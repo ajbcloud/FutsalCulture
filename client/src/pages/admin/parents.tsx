@@ -451,7 +451,7 @@ export default function AdminParents() {
                                   <div key={player.id} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
                                     <div>
                                       <Link 
-                                        href={`/admin/players?filter=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
+                                        href={`/admin/players?playerId=${player.id}`}
                                         className="text-white font-medium hover:text-blue-400 cursor-pointer underline"
                                       >
                                         {player.firstName} {player.lastName}
