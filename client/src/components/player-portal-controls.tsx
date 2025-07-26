@@ -93,6 +93,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
         description: "Player invitation has been sent successfully",
       });
       setIsEmailDialogOpen(false);
+      emailForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -118,6 +119,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
         description: "Player invitation has been sent successfully",
       });
       setIsSMSDialogOpen(false);
+      smsForm.reset();
     },
     onError: (error: any) => {
       toast({
@@ -127,6 +129,27 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
       });
     },
   });
+
+  // Handle direct invite sending when contact info exists
+  const handleEmailInvite = () => {
+    if (player.email) {
+      // Send invite immediately with existing email
+      sendEmailInviteMutation.mutate({ email: player.email });
+    } else {
+      // Open dialog to collect email
+      setIsEmailDialogOpen(true);
+    }
+  };
+
+  const handleSMSInvite = () => {
+    if (player.phoneNumber) {
+      // Send invite immediately with existing phone number
+      sendSMSInviteMutation.mutate({ phoneNumber: player.phoneNumber });
+    } else {
+      // Open dialog to collect phone number
+      setIsSMSDialogOpen(true);
+    }
+  };
 
 
 
@@ -200,18 +223,20 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
         )}
         
         <div className="flex space-x-2">
-          {/* Email Invite Dialog */}
+          {/* Email Invite Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEmailInvite}
+            disabled={sendEmailInviteMutation.isPending}
+            className="border-zinc-600 text-zinc-400 hover:text-white"
+          >
+            <Mail className="w-4 h-4 mr-1" />
+            {player.email ? "Send Email" : "Email"}
+          </Button>
+          
+          {/* Email Dialog */}
           <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-zinc-600 text-zinc-400 hover:text-white"
-              >
-                <Mail className="w-4 h-4 mr-1" />
-                Email
-              </Button>
-            </DialogTrigger>
             <DialogContent className="bg-zinc-900 border-zinc-700">
               <DialogHeader>
                 <DialogTitle className="text-white">Send Email Invite</DialogTitle>
@@ -258,18 +283,20 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
             </DialogContent>
           </Dialog>
 
-          {/* SMS Invite Dialog */}
+          {/* SMS Invite Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSMSInvite}
+            disabled={sendSMSInviteMutation.isPending}
+            className="border-zinc-600 text-zinc-400 hover:text-white"
+          >
+            <MessageSquare className="w-4 h-4 mr-1" />
+            {player.phoneNumber ? "Send SMS" : "SMS"}
+          </Button>
+
+          {/* SMS Dialog */}
           <Dialog open={isSMSDialogOpen} onOpenChange={setIsSMSDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-zinc-600 text-zinc-400 hover:text-white"
-              >
-                <MessageSquare className="w-4 h-4 mr-1" />
-                SMS
-              </Button>
-            </DialogTrigger>
             <DialogContent className="bg-zinc-900 border-zinc-700">
               <DialogHeader>
                 <DialogTitle className="text-white">Send SMS Invite</DialogTitle>
@@ -318,7 +345,9 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
         </div>
         
         <div className="text-xs text-amber-400 mt-2">
-          Click Email or SMS to enter contact details and send invites
+          {player.email || player.phoneNumber 
+            ? "Click to send invite instantly, or edit player profile to update contact info" 
+            : "Click Email or SMS to enter contact details and send invites"}
         </div>
       </div>
     </div>

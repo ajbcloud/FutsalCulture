@@ -14,6 +14,8 @@ const playerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   birthYear: z.number().min(2000).max(new Date().getFullYear() - 4, "Child must be at least 4 years old"),
+  email: z.string().email("Valid email required").optional().or(z.literal("")),
+  phoneNumber: z.string().optional(),
 });
 
 type PlayerForm = z.infer<typeof playerSchema>;
@@ -32,8 +34,16 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       firstName: player?.firstName || "",
       lastName: player?.lastName || "",
       birthYear: player?.birthYear || new Date().getFullYear() - 8,
+      email: player?.email || "",
+      phoneNumber: player?.phoneNumber || "",
     },
   });
+  
+  // Watch birth year changes to show/hide contact fields dynamically
+  const watchedBirthYear = form.watch('birthYear');
+  const currentYear = new Date().getFullYear();
+  const playerAge = currentYear - watchedBirthYear;
+  const isEligibleForPortal = playerAge >= 13;
 
   const createPlayerMutation = useMutation({
     mutationFn: async (data: PlayerForm) => {
@@ -161,6 +171,53 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Contact fields for portal-eligible players */}
+        {isEligibleForPortal && (
+          <>
+            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700">
+              <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                Portal Access Contact Information (Age 13+)
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="email"
+                          placeholder="player@example.com"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="tel"
+                          placeholder="+1 (555) 123-4567"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </>
+        )}
         
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Saving..." : player ? "Update Player" : "Add Player"}
