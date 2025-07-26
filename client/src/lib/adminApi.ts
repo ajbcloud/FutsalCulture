@@ -17,7 +17,7 @@ const apiRequest = async (url: string, options: RequestInit = {}) => {
 };
 
 // Sessions API
-export const adminSessions = {
+const adminSessions = {
   list: () => apiRequest('/api/admin/sessions'),
   get: (id: string) => apiRequest(`/api/admin/sessions/${id}`),
   create: (data: any) => apiRequest('/api/admin/sessions', {
@@ -34,7 +34,7 @@ export const adminSessions = {
 };
 
 // Payments API
-export const adminPayments = {
+const adminPayments = {
   list: (status?: string) => apiRequest(`/api/admin/payments${status ? `?status=${status}` : ''}`),
   confirm: (signupId: string) => apiRequest(`/api/admin/payments/${signupId}/mark-paid`, {
     method: 'POST',
@@ -45,7 +45,7 @@ export const adminPayments = {
 };
 
 // Players API
-export const adminPlayers = {
+const adminPlayers = {
   list: () => apiRequest('/api/admin/players'),
   get: (id: string) => apiRequest(`/api/admin/players/${id}`),
   update: (id: string, data: any) => apiRequest(`/api/admin/players/${id}`, {
@@ -55,12 +55,12 @@ export const adminPlayers = {
 };
 
 // Analytics API
-export const adminAnalytics = {
+const adminAnalytics = {
   get: () => apiRequest('/api/admin/analytics'),
 };
 
 // Help Requests API
-export const adminHelpRequests = {
+const adminHelpRequests = {
   list: () => apiRequest('/api/admin/help-requests'),
   get: (id: string) => apiRequest(`/api/admin/help-requests/${id}`),
   markResolved: (id: string) => apiRequest(`/api/admin/help-requests/${id}/resolve`, {
@@ -73,7 +73,7 @@ export const adminHelpRequests = {
 };
 
 // Settings API
-export const adminSettings = {
+const adminSettings = {
   get: () => apiRequest('/api/admin/settings'),
   update: (data: any) => apiRequest('/api/admin/settings', {
     method: 'PATCH',
@@ -82,7 +82,7 @@ export const adminSettings = {
 };
 
 // Imports API
-export const adminImports = {
+const adminImports = {
   uploadSessions: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -100,3 +100,17 @@ export const adminImports = {
     }).then(r => r.json());
   },
 };
+
+const adminParents = {
+  list: () => fetch('/api/admin/parents').then(res => res.json()),
+  update: (id: string, data: any) => fetch(`/api/admin/parents/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(res => res.json()),
+  delete: (id: string) => fetch(`/api/admin/parents/${id}`, {
+    method: 'DELETE'
+  }).then(res => res.json())
+};
+
+export { adminSessions, adminPlayers, adminPayments, adminAnalytics, adminHelpRequests, adminParents, adminSettings, adminImports };

@@ -13,7 +13,7 @@ import AdminSessions from "@/pages/admin/sessions/index";
 import AdminSessionDetail from "@/pages/admin/sessions/[id]";
 import AdminPayments from "@/pages/admin/payments";
 import AdminPlayers from "@/pages/admin/players";
-
+import AdminParents from "@/pages/admin/parents";
 import AdminAnalytics from "@/pages/admin/analytics";
 import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
@@ -62,7 +62,7 @@ function Router() {
                 <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
                 <Route path="/admin/payments" component={AdminPayments} />
                 <Route path="/admin/players" component={AdminPlayers} />
-
+                <Route path="/admin/parents" component={AdminParents} />
                 <Route path="/admin/analytics" component={AdminAnalytics} />
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />

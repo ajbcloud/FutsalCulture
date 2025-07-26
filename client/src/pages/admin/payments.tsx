@@ -14,11 +14,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { CheckCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 
 export default function AdminPayments() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [paidPayments, setPaidPayments] = useState([]);
+  const [filteredPendingPayments, setFilteredPendingPayments] = useState([]);
+  const [filteredPaidPayments, setFilteredPaidPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    ageGroup: '',
+    gender: '',
+    search: '',
+    dateRange: ''
+  });
   const { toast } = useToast();
 
   const loadPayments = async () => {
@@ -31,6 +42,8 @@ export default function AdminPayments() {
       console.log('admin payments (paid):', paid);
       setPendingPayments(pending);
       setPaidPayments(paid);
+      setFilteredPendingPayments(pending);
+      setFilteredPaidPayments(paid);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -41,6 +54,29 @@ export default function AdminPayments() {
   useEffect(() => {
     loadPayments();
   }, []);
+
+  useEffect(() => {
+    const filterPayments = (payments: any[]) => {
+      return payments.filter((payment: any) => {
+        const player = payment.player;
+        const age = new Date().getFullYear() - player.birthYear;
+        const ageGroup = age <= 8 ? 'U8' : age <= 10 ? 'U10' : age <= 11 ? 'U11' : age <= 12 ? 'U12' : age <= 14 ? 'U14' : 'U16';
+        
+        const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || ageGroup === filters.ageGroup;
+        const matchesGender = !filters.gender || filters.gender === 'all' || player.gender === filters.gender;
+        const matchesSearch = !filters.search || 
+          player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
+          player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
+          payment.parent.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
+          payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase());
+        
+        return matchesAgeGroup && matchesGender && matchesSearch;
+      });
+    };
+
+    setFilteredPendingPayments(filterPayments(pendingPayments));
+    setFilteredPaidPayments(filterPayments(paidPayments));
+  }, [pendingPayments, paidPayments, filters]);
 
   const handleConfirmPayment = async (signupId: string) => {
     try {
@@ -80,13 +116,60 @@ export default function AdminPayments() {
     <AdminLayout>
       <h1 className="text-2xl font-bold text-white mb-6">Payments & Refunds</h1>
 
+      {/* Filter Controls */}
+      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <Label className="text-zinc-300">Search</Label>
+            <Input
+              placeholder="Search players or parents..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <Label className="text-zinc-300">Age Group</Label>
+            <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Ages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ages</SelectItem>
+                <SelectItem value="U8">U8</SelectItem>
+                <SelectItem value="U10">U10</SelectItem>
+                <SelectItem value="U11">U11</SelectItem>
+                <SelectItem value="U12">U12</SelectItem>
+                <SelectItem value="U14">U14</SelectItem>
+                <SelectItem value="U16">U16</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Gender</Label>
+            <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Genders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="boys">Boys</SelectItem>
+                <SelectItem value="girls">Girls</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="bg-zinc-800 border-zinc-700">
           <TabsTrigger value="pending" className="data-[state=active]:bg-zinc-700">
-            Pending ({pendingPayments.length})
+            Pending ({filteredPendingPayments.length})
           </TabsTrigger>
           <TabsTrigger value="paid" className="data-[state=active]:bg-zinc-700">
-            Paid ({paidPayments.length})
+            Paid ({filteredPaidPayments.length})
           </TabsTrigger>
         </TabsList>
 
@@ -103,7 +186,7 @@ export default function AdminPayments() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingPayments.map((payment: any) => (
+                {filteredPendingPayments.map((payment: any) => (
                   <TableRow key={payment.id} className="border-zinc-800">
                     <TableCell className="text-white">
                       {payment.player?.firstName} {payment.player?.lastName}
@@ -152,7 +235,7 @@ export default function AdminPayments() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paidPayments.map((payment: any) => (
+                {filteredPaidPayments.map((payment: any) => (
                   <TableRow key={payment.id} className="border-zinc-800">
                     <TableCell className="text-white">
                       {payment.player?.firstName} {payment.player?.lastName}

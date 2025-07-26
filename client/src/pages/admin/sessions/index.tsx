@@ -16,25 +16,50 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
+  const [filteredSessions, setFilteredSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [filters, setFilters] = useState({
+    ageGroup: '',
+    gender: '',
+    location: '',
+    status: '',
+    search: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     adminSessions.list().then(data => {
       console.log('admin sessions:', data);
       setSessions(data);
+      setFilteredSessions(data);
       setLoading(false);
     }).catch(err => {
       console.error('Error fetching sessions:', err);
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    let filtered = sessions.filter((session: any) => {
+      const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || session.ageGroup === filters.ageGroup;
+      const matchesGender = !filters.gender || filters.gender === 'all' || session.gender === filters.gender;
+      const matchesLocation = !filters.location || session.location.toLowerCase().includes(filters.location.toLowerCase());
+      const matchesStatus = !filters.status || filters.status === 'all' || session.status === filters.status;
+      const matchesSearch = !filters.search || 
+        session.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        session.location.toLowerCase().includes(filters.search.toLowerCase());
+      
+      return matchesAgeGroup && matchesGender && matchesLocation && matchesStatus && matchesSearch;
+    });
+    setFilteredSessions(filtered);
+  }, [sessions, filters]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this session?')) {
@@ -123,6 +148,80 @@ export default function AdminSessions() {
         </div>
       </div>
 
+      {/* Filter Controls */}
+      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <Label className="text-zinc-300">Search</Label>
+            <Input
+              placeholder="Search sessions..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <Label className="text-zinc-300">Age Group</Label>
+            <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Ages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ages</SelectItem>
+                <SelectItem value="U8">U8</SelectItem>
+                <SelectItem value="U10">U10</SelectItem>
+                <SelectItem value="U11">U11</SelectItem>
+                <SelectItem value="U12">U12</SelectItem>
+                <SelectItem value="U14">U14</SelectItem>
+                <SelectItem value="U16">U16</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Gender</Label>
+            <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Genders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="boys">Boys</SelectItem>
+                <SelectItem value="girls">Girls</SelectItem>
+                <SelectItem value="mixed">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Status</Label>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="upcoming">Upcoming</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="full">Full</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Location</Label>
+            <Input
+              placeholder="Filter by location..."
+              value={filters.location}
+              onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -137,7 +236,7 @@ export default function AdminSessions() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sessions.map((session: any) => (
+            {filteredSessions.map((session: any) => (
               <TableRow key={session.id} className="border-zinc-800">
                 <TableCell className="text-white">
                   {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
@@ -176,6 +275,13 @@ export default function AdminSessions() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredSessions.length === 0 && (
+              <TableRow className="border-zinc-800">
+                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                  No sessions found
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

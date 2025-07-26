@@ -412,4 +412,70 @@ export function setupAdminRoutes(app: any) {
       res.status(500).json({ message: "Failed to import players" });
     }
   });
+
+  // Parents management
+  app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const allUsers = await storage.getUsers();
+      const parentsWithCounts = await Promise.all(
+        allUsers.map(async (user) => {
+          const userPlayers = await storage.getPlayersByParent(user.id);
+          return {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            isAdmin: user.isAdmin || false,
+            isAssistant: user.isAssistant || false,
+            lastLogin: user.lastLogin,
+            playersCount: userPlayers.length
+          };
+        })
+      );
+      res.json(parentsWithCounts);
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+      res.status(500).json({ error: 'Failed to fetch parents' });
+    }
+  });
+
+  app.put('/api/admin/parents/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, email, phone, isAdmin, isAssistant } = req.body;
+      
+      await storage.updateUser(id, {
+        firstName,
+        lastName,
+        email,
+        phone,
+        isAdmin,
+        isAssistant
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating parent:', error);
+      res.status(500).json({ error: 'Failed to update parent' });
+    }
+  });
+
+  app.delete('/api/admin/parents/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Delete associated players first
+      const userPlayers = await storage.getPlayersByParent(id);
+      await Promise.all(userPlayers.map(player => storage.deletePlayer(player.id)));
+      
+      // Delete the parent
+      await storage.deleteUser(id);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting parent:', error);
+      res.status(500).json({ error: 'Failed to delete parent' });
+    }
+  });
 }

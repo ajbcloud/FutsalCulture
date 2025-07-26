@@ -1,0 +1,94 @@
+Filter Controls in Key Admin Sections
+1.1 Sessions, Payments & Players Pages
+What:
+– Add filters at the top of each list page: date range, age group, gender, location, payment status (for payments).
+– Combine these with search and pagination controls.
+
+Why:
+Admins need to quickly narrow down large data sets—e.g. see only U12 Girls sessions this week, or view pending payments for U10 Boys.
+
+2. Seed Test Data for Help Requests & Players
+2.1 Help Requests
+What:
+– Insert several sample rows into help_requests table:
+
+sql
+Copy
+Edit
+INSERT INTO help_requests (name, phone, email, note)
+VALUES
+  ('Jane Doe','555-0001','jane@example.com','How do I change my child’s age?'),
+  ('John Smith','555-0002','john@example.com','My Venmo payment didn’t go through.');
+Why:
+Allows you to verify the Help Requests page UI, reply flows, and “Resolve” functionality without having to submit forms manually.
+
+2.2 Players
+What:
+– Ensure at least one player (Harper Brind) is linked to a parent record in players and users tables.
+– Add a second parent relationship for that same player for testing.
+
+Why:
+Validates parent‑player linking, multi‑parent scenarios, and ensures the roster page shows correct parent associations.
+
+3. Parent Management Section in Admin Portal
+3.1 New “Parents” Nav Item
+What:
+– Create /admin/parents page listing all parent accounts: Name, Email, Phone, # of Players.
+– Actions: Edit (manage account & 2FA), View Linked Players, Delete.
+
+Why:
+Admins need an overview of family accounts—especially when players now can have two parents each.
+
+4. Two‑Parent Support Everywhere
+4.1 Data Model Update
+What:
+– Create join table parent_players with parentId & playerId so each player can have multiple parents.
+
+Why:
+Supports shared management access, accurate notification delivery via both parents, and correct analytics grouping.
+
+4.2 UI Updates
+– Parent Portal: allow inviting a second parent under each player’s “Manage Parents” section.
+– Player Portal: show both parent contacts (email/SMS) if permissions granted.
+– Admin Roster & Reports: display both parents in player rows.
+
+5. Detailed Analytics Enhancements
+5.1 Profile‑Level vs. Account‑Level Filtering
+What:
+– On Analytics page, add a “View by” toggle:
+
+Account (counts per parent account)
+
+Profile (counts per unique player)
+
+Why:
+Prevent double‑counting when two parents access the same child’s activity.
+
+5.2 Expanded Metrics
+What:
+Add these KPI panels & charts:
+
+Active Players by Age Group & Gender (bar chart)
+
+Bookings per Location (pie chart)
+
+New Parent Accounts vs. New Player Profiles (dual‑line chart)
+
+Reminder Opt‑In Rates (email vs. SMS)
+
+Average Revenue per Player
+
+Session Fill Time (time from release at 8 AM to full capacity)
+
+Why:
+Gives granular insight into user behavior, facility usage, and revenue drivers.
+
+Add Filter UI components to Sessions, Payments, Players pages.
+
+Seed Test Data for help requests and players multi‑parent scenario.
+
+Build Parents Page under /admin/parents with CRUD and link‑to‑players.
+
+Migrate to Many‑to‑Many parent_players table and update all UIs & APIs.
+
+Enhance Analytics page with profile vs. account toggle and new KPIs.

@@ -17,24 +17,52 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState([]);
+  const [filteredPlayers, setFilteredPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [filters, setFilters] = useState({
+    ageGroup: '',
+    gender: '',
+    portalAccess: '',
+    search: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     adminPlayers.list().then(data => {
       console.log('admin players:', data);
       setPlayers(data);
+      setFilteredPlayers(data);
       setLoading(false);
     }).catch(err => {
       console.error('Error fetching players:', err);
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    let filtered = players.filter((player: any) => {
+      const age = new Date().getFullYear() - player.birthYear;
+      const ageGroup = age <= 8 ? 'U8' : age <= 10 ? 'U10' : age <= 11 ? 'U11' : age <= 12 ? 'U12' : age <= 14 ? 'U14' : 'U16';
+      
+      const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || ageGroup === filters.ageGroup;
+      const matchesGender = !filters.gender || filters.gender === 'all' || player.gender === filters.gender;
+      const matchesPortalAccess = !filters.portalAccess || filters.portalAccess === 'all' ||
+        (filters.portalAccess === 'enabled' && player.canAccessPortal) ||
+        (filters.portalAccess === 'disabled' && !player.canAccessPortal);
+      const matchesSearch = !filters.search || 
+        player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
+        player.lastName.toLowerCase().includes(filters.search.toLowerCase());
+      
+      return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSearch;
+    });
+    setFilteredPlayers(filtered);
+  }, [players, filters]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -106,6 +134,67 @@ export default function AdminPlayers() {
         </div>
       </div>
 
+      {/* Filter Controls */}
+      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <Label className="text-zinc-300">Search</Label>
+            <Input
+              placeholder="Search players..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <Label className="text-zinc-300">Age Group</Label>
+            <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Ages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ages</SelectItem>
+                <SelectItem value="U8">U8</SelectItem>
+                <SelectItem value="U10">U10</SelectItem>
+                <SelectItem value="U11">U11</SelectItem>
+                <SelectItem value="U12">U12</SelectItem>
+                <SelectItem value="U14">U14</SelectItem>
+                <SelectItem value="U16">U16</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Gender</Label>
+            <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Genders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="boys">Boys</SelectItem>
+                <SelectItem value="girls">Girls</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Portal Access</Label>
+            <Select value={filters.portalAccess} onValueChange={(value) => setFilters(prev => ({ ...prev, portalAccess: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Players" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Players</SelectItem>
+                <SelectItem value="enabled">Portal Enabled</SelectItem>
+                <SelectItem value="disabled">Portal Disabled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -120,7 +209,7 @@ export default function AdminPlayers() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {players.map((player: any) => (
+            {filteredPlayers.map((player: any) => (
               <TableRow key={player.id} className="border-zinc-800">
                 <TableCell className="text-white">
                   {player.firstName} {player.lastName}
@@ -148,7 +237,7 @@ export default function AdminPlayers() {
                 </TableCell>
               </TableRow>
             ))}
-            {players.length === 0 && (
+            {filteredPlayers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
                   No players found
