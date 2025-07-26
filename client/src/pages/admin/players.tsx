@@ -38,10 +38,12 @@ export default function AdminPlayers() {
 
   // Check for URL parameters on load
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const urlParams = new URLSearchParams(window.location.search);
     const playerId = urlParams.get('playerId');
     
     console.log('URL location:', location);
+    console.log('Full URL:', window.location.href);
+    console.log('Search params:', window.location.search);
     console.log('Player ID from URL:', playerId);
     console.log('Players loaded:', players.length);
     
