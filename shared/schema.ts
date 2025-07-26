@@ -265,6 +265,23 @@ export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   createdAt: true,
   resolved: true,
   status: true,
+}).extend({
+  name: z.string()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes"),
+  email: z.string()
+    .email("Please enter a valid email address")
+    .max(100, "Email must be less than 100 characters")
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Please enter a valid email address"),
+  phone: z.string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20, "Phone number must be less than 20 characters")
+    .regex(/^[\d\s()\-+.]+$/, "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
+  note: z.string()
+    .min(20, "Message must be at least 20 characters")
+    .max(1000, "Message must be less than 1000 characters")
+    .regex(/^(?!.*(.)\1{5,}).*$/, "Message contains suspicious patterns"),
 });
 
 export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({

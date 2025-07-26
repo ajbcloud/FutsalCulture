@@ -15,11 +15,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().min(10, "Phone number is required"),
-  message: z.string().min(10, "Message must be at least 10 characters"),
-  captcha: z.string().min(1, "Please solve the math problem"),
+  name: z.string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes"),
+  email: z.string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .max(100, "Email must be less than 100 characters")
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Please enter a valid email address"),
+  phone: z.string()
+    .min(1, "Phone number is required")
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20, "Phone number must be less than 20 characters")
+    .regex(/^[\d\s()\-+.]+$/, "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
+  message: z.string()
+    .min(1, "Message is required")
+    .min(20, "Message must be at least 20 characters")
+    .max(1000, "Message must be less than 1000 characters")
+    .regex(/^(?!.*(.)\1{5,}).*$/, "Message contains suspicious patterns"),
+  captcha: z.string()
+    .min(1, "Please solve the math problem")
+    .regex(/^\d+$/, "Please enter only the numeric answer"),
 });
 
 type HelpForm = z.infer<typeof helpSchema>;
@@ -155,12 +173,13 @@ export default function Help() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Name</FormLabel>
+                          <FormLabel className="text-white">Name <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Your full name" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              required
                             />
                           </FormControl>
                           <FormMessage />
@@ -173,13 +192,14 @@ export default function Help() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Email</FormLabel>
+                          <FormLabel className="text-white">Email <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               type="email" 
                               placeholder="your.email@example.com" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              required
                             />
                           </FormControl>
                           <FormMessage />
@@ -192,13 +212,14 @@ export default function Help() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Phone</FormLabel>
+                          <FormLabel className="text-white">Phone <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               type="tel" 
                               placeholder="(555) 123-4567" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              required
                             />
                           </FormControl>
                           <FormMessage />
@@ -211,13 +232,14 @@ export default function Help() {
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Message</FormLabel>
+                          <FormLabel className="text-white">Message <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="How can we help you today?" 
+                              placeholder="Please describe your issue or question in detail (minimum 20 characters)" 
                               rows={5}
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              required
                             />
                           </FormControl>
                           <FormMessage />
@@ -231,14 +253,15 @@ export default function Help() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-white">
-                            Security Check: {captchaQuestion}
+                            Security Check: {captchaQuestion} <span className="text-red-400">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input 
                               type="text" 
-                              placeholder="Enter your answer" 
+                              placeholder="Enter your answer (numbers only)" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              required
                             />
                           </FormControl>
                           <FormMessage />
