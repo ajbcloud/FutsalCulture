@@ -453,7 +453,7 @@ export function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const { resolutionNote } = req.body;
-      const adminUserId = (req as any).user?.id;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
 
       if (!resolutionNote || resolutionNote.trim().length < 10) {
         return res.status(400).json({ 
@@ -1273,14 +1273,10 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     try {
       const { filter, parentId } = req.query;
       
-      let query = db.select().from(users);
-      
       // If parentId is provided, filter by specific parent
-      if (parentId) {
-        query = query.where(eq(users.id, parentId as string));
-      }
-      
-      const allUsers = await query;
+      const allUsers = parentId 
+        ? await db.select().from(users).where(eq(users.id, parentId as string))
+        : await db.select().from(users);
       
       // If filtering by name and no parentId specified
       let filteredUsers = allUsers;
