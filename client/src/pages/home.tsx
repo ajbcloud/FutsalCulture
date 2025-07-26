@@ -61,7 +61,7 @@ export default function Home() {
         </div>
       </section>
       {/* Quick Actions */}
-      <section className="py-8">
+      <section className="py-8 bg-[#18181b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap gap-4 justify-center">
             <Button asChild size="lg">
