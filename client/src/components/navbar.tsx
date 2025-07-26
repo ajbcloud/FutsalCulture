@@ -20,9 +20,11 @@ export default function Navbar() {
             </Link>
             <div className="hidden md:block ml-10">
               <div className="flex space-x-8">
-                <Link href={isAuthenticated ? "/dashboard" : "/sessions"} className="text-white font-medium hover:text-green-400">
-                  Sessions
-                </Link>
+                {!isAuthenticated && (
+                  <Link href="/sessions" className="text-white font-medium hover:text-green-400">
+                    Sessions
+                  </Link>
+                )}
                 {isAuthenticated && (
                   <Link href="/dashboard" className="text-zinc-400 hover:text-white">
                     Dashboard
