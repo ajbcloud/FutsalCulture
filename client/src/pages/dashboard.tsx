@@ -206,11 +206,21 @@ export default function Dashboard() {
     new Date(signup.session.startTime) > new Date()
   );
 
-  // Filter today's sessions
+  // Filter today's sessions - only show sessions eligible for parent's players
   const todaySessions = sessions.filter(session => {
     const sessionDate = new Date(session.startTime);
     const today = new Date();
-    return sessionDate.toDateString() === today.toDateString();
+    const isToday = sessionDate.toDateString() === today.toDateString();
+    
+    if (!isToday) return false;
+    
+    // If parent has players, only show sessions eligible for their players
+    if (players.length > 0) {
+      return players.some(player => isSessionEligibleForPlayer(session, player));
+    }
+    
+    // If no players, show all today's sessions
+    return true;
   });
 
   return (

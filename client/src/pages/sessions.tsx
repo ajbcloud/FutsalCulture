@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FutsalSession } from "@shared/schema";
+import { FutsalSession, Player } from "@shared/schema";
+import { isSessionEligibleForPlayer } from "@shared/utils";
 
 export default function Sessions() {
   const { isAuthenticated } = useAuth();
@@ -26,16 +27,34 @@ export default function Sessions() {
     queryKey: ["/api/sessions", { ageGroup: ageFilter, location: locationFilter, gender: genderFilter }],
   });
 
+  // Get players for authenticated parents
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ["/api/players"],
+    enabled: isAuthenticated,
+  });
+
   const filteredSessions = sessions.filter(session => {
+    // For authenticated parents with players, only show sessions their players can book
+    if (isAuthenticated && players.length > 0) {
+      const isEligibleForAnyPlayer = players.some(player => isSessionEligibleForPlayer(session, player));
+      if (!isEligibleForAnyPlayer) return false;
+    }
+    
+    // Apply manual filters
     if (ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
     if (locationFilter !== "all" && session.location !== locationFilter) return false;
     if (genderFilter !== "all" && session.gender !== genderFilter) return false;
     return true;
   });
 
-  const uniqueAgeGroups = Array.from(new Set(sessions.map(s => s.ageGroup)));
-  const uniqueLocations = Array.from(new Set(sessions.map(s => s.location)));
-  const uniqueGenders = Array.from(new Set(sessions.map(s => s.gender)));
+  // Get unique filter options based on eligible sessions only
+  const eligibleSessions = isAuthenticated && players.length > 0 
+    ? sessions.filter(session => players.some(player => isSessionEligibleForPlayer(session, player)))
+    : sessions;
+    
+  const uniqueAgeGroups = Array.from(new Set(eligibleSessions.map(s => s.ageGroup)));
+  const uniqueLocations = Array.from(new Set(eligibleSessions.map(s => s.location)));
+  const uniqueGenders = Array.from(new Set(eligibleSessions.map(s => s.gender)));
 
   if (isLoading) {
     return (

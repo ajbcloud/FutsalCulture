@@ -8,7 +8,9 @@ export function calculateAgeGroup(birthYear: number): string {
 
 export function isSessionEligibleForPlayer(session: any, player: any): boolean {
   const playerAgeGroup = calculateAgeGroup(player.birthYear);
-  return session.ageGroup === playerAgeGroup;
+  const ageMatch = session.ageGroup === playerAgeGroup;
+  const genderMatch = session.gender === player.gender;
+  return ageMatch && genderMatch;
 }
 
 export function isSessionBookingOpen(session: any): boolean {
