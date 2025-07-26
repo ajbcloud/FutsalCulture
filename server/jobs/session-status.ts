@@ -11,12 +11,17 @@ export async function updateSessionStatus() {
     for (const session of upcomingSessions) {
       const sessionDate = new Date(session.startTime);
       const bookingOpenTime = new Date(sessionDate);
-      bookingOpenTime.setHours(8, 0, 0, 0);
       
-      // If it's 8 AM on session day, open booking
+      // Use per-session booking time if available, otherwise default to 8 AM
+      const hour = session.bookingOpenHour ?? 8;
+      const minute = session.bookingOpenMinute ?? 0;
+      
+      bookingOpenTime.setHours(hour, minute, 0, 0);
+      
+      // If it's the booking time on session day, open booking
       if (now >= bookingOpenTime && now < session.startTime) {
         await storage.updateSessionStatus(session.id, "open");
-        console.log(`Session ${session.id} opened for booking`);
+        console.log(`Session ${session.id} opened for booking at ${hour}:${minute.toString().padStart(2, '0')}`);
       }
       
       // If session start time has passed, mark as closed

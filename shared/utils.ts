@@ -17,13 +17,18 @@ export function isSessionBookingOpen(session: any): boolean {
   const now = new Date();
   const sessionDate = new Date(session.startTime);
   const bookingOpenTime = new Date(sessionDate);
-  bookingOpenTime.setHours(8, 0, 0, 0);
   
-  // Check if it's today and after 8 AM
+  // Use per-session booking time if available, otherwise default to 8 AM
+  const hour = session.bookingOpenHour ?? 8;
+  const minute = session.bookingOpenMinute ?? 0;
+  
+  bookingOpenTime.setHours(hour, minute, 0, 0);
+  
+  // Check if it's today and after the specified booking time
   const isToday = sessionDate.toDateString() === now.toDateString();
-  const isAfter8AM = now >= bookingOpenTime;
+  const isAfterBookingTime = now >= bookingOpenTime;
   
-  return isToday && isAfter8AM && session.status === "open" && session.status !== "full";
+  return isToday && isAfterBookingTime && session.status === "open" && session.status !== "full";
 }
 
 export function getSessionStatusColor(session: any, signupsCount?: number): string {

@@ -83,6 +83,8 @@ export const futsalSessions = pgTable("futsal_sessions", {
   capacity: integer("capacity").notNull().default(12),
   priceCents: integer("price_cents").notNull().default(1000),
   status: sessionsEnum("status").notNull().default("upcoming"),
+  bookingOpenHour: integer("booking_open_hour").default(8), // Hour when booking opens (0-23)
+  bookingOpenMinute: integer("booking_open_minute").default(0), // Minute when booking opens (0-59)
   createdAt: timestamp("created_at").defaultNow(),
 });
 
