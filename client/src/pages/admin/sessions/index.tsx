@@ -578,29 +578,7 @@ export default function AdminSessions() {
                     />
                     <span>Girls</span>
                   </label>
-                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={massUpdateData.genders.includes('boys') && massUpdateData.genders.includes('girls')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          // Mixed = both boys and girls
-                          setMassUpdateData(prev => ({
-                            ...prev,
-                            genders: ['boys', 'girls']
-                          }));
-                        } else {
-                          // Uncheck mixed = remove both
-                          setMassUpdateData(prev => ({
-                            ...prev,
-                            genders: prev.genders.filter(g => g !== 'boys' && g !== 'girls')
-                          }));
-                        }
-                      }}
-                      className="rounded border-zinc-600 bg-zinc-700"
-                    />
-                    <span>Mixed (Boys + Girls)</span>
-                  </label>
+
                 </div>
               </div>
 
