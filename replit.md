@@ -157,3 +157,7 @@ Preferred communication style: Simple, everyday language.
 - **Simplified Navigation**: Removed Sessions header from authenticated user navigation - only Dashboard and Help shown to logged-in parents
 - **Authentication Architecture**: Implemented React Context for auth state management, eliminating infinite request loops from React Query auth hook
 - **Improved Performance**: Reduced auth requests from 60+ per minute to single requests on load with proper error handling
+- **Profile Editing**: Added complete profile editing functionality with form validation for first name, last name, email, and phone
+- **Personalized Greeting**: Welcome message now shows parent's first name ("Welcome Back, Atticus!")
+- **Enhanced Session Filtering**: Sessions now filtered by player eligibility (age + gender) in dashboard and sessions page, but calendar shows all sessions
+- **Smart Empty States**: Dashboard shows "Add a player to see available sessions" when no players exist

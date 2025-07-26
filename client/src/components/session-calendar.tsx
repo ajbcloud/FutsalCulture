@@ -39,18 +39,13 @@ export default function SessionCalendar({
     queryKey: ["/api/sessions"],
   });
 
-  // Filter sessions based on user type and player age groups
-  const sessions = isAuthenticated && players.length > 0 
-    ? allSessions.filter(session => {
-        // For authenticated parents, show sessions eligible for their players
-        return players.some(player => isSessionEligibleForPlayer(session, player));
-      })
-    : allSessions.filter(session => {
-        // Apply manual filters if provided
-        if (ageGroupFilter && session.ageGroup !== ageGroupFilter) return false;
-        if (genderFilter && session.gender !== genderFilter) return false;
-        return true;
-      });
+  // Always show all sessions in the calendar - no player-based filtering
+  const sessions = allSessions.filter(session => {
+    // Apply manual filters if provided (for public sessions page)
+    if (ageGroupFilter && session.ageGroup !== ageGroupFilter) return false;
+    if (genderFilter && session.gender !== genderFilter) return false;
+    return true;
+  });
 
   // Filter sessions for the current month
   const monthStart = startOfMonth(currentMonth);
