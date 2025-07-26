@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuth();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
-  // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
     enabled: isAuthenticated,
@@ -42,7 +41,6 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  // All useMutation hooks (always called in same order)
   const deletePlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
       await apiRequest("DELETE", `/api/players/${playerId}`);
@@ -137,6 +135,32 @@ export default function Dashboard() {
     },
   });
 
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  if (isLoading || playersLoading || signupsLoading || prefsLoading || sessionsLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const upcomingSignups = signups.filter(signup => 
+    new Date(signup.session.startTime) > new Date()
+  );
+
   const createSignupMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
       const response = await apiRequest("POST", "/api/signups", data);
@@ -172,34 +196,6 @@ export default function Dashboard() {
     },
   });
 
-  // useEffect hooks (always called in same order)
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
-
-  // Early return after all hooks
-  if (isLoading || playersLoading || signupsLoading || prefsLoading || sessionsLoading) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  const upcomingSignups = signups.filter(signup => 
-    new Date(signup.session.startTime) > new Date()
-  );
-
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
@@ -209,14 +205,14 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-white">Parent Dashboard</h1>
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Player
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-900 border-zinc-700">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle className="text-white">Add New Player</DialogTitle>
+                <DialogTitle>Add New Player</DialogTitle>
               </DialogHeader>
               <PlayerForm onSuccess={() => setEditingPlayer(null)} />
             </DialogContent>
