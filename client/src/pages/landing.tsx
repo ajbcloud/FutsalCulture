@@ -60,7 +60,7 @@ export default function Landing() {
         </div>
       </section>
       {/* CTA Section */}
-      <section className="py-16 bg-futsal-50">
+      <section className="py-16 bg-[#18181b]">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Get Started?</h2>
           <p className="text-xl text-gray-600 mb-8">
