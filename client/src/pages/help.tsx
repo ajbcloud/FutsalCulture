@@ -65,7 +65,6 @@ export default function Help() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Get Help</h1>
@@ -214,7 +213,7 @@ export default function Help() {
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <div>
                     <p className="text-white font-medium">Support Hours</p>
-                    <p className="text-zinc-400">Monday - Friday, 8 AM - 6 PM</p>
+                    <p className="text-zinc-400">Monday - Friday</p>
                   </div>
                 </div>
                 
@@ -222,7 +221,7 @@ export default function Help() {
                   <MapPin className="w-5 h-5 text-red-400" />
                   <div>
                     <p className="text-white font-medium">Location</p>
-                    <p className="text-zinc-400">123 Soccer Street, Futsal City, FC 12345</p>
+                    <p className="text-zinc-400">South Florida</p>
                   </div>
                 </div>
               </CardContent>
