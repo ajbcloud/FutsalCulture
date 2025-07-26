@@ -49,9 +49,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
       {/* Welcome Section */}
-      <section className="bg-gradient-to-r from-futsal-600 to-brand-600 text-white">
+      <section className="from-futsal-600 to-brand-600 text-white bg-[#18181b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Welcome Back!</h1>
@@ -61,7 +60,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Quick Actions */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,7 +73,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Today's Sessions */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
