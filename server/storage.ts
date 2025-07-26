@@ -273,7 +273,68 @@ export class DatabaseStorage implements IStorage {
 
   async updatePaymentStatus(signupId: string, paidAt: Date): Promise<void> {
     await db.update(signups).set({ paid: true }).where(eq(signups.id, signupId));
-    await db.update(payments).set({ paidAt }).where(eq(payments.signupId, signupId));
+  }
+
+  async getPendingPaymentSignups(): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User }>> {
+    const results = await db
+      .select({
+        // Signup fields
+        id: signups.id,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentIntentId: signups.paymentIntentId,
+        createdAt: signups.createdAt,
+        // Player fields
+        player: players,
+        // Session fields
+        session: futsalSessions,
+        // Parent fields
+        parent: users,
+      })
+      .from(signups)
+      .innerJoin(players, eq(signups.playerId, players.id))
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .innerJoin(users, eq(players.parentId, users.id))
+      .where(eq(signups.paid, false))
+      .orderBy(desc(signups.createdAt));
+    
+    return results as Array<Signup & { player: Player; session: FutsalSession; parent: User }>;
+  }
+
+  async getSignupWithDetails(signupId: string): Promise<(Signup & { player: Player; session: FutsalSession; parent: User }) | undefined> {
+    const [result] = await db
+      .select({
+        // Signup fields
+        id: signups.id,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentIntentId: signups.paymentIntentId,
+        createdAt: signups.createdAt,
+        // Player fields
+        player: players,
+        // Session fields
+        session: futsalSessions,
+        // Parent fields
+        parent: users,
+      })
+      .from(signups)
+      .innerJoin(players, eq(signups.playerId, players.id))
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .innerJoin(users, eq(players.parentId, users.id))
+      .where(eq(signups.id, signupId));
+    
+    return result as (Signup & { player: Player; session: FutsalSession; parent: User }) | undefined;
+  }
+
+  async updateSignupPaymentStatus(signupId: string, paid: boolean): Promise<Signup | undefined> {
+    const [updatedSignup] = await db
+      .update(signups)
+      .set({ paid })
+      .where(eq(signups.id, signupId))
+      .returning();
+    return updatedSignup;
   }
 
   async createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest> {

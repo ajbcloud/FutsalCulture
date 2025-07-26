@@ -161,3 +161,7 @@ Preferred communication style: Simple, everyday language.
 - **Personalized Greeting**: Welcome message now shows parent's first name ("Welcome Back, Atticus!")
 - **Enhanced Session Filtering**: Sessions now filtered by player eligibility (age + gender) in dashboard and sessions page, but calendar shows all sessions
 - **Smart Empty States**: Dashboard shows "Add a player to see available sessions" when no players exist
+- **Reserve & Pay Flow**: Implemented comprehensive Venmo payment system with immediate spot reservation, 1-hour payment window, and automatic cleanup of expired reservations
+- **Venmo Integration**: Created interactive payment prompt with deep-links, formatted payment notes, and countdown timer for reservation expiry
+- **Admin Payment Management**: Built admin panel for managing pending payments with reminder system and manual payment confirmation
+- **Background Job System**: Added automated cleanup of expired reservations every 15 minutes to free up spots

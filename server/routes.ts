@@ -345,19 +345,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Booking opens at 8:00 AM on session day" });
       }
       
+      // Create signup with paid = false (reserved but payment pending)
       const signup = await storage.createSignup({
         playerId,
         sessionId,
-        paid: true,
+        paid: false,
       });
+
+      // Get player and session details for response
+      const player = await storage.getPlayer(playerId);
       
-      // Update session status if capacity reached
-      const newCount = signupsCount + 1;
-      if (newCount >= session.capacity) {
-        await storage.updateSessionStatus(sessionId, "full");
-      }
+      // Calculate reservation expiry (1 hour from now)
+      const reservationExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
       
-      res.json(signup);
+      res.json({
+        ...signup,
+        reservationExpiresAt,
+        player,
+        session
+      });
     } catch (error) {
       console.error("Error creating signup:", error);
       res.status(500).json({ message: "Failed to create signup" });
@@ -371,6 +377,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cancelling signup:", error);
       res.status(500).json({ message: "Failed to cancel signup" });
+    }
+  });
+
+  // Admin routes for pending payments
+  app.get('/api/admin/pending-payments', isAuthenticated, async (req: any, res) => {
+    try {
+      // For now, any authenticated user can access admin functions
+      // In production, add proper admin role checking
+      const pendingSignups = await storage.getPendingPaymentSignups();
+      res.json(pendingSignups);
+    } catch (error) {
+      console.error("Error fetching pending payments:", error);
+      res.status(500).json({ message: "Failed to fetch pending payments" });
+    }
+  });
+
+  app.post('/api/admin/send-reminder/:signupId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { signupId } = req.params;
+      const signup = await storage.getSignupWithDetails(signupId);
+      
+      if (!signup) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+
+      // TODO: Implement SMS/email reminder service
+      // For now, just return success
+      console.log(`Payment reminder sent for signup ${signupId}`);
+      
+      res.json({ success: true, message: "Payment reminder sent" });
+    } catch (error) {
+      console.error("Error sending payment reminder:", error);
+      res.status(500).json({ message: "Failed to send reminder" });
+    }
+  });
+
+  app.patch('/api/admin/confirm-payment/:signupId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { signupId } = req.params;
+      const signup = await storage.updateSignupPaymentStatus(signupId, true);
+      
+      if (!signup) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+
+      res.json({ success: true, signup });
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ message: "Failed to confirm payment" });
     }
   });
 

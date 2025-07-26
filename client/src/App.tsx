@@ -10,6 +10,7 @@ import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminPendingPayments from "@/pages/admin-pending-payments";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -48,7 +49,10 @@ function Router() {
             <Route path="/player-invite/:token" component={PlayerInvite} />
             <Route path="/help" component={Help} />
             {user?.isAdmin && (
-              <Route path="/admin" component={AdminDashboard} />
+              <>
+                <Route path="/admin" component={AdminDashboard} />
+                <Route path="/admin/pending-payments" component={AdminPendingPayments} />
+              </>
             )}
           </>
         )}

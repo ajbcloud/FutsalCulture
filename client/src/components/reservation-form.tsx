@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Player } from "@shared/schema";
+import VenmoPrompt from "@/components/venmo-prompt";
 
 interface ReservationFormProps {
   sessionId: string;
@@ -17,6 +18,8 @@ export default function ReservationForm({ sessionId }: ReservationFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [venmoData, setVenmoData] = useState<any>(null);
+  const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
 
   const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
@@ -27,15 +30,13 @@ export default function ReservationForm({ sessionId }: ReservationFormProps) {
       const response = await apiRequest("POST", "/api/signups", data);
       return response.json();
     },
-    onSuccess: (signup) => {
+    onSuccess: (signupData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
-      toast({
-        title: "Success",
-        description: "Spot reserved! Complete payment to confirm.",
-      });
-      // Redirect to checkout
-      window.location.href = `/checkout/${signup.id}`;
+      
+      // Show Venmo prompt with reservation details
+      setVenmoData(signupData);
+      setShowVenmoPrompt(true);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -87,38 +88,46 @@ export default function ReservationForm({ sessionId }: ReservationFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="player">Select Player</Label>
-        <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Choose a player" />
-          </SelectTrigger>
-          <SelectContent>
-            {players.map((player) => (
-              <SelectItem key={player.id} value={player.id}>
-                {player.firstName} {player.lastName} (Born {player.birthYear})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="player">Select Player</Label>
+          <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a player" />
+            </SelectTrigger>
+            <SelectContent>
+              {players.map((player) => (
+                <SelectItem key={player.id} value={player.id}>
+                  {player.firstName} {player.lastName} (Born {player.birthYear})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-medium mb-2">Payment Information</h4>
-        <p className="text-sm text-gray-600">
-          You'll be redirected to secure payment processing after reservation.
-        </p>
-        <p className="text-lg font-semibold text-futsal-600 mt-2">$10.00</p>
-      </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium mb-2">Reserve & Pay via Venmo</h4>
+          <p className="text-sm text-gray-600">
+            Your spot will be reserved immediately. Complete payment via Venmo within 1 hour to secure your booking.
+          </p>
+          <p className="text-lg font-semibold text-futsal-600 mt-2">$10.00</p>
+        </div>
 
-      <Button 
-        type="submit" 
-        className="w-full"
-        disabled={createSignupMutation.isPending || !selectedPlayerId}
-      >
-        {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
-      </Button>
-    </form>
+        <Button 
+          type="submit" 
+          className="w-full"
+          disabled={createSignupMutation.isPending || !selectedPlayerId}
+        >
+          {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
+        </Button>
+      </form>
+
+      <VenmoPrompt
+        isOpen={showVenmoPrompt}
+        onClose={() => setShowVenmoPrompt(false)}
+        signupData={venmoData}
+      />
+    </>
   );
 }

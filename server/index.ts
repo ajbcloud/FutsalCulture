@@ -68,4 +68,30 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Background job to clean up expired reservations (pending payment > 1 hour)
+  setInterval(async () => {
+    try {
+      const { storage } = await import("./storage");
+      const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+      const expiredSignups = await storage.getPendingPaymentSignups();
+      
+      const expiredReservations = expiredSignups.filter(signup => 
+        new Date(signup.createdAt) < cutoff
+      );
+      
+      for (const signup of expiredReservations) {
+        await storage.deleteSignup(signup.id);
+        log(`Expired reservation cleaned up: ${signup.id} for player ${signup.player.firstName}`);
+        
+        // TODO: Optional - notify parent of cancellation via SMS/email
+      }
+      
+      if (expiredReservations.length > 0) {
+        log(`Cleaned up ${expiredReservations.length} expired reservations`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up expired reservations:", error);
+    }
+  }, 15 * 60 * 1000); // Run every 15 minutes
 })();

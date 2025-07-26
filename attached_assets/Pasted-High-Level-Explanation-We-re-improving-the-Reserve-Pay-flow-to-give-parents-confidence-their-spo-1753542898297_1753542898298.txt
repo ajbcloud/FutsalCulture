@@ -1,0 +1,137 @@
+High‑Level Explanation
+We’re improving the “Reserve & Pay” flow to give parents confidence their spot is held, without requiring them to manually confirm payment in the app. Instead of an “I Have Paid” button, we’ll:
+
+Reserve the Spot Immediately
+
+On “Reserve & Pay,” create the signup(s) with paid = false.
+
+Lock the seat in the database as “pending payment.”
+
+Show a Confirmation Modal
+
+Make clear the spot is reserved but payment is still required.
+
+Display the Venmo deep‑link or web‑link to the Futsal Culture business profile.
+
+Show the DMC‑Futsal_Culture handle and precise “What’s this for” format:
+
+css
+Copy
+Edit
+[PlayerFirstName] [GU12 or BU10] [MM/DD]
+Pending Confirmation UI
+
+After reservation, sessions in the parent/player dashboard show a “Pending Payment” badge.
+
+Include helper copy:
+
+“Your spot is held for 1 hour. Please complete Venmo payment or the reservation will be cancelled.”
+
+Admin Payment Reminder Workflow
+
+In the admin panel, list all “pending payment” signups.
+
+Provide an “Send Payment Reminder” button (SMS or email) that auto‑sends a message:
+
+“Hi [ParentName], your spot for [PlayerName]’s GU12 session at 6 PM is pending payment. Please pay via Venmo at DMC‑Futsal_Culture or your spot may be released.”
+
+Cancellation of Expired Holds
+
+A background job runs every 15 minutes:
+
+Finds pending signups older than 1 hour
+
+Deletes them, freeing up the spot
+
+Optionally notifies the parent of cancellation
+
+🔧 Detailed Instructions for Replit AI
+Backend: Signup Creation
+
+Route: POST /api/signups
+
+Behavior:
+
+Create one or more signups with paid = false and record createdAt.
+
+Respond with signupIds and reservationExpiresAt = createdAt + 1 hour.
+
+Frontend: VenmoPrompt Modal
+
+tsx
+Copy
+Edit
+function VenmoPrompt({ signupIds, reservationExpiresAt }) {
+  const isMobile = /android|iphone|ipad/i.test(navigator.userAgent);
+  const venmoUrl = isMobile
+    ? "venmo://u/DMC-Futsal_Culture"
+    : "https://account.venmo.com/u/DMC-Futsal_Culture";
+
+  return (
+    <Modal>
+      <h2 className="text-xl font-bold">Spot Reserved!</h2>
+      <p>Your spot is held until <strong>{formatTime(reservationExpiresAt)}</strong>.</p>
+      <p>
+        Please complete payment via Venmo to secure your reservation.
+      </p>
+
+      <div className="bg-zinc-900 p-4 rounded border-zinc-700">
+        <p><strong>Venmo Handle:</strong> DMC‑Futsal_Culture</p>
+        <p><strong>Note format:</strong></p>
+        <pre className="bg-black/50 p-2 rounded">
+          [PlayerFirstName] [GU12 or BU10] [MM/DD]
+        </pre>
+      </div>
+
+      <a
+        href={venmoUrl}
+        className="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+      >
+        Open Venmo
+      </a>
+    </Modal>
+  );
+}
+Frontend: Pending Badge
+
+In the parent/player dashboard, for each session where paid = false and createdAt is within the last hour, display:
+
+tsx
+Copy
+Edit
+<span className="inline-block bg-yellow-500 text-black px-2 py-1 rounded">
+  Pending Payment
+</span>
+Admin Panel: Pending Payments List
+
+New tab “Pending Payments” listing signup records with:
+
+Parent name, Player name, Session title, createdAt
+
+“Send Payment Reminder” button
+
+ts
+Copy
+Edit
+app.post("/api/admin/send-reminder/:signupId", requireAuthAdmin, async (req, res) => {
+  const signup = await db.signups.findUnique(...);
+  const parent = await db.users.findUnique(...);
+  // Send SMS or email template:
+  // "Hi [ParentName], your reservation for [PlayerName]’s session is pending payment..."
+  res.json({ success: true });
+});
+Background Job: Expire Holds
+
+ts
+Copy
+Edit
+setInterval(async () => {
+  const cutoff = new Date(Date.now() - 60*60*1000);
+  const expired = await db.signups.findMany({
+    where: { paid: false, createdAt: { lt: cutoff } }
+  });
+  for (const s of expired) {
+    await db.signups.delete({ where: { id: s.id } });
+    // Optional: notify parent of cancellation
+  }
+}, 15*60*1000);
