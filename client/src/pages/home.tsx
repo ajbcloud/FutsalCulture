@@ -68,9 +68,7 @@ export default function Home() {
             <Button asChild size="lg">
               <Link href="/dashboard">My Dashboard</Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/sessions">Browse All Sessions</Link>
-            </Button>
+
             <Button 
               variant="outline" 
               size="lg"

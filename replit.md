@@ -65,10 +65,11 @@ Preferred communication style: Simple, everyday language.
 7. **Admin Panel**: Session management and analytics
 
 ### Business Logic
-- **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session only
+- **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session
+- **Extended Booking Window**: Sessions remain bookable until session start time (if spaces available)
+- **Automatic Closure**: Sessions close when capacity is reached OR when session start time passes
 - **Multiple Sessions**: Up to 3+ sessions can be scheduled per day (Monday-Friday)
 - **Real-time Status**: Sessions show "Pending" before 8 AM, "Open" during booking hours, "Full" when capacity reached
-- Sessions automatically close when capacity is reached or start time passes
 - Background jobs monitor capacity and update session status every 5 minutes
 
 ## Data Flow

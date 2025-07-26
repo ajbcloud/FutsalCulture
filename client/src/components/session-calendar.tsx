@@ -150,6 +150,7 @@ export default function SessionCalendar({
                   const currentHour = today.getHours();
                   const bookingOpen = isToday && currentHour >= 8;
                   const sessionStarted = new Date() >= new Date(session.startTime);
+                  const canBook = bookingOpen && !sessionStarted && session.status !== 'full';
                   
                   let statusColor = 'bg-blue-700/20';
                   let statusText = session.status;
@@ -160,7 +161,7 @@ export default function SessionCalendar({
                   } else if (session.status === 'full') {
                     statusColor = 'bg-red-700/20';
                     statusText = 'full';
-                  } else if (session.status === 'open' && bookingOpen) {
+                  } else if (canBook) {
                     statusColor = 'bg-green-700/20 hover:bg-green-700/30';
                     statusText = 'open';
                   } else if (!bookingOpen) {
@@ -329,6 +330,7 @@ export default function SessionCalendar({
                         const currentHour = today.getHours();
                         const bookingOpen = isToday && currentHour >= 8;
                         const sessionStarted = new Date() >= new Date(session.startTime);
+                        const canBook = bookingOpen && !sessionStarted && session.status !== 'full';
                         
                         if (showBookingButtons) {
                           if (sessionStarted) {
@@ -365,7 +367,7 @@ export default function SessionCalendar({
                                 Session Full
                               </Button>
                             );
-                          } else if (session.status === 'open') {
+                          } else if (canBook) {
                             return (
                               <Button 
                                 className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
