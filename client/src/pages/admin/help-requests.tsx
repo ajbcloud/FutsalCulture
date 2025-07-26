@@ -83,14 +83,17 @@ export default function AdminHelpRequests() {
 
     setSending(true);
     try {
-      await adminHelpRequests.reply(selectedRequest.id, replyMessage);
+      const response = await adminHelpRequests.reply(selectedRequest.id, replyMessage);
       toast({ title: "Reply sent successfully" });
       setSelectedRequest(null);
       setReplyMessage('');
-      // Mark as resolved and update list
+      // Update status to "replied" (backend handles this but we update locally for immediate UI feedback)
       setHelpRequests(helpRequests.map((req: any) => 
-        req.id === selectedRequest.id ? { ...req, status: 'resolved' } : req
+        req.id === selectedRequest.id ? { ...req, status: 'replied' } : req
       ));
+      // Refresh the list to get updated data from server
+      const updatedRequests = await adminHelpRequests.list();
+      setHelpRequests(updatedRequests);
     } catch (error) {
       console.error('Error sending reply:', error);
       toast({ title: "Failed to send reply", variant: "destructive" });
@@ -139,8 +142,16 @@ export default function AdminHelpRequests() {
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant={request.status === 'resolved' || request.resolved ? 'default' : 'secondary'}
-                    className={request.status === 'resolved' || request.resolved ? 'bg-green-900 text-green-300' : 'bg-zinc-700 text-zinc-400'}
+                    variant={
+                      request.status === 'resolved' || request.resolved ? 'default' : 
+                      request.status === 'replied' ? 'secondary' : 
+                      'secondary'
+                    }
+                    className={
+                      request.status === 'resolved' || request.resolved ? 'bg-green-900 text-green-300' : 
+                      request.status === 'replied' ? 'bg-yellow-900 text-yellow-300' : 
+                      'bg-zinc-700 text-zinc-400'
+                    }
                   >
                     {request.status || (request.resolved ? 'resolved' : 'open')}
                   </Badge>

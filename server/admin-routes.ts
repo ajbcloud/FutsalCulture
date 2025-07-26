@@ -496,9 +496,24 @@ export function setupAdminRoutes(app: any) {
       const { id } = req.params;
       const { message } = req.body;
       
+      // Update help request status to "replied"
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          status: 'replied'
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+      
       // TODO: Implement email sending and help request reply logging
-      // For now, just return success
-      res.json({ message: "Reply sent successfully" });
+      
+      res.json({ 
+        ...updatedRequest,
+        message: "Reply sent successfully" 
+      });
     } catch (error) {
       console.error("Error sending help request reply:", error);
       res.status(500).json({ message: "Failed to send reply" });
