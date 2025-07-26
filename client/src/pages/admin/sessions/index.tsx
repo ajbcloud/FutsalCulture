@@ -10,13 +10,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Link } from 'wouter';
-import { Plus, Edit, Trash2, Upload, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Download, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AGE_GROUPS } from '@shared/constants';
 
@@ -25,13 +27,25 @@ export default function AdminSessions() {
   const [filteredSessions, setFilteredSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
+  const [massUpdating, setMassUpdating] = useState(false);
   const [filters, setFilters] = useState({
     ageGroup: '',
     gender: '',
     location: '',
     status: '',
     search: ''
+  });
+  const [massUpdateData, setMassUpdateData] = useState({
+    title: '',
+    location: '',
+    ageGroups: [] as string[],
+    genders: [] as string[],
+    capacity: '',
+    bookingOpenHour: '',
+    bookingOpenMinute: '',
   });
   const { toast } = useToast();
 
@@ -71,6 +85,84 @@ export default function AdminSessions() {
         console.error('Error deleting session:', error);
       }
     }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSessions(new Set(filteredSessions.map((s: any) => s.id)));
+    } else {
+      setSelectedSessions(new Set());
+    }
+  };
+
+  const handleSelectSession = (sessionId: string, checked: boolean) => {
+    const newSelected = new Set(selectedSessions);
+    if (checked) {
+      newSelected.add(sessionId);
+    } else {
+      newSelected.delete(sessionId);
+    }
+    setSelectedSessions(newSelected);
+  };
+
+  const handleMassUpdate = async () => {
+    if (selectedSessions.size === 0) {
+      toast({ title: "No sessions selected", variant: "destructive" });
+      return;
+    }
+
+    setMassUpdating(true);
+    try {
+      // Prepare update data - only include fields that have values
+      const updateData: any = {};
+      if (massUpdateData.title.trim()) updateData.title = massUpdateData.title.trim();
+      if (massUpdateData.location.trim()) updateData.location = massUpdateData.location.trim();
+      if (massUpdateData.ageGroups.length > 0) updateData.ageGroups = massUpdateData.ageGroups;
+      if (massUpdateData.genders.length > 0) updateData.genders = massUpdateData.genders;
+      if (massUpdateData.capacity) updateData.capacity = parseInt(massUpdateData.capacity);
+      if (massUpdateData.bookingOpenHour !== '') updateData.bookingOpenHour = parseInt(massUpdateData.bookingOpenHour);
+      if (massUpdateData.bookingOpenMinute !== '') updateData.bookingOpenMinute = parseInt(massUpdateData.bookingOpenMinute);
+
+      if (Object.keys(updateData).length === 0) {
+        toast({ title: "No fields to update", variant: "destructive" });
+        setMassUpdating(false);
+        return;
+      }
+
+      // Update each selected session
+      const updatePromises = Array.from(selectedSessions).map(sessionId =>
+        adminSessions.update(sessionId, updateData)
+      );
+
+      await Promise.all(updatePromises);
+
+      // Refresh sessions list
+      const updatedSessions = await adminSessions.list();
+      setSessions(updatedSessions);
+      setFilteredSessions(updatedSessions);
+
+      // Reset form and close modal
+      setMassUpdateData({
+        title: '',
+        location: '',
+        ageGroups: [],
+        genders: [],
+        capacity: '',
+        bookingOpenHour: '',
+        bookingOpenMinute: '',
+      });
+      setSelectedSessions(new Set());
+      setShowMassUpdateModal(false);
+
+      toast({ 
+        title: "Mass update completed", 
+        description: `Updated ${selectedSessions.size} sessions successfully` 
+      });
+    } catch (error) {
+      console.error('Mass update error:', error);
+      toast({ title: "Mass update failed", variant: "destructive" });
+    }
+    setMassUpdating(false);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,6 +216,16 @@ export default function AdminSessions() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Sessions Management</h1>
         <div className="flex gap-3">
+          {selectedSessions.size > 0 && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowMassUpdateModal(true)}
+              className="border-orange-600 text-orange-300 hover:bg-orange-900"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Mass Update ({selectedSessions.size})
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={() => window.open('/api/admin/template/sessions', '_blank')}
@@ -224,6 +326,12 @@ export default function AdminSessions() {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
+              <TableHead className="text-zinc-300 w-12">
+                <Checkbox
+                  checked={selectedSessions.size === filteredSessions.length && filteredSessions.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead className="text-zinc-300">Date & Time</TableHead>
               <TableHead className="text-zinc-300">Age Group</TableHead>
               <TableHead className="text-zinc-300">Gender</TableHead>
@@ -236,6 +344,12 @@ export default function AdminSessions() {
           <TableBody>
             {filteredSessions.map((session: any) => (
               <TableRow key={session.id} className="border-zinc-800">
+                <TableCell>
+                  <Checkbox
+                    checked={selectedSessions.has(session.id)}
+                    onCheckedChange={(checked) => handleSelectSession(session.id, checked as boolean)}
+                  />
+                </TableCell>
                 <TableCell className="text-white">
                   {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
                 </TableCell>
@@ -279,7 +393,7 @@ export default function AdminSessions() {
             ))}
             {filteredSessions.length === 0 && (
               <TableRow className="border-zinc-800">
-                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
                   No sessions found
                 </TableCell>
               </TableRow>
@@ -327,6 +441,163 @@ export default function AdminSessions() {
                 <span>Importing sessions...</span>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mass Update Modal */}
+      <Dialog open={showMassUpdateModal} onOpenChange={setShowMassUpdateModal}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Mass Update Sessions ({selectedSessions.size} selected)</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="text-sm text-zinc-400 mb-4">
+              Only fill in the fields you want to update. Empty fields will be left unchanged.
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-zinc-300">Title</Label>
+                <Input
+                  value={massUpdateData.title}
+                  onChange={(e) => setMassUpdateData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Leave empty to keep existing"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-zinc-300">Location</Label>
+                <Input
+                  value={massUpdateData.location}
+                  onChange={(e) => setMassUpdateData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Leave empty to keep existing"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-zinc-300">Age Groups</Label>
+                <Select 
+                  value={massUpdateData.ageGroups.length > 0 ? massUpdateData.ageGroups.join(',') : ''} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      setMassUpdateData(prev => ({ ...prev, ageGroups: [value] }));
+                    } else {
+                      setMassUpdateData(prev => ({ ...prev, ageGroups: [] }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Leave empty to keep existing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Keep existing</SelectItem>
+                    {AGE_GROUPS.map(age => (
+                      <SelectItem key={age} value={age}>{age}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-zinc-300">Gender</Label>
+                <Select 
+                  value={massUpdateData.genders.length > 0 ? massUpdateData.genders[0] : ''} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      setMassUpdateData(prev => ({ ...prev, genders: [value] }));
+                    } else {
+                      setMassUpdateData(prev => ({ ...prev, genders: [] }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Leave empty to keep existing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Keep existing</SelectItem>
+                    <SelectItem value="boys">Boys</SelectItem>
+                    <SelectItem value="girls">Girls</SelectItem>
+                    <SelectItem value="mixed">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-zinc-300">Capacity</Label>
+                <Input
+                  type="number"
+                  value={massUpdateData.capacity}
+                  onChange={(e) => setMassUpdateData(prev => ({ ...prev, capacity: e.target.value }))}
+                  placeholder="Leave empty to keep existing"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+
+              <div>
+                <Label className="text-zinc-300">Booking Opens At</Label>
+                <div className="flex gap-2">
+                  <Select 
+                    value={massUpdateData.bookingOpenHour} 
+                    onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, bookingOpenHour: value }))}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Keep existing</SelectItem>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {i.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={massUpdateData.bookingOpenMinute} 
+                    onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, bookingOpenMinute: value }))}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Keep existing</SelectItem>
+                      <SelectItem value="0">00</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="45">45</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowMassUpdateModal(false)}
+                className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleMassUpdate}
+                disabled={massUpdating}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {massUpdating ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  `Update ${selectedSessions.size} Sessions`
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
