@@ -9,6 +9,7 @@ import Navbar from "@/components/navbar";
 import PlayerPortalControls from "@/components/player-portal-controls";
 import PlayerForm from "@/components/player-form";
 import SessionCard from "@/components/session-card";
+import EnhancedSessionCard from "@/components/enhanced-session-card";
 import SessionCalendar from "@/components/session-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [localReservedSessions, setLocalReservedSessions] = useState<Set<string>>(new Set());
 
   // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
@@ -224,6 +226,17 @@ export default function Dashboard() {
     return players.some(player => isSessionEligibleForPlayer(session, player));
   });
 
+  // Build set of session IDs that the user has already reserved today
+  const reservedSessionIds = new Set(
+    signups
+      .filter(signup => {
+        const sessionDate = new Date(signup.session.startTime);
+        const today = new Date();
+        return sessionDate.toDateString() === today.toDateString();
+      })
+      .map(signup => signup.sessionId)
+  );
+
   return (
     <div className="min-h-screen bg-[#18181b]">
       <Navbar />
@@ -319,7 +332,22 @@ export default function Dashboard() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {todaySessions.map((session) => (
-                <SessionCard key={session.id} session={session} />
+                <EnhancedSessionCard 
+                  key={session.id} 
+                  session={session} 
+                  isReserved={reservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
+                  onReservationChange={(sessionId, reserved) => {
+                    if (reserved) {
+                      setLocalReservedSessions(prev => new Set([...prev, sessionId]));
+                    } else {
+                      setLocalReservedSessions(prev => {
+                        const next = new Set(prev);
+                        next.delete(sessionId);
+                        return next;
+                      });
+                    }
+                  }}
+                />
               ))}
             </div>
           )}
@@ -432,7 +460,15 @@ export default function Dashboard() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => cancelSignupMutation.mutate(reservation.id)}
+                                  onClick={() => {
+                                    cancelSignupMutation.mutate(reservation.id);
+                                    // Update local state to re-enable reserve button
+                                    setLocalReservedSessions(prev => {
+                                      const next = new Set(prev);
+                                      next.delete(reservation.sessionId);
+                                      return next;
+                                    });
+                                  }}
                                   disabled={cancelSignupMutation.isPending}
                                   className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
                                 >

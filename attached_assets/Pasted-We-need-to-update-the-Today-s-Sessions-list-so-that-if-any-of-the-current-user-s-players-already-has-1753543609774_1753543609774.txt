@@ -1,0 +1,76 @@
+We need to update the Today’s Sessions list so that if any of the current user’s players already has a signup for that session:
+
+The “Reserve Spot” button is disabled (greyed out) and relabeled to “Reserved”.
+
+Clicking “Cancel” on that player’s reservation (in the Upcoming Reservations section) removes the signup and immediately re‑enables the “Reserve Spot” button for that session—provided the session still has capacity.
+
+🔧 Detailed Instructions
+1. Identify Reserved Sessions
+Fetch the list of the current user’s upcoming signups (/api/signups?userId=…&date=today).
+
+On the sessions page, build a Set of sessionId values the user has signed up for today.
+
+2. Button Rendering Logic
+In SessionsList.tsx (or wherever you map today’s sessions):
+
+tsx
+Copy
+Edit
+// inside session card render
+const isReserved = reservedSessionIds.has(session.id);
+const isFull = session.signupsCount >= session.capacity;
+
+<button
+  onClick={() => reserveSession(session.id)}
+  disabled={isReserved || isFull}
+  className={`px-4 py-2 rounded font-semibold ${
+    isReserved || isFull
+      ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+      : "bg-blue-600 hover:bg-blue-700 text-white"
+  }`}
+>
+  {isReserved ? "Reserved" : isFull ? "Full" : "Reserve Spot"}
+</button>
+disabled when isReserved OR isFull.
+
+Grey out via Tailwind classes: bg-zinc-700 text-zinc-400 cursor-not-allowed.
+
+3. Re‑Enable After Cancellation
+In your cancel handler (cancelReservation(signupId)):
+
+Call DELETE /api/signups/:signupId.
+
+On success:
+
+Remove sessionId from reservedSessionIds set.
+
+Update local state so the button re‑renders as enabled.
+
+ts
+Copy
+Edit
+async function handleCancel(signupId: string, sessionId: string) {
+  await api.delete(`/api/signups/${signupId}`);
+  setReservedSessionIds(prev => {
+    const next = new Set(prev);
+    next.delete(sessionId);
+    return next;
+  });
+}
+4. Capacity Check
+Ensure you still disable booking when the session is full:
+
+The button should remain greyed out with “Full” if capacity is reached, even after a cancellation frees a spot the UI will reflect session.signupsCount updating and re-enable accordingly.
+
+✅ Summary
+Build a reservedSessionIds set from today’s signups.
+
+Update the Reserve Spot button to:
+
+Disable and relabel to “Reserved” if the session is already booked by the user.
+
+Disable and relabel to “Full” if at capacity.
+
+When a reservation is canceled:
+
+Remove the session from reservedSessionIds and re‑render so the button becomes enabled (“Reserve Spot”) if the session still has open spots.
