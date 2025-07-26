@@ -26,6 +26,9 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Registration status enum
+export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
+
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -39,6 +42,14 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   customerId: varchar("customer_id"),
+  // Registration approval system
+  isApproved: boolean("is_approved").default(false),
+  registrationStatus: registrationStatusEnum("registration_status").default("pending"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by"), // admin user id
+  rejectedAt: timestamp("rejected_at"),
+  rejectedBy: varchar("rejected_by"), // admin user id
+  rejectionReason: text("rejection_reason"),
   // Parent 2 invite tracking
   parent2InviteSentVia: varchar("parent2_invite_sent_via"), // 'email' or 'sms'
   parent2InvitedAt: timestamp("parent2_invited_at"),
@@ -67,6 +78,11 @@ export const players = pgTable("players", {
   userAccountCreated: boolean("user_account_created").default(false),
   email: varchar("email"),
   phoneNumber: varchar("phone_number"),
+  // Registration approval for player accounts
+  isApproved: boolean("is_approved").default(false),
+  registrationStatus: registrationStatusEnum("registration_status").default("pending"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   // Age validation constraint: Portal access only for players 13+
@@ -133,6 +149,16 @@ export const notificationPreferences = pgTable("notification_preferences", {
   sms: boolean("sms").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// System settings table for global configurations
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key").unique().notNull(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by"), // admin user id
 });
 
 // Relations

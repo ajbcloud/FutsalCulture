@@ -1,0 +1,207 @@
+When “Auto‑approve new registrations” is turned off, every new parent or player sign‑up must be manually reviewed and approved by an admin before that account can:
+
+Log in or access any portal pages
+
+Be included in any analytics or player lists
+
+Receive any automated emails or SMS (reminders, confirmations, etc.)
+
+Here’s a sketch of the user flow and UI changes:
+
+Sign‑Up Endpoint Behavior
+
+On signup, instead of immediately creating a fully‑enabled user, the server will create them with status = “pending” (or a boolean isApproved = false).
+
+No session cookie is issued. The user sees a “Thanks for registering—your account is pending approval” message and cannot proceed to the logged‑in experience.
+
+Admin UI
+
+In the Users or Parents management screen, add a new “Pending Registrations” filter tab that lists everyone whose isApproved == false.
+
+Each row in that list shows basic info (name, email, date submitted) and a “Approve” / “Reject” button.
+
+Approving flips isApproved = true and (optionally) sends them a “Your account is now active” email.
+
+Rejecting either deletes the record or sets status = “rejected” and sends a “Sorry, we cannot approve at this time” email.
+
+Email Notifications
+
+On submission: Send a “Thank you for registering, we’ll review your request and let you know” email.
+
+On approval: Send a “Your account is active—here’s how to log in” email.
+
+On rejection (optional): Send a polite “We’re unable to approve your registration” email.
+
+Frontend Login/Access Control
+
+During login, check user.isApproved. If false, reject login with “Your account is pending approval” instead of “Invalid credentials.”
+
+If someone tries to access a protected page via direct URL while pending, redirect them to a “Pending Approval” info page.
+
+Admin Settings Panel
+
+When the toggle is on, all of the above is skipped: sign‑ups instantly become isApproved = true, no pending queue is used.
+
+When the toggle is off, the manual queue is re‑enabled.
+
+1. Database & Models
+Add isApproved flag
+
+In your users (or parents) table schema, add a boolean column isApproved (default: false).
+
+If you use a separate players table, also add isApproved there.
+
+Migration
+
+Write a migration to add isApproved boolean NOT NULL DEFAULT FALSE to both tables.
+
+2. Server‑Side: Sign‑Up & Authentication
+Sign‑Up Handler (POST /api/auth/signup)
+
+If auto‑approve is ON (read from config or notification_preferences):
+
+Create user with isApproved = true.
+
+Issue session cookie / JWT as usual.
+
+If auto‑approve is OFF:
+
+Create user with isApproved = false.
+
+Do NOT issue session cookie or JWT.
+
+Respond with 200 + JSON { status: "pending", message: "Thanks for registering! Your account is awaiting approval." }.
+
+Login Handler (POST /api/auth/login)
+
+After verifying credentials, check user.isApproved.
+
+If false, return 403 + JSON { error: "pending", message: "Your account is pending approval" }.
+
+If true, proceed to issue session cookie / JWT as normal.
+
+Protect All Auth‑Required Routes
+
+In your requireAuth middleware, after verifying token, also check req.user.isApproved.
+
+If false, terminate request with 403 + redirect to “pending approval” page on the client.
+
+3. Admin Portal: Pending Queue & Approval UI
+New “Pending Registrations” View
+
+Under Settings (or a new User Management section), add a tab: Pending Registrations.
+
+Fetch from GET /api/admin/users?isApproved=false.
+
+Table Columns
+
+Name, Email, Date Registered, Role (Parent vs. Player), Actions.
+
+Actions Column
+
+Approve button → POST /api/admin/users/:id/approve
+
+Reject button → POST /api/admin/users/:id/reject
+
+API Endpoints
+
+Approve (POST /api/admin/users/:id/approve)
+
+Set isApproved = true on that record.
+
+Send an email via SendGrid: “Your account is now active—here’s how to log in.”
+
+Return 200 + updated user object.
+
+Reject (POST /api/admin/users/:id/reject)
+
+Option A: Delete the record.
+
+Option B: Set status = "rejected" (add a string column if you prefer).
+
+Send an email: “We’re sorry, your registration was not approved.”
+
+Return 200 + { status: "rejected" }.
+
+4. Emails & SMS Notifications
+On Sign‑Up
+
+Trigger a “registration received” email:
+
+csharp
+Copy
+Edit
+Subject: “Thanks for registering with Futsal Culture”  
+Body: “Hi {{firstName}}, thanks for signing up. Your account is pending approval. We’ll let you know when it’s active.”  
+On Approval
+
+Trigger “account activated” email:
+
+pgsql
+Copy
+Edit
+Subject: “Your Futsal Culture account is now active”  
+Body: “You can now log in at https://…/login using your email and password.”  
+On Rejection (optional)
+
+Trigger “registration not approved” email:
+
+vbnet
+Copy
+Edit
+Subject: “Futsal Culture registration status”  
+Body: “We’re sorry, but we are unable to approve your registration at this time.”  
+SMS (if using Twilio)
+
+Mirror the email flows via SMS for users who opted in.
+
+5. Client‑Side: Pending Info Pages
+Pending Page (/pending)
+
+Simple page showing “Your account is pending approval. You will receive an email when it’s approved.”
+
+Route all 403‑pending responses to redirect here.
+
+Login Component
+
+Catch { error: "pending" } response and display the pending message instead of “invalid credentials.”
+
+6. Admin Settings Toggle
+Settings UI
+
+In Admin → Settings, add a toggle: Auto‑approve new registrations.
+
+When ON: skip pending queue (set a feature flag in the database or a config value).
+
+When OFF: enforce the manual approval workflow.
+
+Server Config
+
+Expose a config value (e.g. process.env.AUTO_APPROVE = true/false) or store in a settings table.
+
+Read this flag in signup/login handlers to decide whether to set isApproved automatically.
+
+7. Summary of Routes & Components
+Route	Method	Purpose
+POST /api/auth/signup	POST	Create user; defer activation if OFF
+POST /api/auth/login	POST	Authenticate; block if !isApproved
+GET /api/admin/users?isApproved=F	GET	List pending users
+POST /api/admin/users/:id/approve	POST	Set isApproved = true; send email
+POST /api/admin/users/:id/reject	POST	Reject or delete registration; email
+/pending	GET	Pending‑approval info page
+
+Implementation Checklist
+
+ Database migration for isApproved.
+
+ Update signup & login handlers.
+
+ Update requireAuth middleware.
+
+ Build Admin → Pending Registrations UI & endpoints.
+
+ Hook up SendGrid/Twilio for all three notification flows.
+
+ Create /pending client page.
+
+ Add “Auto‑approve” toggle to Admin Settings and wire to config.

@@ -175,35 +175,21 @@ export default function AdminSettings() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="capacityWarning" className="text-zinc-300">Session Capacity Warning</Label>
-              <Input
-                id="capacityWarning"
-                type="number"
-                min="1"
-                max="10"
-                value={settings.sessionCapacityWarning}
-                onChange={(e) => setSettings(prev => ({ ...prev, sessionCapacityWarning: parseInt(e.target.value) || 3 }))}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
-              />
-              <p className="text-sm text-zinc-400 mt-1">
-                Show warning when session capacity drops below this number
-              </p>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="require2fa" className="text-zinc-300">Require 2FA for Admins</Label>
+              <Switch id="require2fa" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="sessionTimeout" className="text-zinc-300">Auto-logout after inactivity</Label>
+              <Switch id="sessionTimeout" defaultChecked />
             </div>
             <div>
-              <Label htmlFor="paymentReminder" className="text-zinc-300">Payment Reminder Hours</Label>
+              <Label htmlFor="allowedDomains" className="text-zinc-300">Allowed Admin Domains</Label>
               <Input
-                id="paymentReminder"
-                type="number"
-                min="1"
-                max="24"
-                value={settings.paymentReminderHours}
-                onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderHours: parseInt(e.target.value) || 4 }))}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                id="allowedDomains"
+                placeholder="example.com, company.org"
+                className="bg-zinc-800 border-zinc-700 text-white"
               />
-              <p className="text-sm text-zinc-400 mt-1">
-                Send payment reminders this many hours before payment deadline
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -217,35 +203,53 @@ export default function AdminSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-zinc-300">Email Notifications</Label>
-                <p className="text-sm text-zinc-400">
-                  Send email alerts for new bookings and system updates
-                </p>
-              </div>
-              <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={(checked) => 
-                  setSettings(prev => ({ ...prev, emailNotifications: checked }))
-                }
-              />
+              <Label htmlFor="emailNotifs" className="text-zinc-300">Email Notifications</Label>
+              <Switch id="emailNotifs" defaultChecked />
             </div>
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-zinc-300">SMS Notifications</Label>
-                <p className="text-sm text-zinc-400">
-                  Send SMS alerts for important updates
-                </p>
-              </div>
-              <Switch
-                checked={settings.smsNotifications}
-                onCheckedChange={(checked) => 
-                  setSettings(prev => ({ ...prev, smsNotifications: checked }))
-                }
+              <Label htmlFor="smsNotifs" className="text-zinc-300">SMS Notifications</Label>
+              <Switch id="smsNotifs" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="paymentAlerts" className="text-zinc-300">Payment Alerts</Label>
+              <Switch id="paymentAlerts" defaultChecked />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <Users className="w-5 h-5 mr-2" />
+              User Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="autoApprove" className="text-zinc-300">Auto-approve new registrations</Label>
+              <Switch id="autoApprove" defaultChecked />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="playerPortal" className="text-zinc-300">Allow player portal access</Label>
+              <Switch id="playerPortal" defaultChecked />
+            </div>
+            <div>
+              <Label htmlFor="maxPlayers" className="text-zinc-300">Max players per parent</Label>
+              <Input
+                id="maxPlayers"
+                type="number"
+                defaultValue="5"
+                className="bg-zinc-800 border-zinc-700 text-white"
               />
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex justify-end mt-6">
+        <Button className="bg-blue-600 hover:bg-blue-700">
+          Save Settings
+        </Button>
       </div>
     </AdminLayout>
   );

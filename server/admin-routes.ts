@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 
@@ -374,15 +374,180 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Settings (placeholder)
+  // Pending Registrations Management
+  app.get('/api/admin/pending-registrations', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const pendingUsers = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+        registrationStatus: users.registrationStatus,
+        createdAt: users.createdAt,
+      }).from(users)
+      .where(eq(users.registrationStatus, 'pending'));
+
+      const pendingPlayers = await db.select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+        email: players.email,
+        phoneNumber: players.phoneNumber,
+        registrationStatus: players.registrationStatus,
+        createdAt: players.createdAt,
+        parentId: players.parentId,
+      }).from(players)
+      .where(eq(players.registrationStatus, 'pending'));
+
+      // Combine and format results
+      const pendingRegistrations = [
+        ...pendingUsers.map(user => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          type: 'parent',
+          registrationStatus: user.registrationStatus,
+          createdAt: user.createdAt,
+        })),
+        ...pendingPlayers.map(player => ({
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          email: player.email,
+          phone: player.phoneNumber,
+          type: 'player',
+          registrationStatus: player.registrationStatus,
+          createdAt: player.createdAt,
+          parentId: player.parentId,
+        }))
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      res.json(pendingRegistrations);
+    } catch (error) {
+      console.error("Error fetching pending registrations:", error);
+      res.status(500).json({ message: "Failed to fetch pending registrations" });
+    }
+  });
+
+  // Approve Registration
+  app.post('/api/admin/registrations/:id/approve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { type } = req.body; // 'parent' or 'player'
+      const adminUserId = (req as any).currentUser?.id;
+
+      if (type === 'parent') {
+        const [updatedUser] = await db.update(users)
+          .set({
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            approvedBy: adminUserId,
+          })
+          .where(eq(users.id, id))
+          .returning();
+
+        // TODO: Send approval email notification
+        res.json({ message: "Parent registration approved", user: updatedUser });
+      } else if (type === 'player') {
+        const [updatedPlayer] = await db.update(players)
+          .set({
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            approvedBy: adminUserId,
+          })
+          .where(eq(players.id, id))
+          .returning();
+
+        // TODO: Send approval email notification
+        res.json({ message: "Player registration approved", player: updatedPlayer });
+      } else {
+        res.status(400).json({ message: "Invalid registration type" });
+      }
+    } catch (error) {
+      console.error("Error approving registration:", error);
+      res.status(500).json({ message: "Failed to approve registration" });
+    }
+  });
+
+  // Reject Registration
+  app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { type, reason } = req.body; // 'parent' or 'player', and rejection reason
+      const adminUserId = (req as any).currentUser?.id;
+
+      if (type === 'parent') {
+        const [updatedUser] = await db.update(users)
+          .set({
+            registrationStatus: 'rejected',
+            rejectedAt: new Date(),
+            rejectedBy: adminUserId,
+            rejectionReason: reason,
+          })
+          .where(eq(users.id, id))
+          .returning();
+
+        // TODO: Send rejection email notification
+        res.json({ message: "Parent registration rejected", user: updatedUser });
+      } else if (type === 'player') {
+        const [updatedPlayer] = await db.update(players)
+          .set({
+            registrationStatus: 'rejected',
+            rejectedAt: new Date(),
+            rejectedBy: adminUserId,
+            rejectionReason: reason,
+          })
+          .where(eq(players.id, id))
+          .returning();
+
+        // TODO: Send rejection email notification
+        res.json({ message: "Player registration rejected", player: updatedPlayer });
+      } else {
+        res.status(400).json({ message: "Invalid registration type" });
+      }
+    } catch (error) {
+      console.error("Error rejecting registration:", error);
+      res.status(500).json({ message: "Failed to reject registration" });
+    }
+  });
+
+  // Admin Settings
   app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // TODO: Implement settings storage
-      res.json({
+      // Get system settings from database
+      const settings = await db.select().from(systemSettings);
+      
+      const settingsMap = settings.reduce((acc, setting) => {
+        let value = setting.value;
+        // Parse boolean values
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        // Parse numeric values
+        if (!isNaN(Number(value))) value = Number(value);
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Default settings if none exist
+      const defaultSettings = {
+        autoApproveRegistrations: true,
         businessName: "Futsal Culture",
         contactEmail: "admin@futsalculture.com",
-        timezone: "Singapore/Asia"
-      });
+        timezone: "Singapore/Asia",
+        emailNotifications: true,
+        smsNotifications: false,
+        sessionCapacityWarning: 3,
+        paymentReminderHours: 4,
+        ...settingsMap
+      };
+
+      res.json(defaultSettings);
     } catch (error) {
       console.error("Error fetching settings:", error);
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -391,8 +556,28 @@ export function setupAdminRoutes(app: any) {
 
   app.patch('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const updateData = req.body;
-      // TODO: Implement settings update
+      const updates = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+
+      // Update each setting in the database
+      for (const [key, value] of Object.entries(updates)) {
+        await db.insert(systemSettings)
+          .values({
+            key,
+            value: String(value),
+            updatedBy: adminUserId,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: systemSettings.key,
+            set: {
+              value: String(value),
+              updatedBy: adminUserId,
+              updatedAt: new Date(),
+            },
+          });
+      }
+
       res.json({ message: "Settings updated successfully" });
     } catch (error) {
       console.error("Error updating settings:", error);

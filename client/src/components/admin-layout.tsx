@@ -12,7 +12,8 @@ import {
   HelpCircle, 
   Settings,
   Menu,
-  X
+  X,
+  UserCheck
 } from "lucide-react";
 
 const adminNavItems = [
@@ -21,6 +22,7 @@ const adminNavItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/players", label: "Players", icon: Users },
   { href: "/admin/parents", label: "Parents", icon: Users },
+  { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
