@@ -110,8 +110,6 @@ export const payments = pgTable("payments", {
 // Help requests table
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  subject: varchar("subject").notNull(),
-  category: varchar("category").notNull().default("general"),
   priority: varchar("priority").notNull().default("medium"),
   status: varchar("status").notNull().default("open"),
   name: varchar("name").notNull(),
@@ -215,6 +213,7 @@ export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   id: true,
   createdAt: true,
   resolved: true,
+  status: true,
 });
 
 export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({

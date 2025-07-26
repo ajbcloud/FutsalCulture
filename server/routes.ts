@@ -614,7 +614,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Help request routes
   app.post('/api/help', async (req, res) => {
     try {
-      // Map form data to schema fields
       const { message, ...otherFields } = req.body;
       const validatedData = insertHelpRequestSchema.parse({
         ...otherFields,

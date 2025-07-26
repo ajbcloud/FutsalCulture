@@ -88,9 +88,8 @@ export default function AdminHelpRequests() {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
-              <TableHead className="text-zinc-300">Subject</TableHead>
-              <TableHead className="text-zinc-300">Category</TableHead>
               <TableHead className="text-zinc-300">User</TableHead>
+              <TableHead className="text-zinc-300">Message Preview</TableHead>
               <TableHead className="text-zinc-300">Priority</TableHead>
               <TableHead className="text-zinc-300">Status</TableHead>
               <TableHead className="text-zinc-300">Created</TableHead>
@@ -100,12 +99,15 @@ export default function AdminHelpRequests() {
           <TableBody>
             {helpRequests.map((request: any) => (
               <TableRow key={request.id} className="border-zinc-800">
-                <TableCell className="text-white font-medium">
-                  {request.subject || request.note?.substring(0, 50) + '...'}
-                </TableCell>
-                <TableCell className="text-zinc-300">{request.category || 'General'}</TableCell>
                 <TableCell className="text-zinc-300">
-                  {request.name || 'Anonymous'}
+                  <div>
+                    <div className="font-medium text-white">{request.name || 'Anonymous'}</div>
+                    <div className="text-sm text-zinc-400">{request.email}</div>
+                    {request.phone && <div className="text-sm text-zinc-400">{request.phone}</div>}
+                  </div>
+                </TableCell>
+                <TableCell className="text-white font-medium">
+                  {request.note?.substring(0, 50) + (request.note?.length > 50 ? '...' : '')}
                 </TableCell>
                 <TableCell>
                   <Badge 
@@ -155,7 +157,7 @@ export default function AdminHelpRequests() {
             ))}
             {helpRequests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
                   No help requests found
                 </TableCell>
               </TableRow>
@@ -174,11 +176,14 @@ export default function AdminHelpRequests() {
           {selectedRequest && (
             <div className="space-y-4">
               <div className="bg-zinc-800 p-4 rounded-lg">
-                <h3 className="font-medium text-white mb-2">{selectedRequest.subject}</h3>
                 <p className="text-sm text-zinc-400 mb-2">
-                  From: {selectedRequest.userEmail} | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
+                  From: {selectedRequest.name} ({selectedRequest.email}) | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
                 </p>
-                <p className="text-zinc-300">{selectedRequest.message || selectedRequest.note}</p>
+                {selectedRequest.phone && (
+                  <p className="text-sm text-zinc-400 mb-2">Phone: {selectedRequest.phone}</p>
+                )}
+                <p className="text-sm text-zinc-400 mb-2">Priority: {selectedRequest.priority}</p>
+                <p className="text-zinc-300">{selectedRequest.note}</p>
               </div>
 
               <div>

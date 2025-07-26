@@ -1,0 +1,112 @@
+Context:
+From a player’s row on Admin → Players, clicking the parent’s name/link should route you to Admin → Parents?filter=Parent Name&parentId=…, fetch that single parent record (and their children), and display it. Right now the URL params are set, but the Parents page comes back empty.
+
+1. Verify Client‑side Routing & Query Params
+Link Generation
+
+In client/src/pages/admin/players.tsx (or the component rendering the “Parent” column), confirm the <Link> or router.push() uses exactly the correct query keys:
+
+tsx
+Copy
+Edit
+<Link href={`/admin/parents?filter=${encodeURIComponent(parent.name)}&parentId=${parent.id}`}>
+  {parent.name}
+</Link>
+Console & Network
+
+Open the browser DevTools → click that link → check Network to see the outgoing GET to /api/admin/parents?....
+
+Ensure the URL has parentId=<uuid> (not parent_id or some other name).
+
+2. Server‑Side /api/admin/parents Handler
+Route Definition
+
+In server/admin-routes.ts, locate your app.get('/api/admin/parents', ...) handler.
+
+Query‑param Parsing
+
+You should be reading req.query.parentId (or whatever your client is sending).
+
+If you’re only filtering by name, you’ll need to also accept the parentId param:
+
+ts
+Copy
+Edit
+const { filter, parentId } = req.query;
+Drizzle‑ORM Query
+
+Ensure your Drizzle query does something like:
+
+ts
+Copy
+Edit
+let qb = db.select().from(users).where(eq(users.role, 'parent'));
+if (filter) {
+  qb = qb.where(ilike(users.firstName.concat(' ').concat(users.lastName), `%${filter}%`));
+}
+if (parentId) {
+  qb = qb.where(eq(users.id, parentId as string));
+}
+const parents = await qb.all();
+Important: if you only filter by name but not ID, a long list may come back empty if the name casing doesn’t match exactly, or your ilike isn’t used.
+
+Include Children
+
+To display player count/details, you probably need a JOIN or a two‑step query:
+
+ts
+Copy
+Edit
+const players = await db.select().from(playersTable)
+  .where(eq(playersTable.parentId, parentId as string));
+Return both arrays:
+
+ts
+Copy
+Edit
+res.json({ parents, players });
+3. Client‑Side Fetch & Rendering
+API Call
+
+In client/src/lib/adminApi.ts, confirm getParents actually passes parentId:
+
+ts
+Copy
+Edit
+export async function getParents(params: { filter?: string; parentId?: string }) {
+  const qs = new URLSearchParams(params as any).toString();
+  const res = await fetch(`/api/admin/parents?${qs}`);
+  return res.json();
+}
+State & Effect
+
+In client/src/pages/admin/parents.tsx, ensure your useEffect picks up both filter and parentId from router.query and passes them into getParents.
+
+Log out router.query and the JSON response to verify you actually received the parent.
+
+UI
+
+If parents array is empty, render a “No parent found” message—but first check the raw JSON you got back.
+
+4. Smoke‑Test End‑to‑End
+DB Check
+
+In your Neon dashboard, confirm that the users table has a row whose id is exactly the parentId you clicked.
+
+Verify that players.parent_id foreign‑keys match that same UUID.
+
+Manual cURL
+
+bash
+Copy
+Edit
+curl "https://<your-app>.replit.dev/api/admin/parents?parentId=THE_PARENT_UUID" \
+  -H "Authorization: Bearer <your-cookie-or-token>"
+Ensure it returns a JSON object with that single parent.
+
+Browser Test
+
+Click the link on Players → check DevTools Network → inspect both the request query and the response payload.
+
+Wrap‑up:
+Once the agent confirms it’s reading parentId in the server route, applying that filter in the Drizzle query, returning the record (plus its linked players), and the client hook sends & uses that same param, the Parents page will correctly show the clicked parent.

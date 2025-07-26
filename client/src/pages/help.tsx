@@ -15,8 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
-  category: z.enum(["technical", "payment", "booking", "portal", "general"]),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
@@ -33,8 +31,6 @@ export default function Help() {
   const form = useForm<HelpForm>({
     resolver: zodResolver(helpSchema),
     defaultValues: {
-      subject: "",
-      category: "general",
       priority: "medium",
       name: "",
       email: "",
@@ -105,48 +101,8 @@ export default function Help() {
               ) : (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="subject"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Subject</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Brief description of your issue" 
-                              {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Category</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-zinc-800 border-zinc-600">
-                              <SelectItem value="technical">Technical Issue</SelectItem>
-                              <SelectItem value="payment">Payment & Billing</SelectItem>
-                              <SelectItem value="booking">Booking & Reservations</SelectItem>
-                              <SelectItem value="portal">Portal Access</SelectItem>
-                              <SelectItem value="general">General Question</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+
 
                     <FormField
                       control={form.control}
