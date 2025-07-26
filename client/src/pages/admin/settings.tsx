@@ -16,6 +16,7 @@ interface SystemSettings {
   autoApproveRegistrations: boolean;
   businessName: string;
   contactEmail: string;
+  supportEmail: string;
   timezone: string;
   emailNotifications: boolean;
   smsNotifications: boolean;
@@ -85,6 +86,7 @@ export default function AdminSettings() {
     autoApproveRegistrations: true,
     businessName: '',
     contactEmail: '',
+    supportEmail: '',
     timezone: '',
     emailNotifications: true,
     smsNotifications: false,
@@ -402,6 +404,19 @@ export default function AdminSettings() {
                 onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
+            </div>
+            <div>
+              <Label htmlFor="supportEmail" className="text-zinc-300">Support Email</Label>
+              <Input
+                id="supportEmail"
+                value={settings.supportEmail}
+                onChange={(e) => setSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
+                className="bg-zinc-800 border-zinc-700 text-white"
+                placeholder="Email address for help request notifications"
+              />
+              <p className="text-sm text-zinc-400 mt-1">
+                Email address that receives notifications when users submit help requests
+              </p>
             </div>
             <div>
               <Label htmlFor="timezone" className="text-zinc-300">Timezone</Label>

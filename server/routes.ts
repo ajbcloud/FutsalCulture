@@ -89,6 +89,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertHelpRequestSchema.parse(req.body);
       const helpRequest = await storage.createHelpRequest(validatedData);
+      
+      // Send email notification to support team
+      try {
+        const { sendHelpRequestNotification } = await import('./emailService');
+        const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@futsalculture.com';
+        await sendHelpRequestNotification(supportEmail, {
+          name: helpRequest.name,
+          email: helpRequest.email,
+          phone: helpRequest.phone || undefined,
+          note: helpRequest.note
+        });
+      } catch (emailError) {
+        console.error("Failed to send help request notification email:", emailError);
+        // Don't fail the request if email fails
+      }
+      
       res.status(201).json(helpRequest);
     } catch (error) {
       console.error("Error creating help request:", error);

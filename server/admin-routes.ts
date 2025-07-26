@@ -639,6 +639,7 @@ export function setupAdminRoutes(app: any) {
         autoApproveRegistrations: true,
         businessName: "Futsal Culture",
         contactEmail: "admin@futsalculture.com",
+        supportEmail: "support@futsalculture.com",
         timezone: "Singapore/Asia",
         emailNotifications: true,
         smsNotifications: false,

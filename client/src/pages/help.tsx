@@ -66,7 +66,7 @@ export default function Help() {
   });
 
   const submitHelpMutation = useMutation({
-    mutationFn: async (data: Omit<HelpForm, 'captcha'>) => {
+    mutationFn: async (data: { name: string; email: string; phone: string; note: string }) => {
       const response = await apiRequest("POST", "/api/help", data);
       return response.json();
     },
@@ -101,8 +101,12 @@ export default function Help() {
       return;
     }
     
-    // Remove captcha from submission data
-    const { captcha, ...submitData } = data;
+    // Remove captcha and map message to note for backend schema
+    const { captcha, message, ...otherData } = data;
+    const submitData = {
+      ...otherData,
+      note: message, // Backend expects 'note' field
+    };
     submitHelpMutation.mutate(submitData);
   };
 

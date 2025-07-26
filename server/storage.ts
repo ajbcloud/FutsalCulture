@@ -6,6 +6,7 @@ import {
   payments,
   helpRequests,
   notificationPreferences,
+  systemSettings,
   type User,
   type UpsertUser,
   type UpdateUser,
@@ -364,6 +365,15 @@ export class DatabaseStorage implements IStorage {
   async createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest> {
     const [newRequest] = await db.insert(helpRequests).values(helpRequest).returning();
     return newRequest;
+  }
+
+  async getSystemSetting(key: string): Promise<string | null> {
+    const [setting] = await db
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.key, key))
+      .limit(1);
+    return setting?.value || null;
   }
 
   async getHelpRequests(): Promise<HelpRequest[]> {
