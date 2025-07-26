@@ -42,12 +42,18 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Schema
 - **Users**: Parent profiles with Replit auth integration
-- **Players**: Child profiles linked to parent accounts
+- **Players**: Child profiles linked to parent accounts with portal access controls
 - **Futsal Sessions**: Training sessions with capacity limits and time slots
 - **Signups**: Reservation records linking players to sessions
 - **Payments**: Stripe payment tracking
 - **Help Requests**: Customer support system
 - **Notification Preferences**: User communication settings
+
+### Player Portal System (Age 13+)
+- **Age Verification**: Automatic age calculation from birth year
+- **Portal Access Controls**: Parent-controlled toggles for portal access and booking permissions
+- **Invite System**: Email/SMS invitations with secure token-based account creation
+- **Player Account Creation**: Separate user accounts for eligible players
 
 ### Core Features
 1. **Session Management**: Daily session creation with age groups and locations

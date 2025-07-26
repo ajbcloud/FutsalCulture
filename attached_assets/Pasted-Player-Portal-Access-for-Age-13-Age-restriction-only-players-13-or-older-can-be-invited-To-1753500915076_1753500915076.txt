@@ -1,0 +1,282 @@
+Player Portal Access for Age 13+
+✔ Age restriction: only players 13 or older can be invited
+
+✔ Toggles in parent portal under each player:
+
+[x] Allow player to access portal
+
+[x] Allow player to book and pay for sessions
+
+✔ Invite options via:
+
+Email (SendGrid)
+
+SMS (Twilio)
+
+✔ Player user flow:
+
+Receives invite
+
+Creates PlayerUser account
+
+Sees only sessions matching their age group
+
+✔ Player portal includes:
+
+Upcoming eligible sessions (calendar view)
+
+Session history (past events)
+
+Booking/payment (if enabled by parent)
+
+STEP 1: Update Database Schema
+Update your players table with two new fields:
+
+🔹 Prisma schema (if using Prisma):
+prisma
+Copy
+Edit
+model Player {
+  id                 String   @id @default(cuid())
+  firstName          String
+  lastName           String
+  birthYear          Int
+  parentId           String
+  canAccessPortal    Boolean  @default(false)
+  canBookAndPay      Boolean  @default(false)
+  inviteSentVia      String?  // 'email' or 'sms'
+  invitedAt          DateTime?
+  userAccountCreated Boolean  @default(false)
+}
+If not using Prisma, apply the equivalent via a migration in Sequelize, Knex, or plain SQL:
+
+sql
+Copy
+Edit
+ALTER TABLE players
+ADD COLUMN can_access_portal BOOLEAN DEFAULT FALSE,
+ADD COLUMN can_book_and_pay BOOLEAN DEFAULT FALSE,
+ADD COLUMN invite_sent_via TEXT,
+ADD COLUMN invited_at TIMESTAMP,
+ADD COLUMN user_account_created BOOLEAN DEFAULT FALSE;
+✅ STEP 2: Parent Dashboard UI – Add Toggles per Player
+In the Parent Portal > Players tab, render toggles only if player is 13 or older:
+
+🔹 Age Check:
+ts
+Copy
+Edit
+const currentYear = new Date().getFullYear();
+const playerAge = currentYear - player.birthYear;
+const isEligible = playerAge >= 13;
+🔹 JSX UI Block:
+tsx
+Copy
+Edit
+{isEligible && (
+  <div className="space-y-2 mt-2">
+    <div className="flex justify-between items-center">
+      <label>Allow player to access portal</label>
+      <Toggle
+        checked={player.canAccessPortal}
+        onCheckedChange={(value) =>
+          updatePlayerSetting(player.id, 'canAccessPortal', value)
+        }
+      />
+    </div>
+    <div className="flex justify-between items-center">
+      <label>Allow player to book and pay for sessions</label>
+      <Toggle
+        checked={player.canBookAndPay}
+        onCheckedChange={(value) =>
+          updatePlayerSetting(player.id, 'canBookAndPay', value)
+        }
+      />
+    </div>
+    <div className="mt-2">
+      <button
+        className="bg-blue-600 text-white px-4 py-1 rounded"
+        onClick={() => sendPlayerInvite(player.id)}
+      >
+        Send Account Invite
+      </button>
+    </div>
+  </div>
+)}
+✅ STEP 3: Backend API
+🔹 PATCH /api/players/:id/settings
+Update a player’s flags (validate age >= 13):
+
+ts
+Copy
+Edit
+app.patch('/api/players/:id/settings', requireAuth, async (req, res) => {
+  const { canAccessPortal, canBookAndPay } = req.body;
+  const player = await db.players.findUnique({ where: { id: req.params.id } });
+
+  const playerAge = new Date().getFullYear() - player.birthYear;
+  if (playerAge < 13) return res.status(403).json({ error: 'Player must be 13 or older' });
+
+  await db.players.update({
+    where: { id: req.params.id },
+    data: { canAccessPortal, canBookAndPay },
+  });
+
+  res.json({ success: true });
+});
+✅ STEP 4: Send Invite via Email or SMS
+🔹 POST /api/players/:id/invite
+Check age
+
+Generate secure invite link
+
+Send via SendGrid or Twilio
+
+Example:
+
+ts
+Copy
+Edit
+const inviteUrl = `${APP_URL}/player-invite/${token}`;
+await sendEmail({
+  to: player.email,
+  subject: 'Set up your Futsal Culture Player Account',
+  html: `Click to activate: <a href="${inviteUrl}">${inviteUrl}</a>`
+});
+✅ STEP 5: Player Account Setup Flow
+Player clicks invite link
+
+Fills out:
+
+Name (auto-filled if available)
+
+Email
+
+Create password
+
+Upon successful signup:
+
+PlayerUser created and linked to player.id
+
+userAccountCreated = true on the players table
+
+✅ STEP 6: Player Dashboard
+If canAccessPortal = true, show:
+
+Calendar of eligible upcoming sessions (based on age group)
+
+Session booking if canBookAndPay = true
+
+History view of past sessions
+
+1. Player Invite Token Generation Logic
+Use a signed JWT or short-lived token to ensure security.
+
+🔹 Generate Token (Node.js w/ JWT)
+ts
+Copy
+Edit
+import jwt from 'jsonwebtoken';
+
+function generatePlayerInviteToken(playerId: string): string {
+  const secret = process.env.PLAYER_INVITE_SECRET;
+  const token = jwt.sign(
+    { playerId },
+    secret,
+    { expiresIn: '7d' } // valid for 7 days
+  );
+  return token;
+}
+🔹 Validate Token
+ts
+Copy
+Edit
+function verifyPlayerInviteToken(token: string): string | null {
+  try {
+    const decoded = jwt.verify(token, process.env.PLAYER_INVITE_SECRET);
+    return decoded.playerId;
+  } catch (err) {
+    return null;
+  }
+}
+🔹 Example Invite URL
+ts
+Copy
+Edit
+const token = generatePlayerInviteToken(player.id);
+const inviteUrl = `${APP_URL}/player-invite/${token}`;
+✅ 2. Email Template (HTML)
+🔹 Subject:
+vbnet
+Copy
+Edit
+You're Invited to Futsal Culture – Set Up Your Player Account
+🔹 Body (HTML):
+html
+Copy
+Edit
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; background: #111; color: #fff; padding: 2rem;">
+    <h2 style="color: #34d399;">Welcome to Futsal Culture ⚽</h2>
+    <p>Your parent has invited you to access your own player portal.</p>
+    <p>Use the link below to set up your account. Once logged in, you’ll be able to:</p>
+    <ul>
+      <li>View your upcoming futsal sessions</li>
+      <li>See your past bookings</li>
+      <li>Book and pay for sessions (if enabled)</li>
+    </ul>
+    <p>
+      <a href="{{inviteUrl}}" style="background: #2563eb; padding: 10px 20px; color: #fff; text-decoration: none; border-radius: 5px;">
+        Activate My Account
+      </a>
+    </p>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: #ccc;">This link will expire in 7 days.</p>
+  </body>
+</html>
+Replace {{inviteUrl}} with the actual tokenized link.
+
+✅ 3. SMS Template
+🔹 Body (SMS text):
+css
+Copy
+Edit
+You’ve been invited to join Futsal Culture. Tap to create your player account: {{inviteUrl}} (expires in 7 days)
+Keep this under 160 characters. Use Twilio to send:
+
+ts
+Copy
+Edit
+await twilioClient.messages.create({
+  body: `You’ve been invited to join Futsal Culture. Tap to create your player account: ${inviteUrl}`,
+  from: TWILIO_PHONE_NUMBER,
+  to: playerPhoneNumber
+});
+✅ 4. Optional: Invite Logging Fields (DB)
+In players table:
+
+inviteTokenSentAt
+
+inviteMethod (email or sms)
+
+✅ 5. Frontend: Player Invite Page
+URL: /player-invite/[token]
+
+On load:
+
+Validate token (call /api/invite/validate)
+
+If valid, show setup form:
+
+Name (optional)
+
+Email
+
+Password
+
+On submit:
+
+Create PlayerUser tied to playerId from token
+
+Redirect to player dashboard
+

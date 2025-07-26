@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
+import PlayerPortalControls from "@/components/player-portal-controls";
 import PlayerForm from "@/components/player-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -342,6 +343,8 @@ export default function Dashboard() {
                         ))}
                       </div>
                     )}
+                    
+                    <PlayerPortalControls player={player} />
                   </CardContent>
                 </Card>
               );

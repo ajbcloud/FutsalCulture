@@ -76,6 +76,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player portal settings routes
+  app.patch('/api/players/:id/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const { canAccessPortal, canBookAndPay } = req.body;
+      const userId = req.user.claims.sub;
+
+      // Get player and verify ownership
+      const player = await storage.getPlayer(playerId);
+      if (!player || player.parentId !== userId) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Verify age requirement
+      const currentYear = new Date().getFullYear();
+      const playerAge = currentYear - player.birthYear;
+      if (playerAge < 13) {
+        return res.status(403).json({ message: "Player must be 13 or older for portal access" });
+      }
+
+      const updatedPlayer = await storage.updatePlayerSettings(playerId, {
+        canAccessPortal,
+        canBookAndPay
+      });
+
+      res.json(updatedPlayer);
+    } catch (error) {
+      console.error("Error updating player settings:", error);
+      res.status(500).json({ message: "Failed to update player settings" });
+    }
+  });
+
+  app.post('/api/players/:id/invite', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const { method } = req.body; // 'email' or 'sms'
+      const userId = req.user.claims.sub;
+
+      // Get player and verify ownership
+      const player = await storage.getPlayer(playerId);
+      if (!player || player.parentId !== userId) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Verify age requirement
+      const currentYear = new Date().getFullYear();
+      const playerAge = currentYear - player.birthYear;
+      if (playerAge < 13) {
+        return res.status(403).json({ message: "Player must be 13 or older for portal access" });
+      }
+
+      // Generate invite token (simplified - in production use JWT)
+      const inviteToken = Buffer.from(`${playerId}:${Date.now()}`).toString('base64');
+      const inviteUrl = `${req.protocol}://${req.get('host')}/player-invite/${inviteToken}`;
+
+      // Update player with invite info
+      await storage.updatePlayerInvite(playerId, method, new Date());
+
+      // For now, just return the invite URL (in production, send via email/SMS)
+      res.json({
+        method,
+        inviteUrl,
+        message: `Invite would be sent via ${method}`,
+        // In production: send actual email/SMS here
+      });
+    } catch (error) {
+      console.error("Error sending player invite:", error);
+      res.status(500).json({ message: "Failed to send invite" });
+    }
+  });
+
+  // Player invite validation and acceptance routes
+  app.get('/api/invite/validate/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Decode token (simplified - in production use JWT verification)
+      let playerId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        playerId = decoded.split(':')[0];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const player = await storage.getPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Check if account already created
+      if (player.userAccountCreated) {
+        return res.status(400).json({ message: "Account already exists for this player" });
+      }
+
+      // Check age requirement
+      const currentYear = new Date().getFullYear();
+      const playerAge = currentYear - player.birthYear;
+      if (playerAge < 13) {
+        return res.status(403).json({ message: "Player must be 13 or older" });
+      }
+
+      res.json({ 
+        valid: true, 
+        player: {
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          email: player.email
+        }
+      });
+    } catch (error) {
+      console.error("Error validating invite:", error);
+      res.status(500).json({ message: "Failed to validate invite" });
+    }
+  });
+
+  app.post('/api/invite/accept/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { firstName, lastName, email, password } = req.body;
+      
+      // Decode token (simplified - in production use JWT verification)
+      let playerId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        playerId = decoded.split(':')[0];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const player = await storage.getPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      if (player.userAccountCreated) {
+        return res.status(400).json({ message: "Account already exists" });
+      }
+
+      // Create user account linked to player
+      const user = await storage.upsertUser({
+        id: `player_${playerId}`,
+        email,
+        firstName,
+        lastName,
+      });
+
+      // Mark player account as created and update contact info
+      await storage.updatePlayer(playerId, {
+        userAccountCreated: true,
+        email,
+        firstName,
+        lastName,
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Player account created successfully",
+        userId: user.id
+      });
+    } catch (error) {
+      console.error("Error accepting invite:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
+  });
+
   // Player routes
   app.get('/api/players', isAuthenticated, async (req: any, res) => {
     try {

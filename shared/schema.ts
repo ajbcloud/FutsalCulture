@@ -46,6 +46,13 @@ export const players = pgTable("players", {
   lastName: varchar("last_name").notNull(),
   birthYear: integer("birth_year").notNull(),
   parentId: varchar("parent_id").notNull(),
+  canAccessPortal: boolean("can_access_portal").default(false),
+  canBookAndPay: boolean("can_book_and_pay").default(false),
+  inviteSentVia: varchar("invite_sent_via"), // 'email' or 'sms'
+  invitedAt: timestamp("invited_at"),
+  userAccountCreated: boolean("user_account_created").default(false),
+  email: varchar("email"),
+  phoneNumber: varchar("phone_number"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

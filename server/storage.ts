@@ -31,8 +31,11 @@ export interface IStorage {
   
   // Player operations
   getPlayersByParent(parentId: string): Promise<Player[]>;
+  getPlayer(id: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
+  updatePlayerSettings(playerId: string, settings: { canAccessPortal?: boolean; canBookAndPay?: boolean }): Promise<Player>;
+  updatePlayerInvite(playerId: string, method: string, invitedAt: Date): Promise<Player>;
   deletePlayer(id: string): Promise<void>;
   
   // Session operations
@@ -103,6 +106,32 @@ export class DatabaseStorage implements IStorage {
 
   async updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player> {
     const [updatedPlayer] = await db.update(players).set(player).where(eq(players.id, id)).returning();
+    return updatedPlayer;
+  }
+
+  async getPlayer(id: string): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(eq(players.id, id));
+    return player;
+  }
+
+  async updatePlayerSettings(playerId: string, settings: { canAccessPortal?: boolean; canBookAndPay?: boolean }): Promise<Player> {
+    const [updatedPlayer] = await db
+      .update(players)
+      .set(settings)
+      .where(eq(players.id, playerId))
+      .returning();
+    return updatedPlayer;
+  }
+
+  async updatePlayerInvite(playerId: string, method: string, invitedAt: Date): Promise<Player> {
+    const [updatedPlayer] = await db
+      .update(players)
+      .set({
+        inviteSentVia: method,
+        invitedAt: invitedAt
+      })
+      .where(eq(players.id, playerId))
+      .returning();
     return updatedPlayer;
   }
 
