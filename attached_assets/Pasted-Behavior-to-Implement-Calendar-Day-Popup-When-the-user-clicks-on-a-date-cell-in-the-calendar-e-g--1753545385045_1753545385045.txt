@@ -1,0 +1,77 @@
+Behavior to Implement
+Calendar Day Popup
+
+When the user clicks on a date cell in the calendar (e.g. FullCalendar or React Big Calendar), show a modal or popover listing all sessions on that day.
+
+In this popup, do not include any “Book” or “Reserve” buttons. It’s purely informational.
+
+Clickable Session Entries
+
+Each session listing inside the popup should be a link (or clickable item) that navigates to its Session Detail & Reservation page:
+
+swift
+Copy
+Edit
+/sessions/{sessionId}?playerId={optional}
+No booking action happens in the popup itself.
+
+Reservation Page Eligibility Enforcement
+
+On /sessions/{sessionId}, the “Select Player” dropdown should list all of the parent’s players.
+
+Disable or hide any players whose age group or gender does not match the session’s requirements.
+
+If a parent selects a non‑eligible player (shouldn’t be possible if they’re disabled), the “Reserve Spot” button remains disabled.
+
+🔧 Detailed Prompt for Replit AI
+Task: Update the calendar and reservation flow as follows:
+
+Calendar Popup: In the calendar component (CalendarView.tsx or similar), modify the eventClick or dayClick handler to open a modal that lists each session’s:
+
+Title (e.g. “U12 Girls Afternoon Training”)
+
+Time (e.g. “2:00 PM – 3:30 PM”)
+
+Location
+
+Spots filled (e.g. “3/10”)
+
+Do not include any booking or reserve buttons here.
+
+Session Links: Make each session line an <a> or Link to:
+
+tsx
+Copy
+Edit
+<Link href={`/sessions/${session.id}`}>
+  {session.title} — {formatTime(session.startTime)}
+</Link>
+Reservation Page Player Dropdown: In pages/sessions/[id].tsx, for the “Select Player” <Select>:
+
+Fetch session.gender and computed session.ageGroup.
+
+Filter user.players so only players matching both criteria are enabled in the dropdown.
+
+Disabled options should appear greyed out with a tooltip:
+"Not eligible: requires {session.gender} U{X} only."
+
+Reserve Button State:
+
+tsx
+Copy
+Edit
+const eligible = selectedPlayer &&
+  selectedPlayer.gender === session.gender &&
+  calculateAgeGroup(selectedPlayer.birthYear) === session.ageGroup;
+<button disabled={!eligible} ...>
+Reserve Spot & Pay
+</button>
+
+markdown
+Copy
+Edit
+
+**Styling & UX:**  
+- Calendar popup matches dark theme (`bg-zinc-900`, `text-white`).  
+- Disabled players in dropdown use `text-zinc-600` and `cursor-not-allowed`.  
+- Tooltip can be via a `title` attribute or lightweight hover overlay.
