@@ -56,10 +56,10 @@ export default function Profile() {
         phone: data.phone,
       });
       
-      // Update notification preferences
+      // Update notification preferences - only save if contact info is available
       await apiRequest("PUT", "/api/notification-preferences", {
-        email: data.emailReminder,
-        sms: data.smsReminder,
+        email: data.email?.trim() ? data.emailReminder : false,
+        sms: data.phone?.trim() ? data.smsReminder : false,
       });
     },
     onSuccess: () => {
@@ -233,22 +233,40 @@ export default function Profile() {
                     title: "SMS Reminders",
                     description: "Receive booking confirmations and session reminders via SMS"
                   }
-                ].map((pref) => (
-                  <div key={pref.key} className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-white">{pref.title}</h4>
-                      <p className="text-sm text-zinc-400 mt-1">{pref.description}</p>
+                ].map((pref) => {
+                  // Determine if toggle should be disabled based on missing contact info
+                  const isContactMissing = pref.key === 'emailReminder' 
+                    ? !formData.email?.trim() 
+                    : !formData.phone?.trim();
+                  
+                  const isToggleDisabled = !isEditing || isContactMissing;
+                  
+                  return (
+                    <div key={pref.key} className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                      <div className="flex-1">
+                        <h4 className={`font-medium ${isContactMissing ? 'text-zinc-500' : 'text-white'}`}>
+                          {pref.title}
+                          {isContactMissing && (
+                            <span className="text-xs text-zinc-600 ml-2">
+                              (Requires {pref.key === 'emailReminder' ? 'email address' : 'phone number'})
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-sm text-zinc-400 mt-1">{pref.description}</p>
+                      </div>
+                      <Switch
+                        checked={!isContactMissing && (formData[pref.key as keyof typeof formData] as boolean)}
+                        onCheckedChange={(checked) => {
+                          if (!isContactMissing) {
+                            setFormData({ ...formData, [pref.key]: checked })
+                          }
+                        }}
+                        disabled={isToggleDisabled}
+                        className={`data-[state=checked]:bg-blue-600 ${isContactMissing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
                     </div>
-                    <Switch
-                      checked={formData[pref.key as keyof typeof formData] as boolean}
-                      onCheckedChange={(checked) => 
-                        setFormData({ ...formData, [pref.key]: checked })
-                      }
-                      disabled={!isEditing}
-                      className="data-[state=checked]:bg-blue-600"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </CardContent>
