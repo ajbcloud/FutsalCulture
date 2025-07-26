@@ -1,0 +1,164 @@
+1. Mass Upload Sessions & Players
+What
+Provide contextual CSV/Google‑Sheet imports directly from the Sessions and Players list pages. Supply downloadable templates, bulk‑validate uploads, and write rows into the database.
+
+Why
+Admins need to rapidly onboard large numbers of sessions or players (e.g., pre‑season scheduling, team rosters) without manual row‑by‑row entry. Templates ensure data consistency.
+
+Instructions
+Template Endpoints
+
+GET /api/admin/template/sessions → Return CSV with header:
+
+pgsql
+Copy
+Edit
+title,location,ageGroup,gender,startTime,endTime,capacity,priceCents
+GET /api/admin/template/players → Return CSV with header:
+
+Copy
+Edit
+firstName,lastName,birthYear,gender,parentEmail,parentPhone,canAccessPortal,canBookAndPay
+Import Buttons
+
+On /admin/sessions and /admin/players, add an “Import CSV” button in the page toolbar.
+
+Clicking opens a modal with:
+
+File dropzone or browse
+
+“Download Template” link
+
+Upload progress bar
+
+Upload Handling
+
+Parse CSV client‑side (e.g., Papaparse) or server‑side.
+
+Validate each row (required fields, correct types).
+
+Bulk insert or upsert into futsal_sessions or players via Drizzle.
+
+Show per‑row success/failure feedback.
+
+Google Sheets Integration (Bonus)
+
+In the same modal, offer “Pull from Google Sheet”.
+
+Use OAuth to read sheet rows, map to CSV shape, and bulk import.
+
+🆘 2. Help Requests Triage & Reply
+What
+A dedicated Help Requests page where admins can view incoming support tickets, reply by email, and mark them resolved.
+
+Why
+Consolidates parent support into the Admin Portal—no need to switch to a separate inbox, and replies use the company domain for consistency.
+
+Instructions
+List View (/api/admin/help-requests)
+
+Fetch help_requests where resolved = false.
+
+Columns: Name, Email, Phone, Submitted At, Note snippet.
+
+Actions: View / Reply, Mark Resolved.
+
+Reply UI
+
+Clicking View / Reply opens a drawer or page:
+
+Full message text
+
+Reply textarea
+
+Send Reply button
+
+On send:
+
+POST to /api/admin/help-requests/:id/reply with { message }.
+
+Server sends email via SMTP (company domain settings).
+
+Update help_requests.resolved = true.
+
+Log reply in help_request_replies table.
+
+Resolved Toggle
+
+In list view, allow bulk Mark Resolved without sending an email.
+
+📊 3. Analytics & Financial KPIs
+What
+A filterable Analytics page showing revenue, expenses, profitability, occupancy trends, player growth, and refund rates—exportable as CSV.
+
+Why
+Admins need real‑time insights into business health: which sessions sell best, where costs lie (SMS, email, Stripe fees), and overall profit margins.
+
+Instructions
+Filters
+
+Date range picker
+
+Age Group, Location, Gender dropdowns
+
+Charts (use Recharts or Chart.js)
+
+Revenue Over Time: bar/line chart
+
+Expense Breakdown: pie chart showing Twilio SMS costs vs. Stripe fees vs. email provider costs
+
+Profit: computed as Revenue – Expenses
+
+Occupancy Trends: line chart of fill % by day/week
+
+Player Growth: cumulative new players over time
+
+Refund Rate: % of payments refunded per period
+
+Data Export
+
+“Export CSV” button that downloads the current filtered dataset.
+
+⚙️ 4. Settings Enhancements
+What
+Extend Settings with timezone selection, SMTP domain integration, and Twilio SMS credentials—plus business defaults.
+
+Why
+Sessions and reminders must respect local timezones. Emails must come from @futsalculture.com. SMS and email reminders rely on Twilio and SMTP settings.
+
+Instructions
+Timezone
+
+Dropdown of IANA timezones (tzdata) saved to settings.timezone.
+
+Apply in all date/time displays and scheduled jobs.
+
+Email Domain (SMTP)
+
+Fields: SMTP Host, Port, Username, Password, From Address
+
+“Send Test Email” button to your admin address.
+
+Twilio SMS
+
+Fields: Account SID, Auth Token, From Number
+
+“Send Test SMS” button to your admin phone.
+
+Store costs in an sms_expenses table for analytics.
+
+Business Defaults
+
+Venmo handle
+
+Default session price
+
+Refund window (hours after booking)
+
+🔐 5. Permissions & Nav Cleanup
+Remove the old standalone Imports page.
+
+Embed import functionality within Sessions and Players sections only.
+
+Ensure all /api/admin/* endpoints enforce requireAdmin (or requireAssistant) and require2FA middleware.
+

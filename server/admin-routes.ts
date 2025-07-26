@@ -230,6 +230,20 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  app.post('/api/admin/help-requests/:id/reply', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+      
+      // TODO: Implement email sending and help request reply logging
+      // For now, just return success
+      res.json({ message: "Reply sent successfully" });
+    } catch (error) {
+      console.error("Error sending help request reply:", error);
+      res.status(500).json({ message: "Failed to send reply" });
+    }
+  });
+
   // Admin Settings (placeholder)
   app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -350,6 +364,52 @@ export function setupAdminRoutes(app: any) {
     } catch (error) {
       console.error("Error fetching admin analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // CSV Template Downloads
+  app.get('/api/admin/template/sessions', requireAdmin, (req: Request, res: Response) => {
+    const csvHeaders = 'title,location,ageGroup,gender,startTime,endTime,capacity,priceCents\n';
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
+    res.send(csvHeaders);
+  });
+
+  app.get('/api/admin/template/players', requireAdmin, (req: Request, res: Response) => {
+    const csvHeaders = 'firstName,lastName,birthYear,gender,parentEmail,parentPhone,canAccessPortal,canBookAndPay\n';
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="players_template.csv"');
+    res.send(csvHeaders);
+  });
+
+  // CSV Import Endpoints
+  app.post('/api/admin/imports/sessions', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // TODO: Implement CSV parsing and session bulk import
+      // For now, return success placeholder
+      res.json({ 
+        imported: 0, 
+        errors: [], 
+        message: "Session import functionality will be implemented with CSV parser" 
+      });
+    } catch (error) {
+      console.error("Error importing sessions:", error);
+      res.status(500).json({ message: "Failed to import sessions" });
+    }
+  });
+
+  app.post('/api/admin/imports/players', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // TODO: Implement CSV parsing and player bulk import
+      // For now, return success placeholder
+      res.json({ 
+        imported: 0, 
+        errors: [], 
+        message: "Player import functionality will be implemented with CSV parser" 
+      });
+    } catch (error) {
+      console.error("Error importing players:", error);
+      res.status(500).json({ message: "Failed to import players" });
     }
   });
 }

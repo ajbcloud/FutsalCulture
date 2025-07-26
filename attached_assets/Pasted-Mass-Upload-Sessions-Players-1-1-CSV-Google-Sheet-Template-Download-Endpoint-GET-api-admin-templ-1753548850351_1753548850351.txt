@@ -1,0 +1,130 @@
+Mass Upload Sessions & Players
+1.1 CSV/Google Sheet Template Download
+Endpoint: GET /api/admin/template/sessions and
+GET /api/admin/template/players
+
+Behavior: Returns a CSV file with header row (and no data):
+
+Sessions Template: title,location,ageGroup,gender,startTime,endTime,capacity,priceCents
+
+Players Template: firstName,lastName,birthYear,gender,parentEmail,parentPhone,canAccessPortal,canBookAndPay
+
+1.2 Import Workflow (in Context)
+Rather than a standalone “Imports” page, each list page gets an “Import CSV” button in its toolbar:
+
+Sessions List Page (/admin/sessions):
+
+Import Sessions button
+
+Pops up a CSV uploader (with “Drag & drop or browse” UI)
+
+Parses file, validates each row, reports per‑row success/failure
+
+Bulk inserts via Drizzle into futsal_sessions
+
+Players List Page (/admin/players):
+
+Import Players button
+
+Same CSV‑upload pattern, writes to players table
+
+Automatically sends invites by email/SMS for newly imported players if flags set
+
+1.3 Google Sheets Integration (Optional)
+Sync Button “Pull from Google Sheet” that:
+
+Opens OAuth‑protected Google Sheets picker
+
+Reads the selected sheet’s rows (using Google Sheets API)
+
+Maps columns to the CSV format above
+
+Performs bulk upsert similarly to a CSV upload
+
+2. Help Requests Triage & Reply
+2.1 Help Requests Nav (/admin/help-requests)
+List all open tickets from help_requests table. Columns: Name, Email, Phone, Note snippet, Submitted At
+
+Actions per row:
+
+View / Reply → opens detail drawer or page with full message + an email‑reply form
+
+Mark Resolved
+
+2.2 Reply Workflow
+Form fields: Reply Message (rich text optional)
+
+On Submit:
+
+Send email to the original requester (using company domain SMTP integration—see Settings > Email Domain).
+
+Mark help_requests.resolved = true and log the reply in a new help_request_replies table.
+
+3. Analytics & Financial KPIs
+3.1 Dashboard Home Enhancements
+Add filter controls (date range, ageGroup, location) to the top of the Admin Dashboard. Recompute:
+
+Revenue (Gross vs. Net) by period
+
+Expenses pulled from Twilio (SMS costs) and email provider (if trackable)
+
+Profit = Revenue – Expenses
+
+Occupancy trends (daily fill rates)
+
+New vs. Returning Players
+
+3.2 Analytics Page (/admin/analytics)
+Charts & Tables (Recharts):
+
+Revenue Over Time (bar/line)
+
+Expense Breakdown (pie chart of SMS vs. email vs. Stripe fees)
+
+Player Growth (cumulative new players)
+
+Refund Rate (% of payments refunded)
+
+Filters: date range picker, ageGroup, location, gender
+
+Export button to download filtered data as CSV
+
+4. Settings Page Enhancements
+4.1 Timezone Selection
+Field: Timezone dropdown (IANA tz list) saved to settings.timezone
+
+Used by: session time display, cron jobs, calendar sync
+
+4.2 Email Domain Integration
+Fields: SMTP host, port, username, password, from‑address (e.g., no-reply@futsalculture.com)
+
+Test Button: Sends a test email to the Admin’s address
+
+All outgoing emails (booking confirmations, help replies, reminders) now use this domain
+
+4.3 Twilio SMS Integration
+Fields: Account SID, Auth Token, From Number
+
+Test Button: Sends a test SMS to Admin’s phone
+
+All SMS reminders, player invites, and payment reminders go through Twilio
+
+4.4 Other Business Settings
+Venmo handle (editable)
+
+Session price default
+
+Refund policy window (hours)
+
+5. Permissions & Nav Placement
+Nav Item	Feature
+Dashboard	Overview + KPI filters
+Sessions	Session list + import CSV
+Payments	Pending & paid + confirm/refund
+Players	Player roster + import CSV
+Analytics	Charts & exports
+Help Requests	Triage + reply
+Settings	Timezone, Email, SMS, Twilio
+
+—Remove the old standalone “Imports” page.
+

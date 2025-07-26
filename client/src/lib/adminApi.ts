@@ -66,6 +66,10 @@ export const adminHelpRequests = {
   markResolved: (id: string) => apiRequest(`/api/admin/help-requests/${id}/resolve`, {
     method: 'POST',
   }),
+  reply: (id: string, message: string) => apiRequest(`/api/admin/help-requests/${id}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  }),
 };
 
 // Settings API

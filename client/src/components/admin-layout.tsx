@@ -20,7 +20,7 @@ const adminNavItems = [
   { href: "/admin/sessions", label: "Sessions", icon: Calendar },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/players", label: "Players", icon: Users },
-  { href: "/admin/imports", label: "Imports", icon: Upload },
+
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },

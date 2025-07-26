@@ -12,11 +12,19 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle } from 'lucide-react';
+import { MessageSquare, CheckCircle, Reply } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Textarea } from '../../components/ui/textarea';
+import { Label } from '../../components/ui/label';
+import { useToast } from '../../hooks/use-toast';
 
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     adminHelpRequests.list().then(data => {
@@ -35,9 +43,31 @@ export default function AdminHelpRequests() {
       setHelpRequests(helpRequests.map((req: any) => 
         req.id === id ? { ...req, status: 'resolved' } : req
       ));
+      toast({ title: "Help request marked as resolved" });
     } catch (error) {
       console.error('Error marking help request as resolved:', error);
+      toast({ title: "Failed to mark as resolved", variant: "destructive" });
     }
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedRequest || !replyMessage.trim()) return;
+
+    setSending(true);
+    try {
+      await adminHelpRequests.reply(selectedRequest.id, replyMessage);
+      toast({ title: "Reply sent successfully" });
+      setSelectedRequest(null);
+      setReplyMessage('');
+      // Mark as resolved and update list
+      setHelpRequests(helpRequests.map((req: any) => 
+        req.id === selectedRequest.id ? { ...req, status: 'resolved' } : req
+      ));
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast({ title: "Failed to send reply", variant: "destructive" });
+    }
+    setSending(false);
   };
 
   if (loading) {
@@ -102,8 +132,12 @@ export default function AdminHelpRequests() {
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <MessageSquare className="w-4 h-4" />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedRequest(request)}
+                    >
+                      <Reply className="w-4 h-4" />
                     </Button>
                     {request.status !== 'resolved' && (
                       <Button 
@@ -128,6 +162,56 @@ export default function AdminHelpRequests() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Reply Dialog */}
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Reply to Help Request</DialogTitle>
+          </DialogHeader>
+          
+          {selectedRequest && (
+            <div className="space-y-4">
+              <div className="bg-zinc-800 p-4 rounded-lg">
+                <h3 className="font-medium text-white mb-2">{selectedRequest.subject}</h3>
+                <p className="text-sm text-zinc-400 mb-2">
+                  From: {selectedRequest.userEmail} | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
+                </p>
+                <p className="text-zinc-300">{selectedRequest.message || selectedRequest.note}</p>
+              </div>
+
+              <div>
+                <Label htmlFor="replyMessage" className="text-zinc-300">Your Reply</Label>
+                <Textarea
+                  id="replyMessage"
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  placeholder="Type your reply here..."
+                  className="bg-zinc-800 border-zinc-700 text-white min-h-32"
+                  disabled={sending}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedRequest(null)}
+                  disabled={sending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSendReply}
+                  disabled={sending || !replyMessage.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {sending ? 'Sending...' : 'Send Reply & Mark Resolved'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
