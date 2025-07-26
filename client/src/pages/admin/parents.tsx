@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 
 export default function AdminParents() {
   const [parents, setParents] = useState<any[]>([]);
@@ -450,9 +450,12 @@ export default function AdminParents() {
                                 {parentPlayers[parent.id].map((player: any) => (
                                   <div key={player.id} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
                                     <div>
-                                      <span className="text-white font-medium">
+                                      <Link 
+                                        href={`/admin/players?filter=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
+                                        className="text-white font-medium hover:text-blue-400 cursor-pointer underline"
+                                      >
                                         {player.firstName} {player.lastName}
-                                      </span>
+                                      </Link>
                                       <span className="text-zinc-400 ml-2">
                                         ({player.ageGroup}, {player.gender})
                                       </span>
