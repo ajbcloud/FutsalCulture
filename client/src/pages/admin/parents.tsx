@@ -17,12 +17,14 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
-import { adminParents } from '../../lib/adminApi';
+import { adminParents, adminPlayers } from '../../lib/adminApi';
 
 export default function AdminParents() {
   const [parents, setParents] = useState<any[]>([]);
   const [filteredParents, setFilteredParents] = useState<any[]>([]);
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
+  const [parentPlayers, setParentPlayers] = useState<{[key: string]: any[]}>({});
+  const [loadingPlayers, setLoadingPlayers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<any>(null);
@@ -128,6 +130,35 @@ export default function AdminParents() {
         console.error('Error deleting parent:', error);
         toast({ title: "Error deleting parent", variant: "destructive" });
       }
+    }
+  };
+
+  const loadPlayersForParent = async (parentId: string) => {
+    if (parentPlayers[parentId] || loadingPlayers.has(parentId)) {
+      return; // Already loaded or loading
+    }
+
+    setLoadingPlayers(prev => new Set(prev).add(parentId));
+
+    try {
+      const allPlayers = await adminPlayers.list();
+      const parentPlayersList = allPlayers.filter((player: any) => player.parentId === parentId);
+      setParentPlayers(prev => ({
+        ...prev,
+        [parentId]: parentPlayersList
+      }));
+    } catch (error) {
+      console.error('Error loading players for parent:', error);
+      setParentPlayers(prev => ({
+        ...prev,
+        [parentId]: []
+      }));
+    } finally {
+      setLoadingPlayers(prev => {
+        const next = new Set(prev);
+        next.delete(parentId);
+        return next;
+      });
     }
   };
 
@@ -280,6 +311,8 @@ export default function AdminParents() {
                               nextExpanded.delete(parent.id);
                             } else {
                               nextExpanded.add(parent.id);
+                              // Load players when expanding
+                              loadPlayersForParent(parent.id);
                             }
                             setExpandedParentIds(nextExpanded);
                           }}
@@ -322,10 +355,32 @@ export default function AdminParents() {
                       <TableRow className="bg-zinc-900">
                         <TableCell colSpan={7} className="px-8 py-2">
                           <div className="text-sm text-zinc-400">
-                            {parent.playersCount > 0 ? (
+                            {loadingPlayers.has(parent.id) ? (
                               <div className="space-y-1">
                                 <p className="font-medium text-zinc-300">Players:</p>
                                 <p className="text-zinc-500">Loading player details...</p>
+                              </div>
+                            ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
+                              <div className="space-y-2">
+                                <p className="font-medium text-zinc-300">Players:</p>
+                                {parentPlayers[parent.id].map((player: any) => (
+                                  <div key={player.id} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
+                                    <div>
+                                      <span className="text-white font-medium">
+                                        {player.firstName} {player.lastName}
+                                      </span>
+                                      <span className="text-zinc-400 ml-2">
+                                        ({player.ageGroup}, {player.gender})
+                                      </span>
+                                      {player.canAccessPortal && (
+                                        <Badge className="ml-2 bg-green-900 text-green-300 text-xs">Portal Access</Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-right text-xs text-zinc-400">
+                                      {player.signupCount || 0} bookings
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             ) : (
                               <p className="text-zinc-500">No players registered</p>
