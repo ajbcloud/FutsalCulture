@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ const helpSchema = z.object({
   email: z.string().email("Valid email is required"),
   phone: z.string().min(10, "Phone number is required"),
   message: z.string().min(10, "Message must be at least 10 characters"),
+  captcha: z.string().min(1, "Please solve the math problem"),
 });
 
 type HelpForm = z.infer<typeof helpSchema>;
@@ -26,6 +27,32 @@ type HelpForm = z.infer<typeof helpSchema>;
 export default function Help() {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [captchaQuestion, setCaptchaQuestion] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+  
+  // Generate random math captcha
+  const generateCaptcha = () => {
+    const num1 = Math.floor(Math.random() * 10) + 1;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    const operators = ['+', '-', '*'];
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+    
+    let answer;
+    switch(operator) {
+      case '+': answer = num1 + num2; break;
+      case '-': answer = num1 - num2; break;
+      case '*': answer = num1 * num2; break;
+      default: answer = num1 + num2;
+    }
+    
+    setCaptchaQuestion(`${num1} ${operator} ${num2} = ?`);
+    setCaptchaAnswer(answer.toString());
+  };
+  
+  // Generate captcha on component mount
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
   
   const form = useForm<HelpForm>({
     resolver: zodResolver(helpSchema),
@@ -34,17 +61,19 @@ export default function Help() {
       email: "",
       phone: "",
       message: "",
+      captcha: "",
     },
   });
 
   const submitHelpMutation = useMutation({
-    mutationFn: async (data: HelpForm) => {
+    mutationFn: async (data: Omit<HelpForm, 'captcha'>) => {
       const response = await apiRequest("POST", "/api/help", data);
       return response.json();
     },
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset();
+      generateCaptcha(); // Generate new captcha for next submission
       toast({
         title: "Message sent successfully!",
         description: "We'll get back to you within 24 hours.",
@@ -60,7 +89,21 @@ export default function Help() {
   });
 
   const onSubmit = (data: HelpForm) => {
-    submitHelpMutation.mutate(data);
+    // Verify captcha before submitting
+    if (data.captcha !== captchaAnswer) {
+      toast({
+        title: "Captcha Error",
+        description: "Please solve the math problem correctly.",
+        variant: "destructive",
+      });
+      generateCaptcha(); // Generate new captcha
+      form.setValue("captcha", ""); // Clear captcha field
+      return;
+    }
+    
+    // Remove captcha from submission data
+    const { captcha, ...submitData } = data;
+    submitHelpMutation.mutate(submitData);
   };
 
   return (
@@ -169,6 +212,27 @@ export default function Help() {
                             <Textarea 
                               placeholder="How can we help you today?" 
                               rows={5}
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="captcha"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">
+                            Security Check: {captchaQuestion}
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="text" 
+                              placeholder="Enter your answer" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
                             />

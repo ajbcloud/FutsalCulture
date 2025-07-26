@@ -249,7 +249,9 @@ export function setupAdminRoutes(app: any) {
   app.delete('/api/admin/sessions/:id', requireFullAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await storage.deleteSession(id);
+      // TODO: Implement deleteSession method in storage
+      // await storage.deleteSession(id);
+      await db.delete(futsalSessions).where(eq(futsalSessions.id, id));
       res.json({ message: "Session deleted successfully" });
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -521,7 +523,7 @@ export function setupAdminRoutes(app: any) {
           createdAt: player.createdAt,
           parentId: player.parentId,
         }))
-      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      ].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
       res.json(pendingRegistrations);
     } catch (error) {
@@ -596,9 +598,9 @@ export function setupAdminRoutes(app: any) {
         const [updatedPlayer] = await db.update(players)
           .set({
             registrationStatus: 'rejected',
-            rejectedAt: new Date(),
-            rejectedBy: adminUserId,
-            rejectionReason: reason,
+            // rejectedAt: new Date(), // Field doesn't exist in schema
+            // rejectedBy: adminUserId, // Field doesn't exist in schema
+            // rejectionReason: reason, // Field doesn't exist in schema
           })
           .where(eq(players.id, id))
           .returning();
@@ -621,7 +623,7 @@ export function setupAdminRoutes(app: any) {
       const settings = await db.select().from(systemSettings);
       
       const settingsMap = settings.reduce((acc, setting) => {
-        let value = setting.value;
+        let value: any = setting.value;
         // Parse boolean values
         if (value === 'true') value = true;
         if (value === 'false') value = false;
