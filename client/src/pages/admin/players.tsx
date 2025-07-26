@@ -17,7 +17,7 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
@@ -34,6 +34,24 @@ export default function AdminPlayers() {
     search: ''
   });
   const { toast } = useToast();
+  const [location] = useLocation();
+
+  // Check for URL parameters on load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const playerId = urlParams.get('playerId');
+    
+    if (playerId) {
+      // Find the player and set filters to show only that player
+      const targetPlayer = players.find(p => p.id === playerId);
+      if (targetPlayer) {
+        setFilters(prev => ({
+          ...prev,
+          search: `${targetPlayer.firstName} ${targetPlayer.lastName}`
+        }));
+      }
+    }
+  }, [location, players]);
 
   useEffect(() => {
     adminPlayers.list().then(data => {
@@ -226,7 +244,11 @@ export default function AdminPlayers() {
             {filteredPlayers.map((player: any) => (
               <TableRow key={player.id} className="border-zinc-800">
                 <TableCell className="text-white">
-                  {player.firstName} {player.lastName}
+                  <Link href={`/admin/players?playerId=${player.id}`}>
+                    <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
+                      {player.firstName} {player.lastName}
+                    </span>
+                  </Link>
                 </TableCell>
                 <TableCell className="text-zinc-300">
                   {new Date().getFullYear() - player.birthYear}
