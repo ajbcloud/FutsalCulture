@@ -23,13 +23,15 @@ import {
   type InsertNotificationPreferences,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, count } from "drizzle-orm";
+import { eq, desc, and, gte, lte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User>;
+  updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
+  updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void>;
   
   // Player operations
   getPlayersByParent(parentId: string): Promise<Player[]>;
@@ -107,6 +109,28 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        parent2InviteSentVia: method,
+        parent2InvitedAt: invitedAt,
+        parent2InviteEmail: method === 'email' ? contact : null,
+        parent2InvitePhone: method === 'sms' ? contact : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void> {
+    await db
+      .update(players)
+      .set({ parent2Id: parent2Id })
+      .where(eq(players.parentId, parent1Id));
   }
 
   async getPlayersByParent(parentId: string): Promise<Player[]> {

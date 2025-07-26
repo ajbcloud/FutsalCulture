@@ -21,6 +21,7 @@ import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
 import PlayerInvite from "@/pages/player-invite";
+import Parent2Invite from "@/pages/parent2-invite";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
             <Route path="/profile" component={Profile} />
             <Route path="/multi-checkout" component={MultiCheckout} />
             <Route path="/player-invite/:token" component={PlayerInvite} />
+            <Route path="/parent2-invite/:token" component={Parent2Invite} />
             <Route path="/help" component={Help} />
             {(user?.isAdmin || user?.isAssistant) && (
               <>

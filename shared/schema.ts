@@ -38,6 +38,11 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   customerId: varchar("customer_id"),
+  // Parent 2 invite tracking
+  parent2InviteSentVia: varchar("parent2_invite_sent_via"), // 'email' or 'sms'
+  parent2InvitedAt: timestamp("parent2_invited_at"),
+  parent2InviteEmail: varchar("parent2_invite_email"),
+  parent2InvitePhone: varchar("parent2_invite_phone"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,0 +1,90 @@
+Make the Admin “Analytics Dashboard” widgets and charts drive off real data (revenue, player counts, capacity, fill rates, session counts) and update whenever the date‑range or filters change.
+
+1. Verify the Analytics API Endpoint
+Locate the route handler (e.g. server/routes/admin.ts or wherever /api/admin/analytics lives).
+
+Add detailed logging at the top of the handler:
+
+ts
+Copy
+Edit
+console.log("🔍 Analytics query called with:", req.query);
+Check that filters are parsed (startDate, endDate, ageGroup, gender, viewBy). If any are missing or empty, they should default sensibly.
+
+2. Audit & Correct the Database Query
+Open the Drizzle‑ORM / raw SQL that computes each KPI.
+
+For Total Revenue, ensure you’re doing roughly:
+
+sql
+Copy
+Edit
+SELECT SUM(amount_cents)::float/100 AS total_revenue
+  FROM payments p
+  JOIN signups s ON s.id = p.signup_id
+  JOIN futsal_sessions fs ON fs.id = s.session_id
+ WHERE p.paid_at BETWEEN :startDate AND :endDate
+   AND fs.age_group = ANY(:ageGroups)
+   AND fs.gender = :gender
+For Total Players:
+
+sql
+Copy
+Edit
+SELECT COUNT(DISTINCT player_id) AS total_players
+  FROM players
+ WHERE created_at BETWEEN :startDate AND :endDate
+   AND (filters…)
+For Fill Rate: sum up signups ÷ sum up capacity across matching sessions.
+
+For Active Sessions: count sessions with ≥1 signup in range.
+
+Test each query in isolation (e.g. via Replit’s SQL console) with a known date window to verify numbers.
+
+3. Return a Clean JSON Shape
+Your endpoint should return something like:
+
+json
+Copy
+Edit
+{
+  "totalRevenue": 123.45,
+  "totalPlayers": 42,
+  "fillRate": 0.78,
+  "activeSessions": 10,
+  "revenueOverTime": [{ "date":"2025-07-01", "revenue":75 }, …],
+  "occupancyTrends": [{ "date":"2025-07-01", "fillRate":0.65 }, …],
+  "playerGrowth": [{ "date":"2025-07-01", "newPlayers":3 }, …],
+  "ageDistribution": { "U8":10, "U10":15, "U12":17, … }
+}
+Use console.log("📦 Analytics response:", result) just before you res.json(...) to confirm.
+
+4. Wire Up the Front‑End
+Find the React hook or API call in client/src/pages/admin/Analytics.tsx (or similar).
+
+Ensure it passes filters into the fetch URL:
+
+ts
+Copy
+Edit
+const { data } = await api.get("/api/admin/analytics", { params: { start, end, ageGroup, gender, viewBy } });
+Log the raw JSON in the component:
+
+ts
+Copy
+Edit
+useEffect(() => {
+  console.log("🔄 Received analytics data:", data);
+}, [data]);
+Map each field into your KPI cards and chart props. For example:
+
+tsx
+Copy
+Edit
+<StatCard label="Total Revenue" value={`$${data.totalRevenue.toFixed(2)}`} />
+<LineChart data={data.revenueOverTime} x="date" y="revenue" />
+Verify “Apply” button actually re‑triggers the fetch:
+
+Make sure you’re updating the state that your useEffect depends on (e.g. [start, end, ageGroup, gender])
+
+Confirm in the Network tab that a new request goes out on each filter change.

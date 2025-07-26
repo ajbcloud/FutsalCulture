@@ -266,6 +266,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Parent 2 invite routes
+  app.post('/api/parent2/invite', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { method, email, phoneNumber } = req.body;
+
+      if (!method || (method !== 'email' && method !== 'sms')) {
+        return res.status(400).json({ message: "Valid invite method required (email or sms)" });
+      }
+
+      if (method === 'email' && !email) {
+        return res.status(400).json({ message: "Email address required" });
+      }
+
+      if (method === 'sms' && !phoneNumber) {
+        return res.status(400).json({ message: "Phone number required" });
+      }
+
+      // Generate invite token (simplified - in production use JWT)
+      const inviteToken = Buffer.from(`parent2:${userId}:${Date.now()}`).toString('base64');
+      const inviteUrl = `${req.protocol}://${req.get('host')}/parent2-invite/${inviteToken}`;
+
+      // Update user with invite info
+      await storage.updateUserParent2Invite(userId, method, method === 'email' ? email : phoneNumber, new Date());
+
+      // For now, just return the invite URL (in production, send via email/SMS)
+      res.json({
+        method,
+        inviteUrl,
+        message: `Parent 2 invite would be sent via ${method}`,
+        // In production: send actual email/SMS here
+      });
+    } catch (error) {
+      console.error("Error sending parent 2 invite:", error);
+      res.status(500).json({ message: "Failed to send invite" });
+    }
+  });
+
+  // Parent 2 invite validation and acceptance routes
+  app.get('/api/parent2-invite/validate/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Decode token (simplified - in production use JWT verification)
+      let parentId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'parent2') throw new Error('Invalid token type');
+        parentId = parts[1];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const parent1 = await storage.getUser(parentId);
+      if (!parent1) {
+        return res.status(404).json({ message: "Parent not found" });
+      }
+
+      res.json({ 
+        valid: true, 
+        parent1: {
+          id: parent1.id,
+          firstName: parent1.firstName,
+          lastName: parent1.lastName,
+          email: parent1.parent2InviteEmail || parent1.parent2InvitePhone
+        }
+      });
+    } catch (error) {
+      console.error("Error validating parent 2 invite:", error);
+      res.status(500).json({ message: "Failed to validate invite" });
+    }
+  });
+
+  app.post('/api/parent2-invite/accept/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { firstName, lastName, email, phone } = req.body;
+      
+      // Decode token (simplified - in production use JWT verification)
+      let parent1Id: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'parent2') throw new Error('Invalid token type');
+        parent1Id = parts[1];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const parent1 = await storage.getUser(parent1Id);
+      if (!parent1) {
+        return res.status(404).json({ message: "Parent not found" });
+      }
+
+      // Create parent 2 user account
+      const parent2 = await storage.upsertUser({
+        id: `parent2_${parent1Id}_${Date.now()}`,
+        email,
+        firstName,
+        lastName,
+        phone,
+      });
+
+      // Update all players belonging to parent 1 to include parent 2
+      await storage.updatePlayersParent2(parent1Id, parent2.id);
+
+      res.json({ 
+        success: true, 
+        message: "Parent 2 account created successfully",
+        userId: parent2.id
+      });
+    } catch (error) {
+      console.error("Error accepting parent 2 invite:", error);
+      res.status(500).json({ message: "Failed to create parent 2 account" });
+    }
+  });
+
   // Player routes
   app.get('/api/players', isAuthenticated, async (req: any, res) => {
     try {
