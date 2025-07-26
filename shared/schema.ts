@@ -216,7 +216,9 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
-export type FutsalSession = typeof futsalSessions.$inferSelect;
+export type FutsalSession = typeof futsalSessions.$inferSelect & {
+  signupsCount?: number;
+};
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Signup = typeof signups.$inferSelect;
 export type InsertSignup = z.infer<typeof insertSignupSchema>;

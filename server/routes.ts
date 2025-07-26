@@ -48,7 +48,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: status as string,
         gender: gender as string,
       });
-      res.json(sessions);
+      
+      // Add signup count to each session
+      const sessionsWithCounts = await Promise.all(
+        sessions.map(async (session) => {
+          const signupsCount = await storage.getSignupsCount(session.id);
+          return { ...session, signupsCount };
+        })
+      );
+      
+      res.json(sessionsWithCounts);
     } catch (error) {
       console.error("Error fetching sessions:", error);
       res.status(500).json({ message: "Failed to fetch sessions" });

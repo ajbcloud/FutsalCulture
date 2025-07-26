@@ -1,0 +1,72 @@
+Enhance the Today’s Sessions cards to display real‑time spots filled versus total capacity (e.g. 3/10), with color cues:
+
+Green when plenty of spots remain (less than 70% filled)
+
+Yellow when spots are running low (70–100% filled)
+
+Red when full (100% filled)
+
+🔧 Detailed Instructions
+Compute Spots Filled
+
+Backend already provides session.signupsCount (number of reserved spots) and session.capacity.
+
+Render Dynamic Count
+In your session card component (e.g. SessionCard.tsx), replace the static “Spots: /10” with:
+
+tsx
+Copy
+Edit
+const filled = session.signupsCount;
+const total = session.capacity;
+const fillRatio = filled / total;
+
+let countColor = "text-green-400";
+if (fillRatio >= 1) countColor = "text-red-500";
+else if (fillRatio >= 0.7) countColor = "text-yellow-400";
+
+// In JSX:
+<div className="mt-2 flex items-center justify-between">
+  <span className={`font-medium ${countColor}`}>
+    {filled}/{total} spots filled
+  </span>
+  <button
+    disabled={isReserved || filled >= total}
+    className={`px-4 py-2 rounded font-semibold ${
+      isReserved || filled >= total
+        ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+        : "bg-blue-600 hover:bg-blue-700 text-white"
+    }`}
+    onClick={() => reserveSession(session.id)}
+  >
+    {isReserved ? "Reserved" : filled >= total ? "Full" : "Reserve Spot"}
+  </button>
+</div>
+Progress Bar (Optional)
+For extra visual clarity, add a Tailwind‑styled progress bar beneath the count:
+
+tsx
+Copy
+Edit
+<div className="w-full bg-zinc-800 rounded-full h-2 mt-1 overflow-hidden">
+  <div
+    className={`h-2 rounded-full ${
+      fillRatio >= 1 ? "bg-red-500" :
+      fillRatio >= 0.7 ? "bg-yellow-400" :
+      "bg-green-400"
+    }`}
+    style={{ width: `${Math.min(fillRatio,1) * 100}%` }}
+  />
+</div>
+Styling
+
+Ensure contrast in dark mode: use text-green-400, text-yellow-400, text-red-500.
+
+Match existing card padding, borders, and typography.
+
+✅ Outcome
+Each session card shows real‑time X/Y spots filled.
+
+The count text and progress bar change color based on fill ratio.
+
+Reserve button remains correctly enabled/disabled per reservation and capacity.

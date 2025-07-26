@@ -59,7 +59,23 @@ export default function EnhancedSessionCard({
     }
   };
 
-  const isFull = session.signupsCount >= session.capacity;
+  // Calculate spots and color indicators
+  const filled = session.signupsCount ?? 0;
+  const total = session.capacity;
+  const fillRatio = filled / total;
+  const isFull = filled >= total;
+
+  const getSpotCountColor = () => {
+    if (fillRatio >= 1) return "text-red-500";
+    if (fillRatio >= 0.7) return "text-yellow-400";
+    return "text-green-400";
+  };
+
+  const getProgressBarColor = () => {
+    if (fillRatio >= 1) return "bg-red-500";
+    if (fillRatio >= 0.7) return "bg-yellow-400";
+    return "bg-green-400";
+  };
   const isDisabled = isReserved || isFull || createSignupMutation.isPending;
 
   const getButtonText = () => {
@@ -105,9 +121,21 @@ export default function EnhancedSessionCard({
             <span className="text-zinc-400">Price:</span>
             <span className="text-white">${(session.priceCents / 100).toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-zinc-400">Spots:</span>
-            <span className="text-white">{session.signupsCount}/{session.capacity}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-zinc-400">Spots:</span>
+              <span className={`font-medium ${getSpotCountColor()}`}>
+                {filled}/{total} filled
+              </span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${getProgressBarColor()}`}
+                style={{ width: `${Math.min(fillRatio, 1) * 100}%` }}
+              />
+            </div>
           </div>
           
           <Button
