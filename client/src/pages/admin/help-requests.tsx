@@ -108,7 +108,15 @@ export default function AdminHelpRequests() {
         body: JSON.stringify({ resolutionNote: resolutionNote.trim() }),
       });
 
-      if (!response.ok) throw new Error('Failed to resolve help request');
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast({ 
+          title: "Failed to resolve help request", 
+          description: errorData.message || "Unknown error occurred",
+          variant: "destructive" 
+        });
+        return;
+      }
 
       const resolvedRequest = await response.json();
       setHelpRequests(helpRequests.map((req: any) => 
@@ -409,7 +417,7 @@ export default function AdminHelpRequests() {
               </div>
             </div>
             <div>
-              <Label htmlFor="resolutionNote" className="text-zinc-300">Resolution Details *</Label>
+              <Label htmlFor="resolutionNote" className="text-zinc-300">Resolution Details * (minimum 10 characters)</Label>
               <Textarea
                 id="resolutionNote"
                 value={resolutionNote}
@@ -419,9 +427,14 @@ export default function AdminHelpRequests() {
                 placeholder="Describe how you resolved this issue and what actions were taken..."
                 required
               />
-              <p className="text-xs text-zinc-400 mt-1">
-                This note will be logged for future reference and quality assurance.
-              </p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-zinc-500">
+                  {resolutionNote.trim().length}/10 characters minimum
+                </p>
+                <p className="text-xs text-zinc-400">
+                  This note will be logged for future reference and quality assurance.
+                </p>
+              </div>
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setResolvingRequest(null)}>
