@@ -150,4 +150,10 @@ Preferred communication style: Simple, everyday language.
 - **Clickable Days**: Click any calendar day to see detailed session information in a popup
 - **Session Popups**: Show full session details including time, location, capacity, pricing, and booking status
 - **Age-Based Filtering**: Authenticated parents see only sessions eligible for their players' age groups
-- **Navigation**: Calendar view available on both home page and sessions page
+- **Unified Dashboard**: Calendar integrated into parent dashboard with today's sessions and player management
+
+### Recent Changes (July 26, 2025)
+- **Combined Dashboard Experience**: Merged home page and dashboard into unified parent portal with welcome section, today's sessions, player management, and calendar view
+- **Simplified Navigation**: Removed Sessions header from authenticated user navigation - only Dashboard and Help shown to logged-in parents
+- **Authentication Architecture**: Implemented React Context for auth state management, eliminating infinite request loops from React Query auth hook
+- **Improved Performance**: Reduced auth requests from 60+ per minute to single requests on load with proper error handling

@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Landing from "@/pages/landing";
-import Home from "@/pages/home";
+
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
@@ -39,7 +39,7 @@ function Router() {
           </>
         ) : (
           <>
-            <Route path="/" component={Home} />
+            <Route path="/" component={Dashboard} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/dashboard" component={Dashboard} />
