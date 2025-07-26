@@ -447,7 +447,7 @@ export default function AdminSessions() {
 
       {/* Mass Update Modal */}
       <Dialog open={showMassUpdateModal} onOpenChange={setShowMassUpdateModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-white">Mass Update Sessions ({selectedSessions.size} selected)</DialogTitle>
           </DialogHeader>
@@ -457,7 +457,7 @@ export default function AdminSessions() {
               Only fill in the fields you want to update. Empty fields will be left unchanged.
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <Label className="text-zinc-300">Title</Label>
                 <Input
@@ -479,51 +479,129 @@ export default function AdminSessions() {
               </div>
 
               <div>
-                <Label className="text-zinc-300">Age Groups</Label>
-                <Select 
-                  value={massUpdateData.ageGroups.length > 0 ? massUpdateData.ageGroups.join(',') : ''} 
-                  onValueChange={(value) => {
-                    if (value && value !== "keep-existing") {
-                      setMassUpdateData(prev => ({ ...prev, ageGroups: [value] }));
-                    } else {
-                      setMassUpdateData(prev => ({ ...prev, ageGroups: [] }));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                    <SelectValue placeholder="Leave empty to keep existing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep-existing">Keep existing</SelectItem>
-                    {AGE_GROUPS.map(age => (
-                      <SelectItem key={age} value={age}>{age}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-zinc-300">Age Groups (Multi-Select)</Label>
+                <div className="grid grid-cols-3 gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded">
+                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={massUpdateData.ageGroups.length === 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMassUpdateData(prev => ({ ...prev, ageGroups: [] }));
+                        }
+                      }}
+                      className="rounded border-zinc-600 bg-zinc-700"
+                    />
+                    <span>Keep existing</span>
+                  </label>
+                  {AGE_GROUPS.map(age => (
+                    <label key={age} className="flex items-center space-x-2 text-sm text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={massUpdateData.ageGroups.includes(age)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setMassUpdateData(prev => ({
+                              ...prev,
+                              ageGroups: [...prev.ageGroups, age]
+                            }));
+                          } else {
+                            setMassUpdateData(prev => ({
+                              ...prev,
+                              ageGroups: prev.ageGroups.filter(a => a !== age)
+                            }));
+                          }
+                        }}
+                        className="rounded border-zinc-600 bg-zinc-700"
+                      />
+                      <span>{age}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>
-                <Label className="text-zinc-300">Gender</Label>
-                <Select 
-                  value={massUpdateData.genders.length > 0 ? massUpdateData.genders[0] : ''} 
-                  onValueChange={(value) => {
-                    if (value && value !== "keep-existing") {
-                      setMassUpdateData(prev => ({ ...prev, genders: [value] }));
-                    } else {
-                      setMassUpdateData(prev => ({ ...prev, genders: [] }));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                    <SelectValue placeholder="Leave empty to keep existing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep-existing">Keep existing</SelectItem>
-                    <SelectItem value="boys">Boys</SelectItem>
-                    <SelectItem value="girls">Girls</SelectItem>
-                    <SelectItem value="mixed">Mixed</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-zinc-300">Gender (Multi-Select)</Label>
+                <div className="flex flex-wrap gap-3 p-3 bg-zinc-800 border border-zinc-700 rounded">
+                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={massUpdateData.genders.length === 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMassUpdateData(prev => ({ ...prev, genders: [] }));
+                        }
+                      }}
+                      className="rounded border-zinc-600 bg-zinc-700"
+                    />
+                    <span>Keep existing</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={massUpdateData.genders.includes('boys')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: [...prev.genders.filter(g => g !== 'boys'), 'boys']
+                          }));
+                        } else {
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: prev.genders.filter(g => g !== 'boys')
+                          }));
+                        }
+                      }}
+                      className="rounded border-zinc-600 bg-zinc-700"
+                    />
+                    <span>Boys</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={massUpdateData.genders.includes('girls')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: [...prev.genders.filter(g => g !== 'girls'), 'girls']
+                          }));
+                        } else {
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: prev.genders.filter(g => g !== 'girls')
+                          }));
+                        }
+                      }}
+                      className="rounded border-zinc-600 bg-zinc-700"
+                    />
+                    <span>Girls</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={massUpdateData.genders.includes('boys') && massUpdateData.genders.includes('girls')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          // Mixed = both boys and girls
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: ['boys', 'girls']
+                          }));
+                        } else {
+                          // Uncheck mixed = remove both
+                          setMassUpdateData(prev => ({
+                            ...prev,
+                            genders: prev.genders.filter(g => g !== 'boys' && g !== 'girls')
+                          }));
+                        }
+                      }}
+                      className="rounded border-zinc-600 bg-zinc-700"
+                    />
+                    <span>Mixed (Boys + Girls)</span>
+                  </label>
+                </div>
               </div>
 
               <div>
