@@ -30,7 +30,7 @@ export default function EnhancedSessionCard({
       return await apiRequest("POST", "/api/signups", data);
     },
     onSuccess: (signupData) => {
-      // console.log("Signup response data:", signupData);
+      console.log("Signup response data:", signupData);
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       onReservationChange?.(session.id, true);
