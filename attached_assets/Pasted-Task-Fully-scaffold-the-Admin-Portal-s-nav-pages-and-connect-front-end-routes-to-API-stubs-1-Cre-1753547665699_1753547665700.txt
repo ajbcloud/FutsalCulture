@@ -1,0 +1,73 @@
+Task: Fully scaffold the Admin Portal’s nav pages and connect front‑end routes to API stubs.
+
+1. Create Top‑Level Routes & Pages
+For each nav item under /admin, generate a React component and a route entry:
+
+/admin/dashboard → pages/admin/dashboard.tsx
+
+/admin/sessions → pages/admin/sessions/index.tsx
+
+/admin/sessions/[id] → pages/admin/sessions/[id].tsx
+
+/admin/payments → pages/admin/payments.tsx
+
+/admin/players → pages/admin/players.tsx
+
+/admin/imports → pages/admin/imports.tsx
+
+/admin/analytics → pages/admin/analytics.tsx
+
+/admin/help-requests → pages/admin/help-requests.tsx
+
+/admin/settings → pages/admin/settings.tsx
+
+Each page should:
+
+tsx
+Copy
+Edit
+import React from 'react';
+import AdminLayout from '../../components/admin/AdminLayout';
+
+export default function PageName() {
+  return (
+    <AdminLayout>
+      <h1 className="text-2xl font-bold mb-4">Page Title</h1>
+      <p>“Work in progress” placeholder for {Page Title}.</p>
+    </AdminLayout>
+  );
+}
+2. Hook Up Sidebar Links
+In your AdminLayout or Sidebar component, import Link from your router and point each <NavLink> to the new routes.
+
+tsx
+Copy
+Edit
+<NavLink href="/admin/sessions">Sessions</NavLink>
+3. Add API Client Stubs
+Create a folder client/src/lib/adminApi.ts exporting functions for each section:
+
+ts
+Copy
+Edit
+export async function fetchSessions() { return fetch('/api/admin/sessions').then(r => r.json()); }
+export async function fetchSession(id: string) { return fetch(`/api/admin/sessions/${id}`).then(r => r.json()); }
+export async function fetchPayments() { /* ... */ }
+/* etc for players, imports, analytics, helpRequests, settings */
+4. Integrate Data Hooks in Pages
+On each page stub, call the corresponding API stub with React’s useEffect or useQuery, and log the result to console. E.g. in sessions/index.tsx:
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  fetchSessions().then(data => console.log('admin sessions:', data));
+}, []);
+5. Verify Navigation & Console Logs
+After scaffolding:
+
+Click each sidebar link → you should land on the stub page without a 404.
+
+Open browser console → see the API stub log messages for each page.
+
+Next Steps: Replace the placeholders with real tables, forms, charts and wire up the back‑end endpoints you’ve defined.

@@ -200,6 +200,103 @@ export function setupAdminRoutes(app: any) {
   // Admin Analytics
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const analytics = await storage.getAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Admin Help Requests
+  app.get('/api/admin/help-requests', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const helpRequests = await storage.getHelpRequests();
+      res.json(helpRequests);
+    } catch (error) {
+      console.error("Error fetching help requests:", error);
+      res.status(500).json({ message: "Failed to fetch help requests" });
+    }
+  });
+
+  app.post('/api/admin/help-requests/:id/resolve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      // TODO: Add method to mark help request as resolved
+      res.json({ message: "Help request marked as resolved" });
+    } catch (error) {
+      console.error("Error resolving help request:", error);
+      res.status(500).json({ message: "Failed to resolve help request" });
+    }
+  });
+
+  // Admin Settings (placeholder)
+  app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // TODO: Implement settings storage
+      res.json({
+        businessName: "Futsal Culture",
+        contactEmail: "admin@futsalculture.com",
+        timezone: "Singapore/Asia"
+      });
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.patch('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const updateData = req.body;
+      // TODO: Implement settings update
+      res.json({ message: "Settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Session management endpoints
+  app.get('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const session = await storage.getSession(id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching session:", error);
+      res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  app.post('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const sessionData = req.body;
+      const session = await storage.createSession(sessionData);
+      res.json(session);
+    } catch (error) {
+      console.error("Error creating session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const session = await storage.updateSession(id, updateData);
+      res.json(session);
+    } catch (error) {
+      console.error("Error updating session:", error);
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
+  // Admin Analytics
+  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
+    try {
       const { timeframe = '30d' } = req.query;
       
       // Calculate date range

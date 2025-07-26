@@ -1,0 +1,291 @@
+Task: Fully scaffold the Admin Portal’s nav pages and connect front‑end routes to API stubs.
+
+1. Create Top‑Level Routes & Pages
+For each nav item under /admin, generate a React component and a route entry:
+
+/admin/dashboard → pages/admin/dashboard.tsx
+
+/admin/sessions → pages/admin/sessions/index.tsx
+
+/admin/sessions/[id] → pages/admin/sessions/[id].tsx
+
+/admin/payments → pages/admin/payments.tsx
+
+/admin/players → pages/admin/players.tsx
+
+/admin/imports → pages/admin/imports.tsx
+
+/admin/analytics → pages/admin/analytics.tsx
+
+/admin/help-requests → pages/admin/help-requests.tsx
+
+/admin/settings → pages/admin/settings.tsx
+
+Each page should:
+
+tsx
+Copy
+Edit
+import React from 'react';
+import AdminLayout from '../../components/admin/AdminLayout';
+
+export default function PageName() {
+  return (
+    <AdminLayout>
+      <h1 className="text-2xl font-bold mb-4">Page Title</h1>
+      <p>“Work in progress” placeholder for {Page Title}.</p>
+    </AdminLayout>
+  );
+}
+2. Hook Up Sidebar Links
+In your AdminLayout or Sidebar component, import Link from your router and point each <NavLink> to the new routes.
+
+tsx
+Copy
+Edit
+<NavLink href="/admin/sessions">Sessions</NavLink>
+3. Add API Client Stubs
+Create a folder client/src/lib/adminApi.ts exporting functions for each section:
+
+ts
+Copy
+Edit
+export async function fetchSessions() { return fetch('/api/admin/sessions').then(r => r.json()); }
+export async function fetchSession(id: string) { return fetch(`/api/admin/sessions/${id}`).then(r => r.json()); }
+export async function fetchPayments() { /* ... */ }
+/* etc for players, imports, analytics, helpRequests, settings */
+4. Integrate Data Hooks in Pages
+On each page stub, call the corresponding API stub with React’s useEffect or useQuery, and log the result to console. E.g. in sessions/index.tsx:
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  fetchSessions().then(data => console.log('admin sessions:', data));
+}, []);
+5. Verify Navigation & Console Logs
+After scaffolding:
+
+Click each sidebar link → you should land on the stub page without a 404.
+
+Open browser console → see the API stub log messages for each page.
+
+Next Steps: Replace the placeholders with real tables, forms, charts and wire up the back‑end endpoints you’ve defined.
+
+Back‑End Endpoints
+Ensure these exist in server/routes.ts (or your router file) under requireAdmin middleware:
+
+ts
+Copy
+Edit
+// List all sessions
+GET   /api/admin/sessions
+
+// Fetch one session
+GET   /api/admin/sessions/:id
+
+// Create a new session
+POST  /api/admin/sessions
+
+// Update an existing session
+PATCH /api/admin/sessions/:id
+
+// Delete a session
+DELETE /api/admin/sessions/:id
+Each should use your Drizzle schema methods to query or mutate the futsal_sessions table, including age_group, gender, location, capacity, start_time, end_time, and status.
+
+2. Client‑Side Data Hooks
+In client/src/lib/adminApi.ts add:
+
+ts
+Copy
+Edit
+export const adminSessions = {
+  list:    () => fetch('/api/admin/sessions').then(r => r.json()),
+  get:     (id) => fetch(`/api/admin/sessions/${id}`).then(r => r.json()),
+  create:  (data) => fetch('/api/admin/sessions', { method:'POST', body: JSON.stringify(data) }),
+  update:  (id, data) => fetch(`/api/admin/sessions/${id}`, { method:'PATCH', body: JSON.stringify(data) }),
+  delete:  (id) => fetch(`/api/admin/sessions/${id}`, { method:'DELETE' }),
+};
+3. Sessions List Page UI
+In pages/admin/sessions/index.tsx:
+
+Use a data-fetch hook (e.g. useEffect/useState or React Query) to call adminSessions.list().
+
+Render a table or card grid showing:
+
+Date & Time (formatted)
+
+Age Group & Gender
+
+Location
+
+Capacity (filled/total) with a progress bar
+
+Status (Open/Full/Closed)
+
+Actions: Edit (link to /admin/sessions/{id}), Delete (button)
+
+Example skeleton:
+
+tsx
+Copy
+Edit
+useEffect(()=>{
+  adminSessions.list().then(setSessions);
+}, []);
+
+return (
+  <AdminLayout>
+    <h1>Sessions</h1>
+    <button onClick={()=>router.push('/admin/sessions/new')}>+ New Session</button>
+    <table>…sessions.map(s => (
+      <tr key={s.id}>
+        <td>{format(s.startTime)}</td>
+        <td>{s.ageGroup} {s.gender}</td>
+        <td>{s.location}</td>
+        <td><ProgressBar filled={s.signupsCount} total={s.capacity}/></td>
+        <td>{s.status}</td>
+        <td>
+          <button onClick={()=>router.push(`/admin/sessions/${s.id}`)}>Edit</button>
+          <button onClick={()=>handleDelete(s.id)}>Delete</button>
+        </td>
+      </tr>
+    ))}</table>
+  </AdminLayout>
+)
+4. Session Detail / Edit Page
+In pages/admin/sessions/[id].tsx:
+
+Fetch session data via adminSessions.get(id).
+
+Preload a form (react-hook-form or plain state) with fields:
+
+Title
+
+Date & Time pickers
+
+Location dropdown
+
+Age Group (U8–U15) selector
+
+Gender (Boys/Girls)
+
+Capacity input
+
+On Save, call adminSessions.update(id, formData) and redirect back to list.
+
+Also support creating a new session under /admin/sessions/new (same form, but adminSessions.create).
+
+Next Focus: Payments & Refunds
+1. Back‑End Endpoints
+Under requireAdmin middleware, add:
+
+Method	Route	Description
+GET	/api/admin/payments?status=pending	List all signups with paid = false.
+GET	/api/admin/payments?status=paid	List signups with paid = true (for ledger).
+POST	/api/admin/payments/:signupId/confirm	Mark a pending signup as paid.
+POST	/api/admin/payments/:paymentId/refund	Issue a refund via Stripe and flag refundedAt.
+
+Implementation notes:
+
+Confirm payment:
+
+ts
+Copy
+Edit
+app.post('/api/admin/payments/:signupId/confirm', async (req, res) => {
+  await db.signups.update({ 
+    where: { id: req.params.signupId }, 
+    data: { paid: true } 
+  });
+  // Optionally: send confirmation email/SMS
+  res.sendStatus(204);
+});
+Refund:
+
+ts
+Copy
+Edit
+app.post('/api/admin/payments/:paymentId/refund', async (req, res) => {
+  const payment = await db.payments.findUnique({ where: { id: req.params.paymentId } });
+  await stripe.refunds.create({ payment_intent: payment.stripePaymentIntentId });
+  await db.payments.update({
+    where: { id: payment.id },
+    data: { refundedAt: new Date() }
+  });
+  res.sendStatus(204);
+});
+2. Client‑Side API Stubs
+In client/src/lib/adminApi.ts:
+
+ts
+Copy
+Edit
+export const adminPayments = {
+  list:      (status) => fetch(`/api/admin/payments?status=${status}`).then(r => r.json()),
+  confirm:   (signupId) => fetch(`/api/admin/payments/${signupId}/confirm`, { method: 'POST' }),
+  refund:    (paymentId) => fetch(`/api/admin/payments/${paymentId}/refund`, { method: 'POST' }),
+};
+3. Payments List Page (/admin/payments)
+Tabs or filters for “Pending” vs. “Paid”
+
+Pending Tab:
+
+Table columns: Player, Session, Reserved At, Expires At, Actions
+
+“Confirm Payment” button per row → calls adminPayments.confirm(signupId) and removes from pending.
+
+Paid Tab:
+
+Table columns: Player, Session, Paid At, Amount, Actions
+
+“Refund” button per row → calls adminPayments.refund(paymentId) and moves to refunded state.
+
+Example skeleton:
+
+tsx
+Copy
+Edit
+const [payments, setPayments] = useState([]);
+const [status, setStatus] = useState<'pending'|'paid'>('pending');
+
+useEffect(() => {
+  adminPayments.list(status).then(setPayments);
+}, [status]);
+
+return (
+  <AdminLayout>
+    <h1>Payments & Refunds</h1>
+    <Tabs value={status} onChange={setStatus}>
+      <Tab value="pending">Pending</Tab>
+      <Tab value="paid">Paid</Tab>
+    </Tabs>
+    <Table>
+      {payments.map(p => (
+        <Row key={p.id}>
+          <Cell>{p.playerName}</Cell>
+          <Cell>{p.sessionTitle}</Cell>
+          <Cell>{status === 'pending' ? p.reservedAt : p.paidAt}</Cell>
+          <Cell>${p.amountCents/100}</Cell>
+          <Cell>
+            {status === 'pending' ? (
+              <Button onClick={()=>confirm(p.id)}>Confirm</Button>
+            ) : (
+              <Button onClick={()=>refund(p.id)}>Refund</Button>
+            )}
+          </Cell>
+        </Row>
+      ))}
+    </Table>
+  </AdminLayout>
+);
+4. Testing & Verification
+Seed a couple of pending signups in your database.
+
+Visit /admin/payments, confirm they appear under “Pending.”
+
+Click Confirm → row disappears or moves to “Paid.”
+
+Switch to “Paid” → click Refund → row updates to “Refunded” state (you can hide or gray it out).
+
