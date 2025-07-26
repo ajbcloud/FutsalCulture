@@ -1031,17 +1031,27 @@ export function setupAdminRoutes(app: any) {
 
   // CSV Template Downloads
   app.get('/api/admin/template/sessions', requireAdmin, (req: Request, res: Response) => {
-    const csvHeaders = 'title,location,ageGroup,gender,startTime,endTime,capacity,priceCents\n';
+    const csvContent = `title,location,ageGroup,gender,startTime,endTime,capacity,priceCents
+U10 Boys Morning Training,Sugar Sand Park Boca Raton,U10,boys,2025-07-27 09:00:00,2025-07-27 10:30:00,12,1000
+U12 Girls Afternoon Session,Central Park Field,U12,girls,2025-07-27 15:00:00,2025-07-27 16:30:00,10,1000
+U14 Boys Evening Training,Westside Regional Park,U14,boys,2025-07-27 18:00:00,2025-07-27 19:30:00,15,1000
+U11 Mixed Skills Development,Sugar Sand Park Boca Raton,U11,boys,2025-07-28 10:00:00,2025-07-28 11:30:00,12,1000
+U13 Girls Advanced Training,Central Park Field,U13,girls,2025-07-28 16:00:00,2025-07-28 17:30:00,8,1000`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
-    res.send(csvHeaders);
+    res.send(csvContent);
   });
 
   app.get('/api/admin/template/players', requireAdmin, (req: Request, res: Response) => {
-    const csvHeaders = 'firstName,lastName,birthYear,gender,parentEmail,parentPhone,canAccessPortal,canBookAndPay\n';
+    const csvContent = `firstName,lastName,birthYear,gender,parentEmail,parentPhone,soccerClub,canAccessPortal,canBookAndPay
+Emma,Rodriguez,2013,girls,maria.rodriguez@email.com,555-123-4567,FC Barcelona Youth,true,true
+Liam,Thompson,2012,boys,david.thompson@email.com,555-234-5678,Real Madrid Academy,true,true
+Sofia,Chen,2014,girls,lisa.chen@email.com,555-345-6789,Manchester United Youth,false,false
+Noah,Johnson,2011,boys,sarah.johnson@email.com,555-456-7890,Chelsea FC Academy,true,true
+Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="players_template.csv"');
-    res.send(csvHeaders);
+    res.send(csvContent);
   });
 
   // CSV Import Endpoints
