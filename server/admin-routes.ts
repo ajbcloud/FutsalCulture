@@ -412,6 +412,7 @@ export function setupAdminRoutes(app: any) {
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
+      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
       // Build date filters
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -466,8 +467,8 @@ export function setupAdminRoutes(app: any) {
       // Get filtered signups and payments
       const sessionIds = applicableSessions.map(s => s.id);
       
-      let filteredSignups = [];
-      let filteredPayments = [];
+      let filteredSignups: any[] = [];
+      let filteredPayments: any[] = [];
       
       if (sessionIds.length > 0) {
         filteredSignups = await db
@@ -498,9 +499,9 @@ export function setupAdminRoutes(app: any) {
       }
       
       // Get filtered players
-      let filteredPlayers = [];
+      let filteredPlayers: any[] = [];
       if (filteredSignups.length > 0) {
-        const playerIds = [...new Set(filteredSignups.map(s => s.playerId))];
+        const playerIds = Array.from(new Set(filteredSignups.map(s => s.playerId)));
         filteredPlayers = await db
           .select()
           .from(players)
@@ -508,7 +509,7 @@ export function setupAdminRoutes(app: any) {
           
         // Apply player-level filters
         if (ageGroup && ageGroup !== 'all') {
-          const targetAge = parseInt(ageGroup.substring(1));
+          const targetAge = parseInt((ageGroup as string).substring(1));
           filteredPlayers = filteredPlayers.filter(player => {
             const age = new Date().getFullYear() - player.birthYear;
             return Math.abs(age - targetAge) <= 2; // Within 2 years
@@ -526,6 +527,16 @@ export function setupAdminRoutes(app: any) {
       const totalSignups = filteredSignups.length;
       const totalCapacity = applicableSessions.reduce((sum, session) => sum + session.capacity, 0);
       const fillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
+      
+      console.log('Analytics calculation:', {
+        filteredPayments: filteredPayments.length,
+        totalRevenue,
+        totalSessions,
+        totalSignups,
+        totalCapacity,
+        fillRate,
+        filteredPlayers: filteredPlayers.length
+      });
       
       const filteredAnalytics = {
         totalPlayers: filteredPlayers.length,
