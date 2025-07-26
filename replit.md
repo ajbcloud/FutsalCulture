@@ -57,11 +57,12 @@ Preferred communication style: Simple, everyday language.
 
 ### Core Features
 1. **Session Management**: Daily session creation with age groups and locations
-2. **Booking System**: Time-restricted booking (8 AM day-of rule)
-3. **Capacity Monitoring**: Real-time tracking of available spots
-4. **Payment Integration**: Secure Stripe checkout flow
-5. **Parent Dashboard**: Player management and booking history
-6. **Admin Panel**: Session management and analytics
+2. **Interactive Calendar**: Monthly calendar view with clickable days that show session details in popups
+3. **Advanced Filtering**: Real-time filtering by age group, gender, and location on sessions page
+4. **Booking System**: Time-restricted booking (8 AM day-of rule) - currently disabled (payments removed)
+5. **Capacity Monitoring**: Real-time tracking of available spots
+6. **Parent Dashboard**: Player management and booking history with age-based session filtering
+7. **Admin Panel**: Session management and analytics
 
 ### Business Logic
 - Sessions open for booking at 8 AM on the day of the session
@@ -141,3 +142,10 @@ Preferred communication style: Simple, everyday language.
 - Smart invite system testing data with varied email/phone combinations
 - Run seeding with: `tsx server/seed.ts`
 - Clears existing data and repopulates with fresh test data
+
+### Calendar Features
+- **Interactive Calendar View**: Monthly calendar showing sessions on each day
+- **Clickable Days**: Click any calendar day to see detailed session information in a popup
+- **Session Popups**: Show full session details including time, location, capacity, pricing, and booking status
+- **Age-Based Filtering**: Authenticated parents see only sessions eligible for their players' age groups
+- **Navigation**: Calendar view available on both home page and sessions page

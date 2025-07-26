@@ -118,6 +118,7 @@ export default function Home() {
             <p className="text-zinc-400">View your personalized schedule based on your players' age groups</p>
           </div>
           <SessionCalendar 
+            showBookingButtons={true}
             onSessionClick={(session) => {
               window.location.href = `/sessions/${session.id}`;
             }}

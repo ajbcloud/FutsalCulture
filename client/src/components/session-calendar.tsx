@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, MapPin, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FutsalSession, Player } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { calculateAgeGroup, isSessionEligibleForPlayer } from "@shared/utils";
@@ -23,6 +24,8 @@ export default function SessionCalendar({
   onSessionClick 
 }: SessionCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { isAuthenticated } = useAuth();
 
   // Fetch players to determine age groups for filtering
@@ -122,10 +125,14 @@ export default function SessionCalendar({
           return (
             <div
               key={dateKey}
-              className={`min-h-[120px] p-2 border border-zinc-800 rounded-lg ${
-                isToday ? 'bg-blue-900/20 border-blue-500' : 
-                isPast ? 'bg-zinc-900/50' : 'bg-zinc-900'
+              className={`min-h-[120px] p-2 border border-zinc-800 rounded-lg cursor-pointer transition-colors ${
+                isToday ? 'bg-blue-900/20 border-blue-500 hover:bg-blue-900/30' : 
+                isPast ? 'bg-zinc-900/50 hover:bg-zinc-900/70' : 'bg-zinc-900 hover:bg-zinc-800'
               }`}
+              onClick={() => {
+                setSelectedDate(day);
+                setIsDialogOpen(true);
+              }}
             >
               <div className={`text-sm font-medium mb-2 ${
                 isToday ? 'text-blue-400' : 
@@ -211,6 +218,111 @@ export default function SessionCalendar({
           <span className="text-zinc-300">Closed</span>
         </div>
       </div>
+
+      {/* Day Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-700 max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedDate && (
+            <div className="space-y-4">
+              {(() => {
+                const dateKey = format(selectedDate, 'yyyy-MM-dd');
+                const daySessions = sessionsByDate[dateKey] || [];
+                
+                if (daySessions.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <p className="text-zinc-400">No sessions scheduled for this day.</p>
+                    </div>
+                  );
+                }
+
+                return daySessions.map(session => (
+                  <Card 
+                    key={session.id} 
+                    className={`border-none cursor-pointer transition-colors ${
+                      session.status === 'open' ? 'bg-green-700/20 hover:bg-green-700/30' :
+                      session.status === 'full' ? 'bg-red-700/20 hover:bg-red-700/30' :
+                      session.status === 'closed' ? 'bg-zinc-700/20 hover:bg-zinc-700/30' :
+                      'bg-blue-700/20 hover:bg-blue-700/30'
+                    }`}
+                    onClick={() => {
+                      if (onSessionClick) {
+                        onSessionClick(session);
+                        setIsDialogOpen(false);
+                      }
+                    }}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-white text-lg">{session.title}</CardTitle>
+                        <Badge 
+                          variant={session.status === 'open' ? 'default' : 'secondary'}
+                          className="capitalize"
+                        >
+                          {session.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-4 text-zinc-300">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{format(new Date(session.startTime), 'HH:mm')} - {format(new Date(session.endTime), 'HH:mm')}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>{session.location}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="text-zinc-300 border-zinc-600">
+                            {session.ageGroup}
+                          </Badge>
+                          <Badge variant="outline" className="text-zinc-300 border-zinc-600 capitalize">
+                            {session.gender}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-zinc-400">
+                          <Users className="w-4 h-4" />
+                          <span>{session.capacity} spots</span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-zinc-400">
+                        Price: ${(session.priceCents / 100).toFixed(2)}
+                      </div>
+                      
+                      {showBookingButtons && session.status === 'open' && (
+                        <Button 
+                          className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSessionClick) {
+                              onSessionClick(session);
+                              setIsDialogOpen(false);
+                            }
+                          }}
+                        >
+                          Book Session
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ));
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

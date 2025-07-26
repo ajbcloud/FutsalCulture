@@ -150,6 +150,7 @@ export default function Sessions() {
             <SessionCalendar 
               ageGroupFilter={ageFilter === "all" ? undefined : ageFilter}
               genderFilter={genderFilter === "all" ? undefined : genderFilter}
+              showBookingButtons={true}
               onSessionClick={(session) => {
                 window.location.href = `/sessions/${session.id}`;
               }}
