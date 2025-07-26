@@ -36,11 +36,25 @@ export default function AdminPlayers() {
   useEffect(() => {
     adminPlayers.list().then(data => {
       console.log('admin players:', data);
-      setPlayers(data);
-      setFilteredPlayers(data);
+      
+      // Handle error response
+      if (data.message && data.message.includes('Failed')) {
+        console.error('Server error:', data.message);
+        setPlayers([]);
+        setFilteredPlayers([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Ensure data is an array
+      const playersArray = Array.isArray(data) ? data : [];
+      setPlayers(playersArray);
+      setFilteredPlayers(playersArray);
       setLoading(false);
     }).catch(err => {
       console.error('Error fetching players:', err);
+      setPlayers([]);
+      setFilteredPlayers([]);
       setLoading(false);
     });
   }, []);

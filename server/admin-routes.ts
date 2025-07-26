@@ -176,12 +176,57 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Players Management - Basic version for now
+  // Admin Players Management
   app.get('/api/admin/players', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // For now, just return basic player info
-      // TODO: Add parent details and signup counts when storage methods are available
-      res.json([]);
+      // Get all players with parent information and signup counts
+      const allPlayers = await db.select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+        birthYear: players.birthYear,
+        gender: players.gender,
+        parentId: players.parentId,
+        canAccessPortal: players.canAccessPortal,
+        canBookAndPay: players.canBookAndPay,
+        email: players.email,
+        phoneNumber: players.phoneNumber,
+        createdAt: players.createdAt,
+        // Parent info
+        parentFirstName: users.firstName,
+        parentLastName: users.lastName,
+        parentEmail: users.email,
+        // Signup count
+        signupCount: sql<number>`(
+          SELECT COUNT(*)::int 
+          FROM ${signups} 
+          WHERE ${signups.playerId} = ${players.id}
+        )`,
+      })
+      .from(players)
+      .leftJoin(users, eq(users.id, players.parentId));
+
+      const playersWithData = allPlayers.map(player => ({
+        id: player.id,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        birthYear: player.birthYear,
+        gender: player.gender,
+        age: new Date().getFullYear() - player.birthYear,
+        ageGroup: `U${new Date().getFullYear() - player.birthYear}`,
+        parentId: player.parentId,
+        parentName: `${player.parentFirstName || ''} ${player.parentLastName || ''}`.trim(),
+        parentEmail: player.parentEmail,
+        canAccessPortal: player.canAccessPortal,
+        canBookAndPay: player.canBookAndPay,
+        email: player.email,
+        phoneNumber: player.phoneNumber,
+        signupCount: player.signupCount || 0,
+        createdAt: player.createdAt,
+        lastActivity: player.createdAt // Using creation date as proxy for now
+      }));
+
+      res.json(playersWithData);
     } catch (error) {
       console.error("Error fetching admin players:", error);
       res.status(500).json({ message: "Failed to fetch players" });
