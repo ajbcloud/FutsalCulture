@@ -1,0 +1,134 @@
+We’re integrating a calendar day‑click feature and reinforcing player eligibility rules in the Futsal Culture booking app.
+
+Calendar Day‑Click: Rather than redirecting immediately when a day or event is clicked, we want users to see a modal listing all sessions on that date. This preserves context, lets them choose which session to explore, and keeps the calendar view intact until they explicitly select a session.
+
+Strict Eligibility Enforcement: On the session detail page, only players whose age group and gender match the session’s requirements may book. Disabling ineligible options ensures parents can’t accidentally reserve wrong sessions and players see only what’s appropriate.
+
+This improves UX by clarifying available sessions at a glance and preventing booking errors upstream.
+
+🔧 Build Instructions for Replit AI
+1. Calendar Day‑Click Modal
+Locate your calendar component (CalendarView.tsx or similar).
+
+Remove any immediate router.push or window.location calls in your onDateClick or event handler.
+
+Fetch sessions for the clicked date:
+
+ts
+Copy
+Edit
+const sessionsOnDate = await api.get(`/api/sessions?date=${clickedDate}`);
+Open a Modal listing those sessions:
+
+jsx
+Copy
+Edit
+<Modal onClose={closeModal}>
+  <h3 className="text-xl font-semibold">{formatDate(clickedDate)}</h3>
+  {sessionsOnDate.map(session => (
+    <Link
+      key={session.id}
+      href={`/sessions/${session.id}`}
+      className="block p-2 hover:bg-zinc-800 rounded"
+    >
+      <p className="font-medium">{session.title}</p>
+      <p className="text-sm">{formatTime(session.startTime)}</p>
+      <p className="text-sm text-zinc-400">{session.location}</p>
+    </Link>
+  ))}
+  {sessionsOnDate.length === 0 && (
+    <p className="text-zinc-400 italic">No sessions on this date.</p>
+  )}
+</Modal>
+Ensure no “Book” or “Reserve” buttons appear in this modal—purely informational.
+
+2. Session‑Detail Page Eligibility
+Open client/src/pages/sessions/[id].tsx.
+
+Extract session requirements:
+
+ts
+Copy
+Edit
+const { data: session } = useQuery(['session', id], fetchSession);
+const sessionGender = session.gender;      // “boys” or “girls”
+const sessionAgeGroup = session.ageGroup;  // “U10”, “U12”, etc.
+Compute each player’s age group on the fly:
+
+ts
+Copy
+Edit
+function calculateAgeGroup(birthYear) {
+  const year = new Date().getFullYear();
+  return `U${(year - birthYear) + 1}`;
+}
+Render the Select Player dropdown with eligibility checks:
+
+jsx
+Copy
+Edit
+<select
+  value={selectedPlayerId}
+  onChange={e => setSelectedPlayerId(e.target.value)}
+  className="bg-zinc-900 border border-zinc-700 rounded p-2 w-full"
+>
+  <option value="">Choose a player</option>
+  {userPlayers.map(player => {
+    const playerGroup = calculateAgeGroup(player.birthYear);
+    const eligible =
+      player.gender === sessionGender &&
+      playerGroup === sessionAgeGroup;
+    return (
+      <option
+        key={player.id}
+        value={player.id}
+        disabled={!eligible}
+        title={
+          !eligible
+            ? `Not eligible: requires ${sessionGender} ${sessionAgeGroup}`
+            : ''
+        }
+        className={!eligible ? 'text-zinc-600' : ''}
+      >
+        {player.firstName} {player.lastName} — {playerGroup}
+      </option>
+    );
+  })}
+</select>
+Disable the Reserve button when:
+
+jsx
+Copy
+Edit
+const isPlayerEligible = userPlayers.some(p => p.id === selectedPlayerId && /* eligibility logic */);
+
+<button
+  disabled={!isPlayerEligible}
+  className={`mt-4 px-4 py-2 rounded ${
+    isPlayerEligible
+      ? 'bg-green-600 hover:bg-green-700 text-white'
+      : 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+  }`}
+  onClick={handleReserve}
+>
+  Reserve Spot & Pay
+</button>
+3. Testing
+Calendar:
+
+Click a date cell → modal shows sessions for that day.
+
+No booking controls in the modal.
+
+Session‑Detail:
+
+Dropdown lists only eligible players enabled.
+
+Ineligible players greyed out with tooltip.
+
+Reserve button only active when an eligible player is selected.
+
+Navigation:
+
+Clicking a session in the modal routes to /sessions/{id} without errors.
+

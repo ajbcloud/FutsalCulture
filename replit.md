@@ -165,3 +165,5 @@ Preferred communication style: Simple, everyday language.
 - **Venmo Integration**: Redesigned payment prompt with clear @DMC-Futsal_Culture handle display, formatted message field using current date, and separate buttons for web and mobile app access
 - **Admin Payment Management**: Built admin panel for managing pending payments with reminder system and manual payment confirmation
 - **Background Job System**: Added automated cleanup of expired reservations every 15 minutes to free up spots
+- **Player Eligibility Enforcement**: Session detail page now enforces strict eligibility rules with disabled dropdown options for ineligible players and reserve button validation
+- **Calendar Day-Click Modal**: Calendar displays session information modal when clicking on dates - fully implemented in existing session-calendar.tsx component

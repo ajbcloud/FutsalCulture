@@ -141,7 +141,11 @@ export default function SessionDetail() {
                   </p>
                 </div>
               ) : (
-                <ReservationForm sessionId={session.id} />
+                <ReservationForm 
+                  sessionId={session.id} 
+                  session={session}
+                  preSelectedPlayerId={new URLSearchParams(window.location.search).get('playerId') || undefined}
+                />
               )}
             </CardContent>
           </Card>

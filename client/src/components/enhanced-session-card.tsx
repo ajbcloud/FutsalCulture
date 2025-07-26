@@ -28,13 +28,9 @@ export default function EnhancedSessionCard({
   const createSignupMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
       const response = await apiRequest("POST", "/api/signups", data);
-      const signupData = await response.json();
-      console.log("Parsed signup data:", signupData);
-      return signupData;
+      return await response.json();
     },
     onSuccess: (signupData) => {
-      console.log("Signup response data:", signupData);
-      console.log("Setting venmo data and showing prompt...");
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       onReservationChange?.(session.id, true);
@@ -42,7 +38,6 @@ export default function EnhancedSessionCard({
       // Show Venmo prompt with reservation details
       setVenmoData(signupData);
       setShowVenmoPrompt(true);
-      console.log("VenmoPrompt state:", { venmoData: signupData, showVenmoPrompt: true });
     },
     onError: (error: any) => {
       toast({

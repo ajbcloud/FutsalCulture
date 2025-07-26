@@ -338,7 +338,7 @@ export default function Dashboard() {
                   isReserved={reservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
                   onReservationChange={(sessionId, reserved) => {
                     if (reserved) {
-                      setLocalReservedSessions(prev => new Set([...prev, sessionId]));
+                      setLocalReservedSessions(prev => new Set(Array.from(prev).concat(sessionId)));
                     } else {
                       setLocalReservedSessions(prev => {
                         const next = new Set(prev);
