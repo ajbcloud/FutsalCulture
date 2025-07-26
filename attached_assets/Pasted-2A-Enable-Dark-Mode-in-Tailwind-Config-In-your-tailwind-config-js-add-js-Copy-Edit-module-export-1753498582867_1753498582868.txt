@@ -1,0 +1,117 @@
+2A. Enable Dark Mode in Tailwind Config
+In your tailwind.config.js, add:
+
+js
+Copy
+Edit
+module.exports = {
+  darkMode: 'class',
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+This activates dark mode using a CSS class. We’ll manually toggle it later using <body class="dark">.
+
+✅ 2B. Global Application Setup
+In index.html (or wherever your HTML root lives, often under public/):
+
+Update the <body> to default to dark:
+
+html
+Copy
+Edit
+<body class="dark bg-black text-white">
+  <div id="root"></div>
+</body>
+This sets global background to black and text to white.
+
+✅ 2C. Global Styling Adjustments (Optional)
+If you have a global.css or similar, ensure you remove any light-specific styles and enforce:
+
+css
+Copy
+Edit
+body {
+  @apply bg-black text-white;
+}
+✅ 2D. Tailwind Dark Mode Usage Across Components
+Update your UI components to use these dark mode color classes:
+
+📦 Layout Containers
+tsx
+Copy
+Edit
+<div className="bg-black text-white min-h-screen">
+📌 Cards
+tsx
+Copy
+Edit
+<div className="bg-zinc-900 border border-zinc-700 p-4 rounded-xl shadow-md">
+🧭 Buttons
+tsx
+Copy
+Edit
+<button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl">
+  Reserve Spot
+</button>
+🟢 Accent Status Text
+tsx
+Copy
+Edit
+<p className="text-green-400 font-medium">Session Open</p>
+<p className="text-yellow-400 font-medium">Filling Fast</p>
+<p className="text-red-400 font-medium">Session Full</p>
+📥 Form Inputs
+tsx
+Copy
+Edit
+<input
+  className="bg-zinc-800 text-white border border-zinc-600 rounded px-3 py-2 w-full"
+  placeholder="Your name"
+/>
+✅ 2E. Strategic Color Use Guide
+Element	Class Example	Purpose
+CTAs / Buttons	bg-blue-600 hover:bg-blue-700	Interactivity
+Success Text	text-green-400	Confirmed / Available
+Warning Text	text-yellow-400	Limited Capacity / Alert
+Error Text	text-red-400	Full / Errors
+Cards/Boxes	bg-zinc-900 border-zinc-700	Containers
+
+✅ 2F. Session Card Example (Full JSX)
+tsx
+Copy
+Edit
+<div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-4 shadow-md">
+  <h3 className="text-xl font-semibold">U10 Girls – Boca</h3>
+  <p className="text-sm text-zinc-400">Thu 6:00 PM - 7:00 PM</p>
+  <div className="flex items-center justify-between mt-2">
+    <p className="text-green-400 font-bold">6 of 10 spots filled</p>
+    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded-xl">
+      Reserve Spot
+    </button>
+  </div>
+</div>
+✅ 2G. Testing Tips
+Add dark class directly to <body> for now.
+
+Later, add a toggle with localStorage support if you want optional light/dark modes.
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  document.body.classList.add("dark");
+}, []);
+🟢 Ready for Build
+Let your Replit agent apply the changes across your layout and UI components. If your app structure uses App.tsx as root, ensure you:
+
+Wrap everything in a div with bg-black text-white.
+
+Confirm Tailwind classes override any existing ones.
+
+Review the preview for contrast, readability, and padding.
+

@@ -19,36 +19,38 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route path="/sessions" component={Sessions} />
-          <Route path="/sessions/:id" component={SessionDetail} />
-          <Route path="/help" component={Help} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/sessions" component={Sessions} />
-          <Route path="/sessions/:id" component={SessionDetail} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/checkout/:signupId" component={Checkout} />
-          <Route path="/help" component={Help} />
-          {user?.isAdmin && (
-            <Route path="/admin" component={AdminDashboard} />
-          )}
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <div className="bg-black text-white min-h-screen">
+      <Switch>
+        {!isAuthenticated ? (
+          <>
+            <Route path="/" component={Landing} />
+            <Route path="/sessions" component={Sessions} />
+            <Route path="/sessions/:id" component={SessionDetail} />
+            <Route path="/help" component={Help} />
+          </>
+        ) : (
+          <>
+            <Route path="/" component={Home} />
+            <Route path="/sessions" component={Sessions} />
+            <Route path="/sessions/:id" component={SessionDetail} />
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/checkout/:signupId" component={Checkout} />
+            <Route path="/help" component={Help} />
+            {user?.isAdmin && (
+              <Route path="/admin" component={AdminDashboard} />
+            )}
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
+    </div>
   );
 }
 

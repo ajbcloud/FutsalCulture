@@ -6,22 +6,22 @@ import { Clock, Users, CreditCard } from "lucide-react";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black text-white">
       <Navbar />
       
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-futsal-600 to-brand-600 text-white">
+      <section className="bg-gradient-to-r from-green-600 to-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Elite Futsal Training</h1>
-            <p className="text-xl md:text-2xl mb-8 text-futsal-100">
+            <p className="text-xl md:text-2xl mb-8 text-green-100">
               Professional coaching for young athletes. Limited spots available daily.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="bg-white text-futsal-600 hover:bg-gray-100">
+              <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100">
                 <a href="/api/login">Start Reserving</a>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-futsal-600">
+              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-green-600">
                 <Link href="/sessions">View Schedule</Link>
               </Button>
             </div>
@@ -30,11 +30,11 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Futsal Culture?</h2>
-            <p className="text-xl text-gray-600">Professional training with flexible booking</p>
+            <h2 className="text-3xl font-bold text-white mb-4">Why Choose Futsal Culture?</h2>
+            <p className="text-xl text-zinc-400">Professional training with flexible booking</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">

@@ -61,41 +61,41 @@ export default function SessionDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black text-white">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Session Details */}
-          <Card>
+          <Card className="bg-zinc-900 border border-zinc-700">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-2xl">{session.title}</CardTitle>
-                  <p className="text-gray-600 mt-1">{session.ageGroup}</p>
+                  <CardTitle className="text-2xl text-white">{session.title}</CardTitle>
+                  <p className="text-zinc-400 mt-1">{session.ageGroup}</p>
                 </div>
                 {getStatusBadge()}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-zinc-400">
                 <Clock className="w-5 h-5 mr-3" />
                 <span>
                   {new Date(session.startTime).toLocaleString()} - {new Date(session.endTime).toLocaleTimeString()}
                 </span>
               </div>
               
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-zinc-400">
                 <MapPin className="w-5 h-5 mr-3" />
                 <span>{session.location}</span>
               </div>
               
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-zinc-400">
                 <DollarSign className="w-5 h-5 mr-3" />
                 <span>${(session.priceCents / 100).toFixed(2)}</span>
               </div>
               
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-zinc-400">
                 <Users className="w-5 h-5 mr-3" />
                 <span>{session.signupsCount} of {session.capacity} spots filled</span>
               </div>

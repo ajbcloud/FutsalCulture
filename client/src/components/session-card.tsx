@@ -46,18 +46,18 @@ export default function SessionCard({ session }: SessionCardProps) {
   const isFull = session.status === "full" || fillPercentage >= 100;
 
   return (
-    <Card className={`hover:shadow-md transition-shadow ${isFull ? 'opacity-75' : ''}`}>
+    <Card className={`bg-zinc-900 border border-zinc-700 hover:shadow-md transition-shadow ${isFull ? 'opacity-75' : ''}`}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">{session.title}</h3>
-            <p className="text-gray-600">{session.location}</p>
+            <h3 className="text-xl font-semibold text-white">{session.title}</h3>
+            <p className="text-zinc-400">{session.location}</p>
           </div>
           {getStatusBadge()}
         </div>
         
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-zinc-400">
             <Clock className="w-4 h-4 mr-2" />
             <span>
               {new Date(session.startTime).toLocaleTimeString([], { 
@@ -69,22 +69,22 @@ export default function SessionCard({ session }: SessionCardProps) {
               })}
             </span>
           </div>
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-zinc-400">
             <MapPin className="w-4 h-4 mr-2" />
             <span>{session.ageGroup}</span>
           </div>
-          <div className="flex items-center text-gray-600">
+          <div className="flex items-center text-zinc-400">
             <DollarSign className="w-4 h-4 mr-2" />
             <span>${(session.priceCents / 100).toFixed(2)}</span>
           </div>
         </div>
 
         <div className="mb-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
+          <div className="flex justify-between text-sm text-zinc-400 mb-2">
             <span>Capacity</span>
             <span>{signupsCount} of {session.capacity} spots filled</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-zinc-800 rounded-full h-2">
             <div 
               className={`h-2 rounded-full ${getProgressBarColor()}`}
               style={{ width: `${Math.min(fillPercentage, 100)}%` }}
@@ -95,7 +95,7 @@ export default function SessionCard({ session }: SessionCardProps) {
         <Button 
           asChild={!isFull && isBookingOpen()}
           disabled={isFull || !isBookingOpen()}
-          className="w-full"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           variant={isFull ? "secondary" : "default"}
         >
           {isFull ? (

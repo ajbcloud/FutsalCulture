@@ -9,19 +9,19 @@ export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-zinc-900 border-b border-zinc-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-futsal-600">Futsal Culture</h1>
+              <h1 className="text-2xl font-bold text-green-400">Futsal Culture</h1>
             </Link>
             <div className="hidden md:block ml-10">
               <div className="flex space-x-8">
-                <Link href="/sessions" className="text-gray-900 font-medium hover:text-futsal-600">
+                <Link href="/sessions" className="text-white font-medium hover:text-green-400">
                   Sessions
                 </Link>
-                <Link href="/help" className="text-gray-500 hover:text-gray-900">
+                <Link href="/help" className="text-zinc-400 hover:text-white">
                   Help
                 </Link>
               </div>

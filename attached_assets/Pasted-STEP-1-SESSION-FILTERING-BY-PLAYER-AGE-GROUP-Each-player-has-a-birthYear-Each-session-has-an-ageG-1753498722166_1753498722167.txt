@@ -1,0 +1,217 @@
+STEP 1: SESSION FILTERING BY PLAYER AGE GROUP
+Each player has a birthYear.
+
+Each session has an ageGroup string (e.g. "U8", "U10").
+
+Create a helper function:
+
+ts
+Copy
+Edit
+function calculateAgeGroup(birthYear: number): string {
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - birthYear;
+  return `U${age + 1}`;
+}
+On the dashboard, only show sessions where:
+
+Session ageGroup matches player's calculated group
+
+Session is scheduled for today
+
+Current time is >= 8 AM
+
+Session status is open
+
+🔹 STEP 2: PLAYER DASHBOARD LOGIC
+Show player cards (first name, age group)
+
+For each player, show sessions they’re eligible for
+
+Show “Reserve Spot” only if:
+
+Session is not full
+
+Current time is after 8 AM
+
+Wrap each session in a card like this:
+
+tsx
+Copy
+Edit
+<div className="bg-zinc-900 border border-zinc-700 p-4 rounded-xl mb-4">
+  <h2 className="text-xl">{session.title}</h2>
+  <p>{session.location}</p>
+  <p>{session.startTime} – {session.endTime}</p>
+  <button className="bg-blue-600 text-white px-4 py-2 rounded">Reserve</button>
+</div>
+🔹 STEP 3: PAYMENT FLOW USING STRIPE
+Clicking “Reserve” should:
+
+Create a signup record in backend (playerId, sessionId)
+
+Start a Stripe Checkout session
+
+Redirect user to Stripe Checkout
+
+On successful payment:
+
+Stripe webhook hits /webhooks/stripe
+
+Mark signup.paid = true
+
+Update payment.status = 'paid'
+
+If session reaches capacity, set status to full
+
+Show success/failure confirmation in UI
+
+🔹 STEP 4: EMAIL + SMS CONSENT ENFORCEMENT
+Parent Profile Requirements:
+
+Require:
+
+Email (always)
+
+Phone (if SMS toggle is ON)
+
+Two checkboxes:
+
+ I consent to receive email reminders
+
+ I consent to receive SMS reminders
+
+Backend Validations:
+
+If smsEnabled is true and phone is empty, throw an error
+
+Save in DB:
+
+smsConsent:boolean, emailConsent:boolean
+
+Use these for reminders (Step 7)
+
+🔹 STEP 5: PLAYER INVITE & PORTAL ACCESS
+Parents can invite their children (player records) to access the portal:
+
+Email invite with a secure tokenized signup link
+
+New account is created with role = 'player', linked to parent
+
+Allow setting canBook = true/false
+
+In parent dashboard:
+
+Show toggle: “Allow booking access”
+
+If enabled, PlayerUser can log in and book eligible sessions
+
+🔹 STEP 6: TRANSACTION HISTORY IN PARENT DASHBOARD
+In /dashboard/transactions or below sessions:
+
+List all transactions:
+
+Player name
+
+Session title
+
+Date/time
+
+Amount
+
+Status: Paid / Refunded
+
+Sample UI:
+
+tsx
+Copy
+Edit
+<div className="bg-zinc-900 border border-zinc-700 p-4 rounded">
+  <h2 className="text-lg">U10 Girls – Dec 5, 6 PM</h2>
+  <p>Paid: $10</p>
+  <p>Status: Confirmed</p>
+</div>
+🔹 STEP 7: SESSION REMINDERS (24hr + 1hr)
+Use node-cron to:
+
+Run every hour
+
+Look for upcoming sessions starting within:
+
+24 hours → send email
+
+1 hour → send SMS
+
+Only send reminders to:
+
+Parents with confirmed (paid) signups
+
+Who have consented to email/SMS
+
+Use:
+
+SendGrid or Resend for email
+
+Twilio for SMS
+
+🔹 STEP 8: ADMIN DASHBOARD
+/admin panel includes:
+
+Stats
+Total players
+
+Total revenue this month
+
+Average session fill %
+
+Session Management
+List of sessions
+
+Capacity bar
+
+Revenue per session
+
+Buttons: Edit / Refund / Delete
+
+Refund Workflow
+Admin clicks refund
+
+Stripe API issues refund
+
+payment.status = 'refunded'
+
+🔹 STEP 9: HELP CENTER PAGE
+Public-facing page /help with form:
+
+tsx
+Copy
+Edit
+<form className="space-y-4">
+  <input type="text" placeholder="Name" />
+  <input type="email" placeholder="Email" />
+  <input type="text" placeholder="Phone" />
+  <textarea placeholder="Message"></textarea>
+  <button type="submit">Submit</button>
+</form>
+POST to /api/help → store in help_requests table
+(Optional later: Send email to admin)
+
+✅ STYLING RULES (Already Using Dark Mode)
+Background: bg-black
+
+Text: text-white
+
+Cards: bg-zinc-900 border border-zinc-700
+
+Buttons: bg-blue-600 hover:bg-blue-700
+
+Status labels:
+
+text-green-400 = Available
+
+text-yellow-400 = Filling Fast
+
+text-red-400 = Full
+
+Inputs: bg-zinc-800 border-zinc-600
+
