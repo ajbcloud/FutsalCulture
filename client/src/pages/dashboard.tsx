@@ -11,7 +11,7 @@ import PlayerForm from "@/components/player-form";
 import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
 import SessionCalendar from "@/components/session-calendar";
-import Parent2InviteControls from "@/components/parent2-invite-controls";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -511,12 +511,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Parent 2 Invite Section */}
-      <section className="py-8 bg-[#0a0a0a]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Parent2InviteControls />
-        </div>
-      </section>
     </div>
   );
 }

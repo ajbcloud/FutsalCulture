@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
+import Parent2InviteControls from "@/components/parent2-invite-controls";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -268,6 +269,11 @@ export default function Profile() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Parent 2 Section */}
+            <div className="space-y-6">
+              <Parent2InviteControls />
             </div>
           </CardContent>
         </Card>

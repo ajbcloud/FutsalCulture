@@ -42,8 +42,8 @@ export default function SessionCalendar({
   // Always show all sessions in the calendar - no player-based filtering
   const sessions = allSessions.filter(session => {
     // Apply manual filters if provided (for public sessions page)
-    if (ageGroupFilter && session.ageGroup !== ageGroupFilter) return false;
-    if (genderFilter && session.gender !== genderFilter) return false;
+    if (ageGroupFilter && !session.ageGroups?.includes(ageGroupFilter)) return false;
+    if (genderFilter && !session.genders?.includes(genderFilter)) return false;
     return true;
   });
 
@@ -152,7 +152,7 @@ export default function SessionCalendar({
                   
                   if (sessionStarted) {
                     statusColor = 'bg-zinc-700/20';
-                    statusText = 'started';
+                    statusText = 'closed';
                   } else if (session.status === 'full') {
                     statusColor = 'bg-red-700/20';
                     statusText = 'full';
@@ -161,7 +161,7 @@ export default function SessionCalendar({
                     statusText = 'open';
                   } else if (!bookingOpen) {
                     statusColor = 'bg-yellow-700/20';
-                    statusText = 'pending';
+                    statusText = 'upcoming';
                   }
                   
                   return (
@@ -191,7 +191,7 @@ export default function SessionCalendar({
                             variant="secondary" 
                             className="text-xs px-1 py-0"
                           >
-                            {session.ageGroup}
+                            {session.ageGroups?.join(', ') || 'N/A'}
                           </Badge>
                           <Badge 
                             variant={statusText === 'open' ? 'default' : 'secondary'}
@@ -302,10 +302,10 @@ export default function SessionCalendar({
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2">
                           <Badge variant="outline" className="text-zinc-300 border-zinc-600">
-                            {session.ageGroup}
+                            {session.ageGroups?.join(', ') || 'N/A'}
                           </Badge>
                           <Badge variant="outline" className="text-zinc-300 border-zinc-600 capitalize">
-                            {session.gender}
+                            {session.genders?.join(', ') || 'N/A'}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-zinc-400">
