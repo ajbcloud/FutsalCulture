@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
+import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
@@ -252,6 +253,20 @@ export function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const updateData = req.body;
+      
+      // If attempting to enable portal access, validate age requirement
+      if (updateData.canAccessPortal === true) {
+        const existingPlayer = await db.select().from(players).where(eq(players.id, id)).limit(1);
+        if (existingPlayer.length > 0) {
+          const age = calculateAge(existingPlayer[0].birthYear);
+          if (age < MINIMUM_PORTAL_AGE) {
+            return res.status(400).json({ 
+              message: `Portal access can only be enabled for players ${MINIMUM_PORTAL_AGE} years or older. This player is currently ${age} years old.` 
+            });
+          }
+        }
+      }
+      
       const player = await storage.updatePlayer(id, updateData);
       res.json(player);
     } catch (error) {

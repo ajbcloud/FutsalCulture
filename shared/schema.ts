@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   pgEnum,
+  check,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -67,7 +68,10 @@ export const players = pgTable("players", {
   email: varchar("email"),
   phoneNumber: varchar("phone_number"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  // Age validation constraint: Portal access only for players 13+
+  check("age_portal_check", sql`(can_access_portal = false OR (2025 - birth_year) >= 13)`),
+]);
 
 // Sessions table
 export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed"]);

@@ -4,6 +4,9 @@ export const AGE_GROUPS = ['U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15',
 
 export const GENDERS = ['boys', 'girls'] as const;
 
+// Business rules
+export const MINIMUM_PORTAL_AGE = 13; // Players must be 13+ for portal access
+
 export const LOCATIONS = [
   'Sugar Sand Park',
   'Boca Raton Community Center', 
@@ -24,4 +27,12 @@ export function calculateAgeGroupFromAge(age: number): string {
   if (age <= 16) return 'U16';
   if (age <= 17) return 'U17';
   return 'U18';
+}
+
+export function calculateAge(birthYear: number): number {
+  return new Date().getFullYear() - birthYear;
+}
+
+export function canAccessPortal(birthYear: number): boolean {
+  return calculateAge(birthYear) >= MINIMUM_PORTAL_AGE;
 }
