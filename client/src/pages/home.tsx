@@ -47,7 +47,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#18181b]">
       <Navbar />
       {/* Welcome Section */}
       <section className="from-futsal-600 to-brand-600 text-white bg-[#18181b]">
@@ -74,7 +74,7 @@ export default function Home() {
         </div>
       </section>
       {/* Today's Sessions */}
-      <section className="py-8">
+      <section className="py-8 bg-[#18181b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <div>
