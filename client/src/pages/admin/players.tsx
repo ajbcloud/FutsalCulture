@@ -41,14 +41,21 @@ export default function AdminPlayers() {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const playerId = urlParams.get('playerId');
     
-    if (playerId) {
+    if (playerId && players.length > 0) {
       // Find the player and set filters to show only that player
       const targetPlayer = players.find(p => p.id === playerId);
       if (targetPlayer) {
+        const playerName = `${targetPlayer.firstName} ${targetPlayer.lastName}`;
         setFilters(prev => ({
           ...prev,
-          search: `${targetPlayer.firstName} ${targetPlayer.lastName}`
+          search: playerName
         }));
+        
+        // Immediately apply the filter to show only this player
+        const filtered = players.filter(player => 
+          `${player.firstName} ${player.lastName}`.toLowerCase().includes(playerName.toLowerCase())
+        );
+        setFilteredPlayers(filtered);
       }
     }
   }, [location, players]);
