@@ -60,12 +60,12 @@ export default function VenmoPrompt({ isOpen, onClose, signupData }: VenmoPrompt
   }
   
   const sessionDate = new Date(session.startTime);
-  const ageGroup = calculateAgeGroup(player.birthYear);
-  const genderPrefix = session.gender === "boys" ? "B" : "G";
+  const playerAgeGroup = calculateAgeGroup(player.birthYear);
+  const genderPrefix = player.gender === "boys" ? "B" : "G";
   
   // Format: [PlayerFirstName] [PlayerAgeGroup] [CurrentDate]
   const currentDate = format(new Date(), 'MM/dd');
-  const venmoNote = `${player.firstName} ${genderPrefix}${ageGroup} ${currentDate}`;
+  const venmoNote = `${player.firstName} ${genderPrefix}${playerAgeGroup} ${currentDate}`;
 
   const copyToClipboard = async () => {
     try {

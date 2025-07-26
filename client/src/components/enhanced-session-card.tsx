@@ -27,7 +27,10 @@ export default function EnhancedSessionCard({
 
   const createSignupMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
-      return await apiRequest("POST", "/api/signups", data);
+      const response = await apiRequest("POST", "/api/signups", data);
+      const signupData = await response.json();
+      console.log("Parsed signup data:", signupData);
+      return signupData;
     },
     onSuccess: (signupData) => {
       console.log("Signup response data:", signupData);

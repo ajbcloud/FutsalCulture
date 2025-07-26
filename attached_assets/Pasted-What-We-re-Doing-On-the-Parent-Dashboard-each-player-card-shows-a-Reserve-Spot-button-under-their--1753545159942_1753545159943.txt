@@ -1,0 +1,169 @@
+What We’re Doing
+On the Parent Dashboard, each player card shows a Reserve Spot button under their upcoming eligible sessions. Instead of creating the signup immediately, clicking Reserve Spot should:
+
+Redirect the parent to the Session Detail & Checkout page for that specific session.
+
+Pre‑select the player in the session form.
+
+🔧 Detailed Instructions
+Locate the Dashboard Component
+Find client/src/pages/dashboard.tsx (or wherever the player cards render).
+
+Wrap the Button in a Link
+Replace:
+
+tsx
+Copy
+Edit
+<button
+  onClick={() => reserveSession(session.id, player.id)}
+  className="bg-blue-600 text-white px-4 py-2 rounded"
+>
+  Reserve Spot
+</button>
+With:
+
+tsx
+Copy
+Edit
+<Link
+  href={{
+    pathname: `/sessions/${session.id}`,
+    query: { playerId: player.id }
+  }}
+>
+  <button className="bg-blue-600 text-white px-4 py-2 rounded">
+    Reserve Spot
+  </button>
+</Link>
+Session Page Pre‑Select Player
+In client/src/pages/sessions/[id].tsx, read the playerId query param:
+
+tsx
+Copy
+Edit
+const router = useRouter();
+const { playerId } = router.query;
+When rendering the Select Player dropdown, set its initial value:
+
+jsx
+Copy
+Edit
+<Select
+  value={playerId as string || selectedPlayer}
+  onChange={val => setSelectedPlayer(val)}
+>
+  {/* map players */}
+</Select>
+Remove Immediate Signup Logic
+Ensure reserveSession is no longer called on the dashboard page. All booking now happens on the session detail page only.
+
+Test the Flow
+
+On Dashboard → click Reserve Spot under a player → you land on /sessions/{sessionId}?playerId={player.id}
+
+The session detail shows your selected player already chosen.
+
+Parent completes the “Reserve & Pay” flow there.
+
+
+
+The Spot Reserved modal is showing the wrong age group for the player. It’s currently pulling from the session’s ageGroup or an incorrect source, instead of using the player’s actual age group as calculated from their birthYear.
+
+🔧 Detailed Fix Instructions
+Locate the Modal Component
+Open the file where you render the payment modal—e.g. client/src/components/VenmoPrompt.tsx (or similar).
+
+Inspect Data Props
+Ensure the component receives both:
+
+player object (including birthYear)
+
+session object (with its own ageGroup)
+
+Calculate Player’s Age Group
+If you don’t already have a helper, add:
+
+ts
+Copy
+Edit
+function calculateAgeGroup(birthYear: number): string {
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - birthYear;
+  return `U${age + 1}`; // e.g. birthYear 2014 → age 11 → "U12"
+}
+Use Player’s Group in Modal
+Replace any reference to session.ageGroup in the “Copy and paste” line with the player’s computed group:
+
+tsx
+Copy
+Edit
+// Before (incorrect):
+const note = `${player.firstName} ${session.ageGroup} ${formatDate(session.startTime)}`;
+
+// After (correct):
+const playerAgeGroup = calculateAgeGroup(player.birthYear);
+const note = `${player.firstName} ${playerAgeGroup} ${formatDate(session.startTime)}`;
+Update JSX
+
+jsx
+Copy
+Edit
+<pre className="font-mono bg-black/50 p-2 rounded">
+  {note}
+</pre>
+Test
+
+Reserve a spot for a player of known birth year.
+
+Confirm the modal shows, for example, Harper U12 07/26 instead of Harper U10 07/26.
+
+
+
+Summary
+UI: Retain the yellow “Important…” warning in the modal.
+
+Backend: Remove or disable the background job that automatically deletes pending signups after 1 hour.
+
+🔧 Step‑by‑Step Instructions
+Retain UI Message
+
+Ensure your modal still includes:
+
+jsx
+Copy
+Edit
+<div className="bg-yellow-800 text-white p-3 rounded">
+  <strong>Important:</strong> Your spot is held for 1 hour. Please complete Venmo payment or the reservation will be automatically cancelled.
+</div>
+No change needed here—this stays visible to users.
+
+Remove Auto‑Cancel Job
+
+In your server code (wherever you scheduled automatic cancellation), locate the cancellation logic. It might look like this:
+
+ts
+Copy
+Edit
+// server/jobs/expireHolds.ts (example)
+setInterval(async () => {
+  const cutoff = new Date(Date.now() - 60 * 60 * 1000);
+  const expired = await db.signups.findMany({
+    where: { paid: false, createdAt: { lt: cutoff } }
+  });
+  for (const signup of expired) {
+    await db.signups.delete({ where: { id: signup.id } });
+  }
+}, 15 * 60 * 1000);
+Comment out or remove this entire block so that no pending signups are ever deleted automatically.
+
+Optional: Log a Note
+
+You can leave a comment explaining why it’s disabled:
+
+ts
+Copy
+Edit
+// Auto‑cancel job disabled per business request:
+// Reservations will not be auto‑cancelled after 1 hour.
+Once you’ve removed the cancellation job, the warning message remains purely informational, and spots will stay “pending” indefinitely until manually managed.

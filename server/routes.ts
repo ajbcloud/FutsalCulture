@@ -367,15 +367,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate reservation expiry (1 hour from now)
       const reservationExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
       
-      const response = {
+      res.json({
         ...signup,
         reservationExpiresAt,
         player,
         session
-      };
-      
-      console.log("Signup response being sent:", JSON.stringify(response, null, 2));
-      res.json(response);
+      });
     } catch (error) {
       console.error("Error creating signup:", error);
       res.status(500).json({ message: "Failed to create signup" });
