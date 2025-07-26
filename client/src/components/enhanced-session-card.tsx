@@ -23,8 +23,7 @@ export default function EnhancedSessionCard({
 
   const createSignupMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
-      const response = await apiRequest("POST", "/api/signups", data);
-      return response.json();
+      return await apiRequest("POST", "/api/signups", data);
     },
     onSuccess: (signup) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
@@ -32,10 +31,8 @@ export default function EnhancedSessionCard({
       onReservationChange?.(session.id, true);
       toast({
         title: "Success",
-        description: "Spot reserved! Complete payment to confirm.",
+        description: "Spot reserved successfully!",
       });
-      // Redirect to checkout
-      window.location.href = `/checkout/${signup.id}`;
     },
     onError: (error: any) => {
       toast({
@@ -51,12 +48,19 @@ export default function EnhancedSessionCard({
     // In a real app, you might want to show a player selection dialog
     const players = queryClient.getQueryData<Array<{ id: string; firstName: string; lastName: string }>>(["/api/players"]);
     const firstPlayer = players?.[0];
-    if (firstPlayer) {
-      createSignupMutation.mutate({
-        playerId: firstPlayer.id,
-        sessionId: session.id
+    if (!firstPlayer) {
+      toast({
+        title: "Error",
+        description: "No players found. Please add a player first.",
+        variant: "destructive",
       });
+      return;
     }
+    
+    createSignupMutation.mutate({
+      playerId: firstPlayer.id,
+      sessionId: session.id
+    });
   };
 
   // Calculate spots and color indicators
