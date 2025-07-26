@@ -1,13 +1,30 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Mail, MessageSquare, UserCheck } from "lucide-react";
 import { Player } from "@shared/schema";
+
+const emailInviteSchema = z.object({
+  email: z.string().email("Valid email is required"),
+});
+
+const smsInviteSchema = z.object({
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format"),
+});
+
+type EmailInviteForm = z.infer<typeof emailInviteSchema>;
+type SMSInviteForm = z.infer<typeof smsInviteSchema>;
 
 interface PlayerPortalControlsProps {
   player: Player;
@@ -16,7 +33,22 @@ interface PlayerPortalControlsProps {
 export default function PlayerPortalControls({ player }: PlayerPortalControlsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isInviting, setIsInviting] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isSMSDialogOpen, setIsSMSDialogOpen] = useState(false);
+
+  const emailForm = useForm<EmailInviteForm>({
+    resolver: zodResolver(emailInviteSchema),
+    defaultValues: {
+      email: player.email || "",
+    },
+  });
+
+  const smsForm = useForm<SMSInviteForm>({
+    resolver: zodResolver(smsInviteSchema),
+    defaultValues: {
+      phoneNumber: player.phoneNumber || "",
+    },
+  });
 
   // Calculate player age
   const currentYear = new Date().getFullYear();
@@ -46,30 +78,57 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
     },
   });
 
-  const sendInviteMutation = useMutation({
-    mutationFn: async (method: 'email' | 'sms') => {
+  const sendEmailInviteMutation = useMutation({
+    mutationFn: async (data: EmailInviteForm) => {
       const response = await apiRequest("POST", `/api/players/${player.id}/invite`, {
-        method
+        method: 'email',
+        email: data.email
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
-        title: "Invite sent",
-        description: `Player invite sent via ${data.method}`,
+        title: "Email invite sent!",
+        description: "Player invitation has been sent successfully",
       });
-      setIsInviting(false);
+      setIsEmailDialogOpen(false);
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to send invite",
+        description: error.message || "Failed to send email invite",
         variant: "destructive",
       });
-      setIsInviting(false);
     },
   });
+
+  const sendSMSInviteMutation = useMutation({
+    mutationFn: async (data: SMSInviteForm) => {
+      const response = await apiRequest("POST", `/api/players/${player.id}/invite`, {
+        method: 'sms',
+        phoneNumber: data.phoneNumber
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      toast({
+        title: "SMS invite sent!",
+        description: "Player invitation has been sent successfully",
+      });
+      setIsSMSDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send SMS invite",
+        variant: "destructive",
+      });
+    },
+  });
+
+
 
   if (!isEligible) {
     return (
@@ -141,34 +200,126 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
         )}
         
         <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => sendInviteMutation.mutate('email')}
-            disabled={sendInviteMutation.isPending || !player.email}
-            className="border-zinc-600 text-zinc-400 hover:text-white"
-          >
-            <Mail className="w-4 h-4 mr-1" />
-            Email
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => sendInviteMutation.mutate('sms')}
-            disabled={sendInviteMutation.isPending || !player.phoneNumber}
-            className="border-zinc-600 text-zinc-400 hover:text-white"
-          >
-            <MessageSquare className="w-4 h-4 mr-1" />
-            SMS
-          </Button>
+          {/* Email Invite Dialog */}
+          <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-zinc-600 text-zinc-400 hover:text-white"
+              >
+                <Mail className="w-4 h-4 mr-1" />
+                Email
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-zinc-900 border-zinc-700">
+              <DialogHeader>
+                <DialogTitle className="text-white">Send Email Invite</DialogTitle>
+              </DialogHeader>
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit((data) => sendEmailInviteMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={emailForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Email Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="email"
+                            placeholder="player@example.com"
+                            className="bg-zinc-800 border-zinc-600 text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex space-x-2">
+                    <Button
+                      type="submit"
+                      disabled={sendEmailInviteMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {sendEmailInviteMutation.isPending ? "Sending..." : "Send Invite"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEmailDialogOpen(false)}
+                      className="border-zinc-600 text-zinc-400 hover:text-white"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          {/* SMS Invite Dialog */}
+          <Dialog open={isSMSDialogOpen} onOpenChange={setIsSMSDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-zinc-600 text-zinc-400 hover:text-white"
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                SMS
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-zinc-900 border-zinc-700">
+              <DialogHeader>
+                <DialogTitle className="text-white">Send SMS Invite</DialogTitle>
+              </DialogHeader>
+              <Form {...smsForm}>
+                <form onSubmit={smsForm.handleSubmit((data) => sendSMSInviteMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={smsForm.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Phone Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="tel"
+                            placeholder="+1 (555) 123-4567"
+                            className="bg-zinc-800 border-zinc-600 text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex space-x-2">
+                    <Button
+                      type="submit"
+                      disabled={sendSMSInviteMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {sendSMSInviteMutation.isPending ? "Sending..." : "Send Invite"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsSMSDialogOpen(false)}
+                      className="border-zinc-600 text-zinc-400 hover:text-white"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
         
-        {(!player.email && !player.phoneNumber) && (
-          <div className="text-xs text-amber-400 mt-2">
-            Add player email or phone number to send invites
-          </div>
-        )}
+        <div className="text-xs text-amber-400 mt-2">
+          Click Email or SMS to enter contact details and send invites
+        </div>
       </div>
     </div>
   );
