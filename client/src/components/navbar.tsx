@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Menu, User } from "lucide-react";
+import { Menu, User, X } from "lucide-react";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <nav className="bg-zinc-900 border-b border-zinc-700">
@@ -21,6 +23,11 @@ export default function Navbar() {
                 <Link href="/sessions" className="text-white font-medium hover:text-green-400">
                   Sessions
                 </Link>
+                {isAuthenticated && (
+                  <Link href="/dashboard" className="text-zinc-400 hover:text-white">
+                    Dashboard
+                  </Link>
+                )}
                 <Link href="/help" className="text-zinc-400 hover:text-white">
                   Help
                 </Link>
@@ -46,9 +53,6 @@ export default function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
                   {user?.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">Admin Panel</Link>
@@ -61,11 +65,55 @@ export default function Navbar() {
               </DropdownMenu>
             )}
             
-            <Button variant="ghost" size="sm" className="md:hidden">
-              <Menu className="h-6 w-6" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
+        
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-zinc-800">
+              <Link href="/sessions" className="block px-3 py-2 text-white font-medium hover:text-green-400">
+                Sessions
+              </Link>
+              {isAuthenticated && (
+                <Link href="/dashboard" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                  Dashboard
+                </Link>
+              )}
+              <Link href="/help" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                Help
+              </Link>
+              {!isAuthenticated ? (
+                <a href="/api/login" className="block px-3 py-2 text-blue-400 hover:text-blue-300">
+                  Parent Login
+                </a>
+              ) : (
+                <>
+                  {user?.isAdmin && (
+                    <Link href="/admin" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                      Admin Panel
+                    </Link>
+                  )}
+                  <a href="/api/logout" className="block px-3 py-2 text-red-400 hover:text-red-300">
+                    Logout
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );
