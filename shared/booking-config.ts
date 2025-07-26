@@ -4,6 +4,10 @@ export const GLOBAL_BOOKING_CONFIG = {
   defaultBookingOpenHour: 8,
   defaultBookingOpenMinute: 0,
   
+  // Booking time constraints
+  minBookingHour: 6,    // 6:00 AM
+  maxBookingHour: 21,   // 9:00 PM
+  
   // Override for specific scenarios
   specialRules: {
     // Example: Weekend sessions open at 9 AM
@@ -30,6 +34,28 @@ export function getBookingOpenTime(session: any): Date {
   
   bookingOpenTime.setHours(hour, minute, 0, 0);
   return bookingOpenTime;
+}
+
+// Helper function to convert 24-hour to 12-hour format
+export function format12Hour(hour24: number, minute: number = 0): string {
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const ampm = hour24 < 12 ? 'AM' : 'PM';
+  return `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`;
+}
+
+// Helper function to convert 12-hour to 24-hour format
+export function convert12To24Hour(hour12: number, ampm: 'AM' | 'PM'): number {
+  if (ampm === 'AM') {
+    return hour12 === 12 ? 0 : hour12;
+  } else {
+    return hour12 === 12 ? 12 : hour12 + 12;
+  }
+}
+
+// Validate booking time is within allowed range
+export function isValidBookingTime(hour24: number): boolean {
+  return hour24 >= GLOBAL_BOOKING_CONFIG.minBookingHour && 
+         hour24 <= GLOBAL_BOOKING_CONFIG.maxBookingHour;
 }
 
 // Enhanced booking availability check

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
 import { AGE_GROUPS } from '@shared/constants';
+import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -233,61 +234,96 @@ export default function AdminSessionDetail() {
           <div className="bg-zinc-800/50 rounded-lg p-4 mb-4">
             <p className="text-sm text-zinc-400 mb-2">
               By default, sessions open for booking at 8:00 AM on the day of the session. 
-              You can customize this time for special events or high-demand sessions.
+              You can customize this time between 6:00 AM and 9:00 PM.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="bookingOpenHour" className="text-zinc-300">Booking Open Hour (0-23)</Label>
-              <Select 
-                value={formData.bookingOpenHour.toString()} 
-                onValueChange={(value) => setFormData({...formData, bookingOpenHour: parseInt(value)})}
-              >
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  {Array.from({length: 24}, (_, i) => (
-                    <SelectItem key={i} value={i.toString()} className="text-white hover:bg-zinc-700">
-                      {i.toString().padStart(2, '0')}:00 {i < 12 ? 'AM' : 'PM'} 
-                      {i === 0 && ' (Midnight)'} 
-                      {i === 12 && ' (Noon)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-zinc-500 mt-1">Default: 8 (8:00 AM)</p>
-            </div>
+          <div>
+            <Label className="text-zinc-300">Booking Opens At</Label>
+            <div className="grid grid-cols-3 gap-3 mt-2">
+              <div>
+                <Select 
+                  value={(() => {
+                    const hour = formData.bookingOpenHour;
+                    if (hour === 0) return "12";
+                    if (hour > 12) return (hour - 12).toString();
+                    return hour.toString();
+                  })()} 
+                  onValueChange={(value) => {
+                    const hour12 = parseInt(value);
+                    const currentAMPM = formData.bookingOpenHour < 12 ? 'AM' : 'PM';
+                    const hour24 = convert12To24Hour(hour12, currentAMPM);
+                    
+                    if (isValidBookingTime(hour24)) {
+                      setFormData({...formData, bookingOpenHour: hour24});
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Hour" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const hour = i + 1;
+                      return (
+                        <SelectItem key={hour} value={hour.toString()} className="text-white hover:bg-zinc-700">
+                          {hour}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="bookingOpenMinute" className="text-zinc-300">Booking Open Minute (0-59)</Label>
-              <Select 
-                value={formData.bookingOpenMinute.toString()} 
-                onValueChange={(value) => setFormData({...formData, bookingOpenMinute: parseInt(value)})}
-              >
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-700">
-                  {[0, 15, 30, 45].map((minute) => (
-                    <SelectItem key={minute} value={minute.toString()} className="text-white hover:bg-zinc-700">
-                      :{minute.toString().padStart(2, '0')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-zinc-500 mt-1">Default: 0 (on the hour)</p>
+              <div>
+                <Select 
+                  value={formData.bookingOpenMinute.toString()} 
+                  onValueChange={(value) => setFormData({...formData, bookingOpenMinute: parseInt(value)})}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Min" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="0" className="text-white hover:bg-zinc-700">00</SelectItem>
+                    <SelectItem value="15" className="text-white hover:bg-zinc-700">15</SelectItem>
+                    <SelectItem value="30" className="text-white hover:bg-zinc-700">30</SelectItem>
+                    <SelectItem value="45" className="text-white hover:bg-zinc-700">45</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Select 
+                  value={formData.bookingOpenHour < 12 ? 'AM' : 'PM'} 
+                  onValueChange={(value) => {
+                    const currentHour12 = formData.bookingOpenHour === 0 ? 12 : 
+                                         formData.bookingOpenHour > 12 ? formData.bookingOpenHour - 12 : 
+                                         formData.bookingOpenHour;
+                    const hour24 = convert12To24Hour(currentHour12, value as 'AM' | 'PM');
+                    
+                    if (isValidBookingTime(hour24)) {
+                      setFormData({...formData, bookingOpenHour: hour24});
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="AM" className="text-white hover:bg-zinc-700">AM</SelectItem>
+                    <SelectItem value="PM" className="text-white hover:bg-zinc-700">PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <p className="text-xs text-zinc-500 mt-1">Available times: 6:00 AM - 9:00 PM (Default: 8:00 AM)</p>
           </div>
 
           <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
             <p className="text-sm text-blue-300">
               <strong>Preview:</strong> This session will open for booking at{' '}
               <span className="font-semibold">
-                {formData.bookingOpenHour.toString().padStart(2, '0')}:
-                {formData.bookingOpenMinute.toString().padStart(2, '0')}
-                {formData.bookingOpenHour < 12 ? ' AM' : ' PM'}
+{format12Hour(formData.bookingOpenHour, formData.bookingOpenMinute)}
               </span>
               {' '}on the day of the session.
             </p>

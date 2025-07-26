@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Users, DollarSign, BarChart3, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { FutsalSession, HelpRequest } from "@shared/schema";
 
 interface Analytics {
@@ -167,7 +168,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">
-                                {new Date(session.startTime).toLocaleString()}
+                                {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
                               </p>
                             </div>
                           </div>

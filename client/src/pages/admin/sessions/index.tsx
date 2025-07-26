@@ -541,19 +541,46 @@ export default function AdminSessions() {
                 <Label className="text-zinc-300">Booking Opens At</Label>
                 <div className="flex gap-2">
                   <Select 
-                    value={massUpdateData.bookingOpenHour} 
-                    onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, bookingOpenHour: value }))}
+                    value={massUpdateData.bookingOpenHour !== '' ? (() => {
+                      const hour24 = parseInt(massUpdateData.bookingOpenHour);
+                      if (hour24 === 0) return "12";
+                      if (hour24 > 12) return (hour24 - 12).toString();
+                      return hour24.toString();
+                    })() : ''} 
+                    onValueChange={(value) => {
+                      if (value === '') {
+                        setMassUpdateData(prev => ({ ...prev, bookingOpenHour: '', bookingOpenMinute: '' }));
+                      } else {
+                        const hour12 = parseInt(value);
+                        // Default to AM for new selections, preserve existing AM/PM if already set
+                        const currentHour24 = massUpdateData.bookingOpenHour !== '' ? parseInt(massUpdateData.bookingOpenHour) : 8;
+                        const isCurrentlyPM = currentHour24 >= 12;
+                        let hour24;
+                        if (isCurrentlyPM && massUpdateData.bookingOpenHour !== '') {
+                          hour24 = hour12 === 12 ? 12 : hour12 + 12;
+                        } else {
+                          hour24 = hour12 === 12 ? 0 : hour12;
+                        }
+                        // Restrict to 6am-9pm range
+                        if (hour24 >= 6 && hour24 <= 21) {
+                          setMassUpdateData(prev => ({ ...prev, bookingOpenHour: hour24.toString() }));
+                        }
+                      }
+                    }}
                   >
                     <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
                       <SelectValue placeholder="Hour" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Keep existing</SelectItem>
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {i.toString().padStart(2, '0')}
-                        </SelectItem>
-                      ))}
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const hour = i + 1;
+                        return (
+                          <SelectItem key={hour} value={hour.toString()}>
+                            {hour}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <Select 
@@ -569,6 +596,35 @@ export default function AdminSessions() {
                       <SelectItem value="15">15</SelectItem>
                       <SelectItem value="30">30</SelectItem>
                       <SelectItem value="45">45</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={massUpdateData.bookingOpenHour !== '' ? (parseInt(massUpdateData.bookingOpenHour) < 12 ? 'AM' : 'PM') : ''} 
+                    onValueChange={(value) => {
+                      if (value !== '' && massUpdateData.bookingOpenHour !== '') {
+                        const currentHour24 = parseInt(massUpdateData.bookingOpenHour);
+                        const currentHour12 = currentHour24 === 0 ? 12 : 
+                                             currentHour24 > 12 ? currentHour24 - 12 : 
+                                             currentHour24;
+                        let hour24;
+                        if (value === 'AM') {
+                          hour24 = currentHour12 === 12 ? 0 : currentHour12;
+                        } else {
+                          hour24 = currentHour12 === 12 ? 12 : currentHour12 + 12;
+                        }
+                        // Restrict to 6am-9pm range
+                        if (hour24 >= 6 && hour24 <= 21) {
+                          setMassUpdateData(prev => ({ ...prev, bookingOpenHour: hour24.toString() }));
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="AM/PM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

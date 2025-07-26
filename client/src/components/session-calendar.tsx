@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FutsalSession, Player } from "@shared/schema";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateAgeGroup, isSessionEligibleForPlayer } from "@shared/utils";
+import { format12Hour } from "@shared/booking-config";
 
 interface SessionCalendarProps {
   ageGroupFilter?: string;
@@ -291,7 +292,7 @@ export default function SessionCalendar({
                       <div className="flex items-center gap-4 text-zinc-300">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />
-                          <span>{format(new Date(session.startTime), 'HH:mm')} - {format(new Date(session.endTime), 'HH:mm')}</span>
+                          <span>{format(new Date(session.startTime), 'h:mm a')} - {format(new Date(session.endTime), 'h:mm a')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
@@ -341,7 +342,7 @@ export default function SessionCalendar({
                             return (
                               <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
                                 <p className="text-yellow-400 text-sm">
-                                  Booking opens at 8 AM on {format(sessionDate, 'MMM d')}
+                                  Booking opens at {format12Hour(session.bookingOpenHour ?? 8, session.bookingOpenMinute ?? 0)} on {format(sessionDate, 'MMM d')}
                                 </p>
                               </div>
                             );
@@ -349,7 +350,7 @@ export default function SessionCalendar({
                             return (
                               <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
                                 <p className="text-yellow-400 text-sm">
-                                  Booking opens at 8 AM today
+                                  Booking opens at {format12Hour(session.bookingOpenHour ?? 8, session.bookingOpenMinute ?? 0)} today
                                 </p>
                               </div>
                             );
