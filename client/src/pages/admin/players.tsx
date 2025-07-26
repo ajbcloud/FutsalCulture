@@ -246,7 +246,15 @@ export default function AdminPlayers() {
                   )}
                 </TableCell>
                 <TableCell className="text-zinc-300">
-                  <span className="text-zinc-500">—</span>
+                  {player.parent2Name ? (
+                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
+                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
+                        {player.parent2Name}
+                      </span>
+                    </Link>
+                  ) : (
+                    <span className="text-zinc-500">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge 

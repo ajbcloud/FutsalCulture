@@ -187,15 +187,20 @@ export function setupAdminRoutes(app: any) {
         birthYear: players.birthYear,
         gender: players.gender,
         parentId: players.parentId,
+        parent2Id: players.parent2Id,
         canAccessPortal: players.canAccessPortal,
         canBookAndPay: players.canBookAndPay,
         email: players.email,
         phoneNumber: players.phoneNumber,
         createdAt: players.createdAt,
-        // Parent info
-        parentFirstName: users.firstName,
-        parentLastName: users.lastName,
-        parentEmail: users.email,
+        // Parent 1 info
+        parentFirstName: sql<string>`parent1.first_name`,
+        parentLastName: sql<string>`parent1.last_name`,
+        parentEmail: sql<string>`parent1.email`,
+        // Parent 2 info
+        parent2FirstName: sql<string>`parent2.first_name`,
+        parent2LastName: sql<string>`parent2.last_name`,
+        parent2Email: sql<string>`parent2.email`,
         // Signup count
         signupCount: sql<number>`(
           SELECT COUNT(*)::int 
@@ -204,7 +209,8 @@ export function setupAdminRoutes(app: any) {
         )`,
       })
       .from(players)
-      .leftJoin(users, eq(users.id, players.parentId));
+      .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
+      .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`);
 
       const playersWithData = allPlayers.map(player => ({
         id: player.id,
@@ -217,6 +223,10 @@ export function setupAdminRoutes(app: any) {
         parentId: player.parentId,
         parentName: `${player.parentFirstName || ''} ${player.parentLastName || ''}`.trim(),
         parentEmail: player.parentEmail,
+        parent2Id: player.parent2Id,
+        parent2Name: player.parent2FirstName && player.parent2LastName ? 
+          `${player.parent2FirstName} ${player.parent2LastName}`.trim() : null,
+        parent2Email: player.parent2Email,
         canAccessPortal: player.canAccessPortal,
         canBookAndPay: player.canBookAndPay,
         email: player.email,

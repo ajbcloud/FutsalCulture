@@ -53,6 +53,7 @@ export const players = pgTable("players", {
   birthYear: integer("birth_year").notNull(),
   gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
+  parent2Id: varchar("parent2_id"), // Second parent support
   canAccessPortal: boolean("can_access_portal").default(false),
   canBookAndPay: boolean("can_book_and_pay").default(false),
   inviteSentVia: varchar("invite_sent_via"), // 'email' or 'sms'
