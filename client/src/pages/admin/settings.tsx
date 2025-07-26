@@ -6,11 +6,10 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, Plus, CreditCard } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface SystemSettings {
   autoApproveRegistrations: boolean;
@@ -116,7 +115,7 @@ export default function AdminSettings() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showIntegrationsDialog, setShowIntegrationsDialog] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -247,181 +246,12 @@ export default function AdminSettings() {
                   )}
                 </div>
               </div>
-              <Dialog open={showIntegrationsDialog} onOpenChange={setShowIntegrationsDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-6xl h-[80vh] overflow-hidden bg-zinc-900 border-zinc-800">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">Integrations Management</DialogTitle>
-                    <DialogDescription className="text-zinc-400">
-                      Configure third-party service integrations for your Futsal Culture platform
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="overflow-auto flex-1 p-4">
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="text-lg font-semibold text-white">Active Integrations</h3>
-                          <p className="text-sm text-zinc-400">Configure and manage your third-party service connections</p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Integration
-                        </Button>
-                      </div>
-
-                      <div className="bg-zinc-800 rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-zinc-700">
-                              <TableHead className="text-zinc-300">Service</TableHead>
-                              <TableHead className="text-zinc-300">Status</TableHead>
-                              <TableHead className="text-zinc-300">Last Test</TableHead>
-                              <TableHead className="text-zinc-300">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {integrations.length === 0 ? (
-                              <TableRow className="border-zinc-700">
-                                <TableCell colSpan={4} className="text-center text-zinc-400 py-8">
-                                  No integrations configured yet
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              integrations.map((integration) => (
-                                <TableRow key={integration.id} className="border-zinc-700">
-                                  <TableCell className="text-white">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 bg-blue-900 rounded flex items-center justify-center">
-                                        <Zap className="w-4 h-4 text-blue-300" />
-                                      </div>
-                                      <div>
-                                        <div className="font-medium">{integration.provider}</div>
-                                        <div className="text-sm text-zinc-400">
-                                          {integration.provider === 'twilio' && 'SMS & Voice'}
-                                          {integration.provider === 'sendgrid' && 'Email Delivery'}
-                                          {integration.provider === 'google' && 'Calendar & Drive'}
-                                          {integration.provider === 'microsoft' && 'Teams & Outlook'}
-                                          {integration.provider === 'stripe' && 'Payment Processing'}
-                                          {integration.provider === 'mailchimp' && 'Email Marketing'}
-                                          {integration.provider === 'quickbooks' && 'Accounting & Invoicing'}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge 
-                                      variant={integration.enabled ? "default" : "secondary"}
-                                      className={integration.enabled ? "bg-green-900 text-green-300" : "bg-zinc-700 text-zinc-400"}
-                                    >
-                                      {integration.enabled ? (
-                                        <>
-                                          <CheckCircle className="w-3 h-3 mr-1" />
-                                          Enabled
-                                        </>
-                                      ) : (
-                                        <>
-                                          <XCircle className="w-3 h-3 mr-1" />
-                                          Disabled
-                                        </>
-                                      )}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-zinc-300">
-                                    {integration.lastTestedAt 
-                                      ? new Date(integration.lastTestedAt).toLocaleDateString()
-                                      : 'Never'
-                                    }
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button variant="outline" size="sm">
-                                        Configure
-                                      </Button>
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        className="text-red-400 hover:text-red-300"
-                                      >
-                                        Remove
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-zinc-800 border-zinc-700">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 bg-green-900 rounded flex items-center justify-center">
-                                <Bell className="w-4 h-4 text-green-300" />
-                              </div>
-                              <h4 className="font-medium text-white">SendGrid</h4>
-                            </div>
-                            <p className="text-sm text-zinc-400 mb-3">Email delivery and notifications</p>
-                            <Button variant="outline" size="sm" className="w-full">
-                              Setup SendGrid
-                            </Button>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-zinc-800 border-zinc-700">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 bg-blue-900 rounded flex items-center justify-center">
-                                <Users className="w-4 h-4 text-blue-300" />
-                              </div>
-                              <h4 className="font-medium text-white">Twilio</h4>
-                            </div>
-                            <p className="text-sm text-zinc-400 mb-3">SMS messaging and verification</p>
-                            <Button variant="outline" size="sm" className="w-full">
-                              Setup Twilio
-                            </Button>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-zinc-800 border-zinc-700">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 bg-orange-900 rounded flex items-center justify-center">
-                                <Shield className="w-4 h-4 text-orange-300" />
-                              </div>
-                              <h4 className="font-medium text-white">Google Workspace</h4>
-                            </div>
-                            <p className="text-sm text-zinc-400 mb-3">Calendar and document integration</p>
-                            <Button variant="outline" size="sm" className="w-full">
-                              Setup Google
-                            </Button>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card className="bg-zinc-800 border-zinc-700">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 bg-purple-900 rounded flex items-center justify-center">
-                                <CreditCard className="w-4 h-4 text-purple-300" />
-                              </div>
-                              <h4 className="font-medium text-white">Stripe</h4>
-                            </div>
-                            <p className="text-sm text-zinc-400 mb-3">Payment processing and subscriptions</p>
-                            <Button variant="outline" size="sm" className="w-full">
-                              Setup Stripe
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Link href="/admin/integrations">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  Manage All
+                  <ExternalLink className="w-3 h-3" />
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
