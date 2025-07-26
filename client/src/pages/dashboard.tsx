@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2, Plus } from "lucide-react";
+import { format } from "date-fns";
 import { Player, Signup, FutsalSession, NotificationPreferences } from "@shared/schema";
 import { calculateAgeGroup, isSessionEligibleForPlayer, isSessionBookingOpen, getSessionStatusColor, getSessionStatusText } from "@shared/utils";
 
@@ -354,13 +355,12 @@ export default function Dashboard() {
             </Card>
           ) : (
             players.map((player) => {
-              // Helper function to get eligible sessions for this player
-              const eligibleSessions = sessions.filter(session => {
-                const isEligible = isSessionEligibleForPlayer(session, player);
-                const isBookingOpen = isSessionBookingOpen(session);
-                return isEligible && isBookingOpen;
-              });
               const playerAgeGroup = calculateAgeGroup(player.birthYear);
+              
+              // Get upcoming reservations for this specific player
+              const playerUpcomingReservations = upcomingSignups.filter(signup => 
+                signup.playerId === player.id
+              );
               
               return (
                 <Card key={player.id} className="bg-zinc-900 border border-zinc-700">
@@ -409,55 +409,43 @@ export default function Dashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <h4 className="text-white font-medium mb-4">Available Sessions Today</h4>
-                    {eligibleSessions.length === 0 ? (
-                      <div className="text-center py-6">
-                        <p className="text-zinc-400">No eligible sessions available today.</p>
-                        <p className="text-sm text-zinc-500 mt-1">
-                          Sessions open at 8 AM on the day of training.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {eligibleSessions.map((session) => (
-                          <div key={session.id} className="bg-zinc-800 border border-zinc-600 p-4 rounded-xl">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="text-lg font-semibold text-white">{session.title}</h3>
-                                <p className="text-zinc-400">{session.location}</p>
-                              </div>
-                              <Badge className={getSessionStatusColor(session)}>
-                                {getSessionStatusText(session)}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-1">
-                                <p className="text-zinc-400 text-sm">
-                                  {new Date(session.startTime).toLocaleTimeString([], { 
-                                    hour: 'numeric', 
-                                    minute: '2-digit' 
-                                  })} - {new Date(session.endTime).toLocaleTimeString([], { 
-                                    hour: 'numeric', 
-                                    minute: '2-digit' 
-                                  })}
+                    {/* Upcoming Reservations Section */}
+                    <div className="mt-4">
+                      <h4 className="text-lg font-semibold text-white mb-4">Upcoming Reservations</h4>
+                      {playerUpcomingReservations.length > 0 ? (
+                        <div className="space-y-3">
+                          {playerUpcomingReservations.map(reservation => (
+                            <div key={reservation.id} className="bg-zinc-800 border border-zinc-600 rounded p-3 flex justify-between items-center">
+                              <div className="flex-1">
+                                <p className="font-medium text-white">{reservation.session.title}</p>
+                                <p className="text-sm text-zinc-400">
+                                  {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
                                 </p>
-                                <p className="text-zinc-400 text-sm">${(session.priceCents / 100).toFixed(2)}</p>
+                                <p className="text-sm text-zinc-400">{reservation.session.location}</p>
                               </div>
-                              <Button 
-                                onClick={() => createSignupMutation.mutate({ 
-                                  playerId: player.id, 
-                                  sessionId: session.id 
-                                })}
-                                disabled={createSignupMutation.isPending}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                              >
-                                {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot"}
-                              </Button>
+                              <div className="flex items-center space-x-3">
+                                <span className={`px-2 py-1 rounded text-sm font-medium ${
+                                  reservation.paid ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'
+                                }`}>
+                                  {reservation.paid ? 'Paid' : 'Pending Payment'}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => cancelSignupMutation.mutate(reservation.id)}
+                                  disabled={cancelSignupMutation.isPending}
+                                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-zinc-400 italic">No upcoming reservations.</p>
+                      )}
+                    </div>
                     
                     <PlayerPortalControls player={player} />
                   </CardContent>
@@ -465,94 +453,6 @@ export default function Dashboard() {
               );
             })
           )}
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8 mt-8">
-          {/* Upcoming Reservations Section */}
-          <Card className="bg-zinc-900 border border-zinc-700">
-            <CardHeader>
-              <CardTitle className="text-white">Upcoming Reservations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingSignups.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-zinc-400">No upcoming reservations.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {upcomingSignups.map((signup) => (
-                    <div key={signup.id} className="bg-zinc-800 border border-zinc-600 p-4 rounded-xl">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium text-white">{signup.session.title}</h4>
-                          <p className="text-zinc-400">
-                            {new Date(signup.session.startTime).toLocaleString()}
-                          </p>
-                          <p className="text-sm text-zinc-500">
-                            {signup.player.firstName} {signup.player.lastName}
-                          </p>
-                        </div>
-                        <Badge variant={signup.paid ? "default" : "secondary"} className={signup.paid ? "text-green-400" : "text-yellow-400"}>
-                          {signup.paid ? "Paid" : "Pending"}
-                        </Badge>
-                      </div>
-                      <div className="flex space-x-2 mt-3">
-                        {!signup.paid && (
-                          <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
-                            <a href={`/checkout/${signup.id}`}>Pay Now</a>
-                          </Button>
-                        )}
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => cancelSignupMutation.mutate(signup.id)}
-                          disabled={cancelSignupMutation.isPending}
-                          className="border-zinc-600 text-zinc-400 hover:text-white"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Notification Preferences */}
-          <Card className="bg-zinc-900 border border-zinc-700">
-            <CardHeader>
-              <CardTitle className="text-white">Notification Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="email-notifications"
-                  checked={notificationPrefs?.email ?? true}
-                  onCheckedChange={(checked) => {
-                    updateNotificationsMutation.mutate({
-                      email: checked,
-                      sms: notificationPrefs?.sms ?? false,
-                    });
-                  }}
-                />
-                <Label htmlFor="email-notifications" className="text-white">Email reminders before sessions</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="sms-notifications"
-                  checked={notificationPrefs?.sms ?? false}
-                  onCheckedChange={(checked) => {
-                    updateNotificationsMutation.mutate({
-                      email: notificationPrefs?.email ?? true,
-                      sms: checked,
-                    });
-                  }}
-                />
-                <Label htmlFor="sms-notifications" className="text-white">SMS text reminders</Label>
-              </div>
-            </CardContent>
-          </Card>
         </div>
         </div>
       </section>

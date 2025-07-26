@@ -1,0 +1,72 @@
+Description of Changes
+In the Player Card on the Parent Dashboard:
+
+Remove the “Available Sessions Today” section entirely from each player card.
+
+Insert the player’s Upcoming Reservations in place of the removed section, showing:
+
+Session title (e.g. “U12 Girls Afternoon Training”)
+
+Date & time (formatted)
+
+Player’s name
+
+Payment status badge (“Pending Payment” or “Paid”)
+
+“Cancel” button
+
+Remove the Notification Preferences toggle panel from beneath each player. That belongs in the Parent Profile section only.
+
+🔧 Detailed Prompt for Replit AI
+Task: Refactor the Player Card component (PlayerCard.tsx or equivalent) on the Parent Dashboard.
+
+Changes to Implement:
+
+Remove the block titled “Available Sessions Today” and all associated filtering/UI logic from within the player card.
+
+Add an “Upcoming Reservations” subsection inside the same card, immediately under the player’s name/age line:
+
+jsx
+Copy
+Edit
+<div className="mt-4">
+  <h4 className="text-lg font-semibold">Upcoming Reservations</h4>
+  {player.upcomingReservations.length > 0 ? (
+    player.upcomingReservations.map(reservation => (
+      <div key={reservation.id} className="bg-zinc-900 border border-zinc-700 rounded p-3 my-2 flex justify-between items-center">
+        <div>
+          <p className="font-medium">{reservation.session.title}</p>
+          <p className="text-sm text-zinc-400">{formatDate(reservation.session.startTime)}</p>
+        </div>
+        <span className={`px-2 py-1 rounded text-sm ${
+          reservation.paid ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'
+        }`}>
+          {reservation.paid ? 'Paid' : 'Pending Payment'}
+        </span>
+        <button
+          onClick={() => cancelReservation(reservation.id)}
+          className="ml-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+    ))
+  ) : (
+    <p className="text-zinc-400 italic">No upcoming reservations.</p>
+  )}
+</div>
+Remove the NotificationPreferences component or toggle panel from inside PlayerCard.
+
+Ensure that notification toggles remain only in the Parent Profile page (Profile.tsx).
+
+Data Requirements:
+
+player.upcomingReservations should be passed in from the parent dashboard page and contain the player’s future signups.
+
+Use existing cancel endpoint: DELETE /api/signups/:id.
+
+Styling:
+
+Maintain the dark‑mode theme (bg-zinc-900, border-zinc-700, text-white).
+
+Match spacing and typography used elsewhere for consistency.
