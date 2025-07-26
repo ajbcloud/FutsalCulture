@@ -56,7 +56,7 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Profile</Link>
+                    <Link href="/profile">Parent Profile</Link>
                   </DropdownMenuItem>
                   {user?.isAdmin && (
                     <DropdownMenuItem asChild>
@@ -109,7 +109,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link href="/profile" className="block px-3 py-2 text-zinc-400 hover:text-white">
-                    Profile
+                    Parent Profile
                   </Link>
                   {user?.isAdmin && (
                     <Link href="/admin" className="block px-3 py-2 text-zinc-400 hover:text-white">
