@@ -102,10 +102,17 @@ export default function AdminPlayers() {
         (filters.portalAccess === 'disabled' && !player.canAccessPortal);
       const matchesSearch = !filters.search || 
         player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        player.lastName.toLowerCase().includes(filters.search.toLowerCase());
+        player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
+        `${player.firstName} ${player.lastName}`.toLowerCase().includes(filters.search.toLowerCase());
+      
+      console.log('Filtering player:', player.firstName, player.lastName);
+      console.log('Search term:', filters.search);
+      console.log('Matches search:', matchesSearch);
       
       return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSearch;
     });
+    
+    console.log('Filtered players count:', filtered.length);
     setFilteredPlayers(filtered);
   }, [players, filters]);
 
