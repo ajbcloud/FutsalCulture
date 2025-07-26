@@ -495,11 +495,37 @@ export function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const { message } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+
+      if (!message || message.trim().length < 1) {
+        return res.status(400).json({ message: "Reply message is required" });
+      }
+
+      // Get current help request to append to reply history
+      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
       
-      // Update help request status to "replied"
+      if (!currentRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      // Create new reply object
+      const newReply = {
+        message: message.trim(),
+        repliedBy: adminUserId,
+        repliedAt: new Date().toISOString()
+      };
+
+      // Update reply history and status
+      const updatedReplyHistory = [...(currentRequest.replyHistory || []), newReply];
+      
       const [updatedRequest] = await db.update(helpRequests)
         .set({
-          status: 'replied'
+          status: 'replied',
+          replyHistory: updatedReplyHistory
         })
         .where(eq(helpRequests.id, id))
         .returning();
@@ -508,7 +534,7 @@ export function setupAdminRoutes(app: any) {
         return res.status(404).json({ message: "Help request not found" });
       }
       
-      // TODO: Implement email sending and help request reply logging
+      // TODO: Implement email sending
       
       res.json({ 
         ...updatedRequest,
@@ -529,15 +555,36 @@ export function setupAdminRoutes(app: any) {
       if (!adminUserId) {
         return res.status(401).json({ message: "Admin authentication required" });
       }
+
+      if (!message || message.trim().length < 1) {
+        return res.status(400).json({ message: "Reply message is required" });
+      }
+
+      // Get current help request to append to reply history
+      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
       
-      // Update help request with reply and resolved status
+      if (!currentRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      // Create new reply object
+      const newReply = {
+        message: message.trim(),
+        repliedBy: adminUserId,
+        repliedAt: new Date().toISOString()
+      };
+
+      // Update reply history and resolve
+      const updatedReplyHistory = [...(currentRequest.replyHistory || []), newReply];
+      
       const [updatedRequest] = await db.update(helpRequests)
         .set({
           resolved: true,
           status: 'resolved',
           resolvedBy: adminUserId,
           resolutionNote: resolutionNote || message,
-          resolvedAt: new Date()
+          resolvedAt: new Date(),
+          replyHistory: updatedReplyHistory
         })
         .where(eq(helpRequests.id, id))
         .returning();
@@ -546,7 +593,7 @@ export function setupAdminRoutes(app: any) {
         return res.status(404).json({ message: "Help request not found" });
       }
       
-      // TODO: Implement email sending and help request reply logging
+      // TODO: Implement email sending
       
       res.json({ 
         ...updatedRequest,

@@ -295,20 +295,41 @@ export default function AdminHelpRequests() {
                   {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
                 <TableCell className="text-zinc-300">
-                  {(request.status === 'resolved' || request.resolved) && request.resolvedAt ? (
-                    <div>
-                      <div className="text-sm text-green-400">
-                        Resolved {format(new Date(request.resolvedAt), 'MMM d, yyyy h:mm a')}
-                      </div>
-                      {request.resolutionNote && (
-                        <div className="text-xs text-zinc-400 mt-1 max-w-xs truncate">
-                          {request.resolutionNote}
+                  <div className="space-y-2">
+                    {(request.status === 'resolved' || request.resolved) && request.resolvedAt ? (
+                      <div>
+                        <div className="text-sm text-green-400">
+                          Resolved {format(new Date(request.resolvedAt), 'MMM d, yyyy h:mm a')}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-zinc-500">-</span>
-                  )}
+                        {request.resolutionNote && (
+                          <div className="text-xs text-zinc-400 mt-1 max-w-xs truncate">
+                            {request.resolutionNote}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500">-</span>
+                    )}
+                    
+                    {/* Reply History */}
+                    {request.replyHistory && request.replyHistory.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-zinc-700">
+                        <p className="text-xs text-blue-400 mb-2">
+                          {request.replyHistory.length} {request.replyHistory.length === 1 ? 'reply' : 'replies'} sent:
+                        </p>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {request.replyHistory.map((reply: any, index: number) => (
+                            <div key={index} className="bg-zinc-800 p-2 rounded text-xs border-l-2 border-blue-500">
+                              <p className="text-zinc-200 mb-1">{reply.message}</p>
+                              <p className="text-zinc-500 text-xs">
+                                {format(new Date(reply.repliedAt), 'MMM d, h:mm a')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">

@@ -147,6 +147,11 @@ export const helpRequests = pgTable("help_requests", {
   resolvedBy: varchar("resolved_by"), // admin user ID who resolved the issue
   resolutionNote: text("resolution_note"), // detailed explanation of resolution
   resolvedAt: timestamp("resolved_at"), // when the issue was resolved
+  replyHistory: jsonb("reply_history").$type<Array<{
+    message: string;
+    repliedBy: string;
+    repliedAt: string;
+  }>>().default([]), // Array of reply objects
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
