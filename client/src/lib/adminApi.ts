@@ -2,6 +2,7 @@
 
 const apiRequest = async (url: string, options: RequestInit = {}) => {
   const response = await fetch(url, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -88,6 +89,7 @@ const adminImports = {
     formData.append('file', file);
     return fetch('/api/admin/imports/sessions', {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     }).then(r => r.json());
   },
@@ -96,20 +98,23 @@ const adminImports = {
     formData.append('file', file);
     return fetch('/api/admin/imports/players', {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     }).then(r => r.json());
   },
 };
 
 const adminParents = {
-  list: () => fetch('/api/admin/parents').then(res => res.json()),
+  list: () => fetch('/api/admin/parents', { credentials: 'include' }).then(res => res.json()),
   update: (id: string, data: any) => fetch(`/api/admin/parents/${id}`, {
     method: 'PUT',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   }).then(res => res.json()),
   delete: (id: string) => fetch(`/api/admin/parents/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    credentials: 'include'
   }).then(res => res.json())
 };
 

@@ -58,6 +58,7 @@ export default function AdminHelpRequests() {
       const response = await fetch(`/api/admin/help-requests/${resolvingRequest.id}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ resolutionNote: resolutionNote.trim() }),
       });
 
