@@ -20,7 +20,7 @@ export default function Navbar() {
             </Link>
             <div className="hidden md:block ml-10">
               <div className="flex space-x-8">
-                <Link href="/sessions" className="text-white font-medium hover:text-green-400">
+                <Link href={isAuthenticated ? "/dashboard" : "/sessions"} className="text-white font-medium hover:text-green-400">
                   Sessions
                 </Link>
                 {isAuthenticated && (
@@ -53,6 +53,9 @@ export default function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profile</Link>
+                  </DropdownMenuItem>
                   {user?.isAdmin && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">Admin Panel</Link>
@@ -84,7 +87,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-zinc-800">
-              <Link href="/sessions" className="block px-3 py-2 text-white font-medium hover:text-green-400">
+              <Link href={isAuthenticated ? "/dashboard" : "/sessions"} className="block px-3 py-2 text-white font-medium hover:text-green-400">
                 Sessions
               </Link>
               {isAuthenticated && (
@@ -101,6 +104,9 @@ export default function Navbar() {
                 </a>
               ) : (
                 <>
+                  <Link href="/profile" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                    Profile
+                  </Link>
                   {user?.isAdmin && (
                     <Link href="/admin" className="block px-3 py-2 text-zinc-400 hover:text-white">
                       Admin Panel
