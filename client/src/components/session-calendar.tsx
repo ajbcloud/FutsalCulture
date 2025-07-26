@@ -143,50 +143,71 @@ export default function SessionCalendar({
 
               {/* Sessions for this day */}
               <div className="space-y-1">
-                {daySessions.slice(0, 3).map(session => (
-                  <Card 
-                    key={session.id} 
-                    className={`p-1 cursor-pointer border-none ${
-                      session.status === 'open' ? 'bg-green-700/20 hover:bg-green-700/30' :
-                      session.status === 'full' ? 'bg-red-700/20' :
-                      session.status === 'closed' ? 'bg-zinc-700/20' :
-                      'bg-blue-700/20'
-                    }`}
-                    onClick={() => {
-                      if (onSessionClick) {
-                        onSessionClick(session);
-                      }
-                    }}
-                  >
-                    <CardContent className="p-1">
-                      <div className="text-xs text-white font-medium truncate">
-                        {session.title}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-zinc-300">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(session.startTime), 'HH:mm')}
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-zinc-300">
-                        <MapPin className="w-3 h-3" />
-                        <span className="truncate">{session.location}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs px-1 py-0"
-                        >
-                          {session.ageGroup}
-                        </Badge>
-                        <Badge 
-                          variant={session.status === 'open' ? 'default' : 'secondary'}
-                          className="text-xs px-1 py-0"
-                        >
-                          {session.status}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {daySessions.slice(0, 3).map(session => {
+                  const sessionDate = new Date(session.startTime);
+                  const today = new Date();
+                  const isToday = sessionDate.toDateString() === today.toDateString();
+                  const currentHour = today.getHours();
+                  const bookingOpen = isToday && currentHour >= 8;
+                  const sessionStarted = new Date() >= new Date(session.startTime);
+                  
+                  let statusColor = 'bg-blue-700/20';
+                  let statusText = session.status;
+                  
+                  if (sessionStarted) {
+                    statusColor = 'bg-zinc-700/20';
+                    statusText = 'started';
+                  } else if (session.status === 'full') {
+                    statusColor = 'bg-red-700/20';
+                    statusText = 'full';
+                  } else if (session.status === 'open' && bookingOpen) {
+                    statusColor = 'bg-green-700/20 hover:bg-green-700/30';
+                    statusText = 'open';
+                  } else if (!bookingOpen) {
+                    statusColor = 'bg-yellow-700/20';
+                    statusText = 'pending';
+                  }
+                  
+                  return (
+                    <Card 
+                      key={session.id} 
+                      className={`p-1 cursor-pointer border-none transition-colors ${statusColor}`}
+                      onClick={() => {
+                        if (onSessionClick) {
+                          onSessionClick(session);
+                        }
+                      }}
+                    >
+                      <CardContent className="p-1">
+                        <div className="text-xs text-white font-medium truncate">
+                          {session.title}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-zinc-300">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(session.startTime), 'HH:mm')}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-zinc-300">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{session.location}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs px-1 py-0"
+                          >
+                            {session.ageGroup}
+                          </Badge>
+                          <Badge 
+                            variant={statusText === 'open' ? 'default' : 'secondary'}
+                            className="text-xs px-1 py-0 capitalize"
+                          >
+                            {statusText}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
                 
                 {daySessions.length > 3 && (
                   <div className="text-xs text-zinc-400 text-center">
@@ -203,19 +224,19 @@ export default function SessionCalendar({
       <div className="flex items-center justify-center space-x-4 mt-6 text-sm">
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-green-700/20 border border-green-700 rounded"></div>
-          <span className="text-zinc-300">Open</span>
+          <span className="text-zinc-300">Open for Booking</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 bg-yellow-700/20 border border-yellow-700 rounded"></div>
+          <span className="text-zinc-300">Pending (8 AM Rule)</span>
         </div>
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-red-700/20 border border-red-700 rounded"></div>
           <span className="text-zinc-300">Full</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-blue-700/20 border border-blue-700 rounded"></div>
-          <span className="text-zinc-300">Upcoming</span>
-        </div>
-        <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-zinc-700/20 border border-zinc-700 rounded"></div>
-          <span className="text-zinc-300">Closed</span>
+          <span className="text-zinc-300">Started/Closed</span>
         </div>
       </div>
 
@@ -301,20 +322,68 @@ export default function SessionCalendar({
                         Price: ${(session.priceCents / 100).toFixed(2)}
                       </div>
                       
-                      {showBookingButtons && session.status === 'open' && (
-                        <Button 
-                          className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onSessionClick) {
-                              onSessionClick(session);
-                              setIsDialogOpen(false);
-                            }
-                          }}
-                        >
-                          Book Session
-                        </Button>
-                      )}
+                      {(() => {
+                        const sessionDate = new Date(session.startTime);
+                        const today = new Date();
+                        const isToday = sessionDate.toDateString() === today.toDateString();
+                        const currentHour = today.getHours();
+                        const bookingOpen = isToday && currentHour >= 8;
+                        const sessionStarted = new Date() >= new Date(session.startTime);
+                        
+                        if (showBookingButtons) {
+                          if (sessionStarted) {
+                            return (
+                              <Button 
+                                className="w-full mt-3 bg-gray-600" 
+                                disabled
+                              >
+                                Session Started
+                              </Button>
+                            );
+                          } else if (!isToday) {
+                            return (
+                              <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
+                                <p className="text-yellow-400 text-sm">
+                                  Booking opens at 8 AM on {format(sessionDate, 'MMM d')}
+                                </p>
+                              </div>
+                            );
+                          } else if (!bookingOpen) {
+                            return (
+                              <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
+                                <p className="text-yellow-400 text-sm">
+                                  Booking opens at 8 AM today
+                                </p>
+                              </div>
+                            );
+                          } else if (session.status === 'full') {
+                            return (
+                              <Button 
+                                className="w-full mt-3 bg-red-600" 
+                                disabled
+                              >
+                                Session Full
+                              </Button>
+                            );
+                          } else if (session.status === 'open') {
+                            return (
+                              <Button 
+                                className="w-full mt-3 bg-blue-600 hover:bg-blue-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onSessionClick) {
+                                    onSessionClick(session);
+                                    setIsDialogOpen(false);
+                                  }
+                                }}
+                              >
+                                Book Session
+                              </Button>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
                     </CardContent>
                   </Card>
                 ));
