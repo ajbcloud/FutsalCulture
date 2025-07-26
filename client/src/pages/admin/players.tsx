@@ -17,11 +17,12 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { Link } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 
 export default function AdminPlayers() {
-  const [players, setPlayers] = useState([]);
-  const [filteredPlayers, setFilteredPlayers] = useState([]);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -216,7 +217,8 @@ export default function AdminPlayers() {
               <TableHead className="text-zinc-300">Player Name</TableHead>
               <TableHead className="text-zinc-300">Age</TableHead>
               <TableHead className="text-zinc-300">Gender</TableHead>
-              <TableHead className="text-zinc-300">Parent</TableHead>
+              <TableHead className="text-zinc-300">Parent 1</TableHead>
+              <TableHead className="text-zinc-300">Parent 2</TableHead>
               <TableHead className="text-zinc-300">Portal Access</TableHead>
               <TableHead className="text-zinc-300">Sessions</TableHead>
               <TableHead className="text-zinc-300">Last Activity</TableHead>
@@ -233,7 +235,18 @@ export default function AdminPlayers() {
                 </TableCell>
                 <TableCell className="text-zinc-300">{player.gender}</TableCell>
                 <TableCell className="text-zinc-300">
-                  {player.parentName || 'Unknown'}
+                  {player.parentName ? (
+                    <Link href={`/admin/parents`}>
+                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
+                        {player.parentName}
+                      </span>
+                    </Link>
+                  ) : (
+                    <span className="text-zinc-500">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  <span className="text-zinc-500">—</span>
                 </TableCell>
                 <TableCell>
                   <Badge 
@@ -253,7 +266,7 @@ export default function AdminPlayers() {
             ))}
             {filteredPlayers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
                   No players found
                 </TableCell>
               </TableRow>

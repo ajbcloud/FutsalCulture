@@ -31,8 +31,8 @@ export default function AdminAnalyticsWorking() {
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
-    ageGroup: '',
-    gender: '',
+    ageGroup: 'all',
+    gender: 'all',
     location: '',
     viewBy: 'account'
   });
@@ -159,7 +159,7 @@ export default function AdminAnalyticsWorking() {
                   <SelectValue placeholder="All Ages" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Ages</SelectItem>
+                  <SelectItem value="all">All Ages</SelectItem>
                   <SelectItem value="U8">U8</SelectItem>
                   <SelectItem value="U10">U10</SelectItem>
                   <SelectItem value="U12">U12</SelectItem>
@@ -176,7 +176,7 @@ export default function AdminAnalyticsWorking() {
                   <SelectValue placeholder="All Genders" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Genders</SelectItem>
+                  <SelectItem value="all">All Genders</SelectItem>
                   <SelectItem value="boys">Boys</SelectItem>
                   <SelectItem value="girls">Girls</SelectItem>
                 </SelectContent>
@@ -203,8 +203,8 @@ export default function AdminAnalyticsWorking() {
               <Button onClick={() => setFilters({
                 startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 endDate: new Date().toISOString().split('T')[0],
-                ageGroup: '',
-                gender: '',
+                ageGroup: 'all',
+                gender: 'all',
                 location: '',
                 viewBy: 'account'
               })} variant="outline">
