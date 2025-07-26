@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FutsalSession } from "@shared/schema";
 import { getSessionStatusColor, getSessionStatusText } from "@shared/utils";
+import VenmoPrompt from "./venmo-prompt";
 
 interface EnhancedSessionCardProps {
   session: FutsalSession;
@@ -20,19 +22,21 @@ export default function EnhancedSessionCard({
   onReservationChange 
 }: EnhancedSessionCardProps) {
   const { toast } = useToast();
+  const [venmoData, setVenmoData] = useState<any>(null);
+  const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
 
   const createSignupMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
       return await apiRequest("POST", "/api/signups", data);
     },
-    onSuccess: (signup) => {
+    onSuccess: (signupData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       onReservationChange?.(session.id, true);
-      toast({
-        title: "Success",
-        description: "Spot reserved successfully!",
-      });
+      
+      // Show Venmo prompt with reservation details
+      setVenmoData(signupData);
+      setShowVenmoPrompt(true);
     },
     onError: (error: any) => {
       toast({
@@ -151,6 +155,12 @@ export default function EnhancedSessionCard({
           </Button>
         </div>
       </CardContent>
+      
+      <VenmoPrompt
+        isOpen={showVenmoPrompt}
+        onClose={() => setShowVenmoPrompt(false)}
+        signupData={venmoData}
+      />
     </Card>
   );
 }
