@@ -31,7 +31,7 @@ export const registrationStatusEnum = pgEnum("registration_status", ["pending", 
 
 // Integration provider enum
 export const integrationProviderEnum = pgEnum("integration_provider", [
-  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp"
+  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks"
 ]);
 
 // User storage table for Replit Auth

@@ -31,6 +31,26 @@ function maskCredentials(provider: string, credentials: any): any {
         clientId: credentials.clientId ? `***${credentials.clientId.slice(-4)}` : '',
         clientSecret: credentials.clientSecret ? '***' : '',
       };
+    case 'stripe':
+      return {
+        publishableKey: credentials.publishableKey ? `***${credentials.publishableKey.slice(-4)}` : '',
+        secretKey: credentials.secretKey ? '***' : '',
+        webhookSecret: credentials.webhookSecret ? '***' : '',
+      };
+    case 'mailchimp':
+      return {
+        apiKey: credentials.apiKey ? '***' : '',
+        audienceId: credentials.audienceId,
+        serverPrefix: credentials.serverPrefix,
+      };
+    case 'quickbooks':
+      return {
+        clientId: credentials.clientId ? `***${credentials.clientId.slice(-4)}` : '',
+        clientSecret: credentials.clientSecret ? '***' : '',
+        redirectUri: credentials.redirectUri,
+        companyId: credentials.companyId,
+        sandbox: credentials.sandbox,
+      };
     default:
       return {};
   }

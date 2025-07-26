@@ -225,7 +225,7 @@ export default function AdminSettings() {
               <div className="space-y-0.5">
                 <Label className="text-zinc-300">Third-party Services</Label>
                 <p className="text-sm text-zinc-400">
-                  Configure email, SMS, and other external service integrations
+                  Configure email, SMS, payments, accounting, and other external service integrations
                 </p>
                 <div className="flex gap-2 mt-2">
                   {integrations.slice(0, 3).map((integration) => (
@@ -306,6 +306,8 @@ export default function AdminSettings() {
                                           {integration.provider === 'google' && 'Calendar & Drive'}
                                           {integration.provider === 'microsoft' && 'Teams & Outlook'}
                                           {integration.provider === 'stripe' && 'Payment Processing'}
+                                          {integration.provider === 'mailchimp' && 'Email Marketing'}
+                                          {integration.provider === 'quickbooks' && 'Accounting & Invoicing'}
                                         </div>
                                       </div>
                                     </div>

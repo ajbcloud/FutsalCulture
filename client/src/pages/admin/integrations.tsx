@@ -19,7 +19,8 @@ import {
   XCircle,
   AlertCircle,
   TestTube,
-  CreditCard
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 
 interface Integration {
@@ -36,7 +37,7 @@ interface ProviderConfig {
   name: string;
   icon: React.ReactNode;
   description: string;
-  category: 'email' | 'sms' | 'calendar' | 'storage' | 'payment';
+  category: 'email' | 'sms' | 'calendar' | 'storage' | 'payment' | 'accounting';
   fields: Array<{
     key: string;
     label: string;
@@ -110,6 +111,19 @@ const providerConfigs: Record<string, ProviderConfig> = {
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your Mailchimp API key', required: true },
       { key: 'audienceId', label: 'Audience ID', type: 'text', placeholder: 'Your default audience/list ID', required: true },
       { key: 'serverPrefix', label: 'Server Prefix', type: 'text', placeholder: 'us1, us2, etc. (from your API key)', required: true },
+    ],
+  },
+  quickbooks: {
+    name: 'QuickBooks Online',
+    icon: <DollarSign className="w-4 h-4" />,
+    description: 'Accounting and financial management for revenue tracking and invoicing',
+    category: 'accounting',
+    fields: [
+      { key: 'clientId', label: 'Client ID', type: 'text', placeholder: 'Your QuickBooks app Client ID', required: true },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'Your QuickBooks app Client Secret', required: true },
+      { key: 'redirectUri', label: 'Redirect URI', type: 'url', placeholder: 'https://yourapp.com/auth/quickbooks/callback', required: true },
+      { key: 'companyId', label: 'Company ID', type: 'text', placeholder: 'QuickBooks Company ID (obtained after OAuth)', required: false },
+      { key: 'sandbox', label: 'Sandbox Mode', type: 'text', placeholder: 'true or false', required: false },
     ],
   },
 };
@@ -294,7 +308,7 @@ export default function AdminIntegrations() {
         <div>
           <h1 className="text-2xl font-bold text-white">Integrations</h1>
           <p className="text-zinc-400 mt-1">
-            Connect third-party services for SMS, email, calendar, and file storage.
+            Connect third-party services for SMS, email, calendar, file storage, payments, and accounting.
           </p>
         </div>
 
