@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
 export default function AdminPayments() {
   const [pendingPayments, setPendingPayments] = useState([]);
@@ -60,7 +61,7 @@ export default function AdminPayments() {
       return payments.filter((payment: any) => {
         const player = payment.player;
         const age = new Date().getFullYear() - player.birthYear;
-        const ageGroup = age <= 8 ? 'U8' : age <= 10 ? 'U10' : age <= 11 ? 'U11' : age <= 12 ? 'U12' : age <= 14 ? 'U14' : 'U16';
+        const ageGroup = calculateAgeGroupFromAge(age);
         
         const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || ageGroup === filters.ageGroup;
         const matchesGender = !filters.gender || filters.gender === 'all' || player.gender === filters.gender;
@@ -137,12 +138,9 @@ export default function AdminPayments() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Ages</SelectItem>
-                <SelectItem value="U8">U8</SelectItem>
-                <SelectItem value="U10">U10</SelectItem>
-                <SelectItem value="U11">U11</SelectItem>
-                <SelectItem value="U12">U12</SelectItem>
-                <SelectItem value="U14">U14</SelectItem>
-                <SelectItem value="U16">U16</SelectItem>
+                {AGE_GROUPS.map(age => (
+                  <SelectItem key={age} value={age}>{age}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

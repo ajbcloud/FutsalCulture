@@ -22,6 +22,7 @@ import { Edit, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { Player, Signup, FutsalSession, NotificationPreferences } from "@shared/schema";
 import { calculateAgeGroup, isSessionEligibleForPlayer, isSessionBookingOpen, getSessionStatusColor, getSessionStatusText } from "@shared/utils";
+import { AGE_GROUPS } from "@shared/constants";
 
 export default function Dashboard() {
   const { toast } = useToast();

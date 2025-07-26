@@ -107,17 +107,13 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-const helpCategoryEnum = pgEnum("help_category", ["technical", "payment", "booking", "portal", "general"]);
-const helpPriorityEnum = pgEnum("help_priority", ["low", "medium", "high", "urgent"]);
-const helpStatusEnum = pgEnum("help_status", ["open", "in_progress", "resolved", "closed"]);
-
 // Help requests table
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   subject: varchar("subject").notNull(),
-  category: helpCategoryEnum("category").notNull().default("general"),
-  priority: helpPriorityEnum("priority").notNull().default("medium"),
-  status: helpStatusEnum("status").notNull().default("open"),
+  category: varchar("category").notNull().default("general"),
+  priority: varchar("priority").notNull().default("medium"),
+  status: varchar("status").notNull().default("open"),
   name: varchar("name").notNull(),
   phone: varchar("phone"),
   email: varchar("email").notNull(),

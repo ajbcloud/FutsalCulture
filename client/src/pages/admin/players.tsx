@@ -19,6 +19,7 @@ import { Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -63,7 +64,7 @@ export default function AdminPlayers() {
   useEffect(() => {
     let filtered = players.filter((player: any) => {
       const age = new Date().getFullYear() - player.birthYear;
-      const ageGroup = age <= 8 ? 'U8' : age <= 10 ? 'U10' : age <= 11 ? 'U11' : age <= 12 ? 'U12' : age <= 14 ? 'U14' : 'U16';
+      const ageGroup = calculateAgeGroupFromAge(age);
       
       const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || ageGroup === filters.ageGroup;
       const matchesGender = !filters.gender || filters.gender === 'all' || player.gender === filters.gender;
@@ -170,12 +171,9 @@ export default function AdminPlayers() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Ages</SelectItem>
-                <SelectItem value="U8">U8</SelectItem>
-                <SelectItem value="U10">U10</SelectItem>
-                <SelectItem value="U11">U11</SelectItem>
-                <SelectItem value="U12">U12</SelectItem>
-                <SelectItem value="U14">U14</SelectItem>
-                <SelectItem value="U16">U16</SelectItem>
+                {AGE_GROUPS.map(age => (
+                  <SelectItem key={age} value={age}>{age}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

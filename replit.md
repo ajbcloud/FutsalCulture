@@ -170,3 +170,5 @@ Preferred communication style: Simple, everyday language.
 - **Comprehensive Demo Data System**: Created realistic seed data with 12 parents, 26 players, 60 sessions (4 weeks), 395 signups, and $3,950 revenue for sales presentations
 - **Fixed Analytics Filtering**: Analytics dashboard now queries real database data with proper filtering by age group, gender, date range, and location instead of returning mock values
 - **Admin Parents Portal Enhancement**: Fixed player details loading in parents management section - now displays actual player information, portal access status, and booking counts when expanding parent rows
+- **Help Request System Overhaul**: Enhanced help request system with structured fields (subject, category, priority, status) and aligned admin portal display with proper field mapping
+- **Age Group Expansion**: Extended age groups from U8-U16 to U8-U18, created shared constants file, and updated all admin components, filtering logic, CSV templates, and age calculation functions to support ages 8-18

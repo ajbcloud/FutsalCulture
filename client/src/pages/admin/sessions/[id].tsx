@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
+import { AGE_GROUPS } from '@shared/constants';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -155,7 +156,7 @@ export default function AdminSessionDetail() {
           <div>
             <Label className="text-zinc-300">Age Groups (Multi-Select)</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {['U8', 'U10', 'U12', 'U14', 'U16'].map(age => (
+              {AGE_GROUPS.map(age => (
                 <label key={age} className="flex items-center space-x-2 text-zinc-300">
                   <input
                     type="checkbox"

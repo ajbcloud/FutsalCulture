@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { AGE_GROUPS } from '@shared/constants';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -169,12 +170,9 @@ export default function AdminSessions() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Ages</SelectItem>
-                <SelectItem value="U8">U8</SelectItem>
-                <SelectItem value="U10">U10</SelectItem>
-                <SelectItem value="U11">U11</SelectItem>
-                <SelectItem value="U12">U12</SelectItem>
-                <SelectItem value="U14">U14</SelectItem>
-                <SelectItem value="U16">U16</SelectItem>
+                {AGE_GROUPS.map(age => (
+                  <SelectItem key={age} value={age}>{age}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
