@@ -264,7 +264,7 @@ export default function AdminParents() {
               {filteredParents.map((parent: any) => {
                 const isExpanded = expandedParentIds.has(parent.id);
                 return (
-                  <div key={parent.id}>
+                  <React.Fragment key={parent.id}>
                     <TableRow className="border-zinc-800">
                       <TableCell className="text-white">
                         {parent.firstName} {parent.lastName}
@@ -334,7 +334,7 @@ export default function AdminParents() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </div>
+                  </React.Fragment>
                 );
               })}
               {filteredParents.length === 0 && (
