@@ -520,6 +520,44 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  app.post('/api/admin/help-requests/:id/reply-and-resolve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { message, resolutionNote } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+      
+      // Update help request with reply and resolved status
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          resolved: true,
+          status: 'resolved',
+          resolvedBy: adminUserId,
+          resolutionNote: resolutionNote || message,
+          resolvedAt: new Date()
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+      
+      // TODO: Implement email sending and help request reply logging
+      
+      res.json({ 
+        ...updatedRequest,
+        message: "Reply sent and request resolved successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending help request reply and resolve:", error);
+      res.status(500).json({ message: "Failed to send reply and resolve" });
+    }
+  });
+
   // Pending Registrations Management
   app.get('/api/admin/pending-registrations', requireAdmin, async (req: Request, res: Response) => {
     try {

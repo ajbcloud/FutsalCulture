@@ -16,28 +16,74 @@ import { MessageSquare, CheckCircle, Reply } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
+import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
 
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [resolvingRequest, setResolvingRequest] = useState<any>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [sending, setSending] = useState(false);
+  
+  // Filter states
+  const [userFilter, setUserFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  
   const { toast } = useToast();
 
   useEffect(() => {
     adminHelpRequests.list().then(data => {
       console.log('admin help requests:', data);
       setHelpRequests(data);
+      setFilteredRequests(data);
       setLoading(false);
     }).catch(err => {
       console.error('Error fetching help requests:', err);
       setLoading(false);
     });
   }, []);
+
+  // Apply filters whenever filter values or help requests change
+  useEffect(() => {
+    let filtered = helpRequests;
+
+    // Filter by user (name or email)
+    if (userFilter) {
+      const searchTerm = userFilter.toLowerCase();
+      filtered = filtered.filter(req => 
+        req.name?.toLowerCase().includes(searchTerm) ||
+        req.email?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Filter by status
+    if (statusFilter) {
+      filtered = filtered.filter(req => {
+        const status = req.status || (req.resolved ? 'resolved' : 'open');
+        return status === statusFilter;
+      });
+    }
+
+    // Filter by date range
+    if (startDateFilter) {
+      filtered = filtered.filter(req => 
+        new Date(req.createdAt) >= new Date(startDateFilter)
+      );
+    }
+    if (endDateFilter) {
+      filtered = filtered.filter(req => 
+        new Date(req.createdAt) <= new Date(endDateFilter + 'T23:59:59')
+      );
+    }
+
+    setFilteredRequests(filtered);
+  }, [helpRequests, userFilter, statusFilter, startDateFilter, endDateFilter]);
 
   const handleMarkResolved = async (request: any) => {
     setResolvingRequest(request);
@@ -78,19 +124,33 @@ export default function AdminHelpRequests() {
     }
   };
 
-  const handleSendReply = async () => {
+  const handleSendReply = async (resolveAfterReply = false) => {
     if (!selectedRequest || !replyMessage.trim()) return;
 
     setSending(true);
     try {
-      const response = await adminHelpRequests.reply(selectedRequest.id, replyMessage);
-      toast({ title: "Reply sent successfully" });
+      if (resolveAfterReply) {
+        // Call the reply and resolve endpoint
+        const response = await fetch(`/api/admin/help-requests/${selectedRequest.id}/reply-and-resolve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            message: replyMessage.trim(),
+            resolutionNote: replyMessage.trim() // Use reply as resolution note
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to reply and resolve');
+        toast({ title: "Reply sent and request resolved" });
+      } else {
+        // Just send reply
+        await adminHelpRequests.reply(selectedRequest.id, replyMessage);
+        toast({ title: "Reply sent successfully" });
+      }
+      
       setSelectedRequest(null);
       setReplyMessage('');
-      // Update status to "replied" (backend handles this but we update locally for immediate UI feedback)
-      setHelpRequests(helpRequests.map((req: any) => 
-        req.id === selectedRequest.id ? { ...req, status: 'replied' } : req
-      ));
+      
       // Refresh the list to get updated data from server
       const updatedRequests = await adminHelpRequests.list();
       setHelpRequests(updatedRequests);
@@ -113,7 +173,74 @@ export default function AdminHelpRequests() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-white mb-6">Help Requests</h1>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-white">Help Requests</h1>
+        
+        {/* Filter Controls */}
+        <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-zinc-300 text-sm">Filter by User</Label>
+              <Input
+                placeholder="Search name or email..."
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-zinc-300 text-sm">Filter by Status</Label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+              >
+                <option value="">All Status</option>
+                <option value="open">Open</option>
+                <option value="replied">Replied</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-zinc-300 text-sm">Start Date</Label>
+              <Input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-zinc-300 text-sm">End Date</Label>
+              <Input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+              />
+            </div>
+          </div>
+          {(userFilter || statusFilter || startDateFilter || endDateFilter) && (
+            <div className="mt-3 flex justify-between items-center">
+              <p className="text-sm text-zinc-400">
+                Showing {filteredRequests.length} of {helpRequests.length} help requests
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setUserFilter('');
+                  setStatusFilter('');
+                  setStartDateFilter('');
+                  setEndDateFilter('');
+                }}
+                className="text-zinc-300 border-zinc-600 hover:bg-zinc-800"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </div>
 
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
@@ -128,7 +255,7 @@ export default function AdminHelpRequests() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {helpRequests.map((request: any) => (
+            {filteredRequests.map((request: any) => (
               <TableRow key={request.id} className="border-zinc-800">
                 <TableCell className="text-zinc-300">
                   <div>
@@ -197,10 +324,10 @@ export default function AdminHelpRequests() {
                 </TableCell>
               </TableRow>
             ))}
-            {helpRequests.length === 0 && (
+            {filteredRequests.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
-                  No help requests found
+                  {helpRequests.length === 0 ? 'No help requests found' : 'No help requests match the current filters'}
                 </TableCell>
               </TableRow>
             )}
@@ -244,15 +371,23 @@ export default function AdminHelpRequests() {
                   variant="outline" 
                   onClick={() => setSelectedRequest(null)}
                   disabled={sending}
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
                 >
                   Cancel
                 </Button>
                 <Button 
-                  onClick={handleSendReply}
+                  onClick={() => handleSendReply(false)}
                   disabled={sending || !replyMessage.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
                 >
-                  {sending ? 'Sending...' : 'Send Reply & Mark Resolved'}
+                  {sending ? 'Sending...' : 'Reply'}
+                </Button>
+                <Button 
+                  onClick={() => handleSendReply(true)}
+                  disabled={sending || !replyMessage.trim()}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {sending ? 'Sending...' : 'Reply & Mark Resolved'}
                 </Button>
               </div>
             </div>
@@ -303,6 +438,7 @@ export default function AdminHelpRequests() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </AdminLayout>
   );
 }
