@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(355, 7%, 97%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  
+  /* Futsal Brand Colors */
+  --futsal-50: hsl(138, 76%, 97%);
+  --futsal-100: hsl(141, 84%, 93%);
+  --futsal-200: hsl(141, 79%, 85%);
+  --futsal-300: hsl(142, 77%, 73%);
+  --futsal-400: hsl(142, 69%, 58%);
+  --futsal-500: hsl(142, 76%, 36%);
+  --futsal-600: hsl(142, 72%, 29%);
+  --futsal-700: hsl(142, 64%, 24%);
+  --futsal-800: hsl(142, 53%, 20%);
+  --futsal-900: hsl(143, 61%, 10%);
+  
+  /* Brand Blue Colors */
+  --brand-50: hsl(214, 100%, 97%);
+  --brand-100: hsl(214, 95%, 93%);
+  --brand-200: hsl(213, 97%, 87%);
+  --brand-300: hsl(212, 96%, 78%);
+  --brand-400: hsl(213, 94%, 68%);
+  --brand-500: hsl(217, 91%, 60%);
+  --brand-600: hsl(221, 83%, 53%);
+  --brand-700: hsl(224, 76%, 48%);
+  --brand-800: hsl(226, 71%, 40%);
+  --brand-900: hsl(224, 64%, 33%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(355, 7%, 97%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-futsal-50 { color: var(--futsal-50); }
+  .text-futsal-100 { color: var(--futsal-100); }
+  .text-futsal-200 { color: var(--futsal-200); }
+  .text-futsal-300 { color: var(--futsal-300); }
+  .text-futsal-400 { color: var(--futsal-400); }
+  .text-futsal-500 { color: var(--futsal-500); }
+  .text-futsal-600 { color: var(--futsal-600); }
+  .text-futsal-700 { color: var(--futsal-700); }
+  .text-futsal-800 { color: var(--futsal-800); }
+  .text-futsal-900 { color: var(--futsal-900); }
+  
+  .bg-futsal-50 { background-color: var(--futsal-50); }
+  .bg-futsal-100 { background-color: var(--futsal-100); }
+  .bg-futsal-200 { background-color: var(--futsal-200); }
+  .bg-futsal-300 { background-color: var(--futsal-300); }
+  .bg-futsal-400 { background-color: var(--futsal-400); }
+  .bg-futsal-500 { background-color: var(--futsal-500); }
+  .bg-futsal-600 { background-color: var(--futsal-600); }
+  .bg-futsal-700 { background-color: var(--futsal-700); }
+  .bg-futsal-800 { background-color: var(--futsal-800); }
+  .bg-futsal-900 { background-color: var(--futsal-900); }
+  
+  .text-brand-50 { color: var(--brand-50); }
+  .text-brand-100 { color: var(--brand-100); }
+  .text-brand-200 { color: var(--brand-200); }
+  .text-brand-300 { color: var(--brand-300); }
+  .text-brand-400 { color: var(--brand-400); }
+  .text-brand-500 { color: var(--brand-500); }
+  .text-brand-600 { color: var(--brand-600); }
+  .text-brand-700 { color: var(--brand-700); }
+  .text-brand-800 { color: var(--brand-800); }
+  .text-brand-900 { color: var(--brand-900); }
+  
+  .bg-brand-50 { background-color: var(--brand-50); }
+  .bg-brand-100 { background-color: var(--brand-100); }
+  .bg-brand-200 { background-color: var(--brand-200); }
+  .bg-brand-300 { background-color: var(--brand-300); }
+  .bg-brand-400 { background-color: var(--brand-400); }
+  .bg-brand-500 { background-color: var(--brand-500); }
+  .bg-brand-600 { background-color: var(--brand-600); }
+  .bg-brand-700 { background-color: var(--brand-700); }
+  .bg-brand-800 { background-color: var(--brand-800); }
+  .bg-brand-900 { background-color: var(--brand-900); }
+  
+  .border-futsal-500 { border-color: var(--futsal-500); }
+  .border-brand-500 { border-color: var(--brand-500); }
+  
+  .hover\:bg-futsal-600:hover { background-color: var(--futsal-600); }
+  .hover\:bg-futsal-700:hover { background-color: var(--futsal-700); }
+  .hover\:bg-brand-600:hover { background-color: var(--brand-600); }
+  .hover\:bg-brand-700:hover { background-color: var(--brand-700); }
+}
