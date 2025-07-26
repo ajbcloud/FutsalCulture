@@ -214,13 +214,13 @@ export default function Dashboard() {
     
     if (!isToday) return false;
     
-    // If parent has players, only show sessions eligible for their players
-    if (players.length > 0) {
-      return players.some(player => isSessionEligibleForPlayer(session, player));
+    // If parent has NO players, show nothing
+    if (players.length === 0) {
+      return false;
     }
     
-    // If no players, show all today's sessions
-    return true;
+    // If parent has players, only show sessions eligible for their players
+    return players.some(player => isSessionEligibleForPlayer(session, player));
   });
 
   return (
@@ -288,10 +288,32 @@ export default function Dashboard() {
 
           {todaySessions.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No sessions scheduled for today.</p>
-              <Button asChild className="mt-4">
-                <Link href="/sessions">View All Sessions</Link>
-              </Button>
+              {players.length === 0 ? (
+                <>
+                  <p className="text-gray-500 text-lg">Add a player to see available sessions</p>
+                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="mt-4 bg-green-600 hover:bg-green-700">Add Your First Player</Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-zinc-900 border-zinc-700">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Add New Player</DialogTitle>
+                      </DialogHeader>
+                      <PlayerForm onSuccess={() => {
+                        setIsAddDialogOpen(false);
+                        setEditingPlayer(null);
+                      }} />
+                    </DialogContent>
+                  </Dialog>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 text-lg">No eligible sessions scheduled for today.</p>
+                  <Button asChild className="mt-4">
+                    <Link href="/sessions">View All Sessions</Link>
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
