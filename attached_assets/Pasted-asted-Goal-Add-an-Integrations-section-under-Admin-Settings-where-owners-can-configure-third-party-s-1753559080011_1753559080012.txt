@@ -1,0 +1,169 @@
+asted-Goal-Add-an-Integrations-section-under-Admin-Settings-where-owners-can-configure-third-party-se-1753558650499_1753558650500.txt
+Goal: Add an “Integrations” section under Admin → Settings where owners can configure third‑party services (Twilio, SendGrid, Google Workspace, Microsoft 365, etc.) for SMS and email.
+
+1. Database & Configuration
+integrations table
+
+Columns:
+
+id – UUID primary key
+
+provider – string enum ("twilio", "sendgrid", "google", "microsoft", …)
+
+credentials – JSONB storing provider‑specific keys/secrets
+
+enabled – boolean
+
+created_at, updated_at timestamps
+
+Migration
+
+Create a migration script to add the integrations table.
+
+Server‑side config
+
+In server/config.ts, define an IntegrationConfig interface mapping provider → credentials schema.
+
+2. Server‑Side API Endpoints
+All routes protected by requireAdmin && require2FA.
+
+List Integrations
+
+ts
+Copy
+Edit
+GET /api/admin/integrations
+// returns [{ id, provider, enabled }]
+Get One Integration
+
+ts
+Copy
+Edit
+GET /api/admin/integrations/:id
+// returns { id, provider, credentials, enabled }
+Create or Update Integration
+
+ts
+Copy
+Edit
+POST /api/admin/integrations
+// body: { provider, credentials: { … }, enabled }
+// if provider exists, overwrite credentials+enabled; else insert new
+Enable / Disable
+
+ts
+Copy
+Edit
+PATCH /api/admin/integrations/:id
+// body: { enabled: boolean }
+Delete Integration (optional)
+
+ts
+Copy
+Edit
+DELETE /api/admin/integrations/:id
+3. Client‑Side: Admin UI
+Navigation
+
+In the left‑hand menu under Settings, add Integrations.
+
+Integrations Page (/admin/settings/integrations.tsx)
+
+Header & Description
+
+Title: Integrations
+
+Description: “Connect third‑party services for SMS, email, calendar, and file storage.”
+
+Integrations List
+
+Fetch /api/admin/integrations.
+
+Display a table or card grid:
+
+Provider	Status	Actions
+Twilio	Enabled	Configure ⏎ Disable
+SendGrid	Disabled	Configure ⏎ Enable
+Google	Disabled	Configure ⏎ Enable
+
+Configure Modal / Drawer
+
+When the admin clicks Configure (or Enable), open a modal with provider‑specific fields:
+
+Twilio: Account SID, Auth Token, From Number
+
+SendGrid: API Key, Verified Sender Address
+
+Google: OAuth Client ID, Client Secret, Redirect URI, Scopes
+
+Microsoft: Tenant ID, Client ID, Client Secret, Scopes
+
+Pre‑populate existing credentials if editing.
+
+Save button → POST /api/admin/integrations with the form data + enabled = true.
+
+Cancel closes the modal.
+
+Enable / Disable Toggle
+
+In the table row, include a switch to toggle enabled.
+
+On change, call PATCH /api/admin/integrations/:id → update UI immediately.
+
+Validation & Feedback
+
+Validate required fields client‑side (non‑empty string).
+
+On success, show toast “Integration saved.”
+
+On error, show toast with the error message.
+
+4. Wiring Integrations into Workflows
+SMS Sending (Twilio)
+
+In your SMS helper (lib/sms.ts), read credentials from the integrations table for provider="twilio" where enabled=true.
+
+If none found or disabled, throw an error or skip SMS.
+
+Email Sending (SendGrid / Google / Microsoft)
+
+In your email helper (lib/email.ts), read credentials from the integrations table for the chosen email provider.
+
+Fallback order:
+
+SendGrid
+
+Google (Gmail API)
+
+Microsoft (Outlook API)
+
+If all are missing or disabled, return an error and log “No email provider configured.”
+
+Calendar Invites (Google / Microsoft)
+
+When creating sessions or sending reminders, optionally create calendar events if the provider is configured.
+
+5. Security & Secrets Management
+Encryption at Rest
+
+Store credentials JSONB encrypted in the database (use a field‑level encryption plugin) or use a secrets vault if available.
+
+Access Control
+
+Ensure only admins with 2FA can view or change integrations.
+
+Never expose raw secrets in the client—only return enabled and masked fields (e.g. show last 4 chars).
+
+Audit Logging
+
+Whenever an integration is created, updated, enabled, or disabled, write an audit record (who, when, what).
+
+6. Summary of Deliverables
+Layer	Task
+Database	Create integrations table + migration
+Server API	CRUD endpoints for /api/admin/integrations
+Client UI	Add Integrations page under Settings, with list, configure modal
+Helpers	Wire Twilio/SendGrid/Google/Microsoft drivers to use new credentials
+Security	Encrypt secrets, restrict access to admins + 2FA only
+
+Implement each of these steps in sequence, run your migrations, verify that you can add Twilio and SendGrid credentials in the Admin → Integrations UI, and confirm that subsequent SMS/email flows use the configured provider.
