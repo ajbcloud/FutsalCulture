@@ -17,8 +17,11 @@ export function useAuth() {
       }
     },
     retry: false,
-    staleTime: 60000, // Consider data fresh for 1 minute
+    staleTime: 300000, // Consider data fresh for 5 minutes (increased from 1 minute)
+    gcTime: 300000, // Keep in cache for 5 minutes
     refetchInterval: false, // Don't refetch automatically
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on component mount if data exists
   });
 
   return {
