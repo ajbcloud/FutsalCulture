@@ -134,3 +134,10 @@ Preferred communication style: Simple, everyday language.
 - Capacity monitoring runs every 5 minutes
 - Session status updates run every 5 minutes
 - Jobs automatically start with server process
+
+### Database Seeding
+- Comprehensive seed data system with 10 parents, 14 players, 10 sessions, 14 signups, and 14 payments
+- Sample data includes realistic portal access controls and contact information for testing
+- Smart invite system testing data with varied email/phone combinations
+- Run seeding with: `tsx server/seed.ts`
+- Clears existing data and repopulates with fresh test data
