@@ -100,7 +100,7 @@ export const helpRequests = pgTable("help_requests", {
 // Notification preferences table
 export const notificationPreferences = pgTable("notification_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  parentId: varchar("parent_id").notNull(),
+  parentId: varchar("parent_id").notNull().unique(),
   email: boolean("email").default(true),
   sms: boolean("sms").default(false),
   createdAt: timestamp("created_at").defaultNow(),

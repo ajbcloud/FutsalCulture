@@ -14,7 +14,7 @@ export default function SessionDetail() {
   const { isAuthenticated } = useAuth();
 
   const { data: sessionData, isLoading } = useQuery<FutsalSession & { signupsCount: number }>({
-    queryKey: ["/api/sessions", id],
+    queryKey: [`/api/sessions/${id}`],
     enabled: !!id,
   });
 

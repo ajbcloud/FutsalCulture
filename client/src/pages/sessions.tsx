@@ -15,13 +15,13 @@ export default function Sessions() {
   });
 
   const filteredSessions = sessions.filter(session => {
-    if (ageFilter && session.ageGroup !== ageFilter) return false;
-    if (locationFilter && session.location !== locationFilter) return false;
+    if (ageFilter && ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
+    if (locationFilter && locationFilter !== "all" && session.location !== locationFilter) return false;
     return true;
   });
 
-  const uniqueAgeGroups = [...new Set(sessions.map(s => s.ageGroup))];
-  const uniqueLocations = [...new Set(sessions.map(s => s.location))];
+  const uniqueAgeGroups = Array.from(new Set(sessions.map(s => s.ageGroup)));
+  const uniqueLocations = Array.from(new Set(sessions.map(s => s.location)));
 
   if (isLoading) {
     return (
@@ -48,7 +48,7 @@ export default function Sessions() {
                   <SelectValue placeholder="All Ages" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Ages</SelectItem>
+                  <SelectItem value="all">All Ages</SelectItem>
                   {uniqueAgeGroups.map(age => (
                     <SelectItem key={age} value={age}>{age}</SelectItem>
                   ))}
@@ -59,7 +59,7 @@ export default function Sessions() {
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   {uniqueLocations.map(location => (
                     <SelectItem key={location} value={location}>{location}</SelectItem>
                   ))}
@@ -73,8 +73,8 @@ export default function Sessions() {
               <p className="text-gray-500 text-lg">No sessions found matching your criteria.</p>
               <Button 
                 onClick={() => {
-                  setAgeFilter("");
-                  setLocationFilter("");
+                  setAgeFilter("all");
+                  setLocationFilter("all");
                 }}
                 className="mt-4"
               >

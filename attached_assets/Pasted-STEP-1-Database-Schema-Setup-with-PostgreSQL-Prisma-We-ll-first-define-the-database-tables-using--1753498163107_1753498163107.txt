@@ -1,0 +1,110 @@
+STEP 1: Database Schema Setup with PostgreSQL + Prisma
+We’ll first define the database tables using Prisma ORM, which works cleanly with Replit and PostgreSQL.
+
+🔹 1A. Install Prisma
+In the terminal:
+
+bash
+Copy
+Edit
+npm install prisma --save-dev
+npx prisma init
+Update your .env with your PostgreSQL URL:
+
+ini
+Copy
+Edit
+DATABASE_URL="postgresql://username:password@localhost:5432/futsalculture"
+🔹 1B. Create schema.prisma
+Replace the contents of prisma/schema.prisma with this:
+
+prisma
+Copy
+Edit
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  role           String   // 'parent', 'admin', or 'player'
+  phone          String?
+  smsEnabled     Boolean  @default(false)
+  smsConsent     Boolean  @default(false)
+  emailConsent   Boolean  @default(false)
+  parentId       String?  // for PlayerUser
+  canBook        Boolean? @default(false)
+  birthYear      Int?
+  players        Player[] @relation("ParentPlayers")
+  signups        Signup[] @relation("ParentSignups")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  birthYear Int
+  parent    User     @relation("ParentPlayers", fields: [parentId], references: [id])
+  parentId  String
+  signups   Signup[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  title      String
+  ageGroup   String
+  location   String
+  startTime  DateTime
+  endTime    DateTime
+  capacity   Int
+  priceCents Int
+  status     String   // 'upcoming' | 'open' | 'full' | 'closed'
+  signups    Signup[]
+}
+
+model Signup {
+  id         String   @id @default(cuid())
+  player     Player   @relation(fields: [playerId], references: [id])
+  playerId   String
+  session    Session  @relation(fields: [sessionId], references: [id])
+  sessionId  String
+  paid       Boolean  @default(false)
+  paymentIntentId String
+  parent     User     @relation("ParentSignups", fields: [parentId], references: [id])
+  parentId   String
+  payment    Payment?
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  signup     Signup   @relation(fields: [signupId], references: [id])
+  signupId   String
+  amountCents Int
+  status     String   // 'paid' | 'refunded'
+  createdAt  DateTime @default(now())
+}
+
+model HelpRequest {
+  id      String   @id @default(cuid())
+  name    String
+  phone   String
+  email   String
+  note    String
+  createdAt DateTime @default(now())
+}
+🔹 1C. Generate and Push Schema
+Run:
+
+bash
+Copy
+Edit
+npx prisma generate
+npx prisma db push
+This will create all tables in your PostgreSQL database.

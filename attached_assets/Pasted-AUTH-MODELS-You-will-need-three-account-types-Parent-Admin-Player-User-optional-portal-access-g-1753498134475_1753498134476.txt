@@ -1,0 +1,233 @@
+AUTH MODELS
+You will need three account types:
+
+Parent
+
+Admin
+
+Player User (optional portal access granted by parent)
+
+Use Replit Auth with role-based control in users table:
+
+ts
+Copy
+Edit
+type User = {
+  id: string
+  email: string
+  name: string
+  phone?: string
+  role: 'parent' | 'admin' | 'player'
+  smsEnabled?: boolean
+  smsConsent?: boolean
+  emailConsent?: boolean
+  parentId?: string
+  canBook?: boolean
+  birthYear?: number
+}
+🧱 DATABASE TABLES (PostgreSQL)
+sessions
+id
+
+title (e.g. "U10 Girls")
+
+ageGroup (e.g. U8, U10)
+
+location
+
+startTime
+
+endTime
+
+capacity
+
+priceCents (default 1000)
+
+status: 'upcoming' | 'open' | 'full' | 'closed'
+
+players
+id
+
+parentId → user.id
+
+firstName
+
+lastName
+
+birthYear
+
+signups
+id
+
+playerId → players.id
+
+sessionId → sessions.id
+
+paid: boolean
+
+paymentIntentId (from Stripe)
+
+payments
+id
+
+signupId → signups.id
+
+amountCents
+
+status: 'paid' | 'refunded'
+
+timestamp
+
+help_requests
+id
+
+name
+
+phone
+
+email
+
+message
+
+🎨 FRONTEND UI (REACT + TAILWIND)
+Dark Theme Setup
+js
+Copy
+Edit
+<body className="bg-black text-white">
+Use bg-zinc-900, text-white, text-blue-500, text-green-400, text-red-400
+
+Buttons: bg-blue-600 hover:bg-blue-700
+
+Form fields: bg-zinc-800 border-zinc-700
+
+✅ CORE LOGIC & FEATURES
+Parent Dashboard
+Welcome message: Welcome back, [first name]
+
+Add players (with birth year)
+
+Filter sessions shown based on age group match
+
+Only show sessions on the same day after 8 AM
+
+Book with Stripe (payment required to hold spot)
+
+View transaction history
+
+Toggle email/SMS consent (require phone number if SMS is enabled)
+
+Send player invites (generates a tokenized email link)
+
+Grant portal access with toggle per player
+
+Session Filtering Logic
+js
+Copy
+Edit
+// frontend
+const showSession = (player, session) => {
+  const today = new Date().toDateString()
+  const sessionDate = new Date(session.startTime).toDateString()
+  const currentHour = new Date().getHours()
+
+  return (
+    session.ageGroup === calculateAgeGroup(player.birthYear) &&
+    sessionDate === today &&
+    currentHour >= 8 &&
+    session.status === 'open'
+  )
+}
+Booking Rules
+Stripe payment triggers creation of signup with paid = true
+
+Capacity check after every booking
+
+If signups.length >= session.capacity, mark as full
+
+Admin Portal
+Create, edit, and delete sessions
+
+View live capacity and booking stats
+
+Process refunds (Stripe)
+
+Dashboard with:
+
+Total players
+
+Revenue
+
+Fill rate
+
+Player Portal (Optional)
+Only visible if canBook = true
+
+View matching sessions
+
+Book if allowed by parent
+
+Help Center Page
+Form: name, phone, email, message
+
+Backend route: POST /api/help
+
+Stored in help_requests table
+
+Reminder System
+Use node-cron or setInterval every hour:
+
+Look up sessions starting within 24 hours
+
+Send reminder via email/SMS to parents who opted in
+
+🔄 NEXT STEPS FOR REPLIT AI
+Scaffold all API endpoints in Express.js for:
+
+GET /sessions
+
+POST /signup
+
+POST /payments/confirm
+
+POST /players
+
+GET /dashboard
+
+POST /help
+
+POST /invite-player
+
+Set up PostgreSQL schema using Prisma or Knex.js
+
+Build frontend pages:
+
+/ – landing page with sessions preview
+
+/dashboard – parent portal
+
+/admin – admin controls
+
+/help – contact form
+
+Integrate Stripe:
+
+Collect $10 during signup
+
+Store payment intent ID and confirm on webhook
+
+Add refund logic to admin panel
+
+✅ MUST-FOLLOW RULES
+All bookings require payment to be confirmed
+
+No early access to sessions before 8 AM on session day
+
+SMS toggle requires phone number and consent
+
+Display only relevant sessions per player age
+
+Use color strategically (buttons, icons, alerts)
+
+No use of dashes in UI text
+
