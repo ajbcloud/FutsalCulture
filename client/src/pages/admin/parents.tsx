@@ -15,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight } from 'lucide-react';
+import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
+import { useLocation } from 'wouter';
 
 export default function AdminParents() {
   const [parents, setParents] = useState<any[]>([]);
@@ -41,7 +42,9 @@ export default function AdminParents() {
     status: '',
     role: ''
   });
+  const [urlFilter, setUrlFilter] = useState<string | null>(null);
   const { toast } = useToast();
+  const [location] = useLocation();
 
   const loadParents = async () => {
     try {
@@ -72,6 +75,17 @@ export default function AdminParents() {
 
   useEffect(() => {
     loadParents();
+    
+    // Check for URL filter parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    if (filterParam) {
+      setUrlFilter(decodeURIComponent(filterParam));
+      setFilters(prev => ({
+        ...prev,
+        search: decodeURIComponent(filterParam)
+      }));
+    }
   }, []);
 
   useEffect(() => {
@@ -182,7 +196,27 @@ export default function AdminParents() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Parents Management</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-white">Parents Management</h1>
+            {urlFilter && (
+              <div className="flex items-center gap-2 bg-blue-900/30 border border-blue-700 rounded-lg px-3 py-1">
+                <span className="text-sm text-blue-300">Filtered by:</span>
+                <span className="text-sm text-white font-medium">{urlFilter}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0 text-blue-300 hover:text-white"
+                  onClick={() => {
+                    setUrlFilter(null);
+                    setFilters(prev => ({ ...prev, search: '' }));
+                    window.history.replaceState({}, '', '/admin/parents');
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="text-sm text-zinc-400">
             Total: {parents.length} accounts
           </div>

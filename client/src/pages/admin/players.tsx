@@ -236,7 +236,7 @@ export default function AdminPlayers() {
                 <TableCell className="text-zinc-300">{player.gender}</TableCell>
                 <TableCell className="text-zinc-300">
                   {player.parentName ? (
-                    <Link href={`/admin/parents`}>
+                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
                         {player.parentName}
                       </span>
