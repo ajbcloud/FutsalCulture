@@ -44,11 +44,25 @@ export default function AdminParents() {
     try {
       const data = await adminParents.list();
       console.log('admin parents:', data);
-      setParents(data);
-      setFilteredParents(data);
+      
+      // Handle error response
+      if (data.error) {
+        console.error('Server error:', data.error);
+        setParents([]);
+        setFilteredParents([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Ensure data is an array
+      const parentsArray = Array.isArray(data) ? data : [];
+      setParents(parentsArray);
+      setFilteredParents(parentsArray);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching parents:', error);
+      setParents([]);
+      setFilteredParents([]);
       setLoading(false);
     }
   };

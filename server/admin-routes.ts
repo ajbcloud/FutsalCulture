@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users, players, signups } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
@@ -416,7 +419,9 @@ export function setupAdminRoutes(app: any) {
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const allUsers = await storage.getUsers();
+      // Get all users directly from database
+      const allUsers = await db.select().from(users);
+      
       const parentsWithCounts = await Promise.all(
         allUsers.map(async (user) => {
           const userPlayers = await storage.getPlayersByParent(user.id);
@@ -428,7 +433,7 @@ export function setupAdminRoutes(app: any) {
             phone: user.phone,
             isAdmin: user.isAdmin || false,
             isAssistant: user.isAssistant || false,
-            lastLogin: user.lastLogin,
+            lastLogin: user.updatedAt, // Use updatedAt as lastLogin proxy
             playersCount: userPlayers.length
           };
         })
@@ -445,14 +450,15 @@ export function setupAdminRoutes(app: any) {
       const { id } = req.params;
       const { firstName, lastName, email, phone, isAdmin, isAssistant } = req.body;
       
-      await storage.updateUser(id, {
+      await db.update(users).set({
         firstName,
         lastName,
         email,
         phone,
         isAdmin,
-        isAssistant
-      });
+        isAssistant,
+        updatedAt: new Date()
+      }).where(eq(users.id, id));
 
       res.json({ success: true });
     } catch (error) {
@@ -465,12 +471,16 @@ export function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       
-      // Delete associated players first
-      const userPlayers = await storage.getPlayersByParent(id);
-      await Promise.all(userPlayers.map(player => storage.deletePlayer(player.id)));
+      // Delete associated signups first
+      await db.delete(signups).where(
+        sql`${signups.playerId} IN (SELECT id FROM ${players} WHERE ${players.parentId} = ${id})`
+      );
+      
+      // Delete associated players 
+      await db.delete(players).where(eq(players.parentId, id));
       
       // Delete the parent
-      await storage.deleteUser(id);
+      await db.delete(users).where(eq(users.id, id));
 
       res.json({ success: true });
     } catch (error) {
