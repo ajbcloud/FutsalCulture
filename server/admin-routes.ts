@@ -2,19 +2,47 @@ import { Request, Response } from "express";
 import { storage } from "./storage";
 
 // Middleware to require admin access
-export function requireAdmin(req: Request, res: Response, next: Function) {
-  if (!req.user?.isAdmin && !req.user?.isAssistant) {
-    return res.status(403).json({ message: "Admin access required" });
+export async function requireAdmin(req: Request, res: Response, next: Function) {
+  try {
+    if (!req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    // Check user's admin status directly from database
+    const user = await storage.getUser(req.user.claims.sub);
+    if (!user?.isAdmin && !user?.isAssistant) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    // Attach user to request for convenience
+    (req as any).currentUser = user;
+    next();
+  } catch (error) {
+    console.error("Error checking admin access:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  next();
 }
 
 // Middleware to require full admin (not assistant)
-export function requireFullAdmin(req: Request, res: Response, next: Function) {
-  if (!req.user?.isAdmin) {
-    return res.status(403).json({ message: "Full admin access required" });
+export async function requireFullAdmin(req: Request, res: Response, next: Function) {
+  try {
+    if (!req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    // Check user's admin status directly from database
+    const user = await storage.getUser(req.user.claims.sub);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ message: "Full admin access required" });
+    }
+    
+    // Attach user to request for convenience
+    (req as any).currentUser = user;
+    next();
+  } catch (error) {
+    console.error("Error checking admin access:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  next();
 }
 
 export function setupAdminRoutes(app: any) {
