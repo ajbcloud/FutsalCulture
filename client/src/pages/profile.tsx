@@ -314,70 +314,7 @@ export default function Profile() {
             )}
           </Card>
 
-          {/* Profile Information */}
-          <Card className="bg-zinc-900 border-zinc-700">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-white flex items-center">
-                  <Settings className="w-5 h-5 mr-2" />
-                  Profile Information
-                </CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
-                  disabled
-                >
-                  {isEditing ? "Cancel" : "Edit"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-zinc-400">First Name</Label>
-                  <Input
-                    value={user?.firstName || ""}
-                    disabled={!isEditing}
-                    className="bg-zinc-800 border-zinc-600 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-zinc-400">Last Name</Label>
-                  <Input
-                    value={user?.lastName || ""}
-                    disabled={!isEditing}
-                    className="bg-zinc-800 border-zinc-600 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-zinc-400">Email</Label>
-                  <Input
-                    value={user?.email || ""}
-                    disabled={!isEditing}
-                    className="bg-zinc-800 border-zinc-600 text-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-zinc-400">Phone Number</Label>
-                  <Input
-                    value={user?.phone || ""}
-                    disabled={!isEditing}
-                    className="bg-zinc-800 border-zinc-600 text-white"
-                    placeholder="Not provided"
-                  />
-                </div>
-              </div>
-              {isEditing && (
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    Cancel
-                  </Button>
-                  <Button>Save Changes</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
 
           {/* Notification Preferences */}
           <Card className="bg-zinc-900 border-zinc-700">

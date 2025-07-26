@@ -22,7 +22,7 @@ import { calculateAgeGroup, isSessionEligibleForPlayer, isSessionBookingOpen, ge
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
