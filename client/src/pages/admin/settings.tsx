@@ -34,51 +34,71 @@ interface Integration {
   updatedAt: string;
 }
 
-// Get all available timezones
+// Get all available timezones with US zones prioritized
 const getTimezones = (): string[] => {
+  // Priority US timezones (most commonly used)
+  const priorityTimezones = [
+    'America/New_York',    // Eastern
+    'America/Chicago',     // Central
+    'America/Denver',      // Mountain
+    'America/Los_Angeles'  // Pacific
+  ];
+  
+  let allTimezones: string[] = [];
+  
   try {
     // Use Intl.supportedValuesOf if available (modern browsers)
     if ('supportedValuesOf' in Intl) {
-      return (Intl as any).supportedValuesOf('timeZone').sort();
+      allTimezones = (Intl as any).supportedValuesOf('timeZone');
     }
   } catch (error) {
     console.warn('Intl.supportedValuesOf not available, using fallback timezone list');
   }
   
-  // Fallback list of common timezones
-  return [
-    'America/New_York',
-    'America/Chicago', 
-    'America/Denver',
-    'America/Los_Angeles',
-    'America/Anchorage',
-    'Pacific/Honolulu',
-    'Europe/London',
-    'Europe/Paris',
-    'Europe/Berlin',
-    'Europe/Rome',
-    'Europe/Madrid',
-    'Asia/Tokyo',
-    'Asia/Shanghai',
-    'Asia/Kolkata',
-    'Asia/Dubai',
-    'Australia/Sydney',
-    'Australia/Melbourne',
-    'Pacific/Auckland',
-    'America/Sao_Paulo',
-    'America/Mexico_City',
-    'America/Toronto',
-    'America/Vancouver',
-    'Europe/Amsterdam',
-    'Europe/Stockholm',
-    'Europe/Moscow',
-    'Asia/Seoul',
-    'Asia/Singapore',
-    'Asia/Bangkok',
-    'Africa/Cairo',
-    'Africa/Johannesburg',
-    'UTC'
-  ].sort();
+  // Fallback list if modern API not available
+  if (allTimezones.length === 0) {
+    allTimezones = [
+      'America/New_York',
+      'America/Chicago', 
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Anchorage',
+      'Pacific/Honolulu',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Europe/Rome',
+      'Europe/Madrid',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Asia/Kolkata',
+      'Asia/Dubai',
+      'Australia/Sydney',
+      'Australia/Melbourne',
+      'Pacific/Auckland',
+      'America/Sao_Paulo',
+      'America/Mexico_City',
+      'America/Toronto',
+      'America/Vancouver',
+      'Europe/Amsterdam',
+      'Europe/Stockholm',
+      'Europe/Moscow',
+      'Asia/Seoul',
+      'Asia/Singapore',
+      'Asia/Bangkok',
+      'Africa/Cairo',
+      'Africa/Johannesburg',
+      'UTC'
+    ];
+  }
+  
+  // Remove priority timezones from the main list and sort the rest
+  const remainingTimezones = allTimezones
+    .filter(tz => !priorityTimezones.includes(tz))
+    .sort();
+  
+  // Return priority timezones first, then all others
+  return [...priorityTimezones, ...remainingTimezones];
 };
 
 export default function AdminSettings() {
