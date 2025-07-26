@@ -106,7 +106,7 @@ export default function AdminSettings() {
     businessName: '',
     contactEmail: '',
     supportEmail: '',
-    timezone: '',
+    timezone: 'America/New_York',
     emailNotifications: true,
     smsNotifications: false,
     sessionCapacityWarning: 3,

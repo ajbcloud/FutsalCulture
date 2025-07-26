@@ -798,7 +798,7 @@ export function setupAdminRoutes(app: any) {
         businessName: "Futsal Culture",
         contactEmail: "admin@futsalculture.com",
         supportEmail: "support@futsalculture.com",
-        timezone: "Singapore/Asia",
+        timezone: "America/New_York",
         emailNotifications: true,
         smsNotifications: false,
         sessionCapacityWarning: 3,
