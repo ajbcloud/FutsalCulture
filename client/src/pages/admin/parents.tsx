@@ -82,6 +82,11 @@ export default function AdminParents() {
         setExpandedParentIds(new Set([filterParams.parentId]));
       }
       
+      // Special handling for parentId filtering - ensure immediate display
+      if (filterParams?.parentId && parentsArray.length > 0) {
+        setFilteredParents(parentsArray);
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching parents:', error);
@@ -117,6 +122,14 @@ export default function AdminParents() {
   }, []);
 
   useEffect(() => {
+    // If we have a URL filter (from clicking parent name), don't apply client-side filtering
+    // The server has already done the filtering
+    if (urlFilter) {
+      setFilteredParents(parents);
+      return;
+    }
+
+    // Only apply client-side filtering when there's no URL filter
     let filtered = parents.filter((parent: any) => {
       const matchesSearch = !filters.search || 
         parent.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -135,7 +148,7 @@ export default function AdminParents() {
       return matchesSearch && matchesStatus && matchesRole;
     });
     setFilteredParents(filtered);
-  }, [parents, filters]);
+  }, [parents, filters, urlFilter]);
 
   const handleEdit = (parent: any) => {
     setSelectedParent(parent);
@@ -238,6 +251,7 @@ export default function AdminParents() {
                     setUrlFilter(null);
                     setFilters(prev => ({ ...prev, search: '' }));
                     window.history.replaceState({}, '', '/admin/parents');
+                    loadParents(); // Reload all parents when clearing filter
                   }}
                 >
                   <X className="h-3 w-3" />
@@ -303,7 +317,15 @@ export default function AdminParents() {
               <Input
                 placeholder="Search parents..."
                 value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilters(prev => ({ ...prev, search: value }));
+                  // Clear URL filter when manually searching
+                  if (urlFilter && value !== urlFilter) {
+                    setUrlFilter(null);
+                    window.history.replaceState({}, '', '/admin/parents');
+                  }
+                }}
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
             </div>
