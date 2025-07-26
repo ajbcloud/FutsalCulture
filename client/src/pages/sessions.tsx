@@ -18,20 +18,23 @@ export default function Sessions() {
   const { toast } = useToast();
   const [ageFilter, setAgeFilter] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
+  const [genderFilter, setGenderFilter] = useState<string>("");
   const [cartMode, setCartMode] = useState(false);
 
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
-    queryKey: ["/api/sessions", { ageGroup: ageFilter, location: locationFilter }],
+    queryKey: ["/api/sessions", { ageGroup: ageFilter, location: locationFilter, gender: genderFilter }],
   });
 
   const filteredSessions = sessions.filter(session => {
     if (ageFilter && ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
     if (locationFilter && locationFilter !== "all" && session.location !== locationFilter) return false;
+    if (genderFilter && genderFilter !== "all" && session.gender !== genderFilter) return false;
     return true;
   });
 
   const uniqueAgeGroups = Array.from(new Set(sessions.map(s => s.ageGroup)));
   const uniqueLocations = Array.from(new Set(sessions.map(s => s.location)));
+  const uniqueGenders = Array.from(new Set(sessions.map(s => s.gender)));
 
   if (isLoading) {
     return (
@@ -63,6 +66,20 @@ export default function Sessions() {
                   <Label htmlFor="cart-mode" className="text-white text-sm">Multi-select mode</Label>
                 </div>
               )}
+              <Select value={genderFilter} onValueChange={setGenderFilter}>
+                <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
+                  <SelectValue placeholder="All Genders" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-700">
+                  <SelectItem value="all">All Genders</SelectItem>
+                  {uniqueGenders.map(gender => (
+                    <SelectItem key={gender} value={gender}>
+                      {gender === "boys" ? "Boys" : "Girls"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
               <Select value={ageFilter} onValueChange={setAgeFilter}>
                 <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
                   <SelectValue placeholder="All Ages" />

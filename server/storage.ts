@@ -139,17 +139,25 @@ export class DatabaseStorage implements IStorage {
     await db.delete(players).where(eq(players.id, id));
   }
 
-  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string }): Promise<FutsalSession[]> {
-    let query = db.select().from(futsalSessions);
+  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string }): Promise<FutsalSession[]> {
+    const conditions = [];
     
     if (filters?.ageGroup) {
-      query = query.where(eq(futsalSessions.ageGroup, filters.ageGroup));
+      conditions.push(eq(futsalSessions.ageGroup, filters.ageGroup));
     }
     if (filters?.location) {
-      query = query.where(eq(futsalSessions.location, filters.location));
+      conditions.push(eq(futsalSessions.location, filters.location));
     }
     if (filters?.status) {
-      query = query.where(eq(futsalSessions.status, filters.status as any));
+      conditions.push(eq(futsalSessions.status, filters.status as any));
+    }
+    if (filters?.gender) {
+      conditions.push(eq(futsalSessions.gender, filters.gender as any));
+    }
+    
+    let query = db.select().from(futsalSessions);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
     
     return await query.orderBy(futsalSessions.startTime);

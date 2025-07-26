@@ -75,7 +75,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           </div>
           <div className="flex items-center text-zinc-400">
             <MapPin className="w-4 h-4 mr-2" />
-            <span>{session.ageGroup}</span>
+            <span>{session.ageGroup} {session.gender === "boys" ? "Boys" : "Girls"}</span>
           </div>
           <div className="flex items-center text-zinc-400">
             <DollarSign className="w-4 h-4 mr-2" />

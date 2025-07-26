@@ -33,11 +33,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session routes
   app.get('/api/sessions', async (req, res) => {
     try {
-      const { ageGroup, location, status } = req.query;
+      const { ageGroup, location, status, gender } = req.query;
       const sessions = await storage.getSessions({
         ageGroup: ageGroup as string,
         location: location as string,
         status: status as string,
+        gender: gender as string,
       });
       res.json(sessions);
     } catch (error) {

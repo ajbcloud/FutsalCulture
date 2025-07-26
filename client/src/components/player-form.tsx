@@ -8,12 +8,14 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Player } from "@shared/schema";
 
 const playerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   birthYear: z.number().min(2000).max(new Date().getFullYear() - 4, "Child must be at least 4 years old"),
+  gender: z.enum(["boys", "girls"], { required_error: "Gender is required" }),
   email: z.string().email("Valid email required").optional().or(z.literal("")),
   phoneNumber: z.string().optional(),
 });
@@ -34,6 +36,7 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       firstName: player?.firstName || "",
       lastName: player?.lastName || "",
       birthYear: player?.birthYear || new Date().getFullYear() - 8,
+      gender: player?.gender || "boys",
       email: player?.email || "",
       phoneNumber: player?.phoneNumber || "",
     },
@@ -167,6 +170,28 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
                   onChange={(e) => field.onChange(parseInt(e.target.value))}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="gender"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gender</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="boys">Boys</SelectItem>
+                  <SelectItem value="girls">Girls</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

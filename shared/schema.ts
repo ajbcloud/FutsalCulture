@@ -39,12 +39,16 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Players table
+// Gender enum for players and sessions
+export const genderEnum = pgEnum("gender", ["boys", "girls"]);
+
+// Players table  
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   birthYear: integer("birth_year").notNull(),
+  gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
   canAccessPortal: boolean("can_access_portal").default(false),
   canBookAndPay: boolean("can_book_and_pay").default(false),
@@ -64,6 +68,7 @@ export const futsalSessions = pgTable("futsal_sessions", {
   title: varchar("title").notNull(),
   location: varchar("location").notNull(),
   ageGroup: varchar("age_group").notNull(),
+  gender: genderEnum("gender").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   capacity: integer("capacity").notNull().default(12),
