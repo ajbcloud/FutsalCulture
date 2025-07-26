@@ -31,6 +31,7 @@ export default function AdminPlayers() {
     ageGroup: '',
     gender: '',
     portalAccess: '',
+    soccerClub: '',
     search: ''
   });
   const { toast } = useToast();
@@ -100,6 +101,8 @@ export default function AdminPlayers() {
       const matchesPortalAccess = !filters.portalAccess || filters.portalAccess === 'all' ||
         (filters.portalAccess === 'enabled' && player.canAccessPortal) ||
         (filters.portalAccess === 'disabled' && !player.canAccessPortal);
+      const matchesSoccerClub = !filters.soccerClub || filters.soccerClub === 'all' || 
+        (player.soccerClub && player.soccerClub.toLowerCase().includes(filters.soccerClub.toLowerCase()));
       const matchesSearch = !filters.search || 
         player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
         player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -109,7 +112,7 @@ export default function AdminPlayers() {
       console.log('Search term:', filters.search);
       console.log('Matches search:', matchesSearch);
       
-      return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSearch;
+      return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSoccerClub && matchesSearch;
     });
     
     console.log('Filtered players count:', filtered.length);
@@ -188,7 +191,7 @@ export default function AdminPlayers() {
 
       {/* Filter Controls */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <Label className="text-zinc-300">Search</Label>
             <Input
@@ -241,6 +244,16 @@ export default function AdminPlayers() {
               </SelectContent>
             </Select>
           </div>
+
+          <div>
+            <Label className="text-zinc-300">Soccer Club</Label>
+            <Input
+              placeholder="Filter by club..."
+              value={filters.soccerClub}
+              onChange={(e) => setFilters(prev => ({ ...prev, soccerClub: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
         </div>
       </div>
 
@@ -251,6 +264,7 @@ export default function AdminPlayers() {
               <TableHead className="text-zinc-300">Player Name</TableHead>
               <TableHead className="text-zinc-300">Age</TableHead>
               <TableHead className="text-zinc-300">Gender</TableHead>
+              <TableHead className="text-zinc-300">Soccer Club</TableHead>
               <TableHead className="text-zinc-300">Parent 1</TableHead>
               <TableHead className="text-zinc-300">Parent 2</TableHead>
               <TableHead className="text-zinc-300">Portal Access</TableHead>
@@ -272,6 +286,9 @@ export default function AdminPlayers() {
                   {new Date().getFullYear() - player.birthYear}
                 </TableCell>
                 <TableCell className="text-zinc-300">{player.gender}</TableCell>
+                <TableCell className="text-zinc-300">
+                  {player.soccerClub || <span className="text-zinc-500 italic">No club</span>}
+                </TableCell>
                 <TableCell className="text-zinc-300">
                   {player.parentName ? (
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>

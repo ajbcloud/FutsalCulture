@@ -16,6 +16,7 @@ const playerSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   birthYear: z.number().min(2000).max(new Date().getFullYear() - 4, "Child must be at least 4 years old"),
   gender: z.enum(["boys", "girls"], { required_error: "Gender is required" }),
+  soccerClub: z.string().optional(),
   email: z.string().email("Valid email required").optional().or(z.literal("")),
   phoneNumber: z.string().optional(),
 });
@@ -37,6 +38,7 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       lastName: player?.lastName || "",
       birthYear: player?.birthYear || new Date().getFullYear() - 8,
       gender: player?.gender || "boys",
+      soccerClub: player?.soccerClub || "",
       email: player?.email || "",
       phoneNumber: player?.phoneNumber || "",
     },
@@ -192,6 +194,20 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
                   <SelectItem value="girls">Girls</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="soccerClub"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Soccer Club</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="e.g. Boca FC Youth" />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

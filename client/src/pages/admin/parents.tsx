@@ -458,6 +458,7 @@ export default function AdminParents() {
                                       </Link>
                                       <span className="text-zinc-400 ml-2">
                                         ({player.ageGroup}, {player.gender})
+                                        {player.soccerClub && <span className="text-zinc-500"> • {player.soccerClub}</span>}
                                       </span>
                                       {player.canAccessPortal && (
                                         <Badge className="ml-2 bg-green-900 text-green-300 text-xs">Portal Access</Badge>

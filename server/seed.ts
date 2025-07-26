@@ -85,6 +85,7 @@ const sampleData = {
       birthYear: 2012,
       gender: "boys" as const,
       parentId: "1b64fc3a-7b11-45a9-af02-1fd71bed574f",
+      soccerClub: "Boca FC Youth",
       canAccessPortal: true,
       canBookAndPay: true,
       email: "player0@example.com",
@@ -97,6 +98,7 @@ const sampleData = {
       birthYear: 2016,
       gender: "girls" as const,
       parentId: "92f7e250-457f-47c3-97a1-37a9349134e",
+      soccerClub: "Miami United",
       canAccessPortal: false,
       canBookAndPay: false
     },
@@ -107,6 +109,7 @@ const sampleData = {
       birthYear: 2016,
       gender: "girls" as const,
       parentId: "88ef8969-12f0-47be-965b-21e774ed32a7",
+      soccerClub: "FC Dallas Academy",
       canAccessPortal: false,
       canBookAndPay: false,
       email: "player2@example.com",
@@ -119,6 +122,7 @@ const sampleData = {
       birthYear: 2012,
       gender: "boys" as const,
       parentId: "5c1aeaad-1e58-449e-b01b-722460cb456d",
+      soccerClub: "Real Salt Lake Academy",
       canAccessPortal: true,
       canBookAndPay: false
     },
@@ -129,6 +133,7 @@ const sampleData = {
       birthYear: 2010,
       gender: "girls" as const,
       parentId: "3bdda034-835e-4432-b564-4dddbbd6f843",
+      soccerClub: "Houston Dash Youth",
       canAccessPortal: false,
       canBookAndPay: true,
       email: "player4@example.com",
@@ -141,6 +146,7 @@ const sampleData = {
       birthYear: 2014,
       gender: "boys" as const,
       parentId: "45439e2e-bb06-47e1-8c31-ba4f48e9d254",
+      soccerClub: "LA Galaxy Academy",
       canAccessPortal: false,
       canBookAndPay: false
     },
@@ -151,6 +157,7 @@ const sampleData = {
       birthYear: 2009,
       gender: "girls" as const,
       parentId: "fb1b0f49-444f-48b4-b4ec-5b855394a87",
+      soccerClub: "Seattle Sounders Academy",
       canAccessPortal: true,
       canBookAndPay: false,
       email: "player6@example.com",
@@ -163,6 +170,7 @@ const sampleData = {
       birthYear: 2013,
       gender: "boys" as const,
       parentId: "401e8fc0-16d7-4392-ab6c-efa33e186d48",
+      soccerClub: "Columbus Crew Academy",
       canAccessPortal: false,
       canBookAndPay: false
     },
@@ -173,6 +181,7 @@ const sampleData = {
       birthYear: 2015,
       gender: "girls" as const,
       parentId: "3046d940-2beb-4abf-ab68-b248ae89dbc9",
+      soccerClub: "Chicago Fire Academy",
       canAccessPortal: false,
       canBookAndPay: true,
       email: "player8@example.com",
@@ -185,7 +194,8 @@ const sampleData = {
       birthYear: 2014,
       gender: "boys" as const,
       parentId: "2f23b853-0c7a-4ae5-871e-f3364d668949",
-      canAccessPortal: true,
+      soccerClub: "Portland Timbers Academy",
+      canAccessPortal: false,
       canBookAndPay: false
     },
     {
@@ -195,6 +205,7 @@ const sampleData = {
       birthYear: 2009,
       gender: "girls" as const,
       parentId: "1b64fc3a-7b11-45a9-af02-1fd71bed574f",
+      soccerClub: "Atlanta United Academy",
       canAccessPortal: false,
       canBookAndPay: false,
       email: "player10@example.com",
@@ -207,6 +218,7 @@ const sampleData = {
       birthYear: 2011,
       gender: "boys" as const,
       parentId: "92f7e250-457f-47c3-97a1-37a9349134e",
+      soccerClub: "New York City FC Academy",
       canAccessPortal: false,
       canBookAndPay: false
     },
@@ -217,6 +229,7 @@ const sampleData = {
       birthYear: 2009,
       gender: "girls" as const,
       parentId: "88ef8969-12f0-47be-965b-21e774ed32a7",
+      soccerClub: "Inter Miami CF Academy",
       canAccessPortal: true,
       canBookAndPay: true,
       email: "player12@example.com",
@@ -229,6 +242,7 @@ const sampleData = {
       birthYear: 2012,
       gender: "boys" as const,
       parentId: "5c1aeaad-1e58-449e-b01b-722460cb456d",
+      soccerClub: "Philadelphia Union Academy",
       canAccessPortal: false,
       canBookAndPay: false
     }

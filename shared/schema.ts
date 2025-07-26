@@ -76,6 +76,7 @@ export const players = pgTable("players", {
   gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
   parent2Id: varchar("parent2_id"), // Second parent support
+  soccerClub: varchar("soccer_club"), // Soccer club affiliation
   canAccessPortal: boolean("can_access_portal").default(false),
   canBookAndPay: boolean("can_book_and_pay").default(false),
   inviteSentVia: varchar("invite_sent_via"), // 'email' or 'sms'

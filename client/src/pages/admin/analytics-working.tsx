@@ -34,6 +34,7 @@ export default function AdminAnalyticsWorking() {
     ageGroup: 'all',
     gender: 'all',
     location: '',
+    soccerClub: '',
     viewBy: 'account'
   });
 
@@ -237,6 +238,16 @@ export default function AdminAnalyticsWorking() {
             </div>
             
             <div>
+              <Label className="text-zinc-300">Soccer Club</Label>
+              <Input
+                placeholder="Filter by club..."
+                value={filters.soccerClub}
+                onChange={(e) => setFilters(prev => ({ ...prev, soccerClub: e.target.value }))}
+                className="bg-zinc-800 border-zinc-700 text-white"
+              />
+            </div>
+            
+            <div>
               <Label className="text-zinc-300">View By</Label>
               <Select value={filters.viewBy} onValueChange={(value) => setFilters(prev => ({ ...prev, viewBy: value }))}>
                 <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
@@ -259,6 +270,7 @@ export default function AdminAnalyticsWorking() {
                 ageGroup: 'all',
                 gender: 'all',
                 location: '',
+                soccerClub: '',
                 viewBy: 'account'
               })} variant="outline">
                 Reset
