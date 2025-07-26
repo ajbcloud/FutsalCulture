@@ -347,6 +347,11 @@ export default function Help() {
                   <h4 className="text-white font-medium mb-2">How do age groups work?</h4>
                   <p className="text-zinc-400 text-sm">Players are automatically assigned to age groups (U8, U10, etc.) based on their birth year.</p>
                 </div>
+                
+                <div>
+                  <h4 className="text-white font-medium mb-2">How long are the sessions?</h4>
+                  <p className="text-zinc-400 text-sm">Typically the sessions are 60-90 minutes long.</p>
+                </div>
               </CardContent>
             </Card>
           </div>
