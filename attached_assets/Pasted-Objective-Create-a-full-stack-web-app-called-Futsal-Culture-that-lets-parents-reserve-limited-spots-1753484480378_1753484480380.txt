@@ -1,0 +1,214 @@
+Objective
+
+Create a full stack web app called Futsal Culture that lets parents reserve limited spots in weekly futsal training sessions, pay ten dollars per child with Venmo Business, and receive reminders by email or SMS. The app must import club rosters from CSV, let coaches send sign‑up links from inside the system, and close a session automatically once capacity is reached.
+
+Tech stack
+
+Ruby on Rails 7.1 app template
+
+PostgreSQL for all persistent data
+
+Devise for parent and coach authentication
+
+Pundit for role based access control
+
+Sidekiq and sidekiq‑scheduler for background jobs (reminders, roster imports, capacity checks)
+
+Twilio Ruby SDK for SMS
+
+Action Mailer with SendGrid for email
+
+dotenv‑rails for local environment keys
+
+RSpec and FactoryBot for tests
+
+Tailwind CSS for front end styling (use Importmap, no Node build)
+
+Environment variables to set in .env
+
+ini
+Copy
+Edit
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE=
+SENDGRID_API_KEY=
+VENMO_BUSINESS_USERNAME=
+APP_ROOT_URL=http://localhost:3000
+Database schema
+
+Club
+
+name:string, city:string
+
+Coach (Devise model)
+
+first_name:string, last_name:string, phone:string, email:string
+
+belongs_to :club
+
+Parent (Devise model)
+
+first_name:string, last_name:string, phone:string, email:string
+
+Player
+
+first_name:string, last_name:string, birth_year:integer
+
+belongs_to :parent
+
+belongs_to :club, optional:true
+
+Session
+
+title:string (example “U10 6 PM Boca Raton”)
+
+location:string
+
+start_time:datetime, end_time:datetime
+
+capacity:integer
+
+price_cents:integer default 1000
+
+status:string enum [open, full, closed]
+
+Signup
+
+belongs_to :player
+
+belongs_to :session
+
+paid:boolean default false
+
+payment_link:string
+
+Payment
+
+belongs_to :signup
+
+venmo_txn_id:string
+
+amount_cents:integer
+
+paid_at:datetime
+
+NotificationPreference
+
+belongs_to :parent
+
+email:boolean default true
+
+sms:boolean default false
+
+Core user stories
+
+Parent can create an account, add one or more players, view upcoming open sessions filtered by age group, and reserve a slot.
+
+On reserve, app builds Venmo deeplink https://venmo.com/{VENMO_BUSINESS_USERNAME}?txn=pay&amount=10&note={session_id}-{player_id} and stores link on Signup.
+
+Parent is redirected to a “Pay now in Venmo” button; status stays unpaid until asynchronous webhook (mock now) marks Payment as paid.
+
+Capacity check: after a reserve, if total signups equals capacity, set Session status to full and hide reserve buttons.
+
+Twenty four hours before start_time, Sidekiq job sends reminders (email or SMS) to parents who opted in.
+
+Coach dashboard shows all sessions for their club, live capacity counts, and a “Copy Sign‑up Link” button that produces APP_ROOT_URL/sessions/{id}?club={club_id}.
+
+CSV importer in the Admin area lets Futsal Culture staff upload a roster file with headings: first_name, last_name, birth_year, parent_email, parent_phone, club_name. Import task creates clubs, parents, players as needed.
+
+Controllers and key actions
+
+SessionsController#index show
+
+SignupsController#create destroy (destroy only by parent before cutoff)
+
+PaymentsController#venmo_webhook (stub until Venmo API is open)
+
+ClubsController#show
+
+ImportsController#create (CSV upload)
+
+Views
+
+Public landing page that explains pricing and schedule.
+
+Sessions index grid with cards: title, time range, remaining spots, reserve button (disabled when full).
+
+Parent dashboard with upcoming reservations and payment status.
+
+Coach dashboard with session list, capacity bar, and share link.
+
+Admin panel (use Rails Admin gem) for CRUD on all models.
+
+Background jobs
+
+ReminderJob runs every hour, selects sessions starting in the next twenty four hours, loops signups, sends email or SMS using Twilio or SendGrid.
+
+CapacityMonitorJob runs every five minutes, sets status full when capacity reached and closed when start_time has passed.
+
+RosterImportJob processes large CSV files asynchronously and emails a summary report to the uploader.
+
+Routes
+
+ruby
+Copy
+Edit
+Rails.application.routes.draw do
+  devise_for :parents
+  devise_for :coaches
+  root "home#index"
+
+  resources :sessions, only: %i[index show] do
+    resources :signups, only: %i[create destroy]
+  end
+
+  resources :clubs, only: :show
+  resources :imports, only: :create
+  post "/payments/venmo_webhook", to: "payments#venmo_webhook"
+end
+Tasks for Replit AI
+
+Create new Rails project named futsal_culture with Postgres and Devise set up for Parent and Coach roles.
+
+Add gems listed above, run bundle install, rails db:create.
+
+Generate models and migrations exactly as in schema. Run rails db:migrate.
+
+Seed database with two clubs (Team Boca, Fort Lauderdale FC), one session each, and one coach per club.
+
+Scaffold controllers and views, integrate Tailwind via rails tailwindcss:install.
+
+Build simple card layout for sessions index.
+
+Implement signup flow that creates Signup, redirects to “Pay with Venmo” page.
+
+Stub Payment webhook: mark as paid immediately in development.
+
+Add Sidekiq, configure config/sidekiq.yml, mount Sidekiq Web UI at /sidekiq protected by Admin constraints.
+
+Create ReminderJob, CapacityMonitorJob, schedule them with sidekiq‑scheduler.
+
+Build ImportsController#create that enqueues RosterImportJob. Use CSV.foreach and activerecord-import for bulk inserts.
+
+Write RSpec unit tests for models and jobs including capacity logic and reminder delivery.
+
+Provide a README with setup steps, environment variable explanation, and developer scripts bin/dev for foreman start.
+
+Non functional constraints
+
+No hyphen characters in any user facing copy.
+
+UI must be mobile friendly using Tailwind responsive classes.
+
+All datetime values stored in UTC, displayed in America New_York zone.
+
+Code must include comments that explain any business logic in plain language.
+
+Deliverables
+
+Working Rails app in the Replit environment with code committed to the default git repo.
+
+README that lets a new developer run bundle install, set .env, and rails server to try the app.
+
+Seed script db/seeds.rb that generates sample data for demo.

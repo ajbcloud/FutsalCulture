@@ -1,0 +1,251 @@
+Got it. Since your AI assistant isn’t smart enough to interpret abstract instructions, I’ll lay this out as a **step-by-step master build spec** — broken into frontend, backend, data models, logic rules, automations, and integrations. This will be very explicit, with no gaps or assumptions.
+
+---
+
+## 🔧 SYSTEM OVERVIEW: Futsal Culture Booking App
+
+This app allows parents to book futsal sessions for their children. The sessions are limited in capacity and only open for booking the day of, starting at 8 AM. Payment is required to confirm the reservation.
+
+---
+
+## ✅ PHASE 1: SYSTEM DESIGN BREAKDOWN
+
+---
+
+### 1. 🔐 AUTHENTICATION & USER TYPES
+
+* Use Devise to create:
+
+  * `Parent` model (can add players and make bookings)
+  * `Admin` model (full access to manage sessions, refunds, analytics)
+
+```bash
+rails generate devise Parent
+rails generate devise Admin
+```
+
+**Parent fields**:
+
+* first\_name\:string
+* last\_name\:string
+* phone\:string
+* email\:string (Devise)
+* password\:string (Devise)
+
+**Admin fields**:
+
+* name\:string
+* email\:string (Devise)
+* password\:string (Devise)
+
+---
+
+### 2. 🧱 DATABASE MODELS
+
+#### Session
+
+```bash
+rails generate model Session title:string location:string age_group:string start_time:datetime end_time:datetime capacity:integer price_cents:integer status:string
+```
+
+* status values: `upcoming`, `open`, `full`, `closed`
+* Default price\_cents: 1000 (\$10)
+
+#### Player
+
+```bash
+rails generate model Player first_name:string last_name:string birth_year:integer parent:references
+```
+
+#### Signup
+
+```bash
+rails generate model Signup player:references session:references paid:boolean payment_link:string
+```
+
+#### Payment
+
+```bash
+rails generate model Payment signup:references venmo_txn_id:string amount_cents:integer paid_at:datetime refunded_at:datetime
+```
+
+#### HelpRequest
+
+```bash
+rails generate model HelpRequest name:string phone:string email:string note:text
+```
+
+---
+
+### 3. 🧭 ROUTES
+
+```ruby
+devise_for :parents
+devise_for :admins
+
+root "home#index"
+
+resources :sessions, only: [:index, :show] do
+  resources :signups, only: [:create, :destroy]
+end
+
+resources :players, only: [:index, :new, :create, :edit, :update, :destroy]
+resources :dashboard, only: [:index]
+resources :help_requests, only: [:new, :create]
+
+namespace :admin do
+  resources :sessions
+  resources :payments, only: [:index, :update] # refund toggle
+  resources :analytics, only: [:index]
+end
+```
+
+---
+
+### 4. 🖥️ FRONTEND PAGES (Views)
+
+#### Public
+
+* `Home (/)`
+
+  * Hero banner: “Elite Futsal Training for Young Athletes”
+  * Buttons: \[Start Reserving] \[View Schedule]
+  * Feature Icons: Flexible Scheduling, Small Groups, Easy Payments
+  * Sessions preview (today only, released at 8 AM)
+
+* `Sessions#index`
+
+  * Filters: Age Group, Location
+  * Each session card:
+
+    * Title: U10 Girls, U8 Boys, etc.
+    * Location
+    * Date/time
+    * Price
+    * Capacity bar
+    * Status label (Open, Filling Fast, Full)
+    * "Reserve Spot" button → form
+
+* `Sessions#show`
+
+  * Reservation form (only accessible after 8 AM)
+  * Fields: Player dropdown, payment method, confirm + pay button
+
+* `Calendar View (/schedule)`
+
+  * Monthly view of all upcoming sessions
+
+* `Help Center (/help_requests/new)`
+
+  * Form: name, phone, email, message
+  * Submits to backend, admin gets notified (later: email alert)
+
+#### Parent Dashboard (`/dashboard`)
+
+* My Players (create, edit, delete)
+* Upcoming Reservations:
+
+  * Show session name, time, status
+  * Pay button if unpaid
+  * Cancel button → triggers refund request (admin panel)
+* Notification settings: email / SMS
+
+#### Admin Dashboard (`/admin/analytics`)
+
+* Total Players
+* Total Revenue (this month)
+* Avg Session Fill Rate
+* Active Sessions Table:
+
+  * Session Name, Time, Capacity Bar, Revenue, Edit, Refund
+
+---
+
+### 5. 📤 BACKEND LOGIC
+
+#### Booking Rules
+
+* Sessions open at 8 AM on session day (server-side check in controller)
+* If session is full, disable "Reserve" button
+* No duplicate signups for same player + session
+
+#### Payment Flow
+
+* Clicking "Reserve Spot" generates a Venmo deeplink:
+
+  ```
+  https://venmo.com/business/{username}?txn=pay&amount=10&note=FC-{session_id}-{player_id}
+  ```
+* Redirect to confirmation screen with "Complete Payment in Venmo"
+* Mark as paid only when webhook received (for now, admin marks manually)
+
+#### Refunds
+
+* Admin clicks "Refund" on signup
+* `Payment#refunded_at` is timestamped
+* Refund note optional (add `note:text` if needed)
+
+---
+
+### 6. 🔁 AUTOMATIONS
+
+#### Background Jobs (Sidekiq or `ActiveJob`)
+
+* SessionStatusJob: Runs every 5 min
+
+  * If `Time.current >= session.start_time`, set status to closed
+  * If `signups.count >= capacity`, set status to full
+
+* ReminderJob: Runs daily at 7 AM and 6 PM
+
+  * Sends SMS/email reminders to parents with confirmed bookings that day
+
+---
+
+### 7. 📦 INTEGRATIONS
+
+#### Email: ActionMailer w/ SendGrid
+
+* Setup for confirmation and reminders
+
+#### SMS: Twilio
+
+* Optional field in parent profile: opt-in SMS
+* Use Twilio API to send text reminders before sessions
+
+#### Venmo (Mock for now)
+
+* Store Venmo URL
+* Optionally let admins mark transaction IDs manually in dashboard
+* Refunds are manual (not via API unless business account allows later)
+
+---
+
+### 8. 📁 FILE UPLOAD & CSV IMPORT (Phase 2)
+
+Future enhancement:
+
+* CSV import for club rosters
+* Admin UI → Upload CSV → Parse and create Players + Parents
+
+---
+
+### 9. ❗ QUICK LINKS (Footer or Navbar)
+
+* Browse Sessions
+* View Schedule (Calendar)
+* Help Center (Contact Form)
+* Terms of Service
+* Privacy Policy
+
+---
+
+## 🔄 NEXT STEP
+
+Would you like me to:
+
+1. Write the **full Replit prompt** based on this breakdown?
+2. Start with building the **session reservation logic** first?
+3. Create the **seed file**, UI layout instructions, or the parent dashboard controller?
+
+You can also say “Start at step 1” and I’ll walk the bot through each one.
