@@ -465,98 +465,98 @@ const sampleData = {
     {
       id: "ae2cbc93-5b56-41fb-8440-0fa6b65036862",
       signupId: "db8d2de3-76c1-4aee-9850-a16756035542",
-      stripePaymentIntentId: "pi_fa7e86d7",
+      paymentIntentId: "pi_fa7e86d7",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741791")
     },
     {
       id: "2c5a683d-93cc-492a-9646-89d4bf6c70f0",
       signupId: "4598249c-b848-403a-aeeb-5f6ec470af0b",
-      stripePaymentIntentId: "pi_47cc9185",
+      paymentIntentId: "pi_47cc9185",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741817")
     },
     {
       id: "a54eab34-3260-401b-8144-d021d02c9027",
       signupId: "3f6cf800-c53b-4207-b9c6-0f625e4fba3c",
-      stripePaymentIntentId: "pi_7a08fe38",
+      paymentIntentId: "pi_7a08fe38",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741840")
     },
     {
       id: "1f2d1f5-b93f-46f8-bf37-ae8eaad87f85e",
       signupId: "cdfee28b-32cc-4112-a590-10568e2b6910",
-      stripePaymentIntentId: "pi_c433e75a",
+      paymentIntentId: "pi_c433e75a",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741864")
     },
     {
       id: "f9921456-ccf3-4ae9-b4ef-c28a6039b95b",
       signupId: "fc497c5e-8887-486b-b387-1fdfaab6ca9",
-      stripePaymentIntentId: "pi_4cf5eb0a",
+      paymentIntentId: "pi_4cf5eb0a",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741888")
     },
     {
       id: "2482148c-af83-44a9-ba2a-837e8cd0d688",
       signupId: "fba3b2c5-15e2-4653-a80f-65f5393878de9",
-      stripePaymentIntentId: "pi_37e6b578",
+      paymentIntentId: "pi_37e6b578",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741911")
     },
     {
       id: "8b86755g-34f9-4505-b069-12ae096bc0b",
       signupId: "ec3204a0-bb04-4a23-b2f2-1f0ad17528f4",
-      stripePaymentIntentId: "pi_c44ff638",
+      paymentIntentId: "pi_c44ff638",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.741933")
     },
     {
       id: "46579df5-6b8d-4aad-be5f-6c96a17da1e9",
       signupId: "56d311a8-a80a-4975-bd21-69eb79067804",
-      stripePaymentIntentId: "pi_720296a9",
+      paymentIntentId: "pi_720296a9",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742002")
     },
     {
       id: "5ffab1d4-05e5-4b2b-be8a-3d323b9db74",
       signupId: "898f3c0e-fb1d-4e43-96ac-5b279af2d2c3",
-      stripePaymentIntentId: "pi_e98741d0",
+      paymentIntentId: "pi_e98741d0",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742028")
     },
     {
       id: "e784f699-4158-4a94-9002-e850d249a40",
       signupId: "abe623df-0759-4be0-aa42-4b47212f0247",
-      stripePaymentIntentId: "pi_5e25c994",
+      paymentIntentId: "pi_5e25c994",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742053")
     },
     {
       id: "7d1ddc7a-3fa2-41ff-b5c0-e1adc001fdca",
       signupId: "142e94ab-c8cc-4a61-b765-bbc1801f76c",
-      stripePaymentIntentId: "pi_c982b150",
+      paymentIntentId: "pi_c982b150",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742093")
     },
     {
       id: "d84a402a-c9d8-488b-be84-143de8e5566",
       signupId: "18f67dbe-31f5-41ec-aa5a-0987a3ab2741",
-      stripePaymentIntentId: "pi_c1cee381",
+      paymentIntentId: "pi_c1cee381",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742121")
     },
     {
       id: "326390cf-09a1-4ea5-800e-f38f397a5460",
       signupId: "f7af1782-35d9-4d24-b81e-0d4fe663e9e5",
-      stripePaymentIntentId: "pi_c0ee7e6d",
+      paymentIntentId: "pi_c0ee7e6d",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742146")
     },
     {
       id: "39bc41a-2b6d-4d8c-8030-a02178a1a623",
       signupId: "51e5192b-ad60-4408-8ef1-76fffe50559c",
-      stripePaymentIntentId: "pi_7e492308",
+      paymentIntentId: "pi_7e492308",
       amountCents: 1000,
       paidAt: new Date("2025-07-26T03:59:40.742188")
     }

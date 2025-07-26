@@ -11,7 +11,6 @@ import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import Help from "@/pages/help";
-import Checkout from "@/pages/checkout";
 import MultiCheckout from "@/pages/multi-checkout";
 import PlayerInvite from "@/pages/player-invite";
 import NotFound from "@/pages/not-found";
@@ -43,7 +42,6 @@ function Router() {
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/dashboard" component={Dashboard} />
-            <Route path="/checkout/:signupId" component={Checkout} />
             <Route path="/multi-checkout" component={MultiCheckout} />
             <Route path="/player-invite/:token" component={PlayerInvite} />
             <Route path="/help" component={Help} />

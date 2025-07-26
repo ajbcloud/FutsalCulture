@@ -1,18 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import Stripe from "stripe";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema } from "@shared/schema";
 import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
-
-// Initialize Stripe only if keys are available
-let stripe: Stripe | null = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -340,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signup = await storage.createSignup({
         playerId,
         sessionId,
-        paid: false,
+        paid: true,
       });
       
       // Update session status if capacity reached
@@ -366,13 +359,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Multi-session checkout route
+  // Multi-session booking route (no payment processing)
   app.post('/api/multi-checkout', isAuthenticated, async (req: any, res) => {
     try {
-      if (!stripe) {
-        return res.status(503).json({ message: "Payment processing unavailable. Please contact support." });
-      }
-
       const { sessions } = req.body;
       const userId = req.user.claims.sub;
       
@@ -380,87 +369,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No sessions selected" });
       }
 
-      // Calculate total amount
-      const totalAmount = sessions.length * 1000; // $10 per session in cents
-
-      // Create Stripe checkout session
-      const checkoutSession = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Futsal Training Sessions (${sessions.length})`,
-              description: 'Multiple session booking',
-            },
-            unit_amount: totalAmount,
-          },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        success_url: `${req.protocol}://${req.get('host')}/dashboard?payment=success`,
-        cancel_url: `${req.protocol}://${req.get('host')}/multi-checkout?payment=cancelled`,
-        metadata: {
-          userId,
-          sessionIds: sessions.map((s: any) => s.sessionId).join(','),
-          isMultiSession: 'true',
-        },
+      // Create all signups without payment processing
+      const signupPromises = sessions.map(async (sessionData: any) => {
+        const { sessionId, playerId } = sessionData;
+        
+        // Check if signup already exists
+        const existing = await storage.checkExistingSignup(playerId, sessionId);
+        if (existing) {
+          throw new Error(`Player already signed up for session ${sessionId}`);
+        }
+        
+        // Check session capacity
+        const session = await storage.getSession(sessionId);
+        const signupsCount = await storage.getSignupsCount(sessionId);
+        
+        if (!session) {
+          throw new Error(`Session ${sessionId} not found`);
+        }
+        
+        if (signupsCount >= session.capacity) {
+          throw new Error(`Session ${sessionId} is full`);
+        }
+        
+        // Create signup with paid set to true (no payment required)
+        return await storage.createSignup({
+          playerId,
+          sessionId,
+          paid: true,
+        });
       });
 
-      res.json({ checkoutUrl: checkoutSession.url });
+      const signups = await Promise.all(signupPromises);
+      res.json({ signups, message: "All sessions booked successfully" });
     } catch (error) {
-      console.error("Error creating multi-checkout:", error);
-      res.status(500).json({ message: "Failed to create checkout session" });
+      console.error("Error creating multi-booking:", error);
+      res.status(500).json({ message: "Failed to book sessions" });
     }
   });
 
-  // Payment routes
-  app.post("/api/create-payment-intent", isAuthenticated, async (req, res) => {
-    try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Payment processing not configured. Please contact support." });
-      }
-      
-      const { signupId } = req.body;
-      
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: 1000, // $10.00 in cents
-        currency: "usd",
-        metadata: {
-          signupId,
-        },
-      });
-      
-      // Store payment record
-      await storage.createPayment({
-        signupId,
-        stripePaymentIntentId: paymentIntent.id,
-        amountCents: 1000,
-      });
-      
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      console.error("Error creating payment intent:", error);
-      res.status(500).json({ message: "Error creating payment intent: " + error.message });
-    }
-  });
 
-  app.post("/api/webhooks/stripe", async (req, res) => {
-    try {
-      const { data } = req.body;
-      const paymentIntent = data.object;
-      
-      if (paymentIntent.status === "succeeded") {
-        const signupId = paymentIntent.metadata.signupId;
-        await storage.updatePaymentStatus(signupId, new Date());
-      }
-      
-      res.json({ received: true });
-    } catch (error) {
-      console.error("Error processing webhook:", error);
-      res.status(500).json({ message: "Error processing webhook" });
-    }
-  });
 
   // Help request routes
   app.post('/api/help-requests', async (req, res) => {

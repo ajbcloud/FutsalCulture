@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Navbar from "@/components/navbar";
 import SessionCard from "@/components/session-card";
+import SessionCalendar from "@/components/session-calendar";
 import { Button } from "@/components/ui/button";
 import { FutsalSession } from "@shared/schema";
 
@@ -70,6 +71,15 @@ export default function Home() {
             <Button asChild variant="outline" size="lg">
               <Link href="/sessions">Browse All Sessions</Link>
             </Button>
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => {
+                document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              View Schedule
+            </Button>
           </div>
         </div>
       </section>
@@ -97,6 +107,21 @@ export default function Home() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Calendar Section */}
+      <section className="py-16 bg-[#18181b]" id="calendar">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">Upcoming Sessions Calendar</h2>
+            <p className="text-zinc-400">View your personalized schedule based on your players' age groups</p>
+          </div>
+          <SessionCalendar 
+            onSessionClick={(session) => {
+              window.location.href = `/sessions/${session.id}`;
+            }}
+          />
         </div>
       </section>
     </div>

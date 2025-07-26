@@ -155,12 +155,13 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(futsalSessions.gender, filters.gender as any));
     }
     
-    let query = db.select().from(futsalSessions);
+    const baseQuery = db.select().from(futsalSessions);
+    
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await baseQuery.where(and(...conditions)).orderBy(futsalSessions.startTime);
     }
     
-    return await query.orderBy(futsalSessions.startTime);
+    return await baseQuery.orderBy(futsalSessions.startTime);
   }
 
   async getSession(id: string): Promise<FutsalSession | undefined> {
@@ -183,21 +184,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSignupsByParent(parentId: string): Promise<Array<Signup & { player: Player; session: FutsalSession }>> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        // Signup fields
+        id: signups.id,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentIntentId: signups.paymentIntentId,
+        createdAt: signups.createdAt,
+        // Player fields
+        player: players,
+        // Session fields
+        session: futsalSessions,
+      })
       .from(signups)
       .innerJoin(players, eq(signups.playerId, players.id))
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .where(eq(players.parentId, parentId))
       .orderBy(desc(futsalSessions.startTime));
+    
+    return results as Array<Signup & { player: Player; session: FutsalSession }>;
   }
 
   async getSignupsBySession(sessionId: string): Promise<Array<Signup & { player: Player }>> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        // Signup fields
+        id: signups.id,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentIntentId: signups.paymentIntentId,
+        createdAt: signups.createdAt,
+        // Player fields
+        player: players,
+      })
       .from(signups)
       .innerJoin(players, eq(signups.playerId, players.id))
       .where(eq(signups.sessionId, sessionId));
+    
+    return results as Array<Signup & { player: Player }>;
   }
 
   async createSignup(signup: InsertSignup): Promise<Signup> {

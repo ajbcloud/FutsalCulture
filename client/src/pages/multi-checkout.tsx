@@ -33,7 +33,10 @@ export default function MultiCheckout() {
   const createMultiCheckoutMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/multi-checkout", {
-        sessions: cartItems.map(session => ({ sessionId: session.id }))
+        sessions: cartItems.map(session => ({ 
+          sessionId: session.id,
+          playerId: "default-player-id" // TODO: Implement player selection in cart
+        }))
       });
       return response.json();
     },
@@ -41,10 +44,10 @@ export default function MultiCheckout() {
       clearCart();
       toast({
         title: "Success",
-        description: "Redirecting to payment...",
+        description: "All sessions booked successfully!",
       });
-      // Redirect to Stripe checkout
-      window.location.href = data.checkoutUrl;
+      // Redirect to dashboard
+      window.location.href = "/dashboard";
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

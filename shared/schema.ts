@@ -34,7 +34,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   phone: varchar("phone"),
   isAdmin: boolean("is_admin").default(false),
-  stripeCustomerId: varchar("stripe_customer_id"),
+  customerId: varchar("customer_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -91,7 +91,7 @@ export const signups = pgTable("signups", {
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   signupId: varchar("signup_id").notNull(),
-  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  paymentIntentId: varchar("payment_intent_id"),
   amountCents: integer("amount_cents").notNull(),
   paidAt: timestamp("paid_at"),
   refundedAt: timestamp("refunded_at"),
@@ -201,8 +201,8 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
   updatedAt: true,
 });
 
-// Types
-export type UpsertUser = z.infer<typeof insertUserSchema>;
+// Types for upsert operations (includes id)
+export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
 export type User = typeof users.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;

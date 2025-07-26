@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
 import SessionCard from "@/components/session-card";
 import CartButton from "@/components/cart-button";
+import SessionCalendar from "@/components/session-calendar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -16,9 +17,9 @@ export default function Sessions() {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const [ageFilter, setAgeFilter] = useState<string>("");
-  const [locationFilter, setLocationFilter] = useState<string>("");
-  const [genderFilter, setGenderFilter] = useState<string>("");
+  const [ageFilter, setAgeFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [cartMode, setCartMode] = useState(false);
 
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
@@ -26,9 +27,9 @@ export default function Sessions() {
   });
 
   const filteredSessions = sessions.filter(session => {
-    if (ageFilter && ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
-    if (locationFilter && locationFilter !== "all" && session.location !== locationFilter) return false;
-    if (genderFilter && genderFilter !== "all" && session.gender !== genderFilter) return false;
+    if (ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
+    if (locationFilter !== "all" && session.location !== locationFilter) return false;
+    if (genderFilter !== "all" && session.gender !== genderFilter) return false;
     return true;
   });
 
@@ -112,6 +113,7 @@ export default function Sessions() {
                 onClick={() => {
                   setAgeFilter("all");
                   setLocationFilter("all");
+                  setGenderFilter("all");
                 }}
                 className="mt-4"
               >
@@ -138,6 +140,21 @@ export default function Sessions() {
           )}
           
           <CartButton />
+          
+          {/* Calendar Section */}
+          <div className="mt-16" id="calendar">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-white mb-4">Upcoming Sessions Calendar</h2>
+              <p className="text-zinc-400">View all scheduled training sessions at a glance</p>
+            </div>
+            <SessionCalendar 
+              ageGroupFilter={ageFilter === "all" ? undefined : ageFilter}
+              genderFilter={genderFilter === "all" ? undefined : genderFilter}
+              onSessionClick={(session) => {
+                window.location.href = `/sessions/${session.id}`;
+              }}
+            />
+          </div>
         </div>
       </section>
     </div>
