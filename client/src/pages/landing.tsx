@@ -8,7 +8,6 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-      
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-green-600 to-blue-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -28,7 +27,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Features Section */}
       <section className="py-16 bg-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,7 +59,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* CTA Section */}
       <section className="py-16 bg-futsal-50">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -74,9 +71,8 @@ export default function Landing() {
           </Button>
         </div>
       </section>
-
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
+      <footer className="text-white bg-[#18181b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="col-span-2">
