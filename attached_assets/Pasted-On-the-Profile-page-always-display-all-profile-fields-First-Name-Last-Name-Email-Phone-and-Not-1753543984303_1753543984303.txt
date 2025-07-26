@@ -1,0 +1,116 @@
+On the Profile page, always display all profile fields (First Name, Last Name, Email, Phone) and Notification Preferences. Instead of switching to a separate “edit” form, keep the fields visible in a single panel:
+
+View Mode:
+
+Fields are shown as read‑only text (styled like inputs).
+
+Only an “Edit Profile” button is visible.
+
+Edit Mode:
+
+Clicking “Edit Profile” transforms the text fields into editable inputs.
+
+The “Edit Profile” button is replaced by “Save Changes” and “Cancel” buttons.
+
+Notification toggles become enabled only in edit mode (or always enabled—consistent with your design).
+
+🔧 Implementation Steps
+State Management
+
+ts
+Copy
+Edit
+const [isEditing, setIsEditing] = useState(false);
+const [formData, setFormData] = useState({
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  phone: user.phone || "",
+  emailReminder: prefs.email,
+  smsReminder: prefs.sms,
+});
+Unified JSX Structure
+
+jsx
+Copy
+Edit
+<div className="space-y-6">
+  {/* Profile Header */}
+  <div className="flex justify-between items-center">
+    <h2 className="text-2xl font-bold">Profile Information</h2>
+    {isEditing ? (
+      <div className="flex gap-2">
+        <button onClick={saveProfile} className="bg-green-600 px-4 py-2 rounded">Save Changes</button>
+        <button onClick={() => setIsEditing(false)} className="bg-zinc-700 px-4 py-2 rounded">Cancel</button>
+      </div>
+    ) : (
+      <button onClick={() => setIsEditing(true)} className="bg-blue-600 px-4 py-2 rounded">Edit Profile</button>
+    )}
+  </div>
+
+  {/* Profile Fields */}
+  <div className="grid grid-cols-2 gap-4">
+    {["firstName","lastName","email","phone"].map(field => (
+      <div key={field} className="space-y-1">
+        <label className="text-sm font-medium capitalize">
+          {field === "phone" ? "Phone Number" : field.replace(/([A-Z])/g, " $1")}
+        </label>
+        {isEditing ? (
+          <input
+            type={field === "email" ? "email" : "text"}
+            value={formData[field]}
+            onChange={e => setFormData({ ...formData, [field]: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2"
+          />
+        ) : (
+          <div className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-zinc-300">
+            {formData[field] || <span className="text-zinc-600 italic">Not provided</span>}
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+
+  {/* Notification Preferences */}
+  <div className="space-y-2">
+    <h3 className="text-xl font-semibold">Notification Preferences</h3>
+    {["emailReminder","smsReminder"].map(key => (
+      <div key={key} className="flex justify-between items-center">
+        <div>
+          <p className="font-medium">
+            {key === "emailReminder" ? "Email Reminders" : "SMS Reminders"}
+          </p>
+          <p className="text-sm text-zinc-400">
+            Receive booking confirmations and session reminders via {key.includes("email") ? "email" : "SMS"}.
+          </p>
+        </div>
+        <Toggle
+          checked={formData[key]}
+          disabled={!isEditing}
+          onCheckedChange={val => 
+            setFormData({ ...formData, [key]: val })
+          }
+        />
+      </div>
+    ))}
+  </div>
+</div>
+Save & Cancel Handlers
+
+ts
+Copy
+Edit
+async function saveProfile() {
+  await api.patch("/api/users/me", {
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    phone: formData.phone,
+    emailReminder: formData.emailReminder,
+    smsReminder: formData.smsReminder,
+  });
+  // refresh user & prefs, then:
+  setIsEditing(false);
+}
+API Route
+Ensure you have PATCH /api/users/me in server/routes.ts that updates the user and notification preferences.
+
