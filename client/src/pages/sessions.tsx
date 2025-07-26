@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
 import SessionCard from "@/components/session-card";
+import CartButton from "@/components/cart-button";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { FutsalSession } from "@shared/schema";
 
 export default function Sessions() {
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
+  const { toast } = useToast();
   const [ageFilter, setAgeFilter] = useState<string>("");
   const [locationFilter, setLocationFilter] = useState<string>("");
+  const [cartMode, setCartMode] = useState(false);
 
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
     queryKey: ["/api/sessions", { ageGroup: ageFilter, location: locationFilter }],
@@ -42,12 +52,22 @@ export default function Sessions() {
               <h1 className="text-3xl font-bold text-white">Training Sessions</h1>
               <p className="text-zinc-400 mt-2">Find the perfect session for your young athlete</p>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-4">
+              {isAuthenticated && (
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="cart-mode"
+                    checked={cartMode}
+                    onCheckedChange={setCartMode}
+                  />
+                  <Label htmlFor="cart-mode" className="text-white text-sm">Multi-select mode</Label>
+                </div>
+              )}
               <Select value={ageFilter} onValueChange={setAgeFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
                   <SelectValue placeholder="All Ages" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-zinc-900 border-zinc-700">
                   <SelectItem value="all">All Ages</SelectItem>
                   {uniqueAgeGroups.map(age => (
                     <SelectItem key={age} value={age}>{age}</SelectItem>
@@ -55,10 +75,10 @@ export default function Sessions() {
                 </SelectContent>
               </Select>
               <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 bg-zinc-900 border-zinc-700">
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-zinc-900 border-zinc-700">
                   <SelectItem value="all">All Locations</SelectItem>
                   {uniqueLocations.map(location => (
                     <SelectItem key={location} value={location}>{location}</SelectItem>
@@ -84,10 +104,23 @@ export default function Sessions() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSessions.map((session) => (
-                <SessionCard key={session.id} session={session} />
+                <SessionCard 
+                  key={session.id} 
+                  session={session} 
+                  showAddToCart={cartMode}
+                  onAddToCart={(session) => {
+                    addToCart(session);
+                    toast({
+                      title: "Added to cart",
+                      description: `${session.title} added to your cart`,
+                    });
+                  }}
+                />
               ))}
             </div>
           )}
+          
+          <CartButton />
         </div>
       </section>
     </div>

@@ -1,16 +1,20 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, DollarSign } from "lucide-react";
+import { Clock, MapPin, DollarSign, ShoppingCart } from "lucide-react";
 import { FutsalSession } from "@shared/schema";
 
 interface SessionCardProps {
   session: FutsalSession;
+  onAddToCart?: (session: FutsalSession) => void;
+  showAddToCart?: boolean;
 }
 
-export default function SessionCard({ session }: SessionCardProps) {
+export default function SessionCard({ session, onAddToCart, showAddToCart = false }: SessionCardProps) {
+  const { isAuthenticated } = useAuth();
   const { data: sessionData } = useQuery<FutsalSession & { signupsCount: number }>({
     queryKey: ["/api/sessions", session.id],
   });
@@ -92,20 +96,36 @@ export default function SessionCard({ session }: SessionCardProps) {
           </div>
         </div>
 
-        <Button 
-          asChild={!isFull && isBookingOpen()}
-          disabled={isFull || !isBookingOpen()}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-          variant={isFull ? "secondary" : "default"}
-        >
-          {isFull ? (
-            <span>Session Full</span>
-          ) : !isBookingOpen() ? (
-            <span>Booking Opens at 8 AM</span>
-          ) : (
-            <Link href={`/sessions/${session.id}`}>Reserve Spot</Link>
+        <div className="flex space-x-2">
+          {showAddToCart && onAddToCart && isBookingOpen() && !isFull && (
+            <Button 
+              variant="outline" 
+              onClick={() => onAddToCart(session)}
+              className="flex-1 border-zinc-600 text-zinc-400 hover:text-white"
+            >
+              <ShoppingCart className="w-4 h-4 mr-1" />
+              Add to Cart
+            </Button>
           )}
-        </Button>
+          
+          <Button 
+            asChild={!isFull && isBookingOpen() && isAuthenticated}
+            disabled={isFull || !isBookingOpen()}
+            className={`${showAddToCart ? 'flex-1' : 'w-full'} bg-blue-600 hover:bg-blue-700 text-white`}
+            variant={isFull ? "secondary" : "default"}
+            onClick={!isAuthenticated && isBookingOpen() && !isFull ? () => window.location.href = '/api/login' : undefined}
+          >
+            {isFull ? (
+              <span>Session Full</span>
+            ) : !isBookingOpen() ? (
+              <span>Booking Opens at 8 AM</span>
+            ) : !isAuthenticated ? (
+              <span>Login to Book</span>
+            ) : (
+              <Link href={`/sessions/${session.id}`}>Reserve Spot</Link>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

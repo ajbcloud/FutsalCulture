@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Signup routes
+  // Signup routes (Booking Access Control: Login required)
   app.get('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -195,6 +195,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cancelling signup:", error);
       res.status(500).json({ message: "Failed to cancel signup" });
+    }
+  });
+
+  // Multi-session checkout route
+  app.post('/api/multi-checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Payment processing unavailable. Please contact support." });
+      }
+
+      const { sessions } = req.body;
+      const userId = req.user.claims.sub;
+      
+      if (!sessions || sessions.length === 0) {
+        return res.status(400).json({ message: "No sessions selected" });
+      }
+
+      // Calculate total amount
+      const totalAmount = sessions.length * 1000; // $10 per session in cents
+
+      // Create Stripe checkout session
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Futsal Training Sessions (${sessions.length})`,
+              description: 'Multiple session booking',
+            },
+            unit_amount: totalAmount,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/dashboard?payment=success`,
+        cancel_url: `${req.protocol}://${req.get('host')}/multi-checkout?payment=cancelled`,
+        metadata: {
+          userId,
+          sessionIds: sessions.map((s: any) => s.sessionId).join(','),
+          isMultiSession: 'true',
+        },
+      });
+
+      res.json({ checkoutUrl: checkoutSession.url });
+    } catch (error) {
+      console.error("Error creating multi-checkout:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
     }
   });
 

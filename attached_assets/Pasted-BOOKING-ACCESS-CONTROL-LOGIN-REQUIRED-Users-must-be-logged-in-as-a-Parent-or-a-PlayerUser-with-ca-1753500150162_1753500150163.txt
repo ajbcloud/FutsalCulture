@@ -1,0 +1,235 @@
+BOOKING ACCESS CONTROL (LOGIN REQUIRED)
+Users must be logged in as a Parent or a PlayerUser (with canBook: true) to:
+
+View the “Reserve Spot” button
+
+Submit the booking form
+
+Start the payment process
+
+All users (guests or logged in) can view session details such as:
+
+Name
+
+Age group
+
+Location
+
+Capacity remaining
+
+If not logged in:
+
+Clicking “Book Now” redirects to /login?redirect=/checkout/{sessionId}
+
+Backend Middleware:
+
+ts
+Copy
+Edit
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: "Login required to book a session." });
+  }
+  next();
+}
+Use this on protected routes like:
+
+ts
+Copy
+Edit
+app.post("/api/signups", requireAuth, (req, res) => { ... });
+Frontend Logic:
+
+tsx
+Copy
+Edit
+{user ? (
+  <Link href={`/checkout/${session.id}`}>
+    <button className="bg-blue-600 text-white px-4 py-2 rounded">Book Now</button>
+  </Link>
+) : (
+  <Link href={`/login?redirect=/checkout/${session.id}`}>
+    <button className="bg-blue-600 text-white px-4 py-2 rounded">Book Now</button>
+  </Link>
+)}
+🛒 MULTI-SESSION CHECKOUT SUPPORT
+Allow parents to select multiple sessions across eligible players.
+
+Update session cards to show an “Add to Cart” button instead of direct checkout.
+
+Floating button (bottom right) should appear when cart has sessions:
+
+Label: Checkout (3 Sessions)
+
+On click: open session summary and proceed to Stripe checkout
+
+At checkout:
+
+Show a grouped list of all selected sessions
+
+Total price = number of sessions x $10
+
+Confirm and create Stripe checkout session
+
+On success, mark all as paid: true and log payment details
+
+🌙 DARK MODE CONSISTENCY
+Apply dark theme globally:
+
+html
+Copy
+Edit
+<body class="dark bg-black text-white">
+Update Tailwind config:
+
+js
+Copy
+Edit
+module.exports = {
+  darkMode: 'class',
+  ...
+}
+All views (login, dashboard, help, session list) must use:
+
+bg-black or bg-zinc-900
+
+text-white
+
+Accent: text-green-400, text-yellow-400, text-red-400
+
+Buttons: bg-blue-600 hover:bg-blue-700
+
+📍 LOCATION SETUP
+Seed the following:
+
+Sugar Sand Park, Boca Raton
+
+🧒 AGE GROUPS
+Age groups supported: U8 to U15
+
+Use this logic to determine a player’s group:
+
+ts
+Copy
+Edit
+function calculateAgeGroup(birthYear) {
+  const year = new Date().getFullYear();
+  return `U${(year - birthYear) + 1}`;
+}
+Match this with session’s ageGroup to display only valid sessions.
+
+👩‍👧 PLAYER ACCOUNTS & PERMISSIONS (13+)
+In Parent Portal → Players tab:
+
+Add toggles:
+
+ Allow player to access portal
+
+ Allow player to book and pay for sessions
+
+If player is 13+ and toggles are on:
+
+Parent can click “Send Invite by Email” or “Send via SMS”
+
+Player receives invite to set up login
+
+New PlayerUser is created
+
+Can log in and view session calendar
+
+Player Portal UI must show:
+
+Upcoming eligible sessions (based on age group)
+
+Booking interface if allowed
+
+Session history (past sessions booked)
+
+📅 SCHEDULE VIEW: GOOGLE CALENDAR SYNC
+Create /schedule page with full calendar
+
+Sync with client’s Google Calendar:
+
+Use OAuth2 for one-time authorization
+
+Use Google Calendar API to pull sessions
+
+Parse events into the sessions table
+
+Frontend:
+
+Use FullCalendar.js or React Big Calendar
+
+Show sessions with clickable entries
+
+Follow dark theme
+
+📞 CONTACT SECTION (UPDATED)
+On the Help page, remove:
+
+Support Hours
+
+Placeholder address
+
+Replace with:
+
+tsx
+Copy
+Edit
+<div className="bg-zinc-900 p-4 rounded-xl border border-zinc-700">
+  <p><strong>Email:</strong> support@futsalculture.com</p>
+  <p><strong>Phone:</strong> (555) 123-GOAL</p>
+</div>
+📤 HELP FORM SUBMISSION
+Form fields:
+
+Name
+
+Email
+
+Phone
+
+Message
+
+POST to /api/help
+
+Save in help_requests table
+
+(Optional) Email notification to support address
+
+🔄 SESSION REMINDERS
+Use node-cron or setInterval in backend:
+
+24 hours before session:
+
+Email if emailConsent = true
+
+1 hour before session:
+
+SMS if smsEnabled = true
+
+Use:
+
+SendGrid or Resend for email
+
+Twilio for SMS
+
+💳 STRIPE CHECKOUT
+Use Stripe Checkout (hosted)
+
+For multi-session: one payment = one grouped checkout
+
+Save paymentIntentId, mark all sessions as paid
+
+Admin dashboard supports manual refund via Stripe Dashboard
+
+📊 ADMIN DASHBOARD
+View stats: total players, revenue, fill rate
+
+Manage sessions: add, edit, delete
+
+View transactions
+
+Refund signups manually
+
+View help form submissions

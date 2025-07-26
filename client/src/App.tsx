@@ -12,6 +12,7 @@ import Dashboard from "@/pages/dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import Help from "@/pages/help";
 import Checkout from "@/pages/checkout";
+import MultiCheckout from "@/pages/multi-checkout";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/checkout/:signupId" component={Checkout} />
+            <Route path="/multi-checkout" component={MultiCheckout} />
             <Route path="/help" component={Help} />
             {user?.isAdmin && (
               <Route path="/admin" component={AdminDashboard} />
