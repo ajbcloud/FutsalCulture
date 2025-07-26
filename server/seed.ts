@@ -241,123 +241,143 @@ const sampleData = {
       id: "a33a14e7-7a3b-4f34-8cde-b581632e67ab",
       title: "U10 Boys Morning Training",
       location: "Sugar Sand Park, Boca Raton",
-      ageGroup: "U10",
-      gender: "boys" as const,
+      ageGroups: ["U10"],
+      genders: ["boys"],
       startTime: new Date(new Date().setHours(16, 0, 0, 0)), // Today 4:00 PM
       endTime: new Date(new Date().setHours(17, 30, 0, 0)), // Today 5:30 PM
       capacity: 12,
-      priceCents: 2500,
-      status: "open"
+      priceCents: 1000,
+      status: "open" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "9999534f-4427-48d8-9123-f05b06c6ba06",
       title: "U12 Girls Afternoon Training",
       location: "Sugar Sand Park, Boca Raton",
-      ageGroup: "U12",
-      gender: "girls" as const,
+      ageGroups: ["U12"],
+      genders: ["girls"],
       startTime: new Date(new Date().setHours(18, 0, 0, 0)), // Today 6:00 PM
       endTime: new Date(new Date().setHours(19, 30, 0, 0)), // Today 7:30 PM
       capacity: 10,
-      priceCents: 2500,
-      status: "open"
+      priceCents: 1000,
+      status: "open" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     // Tomorrow's sessions (should show as "pending" until 8 AM tomorrow)
     {
       id: "169afc69-20bc-4eb9-963a-86f0b054eeb",
       title: "U11 Boys Morning Session", 
       location: "Central Park Field",
-      ageGroup: "U11",
-      gender: "boys" as const,
+      ageGroups: ["U11"],
+      genders: ["boys"],
       startTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000), // Tomorrow 9:00 AM
       endTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 10.5 * 60 * 60 * 1000), // Tomorrow 10:30 AM
       capacity: 14,
-      priceCents: 2500,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "1a4bb050-3819-4ace-94ef-cfcb255c1e0d",
       title: "U13 Girls Evening Session",
       location: "Westside Athletic Complex",
-      ageGroup: "U13", 
-      gender: "girls" as const,
+      ageGroups: ["U13"],
+      genders: ["girls"],
       startTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 17 * 60 * 60 * 1000), // Tomorrow 5:00 PM
       endTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 18.5 * 60 * 60 * 1000), // Tomorrow 6:30 PM
       capacity: 12,
-      priceCents: 3000,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "b80fe8d9-3c20-4aef-a87e-6b1490cf333c",
       title: "U9 Boys Afternoon Training",
       location: "Sugar Sand Park, Boca Raton",
-      ageGroup: "U9",
-      gender: "boys" as const,
+      ageGroups: ["U9"],
+      genders: ["boys"],
       startTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 15 * 60 * 60 * 1000), // Tomorrow 3:00 PM
       endTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000 + 16.5 * 60 * 60 * 1000), // Tomorrow 4:30 PM
       capacity: 16,
-      priceCents: 2000,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     // Next week sessions (various weekdays)
     {
       id: "79e4be17-d209-4ed5-b67b-c9f05589677b",
       title: "U14 Girls Advanced Training",
       location: "Elite Sports Center",
-      ageGroup: "U14",
-      gender: "girls" as const,
+      ageGroups: ["U14"],
+      genders: ["girls"],
       startTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000), // Next week Monday 4:00 PM
       endTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000 + 17.5 * 60 * 60 * 1000), // Next week Monday 5:30 PM
       capacity: 10,
-      priceCents: 3500,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "157b1038-f6d3-49bb-a8c2-385c3ad98da8",
       title: "U11 Girls Skills Development",
       location: "Central Park Field",
-      ageGroup: "U11", 
-      gender: "girls" as const,
+      ageGroups: ["U11"],
+      genders: ["girls"],
       startTime: new Date(new Date().getTime() + 9 * 24 * 60 * 60 * 1000 + 16.5 * 60 * 60 * 1000), // Next week Wednesday 4:30 PM
       endTime: new Date(new Date().getTime() + 9 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000), // Next week Wednesday 6:00 PM
       capacity: 12,
-      priceCents: 2750,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "40446271-d86b-4d70-9e4e-946602dce859", 
       title: "U15 Boys Competitive Training",
       location: "Premier Soccer Academy",
-      ageGroup: "U15",
-      gender: "boys" as const,
+      ageGroups: ["U15"],
+      genders: ["boys"],
       startTime: new Date(new Date().getTime() + 11 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000), // Next week Friday 6:00 PM
       endTime: new Date(new Date().getTime() + 11 * 24 * 60 * 60 * 1000 + 19.5 * 60 * 60 * 1000), // Next week Friday 7:30 PM
       capacity: 8,
-      priceCents: 4000,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "73816243-ef6f-4a63-9fa7-5fa908ad2710",
       title: "U8 Mixed Fundamentals",
       location: "Community Recreation Center",
-      ageGroup: "U8",
-      gender: "boys" as const,
+      ageGroups: ["U8"],
+      genders: ["boys"],
       startTime: new Date(new Date().getTime() + 8 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000), // Next week Tuesday 10:00 AM
       endTime: new Date(new Date().getTime() + 8 * 24 * 60 * 60 * 1000 + 11 * 60 * 60 * 1000), // Next week Tuesday 11:00 AM
       capacity: 20,
-      priceCents: 1500,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     },
     {
       id: "ff303889-6e81-4e07-be64-dfc718715282",
       title: "U12 Boys Technical Skills",
       location: "Westside Athletic Complex", 
-      ageGroup: "U12",
-      gender: "boys" as const,
+      ageGroups: ["U12"],
+      genders: ["boys"],
       startTime: new Date(new Date().getTime() + 10 * 24 * 60 * 60 * 1000 + 17 * 60 * 60 * 1000), // Next week Thursday 5:00 PM
       endTime: new Date(new Date().getTime() + 10 * 24 * 60 * 60 * 1000 + 18.5 * 60 * 60 * 1000), // Next week Thursday 6:30 PM
       capacity: 14,
-      priceCents: 2800,
-      status: "upcoming"
+      priceCents: 1000,
+      status: "upcoming" as const,
+      bookingOpenHour: 8,
+      bookingOpenMinute: 0
     }
   ],
 
