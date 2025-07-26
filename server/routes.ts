@@ -612,9 +612,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Help request routes
-  app.post('/api/help-requests', async (req, res) => {
+  app.post('/api/help', async (req, res) => {
     try {
-      const validatedData = insertHelpRequestSchema.parse(req.body);
+      // Map form data to schema fields
+      const { message, ...otherFields } = req.body;
+      const validatedData = insertHelpRequestSchema.parse({
+        ...otherFields,
+        note: message, // Map message to note field
+      });
       const helpRequest = await storage.createHelpRequest(validatedData);
       res.json(helpRequest);
     } catch (error) {

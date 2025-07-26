@@ -101,30 +101,31 @@ export default function AdminHelpRequests() {
             {helpRequests.map((request: any) => (
               <TableRow key={request.id} className="border-zinc-800">
                 <TableCell className="text-white font-medium">
-                  {request.subject}
+                  {request.subject || request.note?.substring(0, 50) + '...'}
                 </TableCell>
-                <TableCell className="text-zinc-300">{request.category}</TableCell>
+                <TableCell className="text-zinc-300">{request.category || 'General'}</TableCell>
                 <TableCell className="text-zinc-300">
-                  {request.userEmail || 'Anonymous'}
+                  {request.name || 'Anonymous'}
                 </TableCell>
                 <TableCell>
                   <Badge 
                     variant="secondary"
                     className={
-                      request.priority === 'high' ? 'bg-red-900 text-red-300' :
+                      request.priority === 'urgent' ? 'bg-red-900 text-red-300' :
+                      request.priority === 'high' ? 'bg-orange-900 text-orange-300' :
                       request.priority === 'medium' ? 'bg-yellow-900 text-yellow-300' :
                       'bg-green-900 text-green-300'
                     }
                   >
-                    {request.priority}
+                    {request.priority || 'medium'}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant={request.status === 'resolved' ? 'default' : 'secondary'}
-                    className={request.status === 'resolved' ? 'bg-green-900 text-green-300' : 'bg-zinc-700 text-zinc-400'}
+                    variant={request.status === 'resolved' || request.resolved ? 'default' : 'secondary'}
+                    className={request.status === 'resolved' || request.resolved ? 'bg-green-900 text-green-300' : 'bg-zinc-700 text-zinc-400'}
                   >
-                    {request.status}
+                    {request.status || (request.resolved ? 'resolved' : 'open')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-300">
