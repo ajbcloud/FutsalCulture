@@ -483,7 +483,7 @@ export default function AdminSessions() {
                 <Select 
                   value={massUpdateData.ageGroups.length > 0 ? massUpdateData.ageGroups.join(',') : ''} 
                   onValueChange={(value) => {
-                    if (value) {
+                    if (value && value !== "keep-existing") {
                       setMassUpdateData(prev => ({ ...prev, ageGroups: [value] }));
                     } else {
                       setMassUpdateData(prev => ({ ...prev, ageGroups: [] }));
@@ -494,7 +494,7 @@ export default function AdminSessions() {
                     <SelectValue placeholder="Leave empty to keep existing" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Keep existing</SelectItem>
+                    <SelectItem value="keep-existing">Keep existing</SelectItem>
                     {AGE_GROUPS.map(age => (
                       <SelectItem key={age} value={age}>{age}</SelectItem>
                     ))}
@@ -507,7 +507,7 @@ export default function AdminSessions() {
                 <Select 
                   value={massUpdateData.genders.length > 0 ? massUpdateData.genders[0] : ''} 
                   onValueChange={(value) => {
-                    if (value) {
+                    if (value && value !== "keep-existing") {
                       setMassUpdateData(prev => ({ ...prev, genders: [value] }));
                     } else {
                       setMassUpdateData(prev => ({ ...prev, genders: [] }));
@@ -518,7 +518,7 @@ export default function AdminSessions() {
                     <SelectValue placeholder="Leave empty to keep existing" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Keep existing</SelectItem>
+                    <SelectItem value="keep-existing">Keep existing</SelectItem>
                     <SelectItem value="boys">Boys</SelectItem>
                     <SelectItem value="girls">Girls</SelectItem>
                     <SelectItem value="mixed">Mixed</SelectItem>
@@ -548,7 +548,7 @@ export default function AdminSessions() {
                       return hour24.toString();
                     })() : ''} 
                     onValueChange={(value) => {
-                      if (value === '') {
+                      if (value === '' || value === 'keep-existing') {
                         setMassUpdateData(prev => ({ ...prev, bookingOpenHour: '', bookingOpenMinute: '' }));
                       } else {
                         const hour12 = parseInt(value);
@@ -572,7 +572,7 @@ export default function AdminSessions() {
                       <SelectValue placeholder="Hour" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keep existing</SelectItem>
+                      <SelectItem value="keep-existing">Keep existing</SelectItem>
                       {Array.from({ length: 12 }, (_, i) => {
                         const hour = i + 1;
                         return (
@@ -585,13 +585,17 @@ export default function AdminSessions() {
                   </Select>
                   <Select 
                     value={massUpdateData.bookingOpenMinute} 
-                    onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, bookingOpenMinute: value }))}
+                    onValueChange={(value) => {
+                      if (value !== 'keep-existing') {
+                        setMassUpdateData(prev => ({ ...prev, bookingOpenMinute: value }));
+                      }
+                    }}
                   >
                     <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
                       <SelectValue placeholder="Min" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keep existing</SelectItem>
+                      <SelectItem value="keep-existing">Keep existing</SelectItem>
                       <SelectItem value="0">00</SelectItem>
                       <SelectItem value="15">15</SelectItem>
                       <SelectItem value="30">30</SelectItem>
@@ -601,7 +605,7 @@ export default function AdminSessions() {
                   <Select 
                     value={massUpdateData.bookingOpenHour !== '' ? (parseInt(massUpdateData.bookingOpenHour) < 12 ? 'AM' : 'PM') : ''} 
                     onValueChange={(value) => {
-                      if (value !== '' && massUpdateData.bookingOpenHour !== '') {
+                      if (value !== 'keep-existing' && value !== '' && massUpdateData.bookingOpenHour !== '') {
                         const currentHour24 = parseInt(massUpdateData.bookingOpenHour);
                         const currentHour12 = currentHour24 === 0 ? 12 : 
                                              currentHour24 > 12 ? currentHour24 - 12 : 
@@ -623,6 +627,7 @@ export default function AdminSessions() {
                       <SelectValue placeholder="AM/PM" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="keep-existing">Keep existing</SelectItem>
                       <SelectItem value="AM">AM</SelectItem>
                       <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
