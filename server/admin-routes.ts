@@ -7,12 +7,12 @@ import { eq, sql } from "drizzle-orm";
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
-    if (!req.user?.claims?.sub) {
+    if (!(req as any).user?.claims?.sub) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
     // Check user's admin status directly from database
-    const user = await storage.getUser(req.user.claims.sub);
+    const user = await storage.getUser((req as any).user.claims.sub);
     if (!user?.isAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
@@ -29,12 +29,12 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
 // Middleware to require full admin (not assistant)
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
-    if (!req.user?.claims?.sub) {
+    if (!(req as any).user?.claims?.sub) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
     // Check user's admin status directly from database
-    const user = await storage.getUser(req.user.claims.sub);
+    const user = await storage.getUser((req as any).user.claims.sub);
     if (!user?.isAdmin) {
       return res.status(403).json({ message: "Full admin access required" });
     }
@@ -245,11 +245,63 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Analytics
+  // Admin Analytics with detailed data
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const analytics = await storage.getAnalytics();
-      res.json(analytics);
+      const { startDate, endDate, ageGroup, gender, location } = req.query;
+      
+      // Default date range if not provided
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      // Revenue over time (from payments)
+      const revenueData = await db.select({
+        day: sql<string>`date_trunc('day', ${signups.createdAt})::date`,
+        amount: sql<number>`sum(10.0)` // All sessions are $10
+      })
+      .from(signups)
+      .where(sql`${signups.createdAt} BETWEEN ${start} AND ${end}`)
+      .groupBy(sql`date_trunc('day', ${signups.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${signups.createdAt})`);
+      
+      // Session occupancy trends
+      const occupancyData = await db.select({
+        day: sql<string>`date_trunc('day', sessions.startTime)::date`,
+        fillRate: sql<number>`ROUND(AVG(signups_count::float / sessions.capacity * 100))`
+      })
+      .from(sql`
+        (SELECT 
+          sessions.*,
+          COALESCE(signup_counts.signups_count, 0) as signups_count
+        FROM futsal_sessions sessions
+        LEFT JOIN (
+          SELECT session_id, COUNT(*) as signups_count
+          FROM signups
+          GROUP BY session_id
+        ) signup_counts ON sessions.id = signup_counts.session_id
+        WHERE sessions.start_time BETWEEN ${start} AND ${end}
+        ) as sessions
+      `)
+      .groupBy(sql`date_trunc('day', sessions.start_time)`)
+      .orderBy(sql`date_trunc('day', sessions.start_time)`);
+      
+      // Player growth over time
+      const playerGrowthData = await db.select({
+        day: sql<string>`date_trunc('day', ${players.createdAt})::date`,
+        count: sql<number>`count(*)`
+      })
+      .from(players)
+      .where(sql`${players.createdAt} BETWEEN ${start} AND ${end}`)
+      .groupBy(sql`date_trunc('day', ${players.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${players.createdAt})`);
+      
+      res.json({
+        revenue: revenueData,
+        occupancy: occupancyData,
+        playerGrowth: playerGrowthData,
+        expenses: [], // Placeholder for expenses data
+        refundRate: [] // Placeholder for refund data
+      });
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });

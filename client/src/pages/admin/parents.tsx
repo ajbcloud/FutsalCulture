@@ -15,16 +15,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Edit, Trash2, Users, UserCheck, UserX } from 'lucide-react';
+import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents } from '../../lib/adminApi';
 
 export default function AdminParents() {
-  const [parents, setParents] = useState([]);
-  const [filteredParents, setFilteredParents] = useState([]);
+  const [parents, setParents] = useState<any[]>([]);
+  const [filteredParents, setFilteredParents] = useState<any[]>([]);
+  const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedParent, setSelectedParent] = useState(null);
+  const [selectedParent, setSelectedParent] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -260,44 +261,82 @@ export default function AdminParents() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredParents.map((parent: any) => (
-                <TableRow key={parent.id} className="border-zinc-800">
-                  <TableCell className="text-white">
-                    {parent.firstName} {parent.lastName}
-                  </TableCell>
-                  <TableCell className="text-zinc-300">{parent.email}</TableCell>
-                  <TableCell className="text-zinc-300">{parent.phone || '-'}</TableCell>
-                  <TableCell>{getRoleDisplay(parent)}</TableCell>
-                  <TableCell className="text-zinc-300">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {parent.playersCount || 0}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-zinc-300">
-                    {parent.lastLogin ? new Date(parent.lastLogin).toLocaleDateString() : 'Never'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleEdit(parent)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDelete(parent.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredParents.map((parent: any) => {
+                const isExpanded = expandedParentIds.has(parent.id);
+                return (
+                  <React.Fragment key={parent.id}>
+                    <TableRow className="border-zinc-800">
+                      <TableCell className="text-white">
+                        {parent.firstName} {parent.lastName}
+                      </TableCell>
+                      <TableCell className="text-zinc-300">{parent.email}</TableCell>
+                      <TableCell className="text-zinc-300">{parent.phone || '-'}</TableCell>
+                      <TableCell>{getRoleDisplay(parent)}</TableCell>
+                      <TableCell className="text-zinc-300">
+                        <button
+                          onClick={() => {
+                            const nextExpanded = new Set(expandedParentIds);
+                            if (isExpanded) {
+                              nextExpanded.delete(parent.id);
+                            } else {
+                              nextExpanded.add(parent.id);
+                            }
+                            setExpandedParentIds(nextExpanded);
+                          }}
+                          className="flex items-center gap-1 p-1 hover:bg-zinc-700 rounded"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-zinc-400" />
+                          )}
+                          <Users className="w-4 h-4" />
+                          {parent.playersCount || 0}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-zinc-300">
+                        {parent.lastLogin ? new Date(parent.lastLogin).toLocaleDateString() : 'Never'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEdit(parent)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDelete(parent.id)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    
+                    {isExpanded && (
+                      <TableRow className="bg-zinc-900">
+                        <TableCell colSpan={7} className="px-8 py-2">
+                          <div className="text-sm text-zinc-400">
+                            {parent.playersCount > 0 ? (
+                              <div className="space-y-1">
+                                <p className="font-medium text-zinc-300">Players:</p>
+                                <p className="text-zinc-500">Loading player details...</p>
+                              </div>
+                            ) : (
+                              <p className="text-zinc-500">No players registered</p>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {filteredParents.length === 0 && (
                 <TableRow className="border-zinc-800">
                   <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
