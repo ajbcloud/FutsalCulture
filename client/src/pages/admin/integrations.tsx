@@ -101,6 +101,17 @@ const providerConfigs: Record<string, ProviderConfig> = {
       { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', required: false },
     ],
   },
+  mailchimp: {
+    name: 'Mailchimp',
+    icon: <Mail className="w-4 h-4" />,
+    description: 'Email marketing and newsletter management for parent communications',
+    category: 'email',
+    fields: [
+      { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your Mailchimp API key', required: true },
+      { key: 'audienceId', label: 'Audience ID', type: 'text', placeholder: 'Your default audience/list ID', required: true },
+      { key: 'serverPrefix', label: 'Server Prefix', type: 'text', placeholder: 'us1, us2, etc. (from your API key)', required: true },
+    ],
+  },
 };
 
 export default function AdminIntegrations() {
