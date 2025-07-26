@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/navbar";
 import ReservationForm from "@/components/reservation-form";
 import { Button } from "@/components/ui/button";

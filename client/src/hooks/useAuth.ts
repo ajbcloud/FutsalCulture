@@ -1,27 +1,48 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
+let cachedAuthState: { user: any; timestamp: number } | null = null;
+const CACHE_DURATION = 300000; // 5 minutes
+
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
+      // Check local cache first
+      if (cachedAuthState && Date.now() - cachedAuthState.timestamp < CACHE_DURATION) {
+        return cachedAuthState.user;
+      }
+
       try {
         const response = await apiRequest("GET", "/api/auth/user");
-        return await response.json();
+        const userData = await response.json();
+        
+        // Update local cache
+        cachedAuthState = {
+          user: userData,
+          timestamp: Date.now()
+        };
+        
+        return userData;
       } catch (error: any) {
-        // If user is not authenticated, return null instead of throwing
+        // If user is not authenticated, cache null result
         if (error.message?.includes("401")) {
+          cachedAuthState = {
+            user: null,
+            timestamp: Date.now()
+          };
           return null;
         }
         throw error;
       }
     },
     retry: false,
-    staleTime: 300000, // Consider data fresh for 5 minutes (increased from 1 minute)
-    gcTime: 300000, // Keep in cache for 5 minutes
-    refetchInterval: false, // Don't refetch automatically
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on component mount if data exists
+    staleTime: Infinity, // Never consider stale - we handle our own caching
+    gcTime: Infinity, // Keep in cache forever
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   return {
