@@ -8,6 +8,7 @@ import {
   notificationPreferences,
   type User,
   type UpsertUser,
+  type UpdateUser,
   type Player,
   type InsertPlayer,
   type FutsalSession,
@@ -28,6 +29,7 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, user: UpdateUser): Promise<User>;
   
   // Player operations
   getPlayersByParent(parentId: string): Promise<Player[]>;
@@ -91,6 +93,18 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: UpdateUser): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...userData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }

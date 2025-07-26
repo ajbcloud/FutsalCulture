@@ -170,6 +170,14 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+export const updateUserSchema = createInsertSchema(users).omit({
+  id: true,
+  isAdmin: true,
+  customerId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertPlayerSchema = createInsertSchema(players).omit({
   id: true,
   createdAt: true,
@@ -203,6 +211,8 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
 
 // Types for upsert operations (includes id)
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;

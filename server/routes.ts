@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema } from "@shared/schema";
+import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema, updateUserSchema } from "@shared/schema";
 import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
@@ -20,6 +20,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.put('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = updateUserSchema.parse(req.body);
+      const user = await storage.updateUser(userId, validatedData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 

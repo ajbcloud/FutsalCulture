@@ -1,5 +1,8 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -10,18 +13,75 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { User, Bell, Phone, Mail, Settings } from "lucide-react";
-import { NotificationPreferences } from "@shared/schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { User, Bell, Phone, Mail, Settings, Edit, Save, X } from "lucide-react";
+import { NotificationPreferences, updateUserSchema } from "@shared/schema";
 
 export default function Profile() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
+  // Profile form setup
+  const form = useForm<z.infer<typeof updateUserSchema>>({
+    resolver: zodResolver(updateUserSchema),
+    defaultValues: {
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+    },
+  });
+
+  // Reset form when user data changes
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user, form]);
+
   // Profile data queries
   const { data: notificationPrefs, isLoading: prefsLoading } = useQuery<NotificationPreferences>({
     queryKey: ["/api/notification-preferences"],
     enabled: isAuthenticated,
+  });
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof updateUserSchema>) => {
+      return await apiRequest("PUT", "/api/auth/user", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    },
   });
 
   // Update notification preferences mutation
@@ -92,6 +152,20 @@ export default function Profile() {
     });
   };
 
+  const onSubmit = async (data: z.infer<typeof updateUserSchema>) => {
+    updateProfileMutation.mutate(data);
+  };
+
+  const handleCancelEdit = () => {
+    form.reset({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#18181b]">
       <Navbar />
@@ -100,27 +174,144 @@ export default function Profile() {
           {/* Profile Header */}
           <Card className="bg-zinc-900 border-zinc-700">
             <CardHeader>
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-white text-2xl">
-                    {user?.firstName} {user?.lastName}
-                  </CardTitle>
-                  <p className="text-zinc-400 flex items-center mt-1">
-                    <Mail className="w-4 h-4 mr-2" />
-                    {user?.email}
-                  </p>
-                  {user?.phoneNumber && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-2xl">
+                      {user?.firstName} {user?.lastName}
+                    </CardTitle>
                     <p className="text-zinc-400 flex items-center mt-1">
-                      <Phone className="w-4 h-4 mr-2" />
-                      {user?.phoneNumber}
+                      <Mail className="w-4 h-4 mr-2" />
+                      {user?.email}
                     </p>
-                  )}
+                    {user?.phone && (
+                      <p className="text-zinc-400 flex items-center mt-1">
+                        <Phone className="w-4 h-4 mr-2" />
+                        {user?.phone}
+                      </p>
+                    )}
+                  </div>
                 </div>
+                {!isEditing && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditing(true)}
+                    className="border-zinc-600 text-zinc-400 hover:text-white"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                )}
               </div>
             </CardHeader>
+            {isEditing && (
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">First Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-zinc-800 border-zinc-600 text-white"
+                                placeholder="Enter your first name"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Last Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-zinc-800 border-zinc-600 text-white"
+                                placeholder="Enter your last name"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              className="bg-zinc-800 border-zinc-600 text-white"
+                              placeholder="Enter your email address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="tel"
+                              className="bg-zinc-800 border-zinc-600 text-white"
+                              placeholder="Enter your phone number"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex space-x-4">
+                      <Button 
+                        type="submit"
+                        disabled={updateProfileMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {updateProfileMutation.isPending ? (
+                          "Saving..."
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Changes
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        className="border-zinc-600 text-zinc-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            )}
           </Card>
 
           {/* Profile Information */}
