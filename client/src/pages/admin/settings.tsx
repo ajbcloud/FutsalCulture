@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -31,6 +32,53 @@ interface Integration {
   createdAt: string;
   updatedAt: string;
 }
+
+// Get all available timezones
+const getTimezones = (): string[] => {
+  try {
+    // Use Intl.supportedValuesOf if available (modern browsers)
+    if ('supportedValuesOf' in Intl) {
+      return (Intl as any).supportedValuesOf('timeZone').sort();
+    }
+  } catch (error) {
+    console.warn('Intl.supportedValuesOf not available, using fallback timezone list');
+  }
+  
+  // Fallback list of common timezones
+  return [
+    'America/New_York',
+    'America/Chicago', 
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Anchorage',
+    'Pacific/Honolulu',
+    'Europe/London',
+    'Europe/Paris',
+    'Europe/Berlin',
+    'Europe/Rome',
+    'Europe/Madrid',
+    'Asia/Tokyo',
+    'Asia/Shanghai',
+    'Asia/Kolkata',
+    'Asia/Dubai',
+    'Australia/Sydney',
+    'Australia/Melbourne',
+    'Pacific/Auckland',
+    'America/Sao_Paulo',
+    'America/Mexico_City',
+    'America/Toronto',
+    'America/Vancouver',
+    'Europe/Amsterdam',
+    'Europe/Stockholm',
+    'Europe/Moscow',
+    'Asia/Seoul',
+    'Asia/Singapore',
+    'Asia/Bangkok',
+    'Africa/Cairo',
+    'Africa/Johannesburg',
+    'UTC'
+  ].sort();
+};
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SystemSettings>({
@@ -93,6 +141,12 @@ export default function AdminSettings() {
       });
 
       if (!response.ok) throw new Error('Failed to update settings');
+
+      // Update timezone context if timezone changed
+      if (window.location && settings.timezone) {
+        // Refresh the page to ensure timezone changes take effect throughout the app
+        window.location.reload();
+      }
 
       toast({
         title: "Success",
@@ -351,12 +405,24 @@ export default function AdminSettings() {
             </div>
             <div>
               <Label htmlFor="timezone" className="text-zinc-300">Timezone</Label>
-              <Input
-                id="timezone"
+              <Select
                 value={settings.timezone}
-                onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
-                className="bg-zinc-800 border-zinc-700 text-white"
-              />
+                onValueChange={(value) => setSettings(prev => ({ ...prev, timezone: value }))}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700 max-h-60">
+                  {getTimezones().map((tz) => (
+                    <SelectItem key={tz} value={tz} className="text-white hover:bg-zinc-700">
+                      {tz.replace(/_/g, ' ')} ({new Date().toLocaleTimeString('en-US', {
+                        timeZone: tz,
+                        timeZoneName: 'short'
+                      }).split(' ').pop()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
