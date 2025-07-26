@@ -121,7 +121,12 @@ export function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const sessionData = req.body;
+      const sessionData = {
+        ...req.body,
+        // Ensure booking time defaults are applied
+        bookingOpenHour: req.body.bookingOpenHour ?? 8,
+        bookingOpenMinute: req.body.bookingOpenMinute ?? 0,
+      };
       const session = await storage.createSession(sessionData);
       res.json(session);
     } catch (error) {

@@ -33,6 +33,8 @@ export default function AdminSessionDetail() {
     ageGroups: [] as string[],
     genders: [] as string[],
     capacity: 12,
+    bookingOpenHour: 8,
+    bookingOpenMinute: 0,
   });
 
   useEffect(() => {
@@ -53,6 +55,8 @@ export default function AdminSessionDetail() {
           ageGroups: data.ageGroups || [],
           genders: data.genders || [],
           capacity: data.capacity || 12,
+          bookingOpenHour: data.bookingOpenHour ?? 8,
+          bookingOpenMinute: data.bookingOpenMinute ?? 0,
         });
         setLoading(false);
       }).catch(err => {
@@ -220,6 +224,73 @@ export default function AdminSessionDetail() {
               min="1"
               max="20"
             />
+          </div>
+        </div>
+
+        {/* Booking Time Controls */}
+        <div className="border-t border-zinc-700 pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Booking Time Settings</h3>
+          <div className="bg-zinc-800/50 rounded-lg p-4 mb-4">
+            <p className="text-sm text-zinc-400 mb-2">
+              By default, sessions open for booking at 8:00 AM on the day of the session. 
+              You can customize this time for special events or high-demand sessions.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="bookingOpenHour" className="text-zinc-300">Booking Open Hour (0-23)</Label>
+              <Select 
+                value={formData.bookingOpenHour.toString()} 
+                onValueChange={(value) => setFormData({...formData, bookingOpenHour: parseInt(value)})}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  {Array.from({length: 24}, (_, i) => (
+                    <SelectItem key={i} value={i.toString()} className="text-white hover:bg-zinc-700">
+                      {i.toString().padStart(2, '0')}:00 {i < 12 ? 'AM' : 'PM'} 
+                      {i === 0 && ' (Midnight)'} 
+                      {i === 12 && ' (Noon)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-zinc-500 mt-1">Default: 8 (8:00 AM)</p>
+            </div>
+
+            <div>
+              <Label htmlFor="bookingOpenMinute" className="text-zinc-300">Booking Open Minute (0-59)</Label>
+              <Select 
+                value={formData.bookingOpenMinute.toString()} 
+                onValueChange={(value) => setFormData({...formData, bookingOpenMinute: parseInt(value)})}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  {[0, 15, 30, 45].map((minute) => (
+                    <SelectItem key={minute} value={minute.toString()} className="text-white hover:bg-zinc-700">
+                      :{minute.toString().padStart(2, '0')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-zinc-500 mt-1">Default: 0 (on the hour)</p>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+            <p className="text-sm text-blue-300">
+              <strong>Preview:</strong> This session will open for booking at{' '}
+              <span className="font-semibold">
+                {formData.bookingOpenHour.toString().padStart(2, '0')}:
+                {formData.bookingOpenMinute.toString().padStart(2, '0')}
+                {formData.bookingOpenHour < 12 ? ' AM' : ' PM'}
+              </span>
+              {' '}on the day of the session.
+            </p>
           </div>
         </div>
 
