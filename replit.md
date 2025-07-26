@@ -139,9 +139,10 @@ Preferred communication style: Simple, everyday language.
 - Jobs automatically start with server process
 
 ### Database Seeding
-- Comprehensive seed data system with 10 parents, 14 players, 10 sessions, 14 signups, and 14 payments
+- Comprehensive seed data system with 10 parents, 14 players, 10 sessions, 19 signups (14 paid + 5 pending), and 14 payments
 - Sample data includes realistic portal access controls and contact information for testing
 - Smart invite system testing data with varied email/phone combinations
+- **Pending Payment Test Data**: 5 signups with unpaid status for testing admin payment management and reminder features
 - Run seeding with: `tsx server/seed.ts`
 - Clears existing data and repopulates with fresh test data
 
@@ -187,3 +188,4 @@ Preferred communication style: Simple, everyday language.
 - **Integration Management Consolidation**: Simplified admin interface by removing duplicate integration management from Settings page and consolidating all integration functionality into dedicated /admin/integrations page. Settings page now shows integration summary with direct link to full management interface, eliminating UI duplication and providing clearer navigation flow.
 - **Braintree Payment Integration**: Added Braintree payment processing integration alongside Stripe with configuration fields for Merchant ID, Public/Private keys, and environment settings. Provides alternative payment processing option with advanced fraud protection and global payment support for futsal session bookings.
 - **Default Timezone Set to EST**: Updated system default timezone from Singapore/Asia to America/New_York (Eastern Time) across all components including server defaults, client initialization, date utilities, and timezone context provider to ensure consistent EST timing throughout the platform.
+- **Pending Payment Test Data**: Added 5 unpaid signups to seed data system to enable testing of admin payment management features, payment reminders, and manual payment confirmation workflows. Seed data now includes both paid and pending payment scenarios for comprehensive testing.

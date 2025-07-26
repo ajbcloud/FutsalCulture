@@ -494,6 +494,37 @@ const sampleData = {
       sessionId: "40446271-d86b-4d70-9e4e-946602dce859",
       paid: true,
       paymentIntentId: "pi_07796c2f"
+    },
+    // PENDING PAYMENT TEST DATA - These signups need payment confirmation
+    {
+      id: "pending-signup-1",
+      playerId: "9238a5fa-a87f-4add-b830-574c553f60a5",
+      sessionId: "a33a14e7-7a3b-4f34-8cde-b581632e67ab",
+      paid: false
+    },
+    {
+      id: "pending-signup-2",
+      playerId: "9dff839f-b64f-41f8-8759-5bc49b106655",
+      sessionId: "9999534f-4427-48d8-9123-f05b06c6ba06",
+      paid: false
+    },
+    {
+      id: "pending-signup-3",
+      playerId: "38d502ea-1198-431d-87ef-5e5eb852bfa80",
+      sessionId: "169afc69-20bc-4eb9-963a-86f0b054eeb",
+      paid: false
+    },
+    {
+      id: "pending-signup-4",
+      playerId: "e40e87c5-c0f1-4b43-83fc-aa080de1d983",
+      sessionId: "1a4bb050-3819-4ace-94ef-cfcb255c1e0d",
+      paid: false
+    },
+    {
+      id: "pending-signup-5",
+      playerId: "2958d4ec-edab-498e-b548-136f15f7c55a",
+      sessionId: "79e4be17-d209-4ed5-b67b-c9f05589677b",
+      paid: false
     }
   ],
 
