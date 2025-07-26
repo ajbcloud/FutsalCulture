@@ -40,10 +40,10 @@ export default function Sessions() {
       if (!isEligibleForAnyPlayer) return false;
     }
     
-    // Apply manual filters
-    if (ageFilter !== "all" && session.ageGroup !== ageFilter) return false;
+    // Apply manual filters (using new array schema)
+    if (ageFilter !== "all" && !session.ageGroups?.includes(ageFilter)) return false;
     if (locationFilter !== "all" && session.location !== locationFilter) return false;
-    if (genderFilter !== "all" && session.gender !== genderFilter) return false;
+    if (genderFilter !== "all" && !session.genders?.includes(genderFilter)) return false;
     return true;
   });
 
@@ -52,9 +52,9 @@ export default function Sessions() {
     ? sessions.filter(session => players.some(player => isSessionEligibleForPlayer(session, player)))
     : sessions;
     
-  const uniqueAgeGroups = Array.from(new Set(eligibleSessions.map(s => s.ageGroup)));
+  const uniqueAgeGroups = Array.from(new Set(eligibleSessions.flatMap(s => s.ageGroups || [])));
   const uniqueLocations = Array.from(new Set(eligibleSessions.map(s => s.location)));
-  const uniqueGenders = Array.from(new Set(eligibleSessions.map(s => s.gender)));
+  const uniqueGenders = Array.from(new Set(eligibleSessions.flatMap(s => s.genders || [])));
 
   if (isLoading) {
     return (
@@ -169,6 +169,7 @@ export default function Sessions() {
             <SessionCalendar 
               ageGroupFilter={ageFilter === "all" ? undefined : ageFilter}
               genderFilter={genderFilter === "all" ? undefined : genderFilter}
+              locationFilter={locationFilter === "all" ? undefined : locationFilter}
               showBookingButtons={true}
               onSessionClick={(session) => {
                 window.location.href = `/sessions/${session.id}`;

@@ -14,6 +14,7 @@ import { format12Hour } from "@shared/booking-config";
 interface SessionCalendarProps {
   ageGroupFilter?: string;
   genderFilter?: string;
+  locationFilter?: string;
   showBookingButtons?: boolean;
   onSessionClick?: (session: FutsalSession) => void;
 }
@@ -21,6 +22,7 @@ interface SessionCalendarProps {
 export default function SessionCalendar({ 
   ageGroupFilter, 
   genderFilter, 
+  locationFilter,
   showBookingButtons = false, 
   onSessionClick 
 }: SessionCalendarProps) {
@@ -45,6 +47,7 @@ export default function SessionCalendar({
     // Apply manual filters if provided (for public sessions page)
     if (ageGroupFilter && !session.ageGroups?.includes(ageGroupFilter)) return false;
     if (genderFilter && !session.genders?.includes(genderFilter)) return false;
+    if (locationFilter && session.location !== locationFilter) return false;
     return true;
   });
 
