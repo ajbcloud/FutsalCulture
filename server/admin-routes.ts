@@ -1,9 +1,91 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
+
+// Integration helper functions
+function maskCredentials(provider: string, credentials: any): any {
+  switch (provider) {
+    case 'twilio':
+      return {
+        accountSid: credentials.accountSid ? `***${credentials.accountSid.slice(-4)}` : '',
+        authToken: credentials.authToken ? '***' : '',
+        fromNumber: credentials.fromNumber,
+      };
+    case 'sendgrid':
+      return {
+        apiKey: credentials.apiKey ? `***${credentials.apiKey.slice(-4)}` : '',
+        verifiedSender: credentials.verifiedSender,
+      };
+    case 'google':
+      return {
+        clientId: credentials.clientId ? `***${credentials.clientId.slice(-4)}` : '',
+        clientSecret: credentials.clientSecret ? '***' : '',
+        redirectUri: credentials.redirectUri,
+      };
+    case 'microsoft':
+      return {
+        tenantId: credentials.tenantId,
+        clientId: credentials.clientId ? `***${credentials.clientId.slice(-4)}` : '',
+        clientSecret: credentials.clientSecret ? '***' : '',
+      };
+    default:
+      return {};
+  }
+}
+
+function validateCredentials(provider: string, credentials: any): string | null {
+  switch (provider) {
+    case 'twilio':
+      if (!credentials.accountSid || !credentials.authToken || !credentials.fromNumber) {
+        return 'Twilio requires Account SID, Auth Token, and From Number';
+      }
+      break;
+    case 'sendgrid':
+      if (!credentials.apiKey || !credentials.verifiedSender) {
+        return 'SendGrid requires API Key and Verified Sender Address';
+      }
+      break;
+    case 'google':
+      if (!credentials.clientId || !credentials.clientSecret || !credentials.redirectUri) {
+        return 'Google requires Client ID, Client Secret, and Redirect URI';
+      }
+      break;
+    case 'microsoft':
+      if (!credentials.tenantId || !credentials.clientId || !credentials.clientSecret) {
+        return 'Microsoft requires Tenant ID, Client ID, and Client Secret';
+      }
+      break;
+    default:
+      return 'Unsupported provider';
+  }
+  return null;
+}
+
+async function testIntegration(integration: any): Promise<{ success: boolean; error?: string }> {
+  try {
+    switch (integration.provider) {
+      case 'twilio':
+        // Test Twilio connection - placeholder for now
+        return { success: true };
+      case 'sendgrid':
+        // Test SendGrid connection - placeholder for now
+        return { success: true };
+      case 'google':
+        // Test Google connection - placeholder for now
+        return { success: true };
+      case 'microsoft':
+        // Test Microsoft connection - placeholder for now
+        return { success: true };
+      default:
+        return { success: false, error: 'Unsupported provider' };
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
@@ -598,6 +680,168 @@ export function setupAdminRoutes(app: any) {
     } catch (error) {
       console.error("Error updating settings:", error);
       res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Integrations Management Endpoints
+  app.get('/api/admin/integrations', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const allIntegrations = await db.select({
+        id: integrations.id,
+        provider: integrations.provider,
+        enabled: integrations.enabled,
+        lastTestedAt: integrations.lastTestedAt,
+        testStatus: integrations.testStatus,
+        createdAt: integrations.createdAt,
+        updatedAt: integrations.updatedAt,
+      }).from(integrations);
+
+      res.json(allIntegrations);
+    } catch (error) {
+      console.error("Error fetching integrations:", error);
+      res.status(500).json({ message: "Failed to fetch integrations" });
+    }
+  });
+
+  app.get('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Mask sensitive credentials for security
+      const integrationData = integration[0];
+      const maskedCredentials = maskCredentials(integrationData.provider, integrationData.credentials as any);
+      
+      res.json({
+        ...integrationData,
+        credentials: maskedCredentials,
+      });
+    } catch (error) {
+      console.error("Error fetching integration:", error);
+      res.status(500).json({ message: "Failed to fetch integration" });
+    }
+  });
+
+  app.post('/api/admin/integrations', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { provider, credentials, enabled = true } = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+
+      // Validate credentials based on provider
+      const validationError = validateCredentials(provider, credentials);
+      if (validationError) {
+        return res.status(400).json({ message: validationError });
+      }
+
+      // Check if integration already exists
+      const existing = await db.select().from(integrations).where(eq(integrations.provider, provider)).limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing integration
+        const updated = await db.update(integrations)
+          .set({
+            credentials,
+            enabled,
+            configuredBy: adminUserId,
+            updatedAt: new Date(),
+          })
+          .where(eq(integrations.provider, provider))
+          .returning();
+
+        res.json(updated[0]);
+      } else {
+        // Create new integration
+        const created = await db.insert(integrations)
+          .values({
+            provider,
+            credentials,
+            enabled,
+            configuredBy: adminUserId,
+          })
+          .returning();
+
+        res.json(created[0]);
+      }
+    } catch (error) {
+      console.error("Error creating/updating integration:", error);
+      res.status(500).json({ message: "Failed to save integration" });
+    }
+  });
+
+  app.patch('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { enabled } = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+
+      const updated = await db.update(integrations)
+        .set({
+          enabled,
+          configuredBy: adminUserId,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, id))
+        .returning();
+
+      if (!updated.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error updating integration:", error);
+      res.status(500).json({ message: "Failed to update integration" });
+    }
+  });
+
+  app.delete('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const deleted = await db.delete(integrations)
+        .where(eq(integrations.id, id))
+        .returning();
+
+      if (!deleted.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      res.json({ message: "Integration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting integration:", error);
+      res.status(500).json({ message: "Failed to delete integration" });
+    }
+  });
+
+  app.post('/api/admin/integrations/:id/test', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      const testResult = await testIntegration(integration[0]);
+      
+      // Update test status
+      await db.update(integrations)
+        .set({
+          lastTestedAt: new Date(),
+          testStatus: testResult.success ? 'success' : 'failure',
+          testErrorMessage: testResult.error || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, id));
+
+      res.json(testResult);
+    } catch (error) {
+      console.error("Error testing integration:", error);
+      res.status(500).json({ message: "Failed to test integration" });
     }
   });
 

@@ -18,6 +18,7 @@ import AdminAnalyticsWorking from "@/pages/admin/analytics-working";
 import AdminPendingRegistrations from "@/pages/admin/pending-registrations";
 import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
+import AdminIntegrations from "@/pages/admin/integrations";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -70,6 +71,7 @@ function Router() {
                 <Route path="/admin/analytics" component={AdminAnalyticsWorking} />
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />
+                <Route path="/admin/integrations" component={AdminIntegrations} />
               </>
             )}
           </>

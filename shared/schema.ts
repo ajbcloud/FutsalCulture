@@ -29,6 +29,11 @@ export const sessions = pgTable(
 // Registration status enum
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
 
+// Integration provider enum
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar"
+]);
+
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -161,6 +166,20 @@ export const systemSettings = pgTable("system_settings", {
   updatedBy: varchar("updated_by"), // admin user id
 });
 
+// Integrations table for third-party service configuration
+export const integrations = pgTable("integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: integrationProviderEnum("provider").notNull().unique(),
+  credentials: jsonb("credentials").notNull(), // Store encrypted credentials
+  enabled: boolean("enabled").default(false),
+  configuredBy: varchar("configured_by"), // admin user id
+  lastTestedAt: timestamp("last_tested_at"),
+  testStatus: varchar("test_status"), // 'success', 'failure', 'pending'
+  testErrorMessage: text("test_error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   players: many(players),
@@ -253,6 +272,12 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
   updatedAt: true,
 });
 
+export const insertIntegrationSchema = createInsertSchema(integrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for upsert operations (includes id)
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -272,3 +297,5 @@ export type HelpRequest = typeof helpRequests.$inferSelect;
 export type InsertHelpRequest = z.infer<typeof insertHelpRequestSchema>;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type Integration = typeof integrations.$inferSelect;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;

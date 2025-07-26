@@ -13,7 +13,8 @@ import {
   Settings,
   Menu,
   X,
-  UserCheck
+  UserCheck,
+  Zap
 } from "lucide-react";
 
 const adminNavItems = [
@@ -26,6 +27,7 @@ const adminNavItems = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/integrations", label: "Integrations", icon: Zap },
 ];
 
 interface AdminLayoutProps {
