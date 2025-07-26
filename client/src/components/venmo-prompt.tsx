@@ -49,9 +49,16 @@ export default function VenmoPrompt({ isOpen, onClose, signupData }: VenmoPrompt
     return () => clearInterval(interval);
   }, [signupData?.reservationExpiresAt]);
 
-  if (!signupData) return null;
+  if (!signupData || !signupData.player || !signupData.session) return null;
 
   const { player, session } = signupData;
+  
+  // Ensure session has required properties
+  if (!session.startTime || !session.gender || !player.firstName || !player.birthYear) {
+    console.error("Missing required properties in signup data:", signupData);
+    return null;
+  }
+  
   const sessionDate = new Date(session.startTime);
   const ageGroup = calculateAgeGroup(player.birthYear);
   const genderPrefix = session.gender === "boys" ? "B" : "G";
