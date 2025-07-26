@@ -144,6 +144,9 @@ export const helpRequests = pgTable("help_requests", {
   email: varchar("email").notNull(),
   note: text("note").notNull(),
   resolved: boolean("resolved").default(false),
+  resolvedBy: varchar("resolved_by"), // admin user ID who resolved the issue
+  resolutionNote: text("resolution_note"), // detailed explanation of resolution
+  resolvedAt: timestamp("resolved_at"), // when the issue was resolved
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

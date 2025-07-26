@@ -23,6 +23,8 @@ export default function AdminHelpRequests() {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [replyMessage, setReplyMessage] = useState('');
+  const [resolvingRequest, setResolvingRequest] = useState<any>(null);
+  const [resolutionNote, setResolutionNote] = useState('');
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -37,16 +39,41 @@ export default function AdminHelpRequests() {
     });
   }, []);
 
-  const handleMarkResolved = async (id: string) => {
+  const handleMarkResolved = async (request: any) => {
+    setResolvingRequest(request);
+    setResolutionNote('');
+  };
+
+  const handleConfirmResolution = async () => {
+    if (!resolvingRequest || !resolutionNote.trim()) {
+      toast({ 
+        title: "Resolution note required", 
+        description: "Please provide details about how the issue was resolved.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
-      await adminHelpRequests.markResolved(id);
+      const response = await fetch(`/api/admin/help-requests/${resolvingRequest.id}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolutionNote: resolutionNote.trim() }),
+      });
+
+      if (!response.ok) throw new Error('Failed to resolve help request');
+
+      const resolvedRequest = await response.json();
       setHelpRequests(helpRequests.map((req: any) => 
-        req.id === id ? { ...req, status: 'resolved' } : req
+        req.id === resolvingRequest.id ? { ...req, ...resolvedRequest } : req
       ));
-      toast({ title: "Help request marked as resolved" });
+      
+      toast({ title: "Help request resolved successfully" });
+      setResolvingRequest(null);
+      setResolutionNote('');
     } catch (error) {
-      console.error('Error marking help request as resolved:', error);
-      toast({ title: "Failed to mark as resolved", variant: "destructive" });
+      console.error('Error resolving help request:', error);
+      toast({ title: "Failed to resolve help request", variant: "destructive" });
     }
   };
 
@@ -92,6 +119,7 @@ export default function AdminHelpRequests() {
               <TableHead className="text-zinc-300">Message Preview</TableHead>
               <TableHead className="text-zinc-300">Status</TableHead>
               <TableHead className="text-zinc-300">Submitted</TableHead>
+              <TableHead className="text-zinc-300">Resolution</TableHead>
               <TableHead className="text-zinc-300">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -119,6 +147,22 @@ export default function AdminHelpRequests() {
                 <TableCell className="text-zinc-300">
                   {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
+                <TableCell className="text-zinc-300">
+                  {(request.status === 'resolved' || request.resolved) && request.resolvedAt ? (
+                    <div>
+                      <div className="text-sm text-green-400">
+                        Resolved {format(new Date(request.resolvedAt), 'MMM d, yyyy h:mm a')}
+                      </div>
+                      {request.resolutionNote && (
+                        <div className="text-xs text-zinc-400 mt-1 max-w-xs truncate">
+                          {request.resolutionNote}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-zinc-500">-</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button 
@@ -128,9 +172,9 @@ export default function AdminHelpRequests() {
                     >
                       <Reply className="w-4 h-4" />
                     </Button>
-                    {request.status !== 'resolved' && (
+                    {request.status !== 'resolved' && !request.resolved && (
                       <Button 
-                        onClick={() => handleMarkResolved(request.id)}
+                        onClick={() => handleMarkResolved(request)}
                         className="bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
@@ -143,7 +187,7 @@ export default function AdminHelpRequests() {
             ))}
             {helpRequests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
                   No help requests found
                 </TableCell>
               </TableRow>
@@ -201,6 +245,50 @@ export default function AdminHelpRequests() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolution Dialog */}
+      <Dialog open={!!resolvingRequest} onOpenChange={() => setResolvingRequest(null)}>
+        <DialogContent className="bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Resolve Help Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-zinc-300">Request from {resolvingRequest?.name}</Label>
+              <div className="p-3 bg-zinc-800 rounded-lg border border-zinc-700 mt-1">
+                <p className="text-white whitespace-pre-wrap">{resolvingRequest?.note}</p>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="resolutionNote" className="text-zinc-300">Resolution Details *</Label>
+              <Textarea
+                id="resolutionNote"
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                rows={4}
+                placeholder="Describe how you resolved this issue and what actions were taken..."
+                required
+              />
+              <p className="text-xs text-zinc-400 mt-1">
+                This note will be logged for future reference and quality assurance.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setResolvingRequest(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmResolution}
+                disabled={!resolutionNote.trim()}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Mark as Resolved
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

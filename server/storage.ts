@@ -380,6 +380,20 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(helpRequests).orderBy(desc(helpRequests.createdAt));
   }
 
+  async resolveHelpRequest(id: string, adminId: string, resolutionNote: string): Promise<HelpRequest | null> {
+    const [result] = await db.update(helpRequests)
+      .set({
+        resolved: true,
+        status: 'resolved',
+        resolvedBy: adminId,
+        resolutionNote,
+        resolvedAt: new Date()
+      })
+      .where(eq(helpRequests.id, id))
+      .returning();
+    return result || null;
+  }
+
   async getNotificationPreferences(parentId: string): Promise<NotificationPreferences | undefined> {
     const [prefs] = await db
       .select()

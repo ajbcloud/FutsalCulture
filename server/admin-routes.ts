@@ -452,8 +452,39 @@ export function setupAdminRoutes(app: any) {
   app.post('/api/admin/help-requests/:id/resolve', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      // TODO: Add method to mark help request as resolved
-      res.json({ message: "Help request marked as resolved" });
+      const { resolutionNote } = req.body;
+      const adminUserId = (req as any).user?.id;
+
+      if (!resolutionNote || resolutionNote.trim().length < 10) {
+        return res.status(400).json({ 
+          message: "Resolution note is required and must be at least 10 characters" 
+        });
+      }
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+
+      // Update help request with resolution details
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          resolved: true,
+          status: 'resolved',
+          resolvedBy: adminUserId,
+          resolutionNote: resolutionNote.trim(),
+          resolvedAt: new Date()
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      res.json({
+        ...updatedRequest,
+        message: "Help request resolved successfully"
+      });
     } catch (error) {
       console.error("Error resolving help request:", error);
       res.status(500).json({ message: "Failed to resolve help request" });
