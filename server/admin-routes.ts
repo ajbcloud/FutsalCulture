@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences } from "@shared/schema";
+import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
@@ -408,37 +408,133 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Analytics with filtering
+  // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
       
-      // Get basic analytics (always return baseline numbers)
-      const analytics = await storage.getAnalytics();
+      // Build date filters
+      const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const dateEnd = endDate ? new Date(endDate as string) : new Date();
       
-      // Apply filters to modify the analytics if provided
-      let filteredAnalytics = { ...analytics };
+      // Get filtered sessions
+      let sessionQuery = db
+        .select({
+          id: futsalSessions.id,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          location: futsalSessions.location,
+          capacity: futsalSessions.capacity,
+          startTime: futsalSessions.startTime,
+          signupCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${signups} 
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`,
+        })
+        .from(futsalSessions)
+        .where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd)
+          )
+        );
+
+      const filteredSessions = await sessionQuery;
       
-      if (startDate && endDate) {
-        // Simulate filtering by date range - in real implementation, this would query the database
-        const daysDiff = Math.ceil((new Date(endDate as string).getTime() - new Date(startDate as string).getTime()) / (1000 * 60 * 60 * 24));
-        const multiplier = Math.min(daysDiff / 30, 1); // Scale down for shorter periods
-        
-        filteredAnalytics.monthlyRevenue = Math.floor(analytics.monthlyRevenue * multiplier);
-        filteredAnalytics.activeSessions = Math.floor(analytics.activeSessions * multiplier);
-      }
+      // Apply additional filters
+      let applicableSessions = filteredSessions;
       
       if (ageGroup && ageGroup !== 'all') {
-        // Simulate age group filtering - reduce player count
-        filteredAnalytics.totalPlayers = Math.floor(analytics.totalPlayers * 0.3);
-        filteredAnalytics.monthlyRevenue = Math.floor(analytics.monthlyRevenue * 0.4);
+        applicableSessions = filteredSessions.filter(session => 
+          session.ageGroups.includes(ageGroup as string)
+        );
       }
       
       if (gender && gender !== 'all') {
-        // Simulate gender filtering - adjust numbers
-        filteredAnalytics.totalPlayers = Math.floor(analytics.totalPlayers * 0.6);
-        filteredAnalytics.monthlyRevenue = Math.floor(analytics.monthlyRevenue * 0.65);
+        applicableSessions = filteredSessions.filter(session =>
+          session.genders.includes(gender as string)
+        );
       }
+      
+      if (location) {
+        applicableSessions = filteredSessions.filter(session =>
+          session.location.toLowerCase().includes((location as string).toLowerCase())
+        );
+      }
+      
+      // Get filtered signups and payments
+      const sessionIds = applicableSessions.map(s => s.id);
+      
+      let filteredSignups = [];
+      let filteredPayments = [];
+      
+      if (sessionIds.length > 0) {
+        filteredSignups = await db
+          .select()
+          .from(signups)
+          .where(
+            and(
+              inArray(signups.sessionId, sessionIds),
+              gte(signups.createdAt, dateStart),
+              lte(signups.createdAt, dateEnd)
+            )
+          );
+          
+        const signupIds = filteredSignups.map(s => s.id);
+        
+        if (signupIds.length > 0) {
+          filteredPayments = await db
+            .select()
+            .from(payments)
+            .where(
+              and(
+                inArray(payments.signupId, signupIds),
+                gte(payments.createdAt, dateStart),
+                lte(payments.createdAt, dateEnd)
+              )
+            );
+        }
+      }
+      
+      // Get filtered players
+      let filteredPlayers = [];
+      if (filteredSignups.length > 0) {
+        const playerIds = [...new Set(filteredSignups.map(s => s.playerId))];
+        filteredPlayers = await db
+          .select()
+          .from(players)
+          .where(inArray(players.id, playerIds));
+          
+        // Apply player-level filters
+        if (ageGroup && ageGroup !== 'all') {
+          const targetAge = parseInt(ageGroup.substring(1));
+          filteredPlayers = filteredPlayers.filter(player => {
+            const age = new Date().getFullYear() - player.birthYear;
+            return Math.abs(age - targetAge) <= 2; // Within 2 years
+          });
+        }
+        
+        if (gender && gender !== 'all') {
+          filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
+        }
+      }
+      
+      // Calculate filtered analytics
+      const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
+      const totalSessions = applicableSessions.length;
+      const totalSignups = filteredSignups.length;
+      const totalCapacity = applicableSessions.reduce((sum, session) => sum + session.capacity, 0);
+      const fillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
+      
+      const filteredAnalytics = {
+        totalPlayers: filteredPlayers.length,
+        monthlyRevenue: Math.round(totalRevenue),
+        activeSessions: totalSessions,
+        avgFillRate: fillRate,
+        totalSignups: totalSignups,
+        pendingPayments: 0, // All payments are complete in demo data
+      };
       
       res.json(filteredAnalytics);
     } catch (error) {
