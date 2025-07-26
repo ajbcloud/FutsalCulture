@@ -1,6 +1,6 @@
 // Shared constants for the Futsal Culture application
 
-export const AGE_GROUPS = ['U8', 'U10', 'U12', 'U14', 'U16', 'U18'] as const;
+export const AGE_GROUPS = ['U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18'] as const;
 
 export const GENDERS = ['boys', 'girls'] as const;
 
@@ -14,10 +14,14 @@ export const LOCATIONS = [
 
 export function calculateAgeGroupFromAge(age: number): string {
   if (age <= 8) return 'U8';
+  if (age <= 9) return 'U9';
   if (age <= 10) return 'U10';
   if (age <= 11) return 'U11';
   if (age <= 12) return 'U12';
+  if (age <= 13) return 'U13';
   if (age <= 14) return 'U14';
+  if (age <= 15) return 'U15';
   if (age <= 16) return 'U16';
+  if (age <= 17) return 'U17';
   return 'U18';
 }

@@ -171,4 +171,4 @@ Preferred communication style: Simple, everyday language.
 - **Fixed Analytics Filtering**: Analytics dashboard now queries real database data with proper filtering by age group, gender, date range, and location instead of returning mock values
 - **Admin Parents Portal Enhancement**: Fixed player details loading in parents management section - now displays actual player information, portal access status, and booking counts when expanding parent rows
 - **Help Request System Overhaul**: Enhanced help request system with structured fields (subject, category, priority, status) and aligned admin portal display with proper field mapping
-- **Age Group Expansion**: Extended age groups from U8-U16 to U8-U18, created shared constants file, and updated all admin components, filtering logic, CSV templates, and age calculation functions to support ages 8-18
+- **Age Group Expansion**: Extended age groups to support all ages 8-18 with complete coverage (U8, U9, U10, U11, U12, U13, U14, U15, U16, U17, U18), created shared constants file, and updated all admin components, filtering logic, CSV templates, and age calculation functions

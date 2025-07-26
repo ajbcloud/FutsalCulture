@@ -1,0 +1,74 @@
+Goal: strip out the subject and category fields from both the user‑facing “Send us a message” form and the admin “Help Requests” table and API, including database, schema, storage, API routes, front‑end form, and admin list.
+
+1. Database & Schema
+Remove columns
+
+In your Drizzle schema (shared/schema.ts), remove the subject and category columns from the help_requests table definition.
+
+Migration
+
+Generate and run a migration to drop those two columns from the help_requests table in Postgres.
+
+2. Server‑Side Storage & API
+Storage Interface
+
+In server/storage.ts (or wherever you define HelpRequests CRUD), remove any references to subject and category.
+
+API Routes
+
+In server/admin-routes.ts and server/routes.ts (the public route for POST /api/help-requests), update the handler signatures:
+
+Delete req.body.subject and req.body.category destructuring.
+
+Adjust the insert call so it only writes name, email, phone, priority, message.
+
+Type Definitions
+
+If you have a HelpRequest TypeScript interface, delete subject and category from it.
+
+Outgoing JSON
+
+In the admin listing endpoint (GET /api/admin/help-requests), stop selecting subject and category—only return id, priority, name, email, phone, message, status, createdAt.
+
+3. Client‑Side Form
+Form Component
+
+In client/src/components/HelpRequestForm.tsx (or wherever your form lives), remove the <Input> and <Select> for Subject and Category.
+
+Validation
+
+Adjust any Zod/Yup schema or React Hook Form rules so they no longer expect subject or category.
+
+API Call
+
+In client/src/lib/api.ts (where you fetch('/api/help-requests')), delete subject and category from the JSON payload you send.
+
+4. Admin Help Requests Page
+Columns
+
+In client/src/pages/admin/help-requests.tsx, remove the table columns for Subject and Category.
+
+Row Renderer
+
+When you map over each request, stop destructuring subject and category.
+
+Shift the other columns (User, Priority, Status, Created) left so there’s no gap.
+
+Filters & Search
+
+If you had category filters, remove them.
+
+5. Clean‑Up & Testing
+Console & Types
+
+Search the entire repo for subject and category in the help‑requests context and remove unused imports/types.
+
+End‑to‑End Smoke Test
+
+Submit a new help request via the public form → verify it lands in the DB without subject/category.
+
+Go to Admin → Help Requests → confirm the new row appears correctly, and there’s no column for Subject or Category.
+
+SQL Console
+
+In your Neon dashboard, verify the help_requests table no longer has those two columns.
