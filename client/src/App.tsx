@@ -5,12 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Landing from "@/pages/landing";
-
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
-import AdminDashboard from "@/pages/admin-dashboard";
-import AdminPendingPayments from "@/pages/admin-pending-payments";
+import AdminDashboard from "@/pages/admin/dashboard";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -48,10 +46,9 @@ function Router() {
             <Route path="/multi-checkout" component={MultiCheckout} />
             <Route path="/player-invite/:token" component={PlayerInvite} />
             <Route path="/help" component={Help} />
-            {user?.isAdmin && (
+            {(user?.isAdmin || user?.isAssistant) && (
               <>
                 <Route path="/admin" component={AdminDashboard} />
-                <Route path="/admin/pending-payments" component={AdminPendingPayments} />
               </>
             )}
           </>

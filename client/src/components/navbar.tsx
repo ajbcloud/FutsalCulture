@@ -58,9 +58,9 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Parent Profile</Link>
                   </DropdownMenuItem>
-                  {user?.isAdmin && (
+                  {(user?.isAdmin || user?.isAssistant) && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">Admin Panel</Link>
+                      <Link href="/admin">Admin Portal</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
@@ -111,9 +111,9 @@ export default function Navbar() {
                   <Link href="/profile" className="block px-3 py-2 text-zinc-400 hover:text-white">
                     Parent Profile
                   </Link>
-                  {user?.isAdmin && (
+                  {(user?.isAdmin || user?.isAssistant) && (
                     <Link href="/admin" className="block px-3 py-2 text-zinc-400 hover:text-white">
-                      Admin Panel
+                      Admin Portal
                     </Link>
                   )}
                   <a href="/api/logout" className="block px-3 py-2 text-red-400 hover:text-red-300">

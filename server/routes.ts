@@ -6,6 +6,7 @@ import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, inser
 import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
+import { setupAdminRoutes } from './admin-routes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -574,6 +575,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch help requests" });
     }
   });
+
+  // Setup admin routes
+  setupAdminRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

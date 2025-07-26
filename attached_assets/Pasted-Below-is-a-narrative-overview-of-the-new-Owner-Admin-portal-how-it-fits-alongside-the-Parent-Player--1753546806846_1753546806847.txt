@@ -1,0 +1,206 @@
+Below is a narrative overview of the new Owner/Admin portal—how it fits alongside the Parent/Player experience, who logs in, and the added security measures (including 2FA) that protect the business’s sensitive data.
+
+1. What We’re Building: The Owner/Admin Portal
+Goal:
+Give the Futsal Culture leadership team a centralized, secure interface to manage sessions, view financials, handle payments and refunds, monitor registrations and waitlists, and respond to support requests—without mixing them up with the parent‑facing booking flows.
+
+2. Who Logs In & How
+Role	Purpose	Login Experience
+Owner	Full control—session creation, finance, settings	Uses the same core Replit Auth system but with an Admin flag (isAdmin=true). On first login, sets up Two‑Factor Authentication (2FA) via SMS or Authenticator app before accessing any pages.
+Assistant	Day‑to‑day ops: confirm payments, send reminders, handle help tickets	Same admin login flow, controlled via user record by toggling isAdminAssistant=true. Has granular permissions (e.g., cannot change pricing or delete users). Also must complete 2FA.
+Parent	Book sessions, manage players, view history	Standard Replit Auth (no 2FA). Can only access /dashboard and /sessions.
+PlayerUser	(13+) Book sessions and view history	Standard login via invite link. No access to owner features.
+
+3. Security & 2FA
+Why 2FA? The Admin portal exposes revenue data, refund controls, and user PII—so we require an extra layer of security.
+
+Implementation:
+
+After a successful username/password login, prompt Admins/Assistants to enter a one‑time code (TOTP or SMS).
+
+Store the 2FA secret or phone number in the users table:
+
+sql
+Copy
+Edit
+ALTER TABLE users
+  ADD COLUMN twoFactorEnabled BOOLEAN DEFAULT FALSE,
+  ADD COLUMN twoFactorSecret TEXT;
+Use a library like speakeasy for TOTP or Twilio Verify for SMS.
+
+4. How This Differs from Parent/Player Portal
+Feature	Parent & Player	Owner/Admin
+Access	Public landing page, then gated by simple auth	Entirely separate /admin route guarded by requireAdmin middleware + 2FA
+UI Focus	Booking flow, session browse, child management	Data tables, charts, bulk actions, system configuration
+Payment Actions	“Pay by Venmo” flow only	View pending payments, mark paid, issue refunds directly via Stripe
+Session Management	Browse & register	Create/Edit/Delete sessions, calendar sync control
+Help Requests	Submit form only	Inbox of incoming tickets with “Resolve” and “Reply”
+Analytics	N/A	Revenue charts, occupancy trends, player growth graphs
+
+5. Owner Portal Core Sections
+Dashboard Home – KPIs, alerts, quick‑links to tasks
+
+Sessions – Full session CRUD + sync status with Google Calendar
+
+Registrations – Signups list, pending payments, waitlist management
+
+Payments & Refunds – Mark as paid, trigger Stripe refunds, export ledger
+
+Players & Imports – Roster management, bulk CSV upload
+
+Analytics – Interactive charts on bookings, revenue, capacity
+
+Help Requests – Support tickets, built‑in email reply form
+
+Settings – Business info (Venmo handle, pricing), 2FA management, admin user management
+
+Define Admin User Flow
+Sign‑Up & Role Assignment
+
+Owners and Assistants are created via an Admin setup process (not public).
+
+In the database, each user record has flags:
+
+isAdmin: boolean
+
+isAssistant: boolean
+
+Only an existing Admin can invite or promote another user into either role.
+
+2FA Onboarding
+
+After entering email/password on /admin/login, check user.twoFactorEnabled.
+
+If false, prompt setup:
+
+Generate a TOTP secret (or send SMS code via Twilio).
+
+Display QR code (for authenticator apps) or SMS code field.
+
+Verify the first code entry, then set twoFactorEnabled = true and store the secret.
+
+On subsequent logins, after password success, prompt for the one‑time code.
+
+2. Scaffold /admin React Routes & Middleware
+Routes Structure (client/src/admin/routes.tsx or Next.js pages under /admin)
+
+bash
+Copy
+Edit
+/admin
+  ├─ /            → DashboardHome
+  ├─ /sessions    → SessionsList
+  ├─ /sessions/[id] → SessionDetail
+  ├─ /payments    → PaymentsList
+  ├─ /refunds     → RefundsList
+  ├─ /players     → PlayersList
+  ├─ /imports     → CsvImportPage
+  ├─ /analytics   → AnalyticsPage
+  ├─ /help        → HelpRequestsPage
+  └─ /settings    → SettingsPage
+Middleware HOCs or Hooks
+
+requireAdmin checks user.isAdmin === true.
+
+require2FA checks user.twoFactorEnabled && session.has2FAVerified.
+
+Wrap every /admin/* route:
+
+tsx
+Copy
+Edit
+<RequireAuth>
+  <RequireAdmin>
+    <Require2FA>
+      <AdminLayout>…</AdminLayout>
+    </Require2FA>
+  </RequireAdmin>
+</RequireAuth>
+3. Build API Endpoints & Permission Checks
+3.1. User & 2FA Endpoints
+POST /api/admin/invite → create new admin/assistant user
+
+POST /api/admin/2fa/setup → generate and return TOTP secret or SMS code
+
+POST /api/admin/2fa/verify → verify first code and enable 2FA
+
+POST /api/admin/2fa/authenticate → verify code on login
+
+3.2. Sessions Management
+GET /api/admin/sessions
+
+POST /api/admin/sessions
+
+PATCH /api/admin/sessions/:id
+
+DELETE /api/admin/sessions/:id
+
+3.3. Registrations & Waitlists
+GET /api/admin/sessions/:id/signups
+
+POST /api/admin/signups/:id/mark-paid
+
+DELETE /api/admin/signups/:id (cancel)
+
+POST /api/admin/sessions/:id/waitlist (promote/manual)
+
+3.4. Payments & Refunds
+GET /api/admin/payments?status=pending|paid|refunded
+
+POST /api/admin/payments/:id/refund
+
+3.5. Players & Imports
+GET /api/admin/players
+
+PATCH /api/admin/players/:id (edit/invite)
+
+POST /api/admin/imports (CSV upload)
+
+GET /api/admin/imports/:id/logs
+
+3.6. Analytics & Help
+GET /api/admin/analytics
+
+GET /api/admin/help-requests
+
+PATCH /api/admin/help-requests/:id/resolve
+
+Permission checks: All routes under /api/admin/* must verify req.user.isAdmin === true.
+
+4. Implement UI Components for Core Sections
+4.1. Dashboard Home
+KPI cards (Revenue, Players, Fill Rate, Pending Payments)
+
+Alerts list (pending tasks)
+
+4.2. Sessions Management
+SessionsList: Data table with search, filter, and action buttons
+
+SessionDetail: Tabs for “Signups”, “Waitlist”, “Edit”
+
+4.3. Payments & Refunds
+PaymentsList: Pending and Paid tabs, with “Mark Paid” button
+
+RefundsList: List of refundable payments, with Stripe refund action
+
+4.4. Players & Imports
+PlayersList: Paginated, searchable roster
+
+CsvImportPage: File upload, progress indicator, result summary
+
+4.5. Analytics
+Charts: Revenue over time, Occupancy trends, Player growth
+
+Use a charting library (Recharts or Chart.js)
+
+4.6. Help Requests
+HelpRequestsPage: List of tickets with detail view and “Resolve” button
+
+4.7. Settings
+SettingsPage:
+
+Business info (Venmo handle, pricing, refund window)
+
+2FA management (disable/reset)
+
+Admin user management (invite, revoke)
