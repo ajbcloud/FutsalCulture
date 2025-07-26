@@ -1,12 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/queryClient';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  isAdmin?: boolean;
-}
+import type { User } from '@shared/schema';
 
 interface AuthContextType {
   user: User | null;

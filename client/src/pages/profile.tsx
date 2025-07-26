@@ -361,7 +361,7 @@ export default function Profile() {
                 <div>
                   <Label className="text-zinc-400">Phone Number</Label>
                   <Input
-                    value={user?.phoneNumber || ""}
+                    value={user?.phone || ""}
                     disabled={!isEditing}
                     className="bg-zinc-800 border-zinc-600 text-white"
                     placeholder="Not provided"
