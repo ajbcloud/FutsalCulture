@@ -57,12 +57,26 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Check if auto-approve is enabled
+  const { db } = await import("./db");
+  const { systemSettings } = await import("@shared/schema");
+  const { eq } = await import("drizzle-orm");
+  
+  const autoApproveSetting = await db.select()
+    .from(systemSettings)
+    .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+    .limit(1);
+  
+  const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
+  
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    isApproved: autoApprove,
+    registrationStatus: autoApprove ? 'approved' : 'pending',
   });
 }
 

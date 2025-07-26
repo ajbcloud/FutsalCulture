@@ -415,9 +415,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/players', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Check if auto-approve is enabled
+      const { db } = await import("./db");
+      const { systemSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const autoApproveSetting = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+        .limit(1);
+      
+      const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
+      
       const validatedData = insertPlayerSchema.parse({
         ...req.body,
         parentId: userId,
+        isApproved: autoApprove,
+        registrationStatus: autoApprove ? 'approved' : 'pending',
       });
       
       const player = await storage.createPlayer(validatedData);
