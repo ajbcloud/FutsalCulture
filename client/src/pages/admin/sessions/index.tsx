@@ -241,8 +241,12 @@ export default function AdminSessions() {
                 <TableCell className="text-white">
                   {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
                 </TableCell>
-                <TableCell className="text-zinc-300">{session.ageGroup}</TableCell>
-                <TableCell className="text-zinc-300">{session.gender}</TableCell>
+                <TableCell className="text-zinc-300">
+                  {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroup || 'N/A'}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {Array.isArray(session.genders) ? session.genders.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
+                </TableCell>
                 <TableCell className="text-zinc-300">{session.location}</TableCell>
                 <TableCell className="text-zinc-300">
                   {session.signupsCount || 0}/{session.capacity}

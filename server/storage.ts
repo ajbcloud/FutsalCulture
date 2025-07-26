@@ -157,7 +157,7 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     if (filters?.ageGroup) {
-      conditions.push(eq(futsalSessions.ageGroup, filters.ageGroup));
+      conditions.push(sql`${filters.ageGroup} = ANY(${futsalSessions.ageGroups})`);
     }
     if (filters?.location) {
       conditions.push(eq(futsalSessions.location, filters.location));
@@ -166,7 +166,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(futsalSessions.status, filters.status as any));
     }
     if (filters?.gender) {
-      conditions.push(eq(futsalSessions.gender, filters.gender as any));
+      conditions.push(sql`${filters.gender} = ANY(${futsalSessions.genders})`);
     }
     
     const baseQuery = db.select().from(futsalSessions);

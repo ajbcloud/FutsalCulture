@@ -29,8 +29,8 @@ export default function AdminSessionDetail() {
     startTime: '',
     endTime: '',
     location: '',
-    ageGroup: '',
-    gender: '',
+    ageGroups: [] as string[],
+    genders: [] as string[],
     capacity: 12,
   });
 
@@ -49,8 +49,8 @@ export default function AdminSessionDetail() {
           startTime: data.startTime?.slice(0, 16) || '',
           endTime: data.endTime?.slice(0, 16) || '',
           location: data.location || '',
-          ageGroup: data.ageGroup || '',
-          gender: data.gender || '',
+          ageGroups: data.ageGroups || [],
+          genders: data.genders || [],
           capacity: data.capacity || 12,
         });
         setLoading(false);
@@ -153,32 +153,59 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label htmlFor="ageGroup" className="text-zinc-300">Age Group</Label>
-            <Select value={formData.ageGroup} onValueChange={(value) => setFormData({...formData, ageGroup: value})}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                <SelectValue placeholder="Select age group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="U8">U8 (Under 8)</SelectItem>
-                <SelectItem value="U10">U10 (Under 10)</SelectItem>
-                <SelectItem value="U12">U12 (Under 12)</SelectItem>
-                <SelectItem value="U15">U15 (Under 15)</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-zinc-300">Age Groups (Multi-Select)</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {['U8', 'U10', 'U12', 'U14', 'U16'].map(age => (
+                <label key={age} className="flex items-center space-x-2 text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.ageGroups.includes(age)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({...formData, ageGroups: [...formData.ageGroups, age]});
+                      } else {
+                        setFormData({...formData, ageGroups: formData.ageGroups.filter(g => g !== age)});
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span>{age}</span>
+                </label>
+              ))}
+            </div>
+            {formData.ageGroups.length > 0 && (
+              <p className="text-xs text-zinc-400 mt-1">
+                Selected: {formData.ageGroups.join(', ')}
+              </p>
+            )}
           </div>
 
           <div>
-            <Label htmlFor="gender" className="text-zinc-300">Gender</Label>
-            <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Boys">Boys</SelectItem>
-                <SelectItem value="Girls">Girls</SelectItem>
-                <SelectItem value="Mixed">Mixed</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-zinc-300">Genders (Multi-Select)</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {['boys', 'girls'].map(gender => (
+                <label key={gender} className="flex items-center space-x-2 text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.genders.includes(gender)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({...formData, genders: [...formData.genders, gender]});
+                      } else {
+                        setFormData({...formData, genders: formData.genders.filter(g => g !== gender)});
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="capitalize">{gender}</span>
+                </label>
+              ))}
+            </div>
+            {formData.genders.length > 0 && (
+              <p className="text-xs text-zinc-400 mt-1">
+                Selected: {formData.genders.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}
+              </p>
+            )}
           </div>
 
           <div>
