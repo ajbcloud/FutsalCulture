@@ -11,197 +11,250 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
-const helpRequestSchema = z.object({
+const helpSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
-  phone: z.string().optional(),
-  note: z.string().min(10, "Please provide more details (at least 10 characters)"),
+  phone: z.string().min(10, "Phone number is required"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
 });
 
-type HelpRequestForm = z.infer<typeof helpRequestSchema>;
-
-const faqs = [
-  {
-    question: "When do session bookings open?",
-    answer: "Bookings open at exactly 8:00 AM on the day of each session. Make sure to book early as spots fill quickly!"
-  },
-  {
-    question: "What is the cost per session?",
-    answer: "Each training session costs $10.00 per child. Payment is required to confirm your reservation."
-  },
-  {
-    question: "Can I cancel a reservation?",
-    answer: "Yes, you can cancel reservations from your parent dashboard. Refunds are processed manually by our admin team."
-  },
-  {
-    question: "How do I add multiple children?",
-    answer: "In your parent dashboard, you can add multiple players using the 'Add Player' button. Each child will have their own profile."
-  },
-  {
-    question: "What age groups do you offer?",
-    answer: "We offer training sessions for various age groups including U8, U10, U12, and U14. Check our sessions page for specific offerings."
-  },
-];
+type HelpForm = z.infer<typeof helpSchema>;
 
 export default function Help() {
   const { toast } = useToast();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const form = useForm<HelpRequestForm>({
-    resolver: zodResolver(helpRequestSchema),
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const form = useForm<HelpForm>({
+    resolver: zodResolver(helpSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
-      note: "",
+      message: "",
     },
   });
 
-  const submitHelpRequest = useMutation({
-    mutationFn: async (data: HelpRequestForm) => {
-      const response = await apiRequest("POST", "/api/help-requests", data);
+  const submitHelpMutation = useMutation({
+    mutationFn: async (data: HelpForm) => {
+      const response = await apiRequest("POST", "/api/help", data);
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Your help request has been submitted. We'll get back to you soon!",
-      });
+      setIsSubmitted(true);
       form.reset();
+      toast({
+        title: "Message sent successfully!",
+        description: "We'll get back to you within 24 hours.",
+      });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to submit help request. Please try again.",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: HelpRequestForm) => {
-    submitHelpRequest.mutate(data);
+  const onSubmit = (data: HelpForm) => {
+    submitHelpMutation.mutate(data);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black text-white">
       <Navbar />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Need Help?</h1>
-          <p className="text-xl text-gray-600">Get in touch with our support team</p>
+          <h1 className="text-4xl font-bold mb-4">Get Help</h1>
+          <p className="text-zinc-400 text-lg">
+            Need assistance with your Futsal Culture experience? We're here to help!
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Contact Form */}
-          <Card>
+          <Card className="bg-zinc-900 border border-zinc-700">
             <CardHeader>
-              <CardTitle>Send us a message</CardTitle>
+              <CardTitle className="text-white text-xl">Send us a message</CardTitle>
             </CardHeader>
             <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+              {isSubmitted ? (
+                <div className="text-center py-8">
+                  <div className="bg-green-600/20 border border-green-600 rounded-lg p-6 mb-4">
+                    <h3 className="text-green-400 font-semibold mb-2">Message Sent!</h3>
+                    <p className="text-zinc-400">
+                      Thank you for contacting us. We'll respond within 24 hours.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setIsSubmitted(false)} 
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Send Another Message
+                  </Button>
+                </div>
+              ) : (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
                       control={form.control}
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Full Name</FormLabel>
+                          <FormLabel className="text-white">Name</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input 
+                              placeholder="Your full name" 
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Email</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="email" 
+                              placeholder="your.email@example.com" 
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={form.control}
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone Number (Optional)</FormLabel>
+                          <FormLabel className="text-white">Phone</FormLabel>
                           <FormControl>
-                            <Input {...field} type="tel" />
+                            <Input 
+                              type="tel" 
+                              placeholder="(555) 123-4567" 
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="email" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="note"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>How can we help?</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            rows={5}
-                            placeholder="Describe your question or issue..."
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={submitHelpRequest.isPending}
-                  >
-                    {submitHelpRequest.isPending ? "Sending..." : "Send Message"}
-                  </Button>
-                </form>
-              </Form>
+                    
+                    <FormField
+                      control={form.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Message</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="How can we help you today?" 
+                              rows={5}
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      disabled={submitHelpMutation.isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {submitHelpMutation.isPending ? "Sending..." : "Send Message"}
+                    </Button>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
 
-          {/* FAQ Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Frequently Asked Questions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {faqs.map((faq, index) => (
-                  <Collapsible
-                    key={index}
-                    open={openFaq === index}
-                    onOpenChange={(open) => setOpenFaq(open ? index : null)}
-                  >
-                    <CollapsibleTrigger className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 flex justify-between items-center">
-                      <span className="font-medium">{faq.question}</span>
-                      <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${openFaq === index ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-4 pb-4 text-gray-600 border-x border-b rounded-b-lg">
-                      {faq.answer}
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Contact Information */}
+          <div className="space-y-6">
+            <Card className="bg-zinc-900 border border-zinc-700">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Mail className="w-5 h-5 text-blue-400" />
+                  <div>
+                    <p className="text-white font-medium">Email</p>
+                    <p className="text-zinc-400">support@futsalculture.com</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Phone className="w-5 h-5 text-green-400" />
+                  <div>
+                    <p className="text-white font-medium">Phone</p>
+                    <p className="text-zinc-400">(555) 123-GOAL</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Clock className="w-5 h-5 text-yellow-400" />
+                  <div>
+                    <p className="text-white font-medium">Support Hours</p>
+                    <p className="text-zinc-400">Monday - Friday, 8 AM - 6 PM</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <MapPin className="w-5 h-5 text-red-400" />
+                  <div>
+                    <p className="text-white font-medium">Location</p>
+                    <p className="text-zinc-400">123 Soccer Street, Futsal City, FC 12345</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-zinc-900 border border-zinc-700">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Frequently Asked Questions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="text-white font-medium mb-2">When do sessions open for booking?</h4>
+                  <p className="text-zinc-400 text-sm">Sessions open at 8:00 AM on the day of training.</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-white font-medium mb-2">How much does each session cost?</h4>
+                  <p className="text-zinc-400 text-sm">Each futsal training session costs $10.</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-white font-medium mb-2">Can I cancel a reservation?</h4>
+                  <p className="text-zinc-400 text-sm">Yes, you can cancel from your dashboard before the session starts.</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-white font-medium mb-2">How do age groups work?</h4>
+                  <p className="text-zinc-400 text-sm">Players are automatically assigned to age groups (U8, U10, etc.) based on their birth year.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

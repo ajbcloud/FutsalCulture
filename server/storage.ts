@@ -245,7 +245,7 @@ export class DatabaseStorage implements IStorage {
     const [monthlyPayments] = await db
       .select({ total: count() })
       .from(payments)
-      .where(and(gte(payments.paidAt, startOfMonth), eq(payments.refundedAt, null)));
+      .where(gte(payments.paidAt, startOfMonth));
     
     const [activeSessionsCount] = await db
       .select({ count: count() })

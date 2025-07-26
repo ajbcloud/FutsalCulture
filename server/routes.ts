@@ -11,9 +11,7 @@ import "./jobs/session-status";
 // Initialize Stripe only if keys are available
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2023-10-16",
-  });
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -60,6 +58,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching session:", error);
       res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  // Help requests route
+  app.post('/api/help', async (req, res) => {
+    try {
+      const validatedData = insertHelpRequestSchema.parse(req.body);
+      const helpRequest = await storage.createHelpRequest(validatedData);
+      res.status(201).json(helpRequest);
+    } catch (error) {
+      console.error("Error creating help request:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create help request" });
     }
   });
 
