@@ -110,14 +110,13 @@ export const payments = pgTable("payments", {
 // Help requests table
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  priority: varchar("priority").notNull().default("medium"),
   status: varchar("status").notNull().default("open"),
   name: varchar("name").notNull(),
   phone: varchar("phone"),
   email: varchar("email").notNull(),
   note: text("note").notNull(),
   resolved: boolean("resolved").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Notification preferences table

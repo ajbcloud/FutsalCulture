@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
-  priority: z.enum(["low", "medium", "high", "urgent"]),
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   phone: z.string().min(10, "Phone number is required"),
@@ -31,7 +30,6 @@ export default function Help() {
   const form = useForm<HelpForm>({
     resolver: zodResolver(helpSchema),
     defaultValues: {
-      priority: "medium",
       name: "",
       email: "",
       phone: "",
@@ -104,30 +102,7 @@ export default function Help() {
 
 
 
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Priority</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-zinc-800 border-zinc-600">
-                              <SelectItem value="low">Low - General question</SelectItem>
-                              <SelectItem value="medium">Medium - Standard issue</SelectItem>
-                              <SelectItem value="high">High - Urgent assistance needed</SelectItem>
-                              <SelectItem value="urgent">Urgent - Critical issue</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
+
                     <FormField
                       control={form.control}
                       name="name"

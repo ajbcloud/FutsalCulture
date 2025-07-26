@@ -46,9 +46,17 @@ export default function AdminParents() {
   const { toast } = useToast();
   const [location] = useLocation();
 
-  const loadParents = async () => {
+  const loadParents = async (filterParams?: { filter?: string; parentId?: string }) => {
     try {
-      const data = await adminParents.list();
+      const params = new URLSearchParams();
+      if (filterParams?.filter) params.append('filter', filterParams.filter);
+      if (filterParams?.parentId) params.append('parentId', filterParams.parentId);
+      
+      const queryString = params.toString();
+      const url = queryString ? `/api/admin/parents?${queryString}` : '/api/admin/parents';
+      
+      const response = await fetch(url);
+      const data = await response.json();
       console.log('admin parents:', data);
       
       // Handle error response
@@ -64,6 +72,16 @@ export default function AdminParents() {
       const parentsArray = Array.isArray(data) ? data : [];
       setParents(parentsArray);
       setFilteredParents(parentsArray);
+      
+      // If we have player data, populate it
+      if (filterParams?.parentId && parentsArray.length > 0 && parentsArray[0].players) {
+        setParentPlayers(prev => ({
+          ...prev,
+          [filterParams.parentId!]: parentsArray[0].players
+        }));
+        setExpandedParentIds(new Set([filterParams.parentId]));
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching parents:', error);
@@ -74,17 +92,27 @@ export default function AdminParents() {
   };
 
   useEffect(() => {
-    loadParents();
-    
     // Check for URL filter parameters
     const urlParams = new URLSearchParams(window.location.search);
     const filterParam = urlParams.get('filter');
-    if (filterParam) {
-      setUrlFilter(decodeURIComponent(filterParam));
-      setFilters(prev => ({
-        ...prev,
-        search: decodeURIComponent(filterParam)
-      }));
+    const parentIdParam = urlParams.get('parentId');
+    
+    if (filterParam || parentIdParam) {
+      const decodedFilter = filterParam ? decodeURIComponent(filterParam) : undefined;
+      setUrlFilter(decodedFilter || null);
+      if (decodedFilter) {
+        setFilters(prev => ({
+          ...prev,
+          search: decodedFilter
+        }));
+      }
+      
+      loadParents({ 
+        filter: decodedFilter, 
+        parentId: parentIdParam || undefined 
+      });
+    } else {
+      loadParents();
     }
   }, []);
 

@@ -613,11 +613,29 @@ export function setupAdminRoutes(app: any) {
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // Get all users directly from database
-      const allUsers = await db.select().from(users);
+      const { filter, parentId } = req.query;
+      
+      let query = db.select().from(users);
+      
+      // If parentId is provided, filter by specific parent
+      if (parentId) {
+        query = query.where(eq(users.id, parentId as string));
+      }
+      
+      const allUsers = await query;
+      
+      // If filtering by name and no parentId specified
+      let filteredUsers = allUsers;
+      if (filter && !parentId) {
+        const searchTerm = (filter as string).toLowerCase();
+        filteredUsers = allUsers.filter(user => 
+          `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm) ||
+          user.email?.toLowerCase().includes(searchTerm)
+        );
+      }
       
       const parentsWithCounts = await Promise.all(
-        allUsers.map(async (user) => {
+        filteredUsers.map(async (user) => {
           const userPlayers = await storage.getPlayersByParent(user.id);
           return {
             id: user.id,
@@ -628,10 +646,12 @@ export function setupAdminRoutes(app: any) {
             isAdmin: user.isAdmin || false,
             isAssistant: user.isAssistant || false,
             lastLogin: user.updatedAt, // Use updatedAt as lastLogin proxy
-            playersCount: userPlayers.length
+            playersCount: userPlayers.length,
+            players: userPlayers // Include player data when filtering by parentId
           };
         })
       );
+      
       res.json(parentsWithCounts);
     } catch (error) {
       console.error('Error fetching parents:', error);

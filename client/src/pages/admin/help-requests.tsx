@@ -19,7 +19,7 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 
 export default function AdminHelpRequests() {
-  const [helpRequests, setHelpRequests] = useState([]);
+  const [helpRequests, setHelpRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [replyMessage, setReplyMessage] = useState('');
@@ -90,9 +90,8 @@ export default function AdminHelpRequests() {
             <TableRow className="border-zinc-800">
               <TableHead className="text-zinc-300">User</TableHead>
               <TableHead className="text-zinc-300">Message Preview</TableHead>
-              <TableHead className="text-zinc-300">Priority</TableHead>
               <TableHead className="text-zinc-300">Status</TableHead>
-              <TableHead className="text-zinc-300">Created</TableHead>
+              <TableHead className="text-zinc-300">Submitted</TableHead>
               <TableHead className="text-zinc-300">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -111,19 +110,6 @@ export default function AdminHelpRequests() {
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant="secondary"
-                    className={
-                      request.priority === 'urgent' ? 'bg-red-900 text-red-300' :
-                      request.priority === 'high' ? 'bg-orange-900 text-orange-300' :
-                      request.priority === 'medium' ? 'bg-yellow-900 text-yellow-300' :
-                      'bg-green-900 text-green-300'
-                    }
-                  >
-                    {request.priority || 'medium'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge 
                     variant={request.status === 'resolved' || request.resolved ? 'default' : 'secondary'}
                     className={request.status === 'resolved' || request.resolved ? 'bg-green-900 text-green-300' : 'bg-zinc-700 text-zinc-400'}
                   >
@@ -131,7 +117,7 @@ export default function AdminHelpRequests() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-300">
-                  {format(new Date(request.createdAt), 'MMM d, yyyy')}
+                  {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
@@ -157,7 +143,7 @@ export default function AdminHelpRequests() {
             ))}
             {helpRequests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={5} className="text-center text-zinc-400 py-8">
                   No help requests found
                 </TableCell>
               </TableRow>
@@ -182,7 +168,6 @@ export default function AdminHelpRequests() {
                 {selectedRequest.phone && (
                   <p className="text-sm text-zinc-400 mb-2">Phone: {selectedRequest.phone}</p>
                 )}
-                <p className="text-sm text-zinc-400 mb-2">Priority: {selectedRequest.priority}</p>
                 <p className="text-zinc-300">{selectedRequest.note}</p>
               </div>
 
