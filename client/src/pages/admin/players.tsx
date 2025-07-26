@@ -11,9 +11,11 @@ import {
 } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Switch } from '../../components/ui/switch';
+import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
 import { Upload, Download } from 'lucide-react';
 import { format } from 'date-fns';
@@ -27,6 +29,19 @@ export default function AdminPlayers() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    birthYear: new Date().getFullYear(),
+    gender: 'boys' as 'boys' | 'girls',
+    soccerClub: '',
+    canAccessPortal: false,
+    canBookAndPay: false,
+    email: '',
+    phoneNumber: ''
+  });
   const [filters, setFilters] = useState({
     ageGroup: '',
     gender: '',
@@ -155,6 +170,64 @@ export default function AdminPlayers() {
     setImporting(false);
   };
 
+  const handleEditPlayer = (player: any) => {
+    setEditingPlayer(player);
+    setEditForm({
+      firstName: player.firstName || '',
+      lastName: player.lastName || '',
+      birthYear: player.birthYear || new Date().getFullYear(),
+      gender: player.gender || 'boys',
+      soccerClub: player.soccerClub || '',
+      canAccessPortal: player.canAccessPortal || false,
+      canBookAndPay: player.canBookAndPay || false,
+      email: player.email || '',
+      phoneNumber: player.phoneNumber || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdatePlayer = async () => {
+    if (!editingPlayer) return;
+
+    try {
+      setImporting(true); // Reuse importing state for loading
+      
+      const response = await fetch(`/api/admin/players/${editingPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update player');
+      }
+
+      const updatedPlayer = await response.json();
+
+      // Update the player in the local state
+      setPlayers(prev => prev.map(p => p.id === editingPlayer.id ? updatedPlayer : p));
+      
+      setShowEditModal(false);
+      setEditingPlayer(null);
+      
+      toast({
+        title: "Success",
+        description: "Player updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update player",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -276,11 +349,12 @@ export default function AdminPlayers() {
             {filteredPlayers.map((player: any) => (
               <TableRow key={player.id} className="border-zinc-800">
                 <TableCell className="text-white">
-                  <Link href={`/admin/players?playerId=${player.id}`}>
-                    <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
-                      {player.firstName} {player.lastName}
-                    </span>
-                  </Link>
+                  <button
+                    onClick={() => handleEditPlayer(player)}
+                    className="text-blue-400 hover:text-blue-300 cursor-pointer underline bg-transparent border-none p-0 font-inherit"
+                  >
+                    {player.firstName} {player.lastName}
+                  </button>
                 </TableCell>
                 <TableCell className="text-zinc-300">
                   {new Date().getFullYear() - player.birthYear}
@@ -377,6 +451,152 @@ export default function AdminPlayers() {
                 <span>Importing players...</span>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Player Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Edit Player: {editingPlayer?.firstName} {editingPlayer?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName" className="text-zinc-300">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName" className="text-zinc-300">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="birthYear" className="text-zinc-300">Birth Year</Label>
+                <Input
+                  id="birthYear"
+                  type="number"
+                  min="2005"
+                  max="2018"
+                  value={editForm.birthYear}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, birthYear: parseInt(e.target.value) || new Date().getFullYear() }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="gender" className="text-zinc-300">Gender</Label>
+                <Select value={editForm.gender} onValueChange={(value: 'boys' | 'girls') => setEditForm(prev => ({ ...prev, gender: value }))}>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="boys">Boys</SelectItem>
+                    <SelectItem value="girls">Girls</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="soccerClub" className="text-zinc-300">Soccer Club</Label>
+              <Input
+                id="soccerClub"
+                value={editForm.soccerClub}
+                onChange={(e) => setEditForm(prev => ({ ...prev, soccerClub: e.target.value }))}
+                placeholder="Enter soccer club name"
+                className="bg-zinc-800 border-zinc-700 text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="player@example.com"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phoneNumber" className="text-zinc-300">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  value={editForm.phoneNumber}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  placeholder="555-123-4567"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+                <div>
+                  <Label className="text-zinc-300">Portal Access</Label>
+                  <p className="text-sm text-zinc-400">Allow player to access their own portal (age 13+)</p>
+                </div>
+                <Switch
+                  checked={editForm.canAccessPortal}
+                  onCheckedChange={(checked) => setEditForm(prev => ({ ...prev, canAccessPortal: checked }))}
+                  disabled={new Date().getFullYear() - editForm.birthYear < 13}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+                <div>
+                  <Label className="text-zinc-300">Booking & Payment</Label>
+                  <p className="text-sm text-zinc-400">Allow player to book sessions and make payments</p>
+                </div>
+                <Switch
+                  checked={editForm.canBookAndPay}
+                  onCheckedChange={(checked) => setEditForm(prev => ({ ...prev, canBookAndPay: checked }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowEditModal(false)}
+                disabled={importing}
+                className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdatePlayer}
+                disabled={importing}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {importing ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Player'
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

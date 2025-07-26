@@ -1060,6 +1060,134 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Update Player
+  app.patch('/api/admin/players/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // Validate required fields if they're being updated
+      if (updateData.firstName && typeof updateData.firstName !== 'string') {
+        return res.status(400).json({ message: "First name must be a string" });
+      }
+      if (updateData.lastName && typeof updateData.lastName !== 'string') {
+        return res.status(400).json({ message: "Last name must be a string" });
+      }
+      if (updateData.birthYear && (!Number.isInteger(updateData.birthYear) || updateData.birthYear < 2005 || updateData.birthYear > 2018)) {
+        return res.status(400).json({ message: "Birth year must be between 2005 and 2018" });
+      }
+      if (updateData.gender && !['boys', 'girls'].includes(updateData.gender)) {
+        return res.status(400).json({ message: "Gender must be 'boys' or 'girls'" });
+      }
+
+      // Check age validation for portal access
+      if (updateData.canAccessPortal === true && updateData.birthYear) {
+        const age = new Date().getFullYear() - updateData.birthYear;
+        if (age < MINIMUM_PORTAL_AGE) {
+          return res.status(400).json({ 
+            message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
+          });
+        }
+      }
+
+      // Get current player to check existing portal access restrictions
+      const currentPlayer = await db.select().from(players).where(eq(players.id, id)).limit(1);
+      if (currentPlayer.length === 0) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // If only updating portal access, check age with current birth year
+      if (updateData.canAccessPortal === true && !updateData.birthYear) {
+        const age = new Date().getFullYear() - currentPlayer[0].birthYear;
+        if (age < MINIMUM_PORTAL_AGE) {
+          return res.status(400).json({ 
+            message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
+          });
+        }
+      }
+
+      // Update the player
+      const [updatedPlayer] = await db.update(players)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(players.id, id))
+        .returning();
+
+      // Return the updated player with parent information
+      const playerWithParents = await db.select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+        birthYear: players.birthYear,
+        gender: players.gender,
+        parentId: players.parentId,
+        parent2Id: players.parent2Id,
+        soccerClub: players.soccerClub,
+        canAccessPortal: players.canAccessPortal,
+        canBookAndPay: players.canBookAndPay,
+        email: players.email,
+        phoneNumber: players.phoneNumber,
+        createdAt: players.createdAt,
+        // Parent 1 info
+        parentFirstName: sql<string>`parent1.first_name`,
+        parentLastName: sql<string>`parent1.last_name`,
+        parentEmail: sql<string>`parent1.email`,
+        // Parent 2 info
+        parent2FirstName: sql<string>`parent2.first_name`,
+        parent2LastName: sql<string>`parent2.last_name`,
+        parent2Email: sql<string>`parent2.email`,
+        // Signup count
+        signupCount: sql<number>`(
+          SELECT COUNT(*)::int 
+          FROM ${signups} 
+          WHERE ${signups.playerId} = ${players.id}
+        )`,
+      })
+      .from(players)
+      .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
+      .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`)
+      .where(eq(players.id, id))
+      .limit(1);
+
+      if (playerWithParents.length === 0) {
+        return res.status(404).json({ message: "Player not found after update" });
+      }
+
+      const player = playerWithParents[0];
+      const responseData = {
+        id: player.id,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        birthYear: player.birthYear,
+        gender: player.gender,
+        age: new Date().getFullYear() - player.birthYear,
+        ageGroup: `U${new Date().getFullYear() - player.birthYear}`,
+        parentId: player.parentId,
+        parentName: `${player.parentFirstName || ''} ${player.parentLastName || ''}`.trim(),
+        parentEmail: player.parentEmail,
+        parent2Id: player.parent2Id,
+        parent2Name: player.parent2FirstName && player.parent2LastName ? 
+          `${player.parent2FirstName} ${player.parent2LastName}`.trim() : null,
+        parent2Email: player.parent2Email,
+        soccerClub: player.soccerClub,
+        canAccessPortal: player.canAccessPortal,
+        canBookAndPay: player.canBookAndPay,
+        email: player.email,
+        phoneNumber: player.phoneNumber,
+        signupsCount: player.signupCount || 0,
+        createdAt: player.createdAt,
+        lastActivity: player.createdAt
+      };
+
+      res.json(responseData);
+    } catch (error) {
+      console.error('Error updating player:', error);
+      res.status(500).json({ message: 'Failed to update player' });
+    }
+  });
+
   app.post('/api/admin/imports/players', requireAdmin, async (req: Request, res: Response) => {
     try {
       // TODO: Implement CSV parsing and player bulk import
