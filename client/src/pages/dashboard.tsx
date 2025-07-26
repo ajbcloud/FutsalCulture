@@ -21,6 +21,8 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
@@ -208,7 +210,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">Parent Dashboard</h1>
-          <Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-2" />
@@ -219,7 +221,10 @@ export default function Dashboard() {
               <DialogHeader>
                 <DialogTitle className="text-white">Add New Player</DialogTitle>
               </DialogHeader>
-              <PlayerForm onSuccess={() => setEditingPlayer(null)} />
+              <PlayerForm onSuccess={() => {
+                setIsAddDialogOpen(false);
+                setEditingPlayer(null);
+              }} />
             </DialogContent>
           </Dialog>
         </div>
@@ -230,7 +235,7 @@ export default function Dashboard() {
             <Card className="bg-zinc-900 border border-zinc-700">
               <CardContent className="text-center py-8">
                 <p className="text-zinc-400 mb-4">No players added yet.</p>
-                <Dialog>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-blue-600 hover:bg-blue-700">Add Your First Player</Button>
                   </DialogTrigger>
@@ -238,7 +243,10 @@ export default function Dashboard() {
                     <DialogHeader>
                       <DialogTitle className="text-white">Add New Player</DialogTitle>
                     </DialogHeader>
-                    <PlayerForm onSuccess={() => setEditingPlayer(null)} />
+                    <PlayerForm onSuccess={() => {
+                      setIsAddDialogOpen(false);
+                      setEditingPlayer(null);
+                    }} />
                   </DialogContent>
                 </Dialog>
               </CardContent>
@@ -266,9 +274,12 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="flex space-x-2">
-                        <Dialog>
+                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={() => setEditingPlayer(player)}>
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setEditingPlayer(player);
+                              setIsEditDialogOpen(true);
+                            }}>
                               <Edit className="w-4 h-4" />
                             </Button>
                           </DialogTrigger>
@@ -278,7 +289,10 @@ export default function Dashboard() {
                             </DialogHeader>
                             <PlayerForm 
                               player={editingPlayer} 
-                              onSuccess={() => setEditingPlayer(null)} 
+                              onSuccess={() => {
+                                setIsEditDialogOpen(false);
+                                setEditingPlayer(null);
+                              }} 
                             />
                           </DialogContent>
                         </Dialog>
