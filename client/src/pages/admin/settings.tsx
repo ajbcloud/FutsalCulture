@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, Plus } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, Plus, CreditCard } from 'lucide-react';
 
 interface SystemSettings {
   autoApproveRegistrations: boolean;
@@ -284,6 +284,8 @@ export default function AdminSettings() {
                                           {integration.provider === 'twilio' && 'SMS & Voice'}
                                           {integration.provider === 'sendgrid' && 'Email Delivery'}
                                           {integration.provider === 'google' && 'Calendar & Drive'}
+                                          {integration.provider === 'microsoft' && 'Teams & Outlook'}
+                                          {integration.provider === 'stripe' && 'Payment Processing'}
                                         </div>
                                       </div>
                                     </div>
@@ -375,6 +377,21 @@ export default function AdminSettings() {
                             <p className="text-sm text-zinc-400 mb-3">Calendar and document integration</p>
                             <Button variant="outline" size="sm" className="w-full">
                               Setup Google
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card className="bg-zinc-800 border-zinc-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="w-8 h-8 bg-purple-900 rounded flex items-center justify-center">
+                                <CreditCard className="w-4 h-4 text-purple-300" />
+                              </div>
+                              <h4 className="font-medium text-white">Stripe</h4>
+                            </div>
+                            <p className="text-sm text-zinc-400 mb-3">Payment processing and subscriptions</p>
+                            <Button variant="outline" size="sm" className="w-full">
+                              Setup Stripe
                             </Button>
                           </CardContent>
                         </Card>

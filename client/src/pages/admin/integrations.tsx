@@ -18,7 +18,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  TestTube
+  TestTube,
+  CreditCard
 } from 'lucide-react';
 
 interface Integration {
@@ -35,7 +36,7 @@ interface ProviderConfig {
   name: string;
   icon: React.ReactNode;
   description: string;
-  category: 'email' | 'sms' | 'calendar' | 'storage';
+  category: 'email' | 'sms' | 'calendar' | 'storage' | 'payment';
   fields: Array<{
     key: string;
     label: string;
@@ -87,6 +88,17 @@ const providerConfigs: Record<string, ProviderConfig> = {
       { key: 'tenantId', label: 'Tenant ID', type: 'text', required: true },
       { key: 'clientId', label: 'Client ID', type: 'text', required: true },
       { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+    ],
+  },
+  stripe: {
+    name: 'Stripe',
+    icon: <CreditCard className="w-4 h-4" />,
+    description: 'Payment processing and subscription management',
+    category: 'payment',
+    fields: [
+      { key: 'publishableKey', label: 'Publishable Key', type: 'text', placeholder: 'pk_test_...', required: true },
+      { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', required: true },
+      { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', required: false },
     ],
   },
 };
