@@ -675,9 +675,15 @@ export function setupAdminRoutes(app: any) {
         emailNotifications: true,
         smsNotifications: false,
         sessionCapacityWarning: 3,
-        paymentReminderHours: 4,
+        paymentReminderMinutes: 240, // 4 hours = 240 minutes
         ...settingsMap
       };
+      
+      // Convert legacy paymentReminderHours to paymentReminderMinutes if it exists
+      if (settingsMap.paymentReminderHours && !settingsMap.paymentReminderMinutes) {
+        defaultSettings.paymentReminderMinutes = settingsMap.paymentReminderHours * 60;
+        delete defaultSettings.paymentReminderHours;
+      }
 
       res.json(defaultSettings);
     } catch (error) {

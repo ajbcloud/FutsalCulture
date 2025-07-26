@@ -21,7 +21,7 @@ interface SystemSettings {
   emailNotifications: boolean;
   smsNotifications: boolean;
   sessionCapacityWarning: number;
-  paymentReminderHours: number;
+  paymentReminderMinutes: number;
 }
 
 interface Integration {
@@ -91,7 +91,7 @@ export default function AdminSettings() {
     emailNotifications: true,
     smsNotifications: false,
     sessionCapacityWarning: 3,
-    paymentReminderHours: 4
+    paymentReminderMinutes: 60
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +109,13 @@ export default function AdminSettings() {
       const response = await fetch('/api/admin/settings');
       if (!response.ok) throw new Error('Failed to fetch settings');
       const data = await response.json();
+      
+      // Convert legacy paymentReminderHours to paymentReminderMinutes if needed
+      if (data.paymentReminderHours && !data.paymentReminderMinutes) {
+        data.paymentReminderMinutes = data.paymentReminderHours * 60;
+        delete data.paymentReminderHours;
+      }
+      
       setSettings(data);
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -492,18 +499,18 @@ export default function AdminSettings() {
               </p>
             </div>
             <div>
-              <Label htmlFor="paymentReminder" className="text-zinc-300">Payment Reminder Hours</Label>
+              <Label htmlFor="paymentReminder" className="text-zinc-300">Payment Reminder Minutes</Label>
               <Input
                 id="paymentReminder"
                 type="number"
-                min="1"
-                max="24"
-                value={settings.paymentReminderHours}
-                onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderHours: parseInt(e.target.value) || 4 }))}
+                min="5"
+                max="1440"
+                value={settings.paymentReminderMinutes}
+                onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderMinutes: parseInt(e.target.value) || 60 }))}
                 className="bg-zinc-800 border-zinc-700 text-white mt-1"
               />
               <p className="text-sm text-zinc-400 mt-1">
-                Send payment reminders this many hours before payment deadline
+                Send payment reminders this many minutes before payment deadline
               </p>
             </div>
           </CardContent>
