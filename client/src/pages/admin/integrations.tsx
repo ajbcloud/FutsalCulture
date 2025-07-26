@@ -126,6 +126,18 @@ const providerConfigs: Record<string, ProviderConfig> = {
       { key: 'sandbox', label: 'Sandbox Mode', type: 'text', placeholder: 'true or false', required: false },
     ],
   },
+  braintree: {
+    name: 'Braintree',
+    icon: <CreditCard className="w-4 h-4" />,
+    description: 'Alternative payment processing with advanced fraud protection and global support',
+    category: 'payment',
+    fields: [
+      { key: 'merchantId', label: 'Merchant ID', type: 'text', placeholder: 'Your Braintree Merchant ID', required: true },
+      { key: 'publicKey', label: 'Public Key', type: 'text', placeholder: 'Your Braintree Public Key', required: true },
+      { key: 'privateKey', label: 'Private Key', type: 'password', placeholder: 'Your Braintree Private Key', required: true },
+      { key: 'environment', label: 'Environment', type: 'text', placeholder: 'sandbox or production', required: true },
+    ],
+  },
 };
 
 export default function AdminIntegrations() {

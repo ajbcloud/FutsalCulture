@@ -51,6 +51,13 @@ function maskCredentials(provider: string, credentials: any): any {
         companyId: credentials.companyId,
         sandbox: credentials.sandbox,
       };
+    case 'braintree':
+      return {
+        merchantId: credentials.merchantId,
+        publicKey: credentials.publicKey ? `***${credentials.publicKey.slice(-4)}` : '',
+        privateKey: credentials.privateKey ? '***' : '',
+        environment: credentials.environment,
+      };
     default:
       return {};
   }
