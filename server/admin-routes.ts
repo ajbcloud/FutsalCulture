@@ -72,6 +72,11 @@ export function setupAdminRoutes(app: any) {
       const pendingSignups = await storage.getPendingPaymentSignups();
       const pendingPayments = pendingSignups.length;
 
+      // Get pending registrations
+      const pendingUsers = await db.select().from(users).where(eq(users.registrationStatus, 'pending'));
+      const pendingPlayers = await db.select().from(players).where(eq(players.registrationStatus, 'pending'));
+      const totalPendingRegistrations = pendingUsers.length + pendingPlayers.length;
+
       // Generate pending tasks
       const pendingTasks = [];
       if (pendingPayments > 0) {
@@ -80,6 +85,17 @@ export function setupAdminRoutes(app: any) {
           type: 'Payment Review',
           message: `${pendingPayments} payments awaiting confirmation`,
           priority: 'high' as const,
+          action: '/admin/payments',
+        });
+      }
+      
+      if (totalPendingRegistrations > 0) {
+        pendingTasks.push({
+          id: 'pending-registrations',
+          type: 'Registration Review',
+          message: `${totalPendingRegistrations} registrations awaiting approval`,
+          priority: 'high' as const,
+          action: '/admin/pending-registrations',
         });
       }
 

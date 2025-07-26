@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import AdminLayout from "@/components/admin-layout";
 import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   DollarSign, 
   Users, 
   Calendar, 
   CreditCard,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  ChevronRight
 } from "lucide-react";
 
 interface AdminStats {
@@ -23,13 +26,21 @@ interface AdminStats {
     type: string;
     message: string;
     priority: 'high' | 'medium' | 'low';
+    action?: string;
   }>;
 }
 
 export default function AdminDashboard() {
+  const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
   });
+
+  const handleTaskClick = (task: AdminStats['pendingTasks'][0]) => {
+    if (task.action) {
+      setLocation(task.action);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -128,17 +139,28 @@ export default function AdminDashboard() {
                 <div className="space-y-3">
                   {stats?.pendingTasks?.length ? (
                     stats.pendingTasks.map((task) => (
-                      <div key={task.id} className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
+                      <div 
+                        key={task.id} 
+                        className={`flex items-center justify-between p-3 bg-zinc-800 rounded-lg transition-colors ${
+                          task.action ? 'hover:bg-zinc-700 cursor-pointer' : ''
+                        }`}
+                        onClick={() => task.action && handleTaskClick(task)}
+                      >
                         <div className="flex-1">
                           <p className="text-white text-sm">{task.message}</p>
                           <p className="text-zinc-400 text-xs mt-1">{task.type}</p>
                         </div>
-                        <Badge 
-                          variant={task.priority === 'high' ? 'destructive' : 
-                                   task.priority === 'medium' ? 'default' : 'secondary'}
-                        >
-                          {task.priority}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={task.priority === 'high' ? 'destructive' : 
+                                     task.priority === 'medium' ? 'default' : 'secondary'}
+                          >
+                            {task.priority}
+                          </Badge>
+                          {task.action && (
+                            <ChevronRight className="w-4 h-4 text-zinc-400" />
+                          )}
+                        </div>
                       </div>
                     ))
                   ) : (
