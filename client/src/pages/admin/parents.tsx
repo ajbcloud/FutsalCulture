@@ -129,7 +129,7 @@ export default function AdminParents() {
     } else {
       loadParents();
     }
-  }, []);
+  }, [location]); // Re-run when location changes
 
   useEffect(() => {
     // If we have a URL filter (from clicking parent name), don't apply client-side filtering

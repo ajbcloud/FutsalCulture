@@ -52,7 +52,7 @@ export default function AdminPlayers() {
   const { toast } = useToast();
   const [location] = useLocation();
 
-  // Check for URL parameters on load
+  // Check for URL parameters on load and when location changes
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const searchTerm = urlParams.get('search');
@@ -62,7 +62,7 @@ export default function AdminPlayers() {
     
     // Load players first, then apply filters
     loadPlayers(searchTerm, playerId);
-  }, []);
+  }, [location]); // Re-run when location changes
 
   const loadPlayers = async (searchTerm?: string | null, playerId?: string | null) => {
     try {
@@ -110,42 +110,9 @@ export default function AdminPlayers() {
     }
   };
 
-  // Load players normally when no URL params are present
-  useEffect(() => {
-    // Only load if no URL params were processed above
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.get('search') && !urlParams.get('playerId')) {
-      adminPlayers.list().then(data => {
-        setPlayers(data);
-        setFilteredPlayers(data);
-        setLoading(false);
-      }).catch(err => {
-        console.error('Error fetching players:', err);
-        setLoading(false);
-      });
-    }
-  }, []);
+  // This useEffect is no longer needed since the one above handles all cases
 
-  // Apply filters when URL changes (for deep linking)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const playerId = urlParams.get('playerId');
-    
-    if (playerId && players.length > 0) {
-      // Find the player and set filters to show only that player
-      const targetPlayer = players.find(p => p.id === playerId);
-      
-      if (targetPlayer) {
-        const playerName = `${targetPlayer.firstName} ${targetPlayer.lastName}`;
-        console.log('Setting search filter to:', playerName);
-        
-        setFilters(prev => ({
-          ...prev,
-          search: playerName
-        }));
-      }
-    }
-  }, [location, players]);
+  // This useEffect is also no longer needed since filtering is handled above
 
   useEffect(() => {
     let filtered = players.filter((player: any) => {
