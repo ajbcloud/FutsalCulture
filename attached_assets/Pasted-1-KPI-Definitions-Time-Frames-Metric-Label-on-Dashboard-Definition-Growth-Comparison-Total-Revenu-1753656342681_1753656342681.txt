@@ -1,0 +1,97 @@
+1. KPI Definitions & Time Frames
+Metric	Label on Dashboard	Definition	Growth Comparison
+Total Revenue	Total Revenue
+<small>(This Month)</small>	Sum of all payments received (i.e. payments.paid_at is not null) with paid_at between the first day of the current month at 00:00 and “now.”	% change vs. same period last month
+Monthly Revenue YTD	YTD Revenue	Sum of all payments received in all months so far this calendar year.	% change vs. YTD same date last year
+Total Players	Total Players
+<small>(This Month)</small>	Count of unique players who registered (users.created_at) between the first of the current month and “now.”	+/– vs. same period last month
+Total Registrations	Total Registrations
+<small>(This Month)</small>	Count of signups (i.e. signups table rows with created_at in the current month). This captures “bookings” created, even if payment is still pending.	+/– vs. same period last month
+Sessions This Week	Sessions This Week	Count of sessions scheduled (futsal_sessions) with a start_time between Monday (00:00) and Sunday (23:59) of the current week.	+/– vs. sessions last week
+Pending Payments	Pending Payments
+<small>Needs attention</small>	Count of signups where paid_at is null and created_at is older than 1 hour ago (i.e. payment overdue).	+/– vs. pending payments last period
+Active Parents	Active Parents
+<small>(YTD)</small>	Count of parent accounts with at least one login or action (signups or help_requests) in the last 30 days.	+/– vs. active parents last period
+
+2. Growth / Attrition Callouts
+Each card’s “% change” label should read:
+
+Up arrow 4.3% (“up 4.3% vs. last month”)
+
+Down arrow 2.1% (“down 2.1% vs. last month”)
+
+If negative: display a red down‑arrow and “–X%”
+
+If zero: display “±0.0%” in gray
+
+3. Activity Feed
+Recent Activity panel should be a vertically scrollable list (max‑height: 300 px).
+
+Show all events from today, ordered newest → oldest.
+
+Each entry:
+
+Icon (🎉 payment, 👤 new player, ⚠️ capacity full, 💬 help request, etc.)
+
+Brief text + timestamp (“2 min ago”)
+
+At the bottom: if more than fit → display a “Load more” link to fetch “yesterday” events.
+
+4. Layout & Labels
+At the top, group metrics in two rows:
+
+Primary KPIs: Total Revenue, Total Players, Total Registrations, Sessions This Week, Pending Payments.
+
+Secondary KPIs: YTD Revenue, Active Parents.
+
+Under each numeric value, show the small gray text for the period in parentheses.
+
+On hover over any card, show a tooltip with the exact date range used for that calculation.
+
+5. Data Queries (Drizzle‑ORM examples)
+ts
+Copy
+Edit
+// 1. Total Revenue (This Month)
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const monthlyRevenue = await db
+  .select({ sumCents: sql<number>`SUM(${payments.amount_cents})` })
+  .from(payments)
+  .where(and(
+    gte(payments.paidAt, startOfMonth),
+    lte(payments.paidAt, now),
+  ));
+
+// 2. Total Players (Registrations)
+const totalPlayers = await db.select({
+  count: sql<number>`COUNT(DISTINCT ${users.id})`
+}).from(users)
+ .where(and(
+    gte(users.createdAt, startOfMonth),
+    lte(users.createdAt, now),
+ ));
+
+// 3. Total Registrations (Signups)
+const totalSignups = await db.select({
+  count: sql<number>`COUNT(*)`
+}).from(signups)
+ .where(and(
+    gte(signups.createdAt, startOfMonth),
+    lte(signups.createdAt, now),
+ ));
+6. Front‑End Fetch & Display
+Fetch /api/admin/dashboard-metrics?range=month → returns an object with all six primary values plus growth percentages.
+
+Render each card by mapping the JSON fields directly, e.g.:
+
+tsx
+Copy
+Edit
+<StatCard
+  title="Total Registrations"
+  value={metrics.registrations}
+  subtitle="This Month"
+  growth={metrics.registrationsGrowth}
+/>
+Activity: fetch /api/admin/recent-activity?date=today on load and “Load more” to /api/admin/recent-activity?before=<oldestTimestamp>.
+

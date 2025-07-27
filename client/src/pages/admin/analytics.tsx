@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import AdminLayout from '@/components/admin-layout';
 import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { KPICard } from '../../components/kpi-card';
 import { TrendingUp, Users, DollarSign, Calendar, Activity } from 'lucide-react';
 
 interface DashboardMetrics {
@@ -46,99 +47,66 @@ export default function AdminAnalytics() {
 
           {/* Primary Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  ${((metrics?.totalRevenue || 0) / 100).toFixed(2)}
-                </div>
-                <p className="text-xs text-zinc-400">All time revenue</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Total Players</CardTitle>
-                <Users className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {metrics?.totalPlayers || 0}
-                </div>
-                <p className="text-xs text-zinc-400">Registered players</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Fill Rate</CardTitle>
-                <TrendingUp className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {metrics?.fillRate || 0}%
-                </div>
-                <p className="text-xs text-zinc-400">Session capacity</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Active Sessions</CardTitle>
-                <Activity className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {metrics?.sessionsThisWeek || 0}
-                </div>
-                <p className="text-xs text-zinc-400">This week</p>
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Total Revenue"
+              value={`$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`}
+              tooltip="Sum of all payments received from session bookings across all time periods."
+              icon={DollarSign}
+              iconColor="text-green-500"
+              subtitle="All time revenue"
+            />
+            <KPICard
+              title="Total Players"
+              value={(metrics?.totalPlayers || 0).toString()}
+              tooltip="Total number of players registered in the system across all age groups."
+              icon={Users}
+              iconColor="text-blue-500"
+              subtitle="Registered players"
+            />
+            <KPICard
+              title="Fill Rate"
+              value={`${metrics?.fillRate || 0}%`}
+              tooltip="Percentage of session capacity filled across all sessions and age groups."
+              icon={TrendingUp}
+              iconColor="text-orange-500"
+              subtitle="Session capacity"
+            />
+            <KPICard
+              title="Active Sessions"
+              value={(metrics?.sessionsThisWeek || 0).toString()}
+              tooltip="Training sessions scheduled for the current week across all locations."
+              icon={Activity}
+              iconColor="text-purple-500"
+              subtitle="This week"
+            />
           </div>
 
           {/* Secondary Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Monthly Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  ${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}
-                </div>
-                <p className="text-xs text-zinc-400">Current month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">YTD Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  ${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}
-                </div>
-                <p className="text-xs text-zinc-400">Year to date</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-700">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-300">Active Parents</CardTitle>
-                <Users className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {metrics?.activeParents || 0}
-                </div>
-                <p className="text-xs text-zinc-400">Last 30 days</p>
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Monthly Revenue"
+              value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
+              tooltip="Sum of all payments received this month from session bookings."
+              icon={DollarSign}
+              iconColor="text-green-500"
+              subtitle="Current month"
+            />
+            <KPICard
+              title="YTD Revenue"
+              value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
+              tooltip="Total revenue from January 1 to today across all sessions."
+              icon={DollarSign}
+              iconColor="text-green-500"
+              subtitle="Year to date"
+            />
+            <KPICard
+              title="Active Parents"
+              value={(metrics?.activeParents || 0).toString()}
+              tooltip="Parents who logged in within the last 30 days and engaged with the platform."
+              icon={Users}
+              iconColor="text-blue-500"
+              subtitle="Last 30 days"
+            />
           </div>
 
           {/* Data Breakdown */}

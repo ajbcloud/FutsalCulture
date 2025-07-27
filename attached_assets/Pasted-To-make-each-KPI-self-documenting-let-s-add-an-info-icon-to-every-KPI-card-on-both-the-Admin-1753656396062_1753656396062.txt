@@ -1,0 +1,198 @@
+To make each KPI self‑documenting, let’s add an “info” icon (ℹ️) to every KPI card on both the Admin Dashboard and the Analytics Dashboard. Hovering over the icon will reveal a concise tooltip with the metric’s definition. Here’s how to implement it:
+
+1. Design & UX
+Icon placement
+
+Position a small “ℹ️” icon in the top‑right corner of each KPI card (same spot across all cards).
+
+Use a neutral color (e.g. gray) that turns accent‑color on hover so it’s visible but not distracting.
+
+Tooltip content
+
+On hover (or focus, for accessibility), show a tooltip containing the KPI’s definition.
+
+Tooltip style: dark background, white text, subtle drop shadow, ~250 ms fade in/out.
+
+Example tooltip text
+
+Total Revenue ℹ️ → “Sum of all payments received this month.”
+
+YTD Revenue ℹ️ → “Total revenue from January 1 to today.”
+
+Sessions This Week ℹ️ → “Training sessions scheduled for the current week.”
+
+Total Registrations ℹ️ → “Session sign‑ups created this month.”
+
+Total Players ℹ️ → “New player registrations this month.”
+
+Active Parents ℹ️ → “Parents who logged in within the last 30 days.”
+
+Pending Payments ℹ️ → “Unpaid reservations older than 1 hour.”
+
+Growth % ℹ️ → “Percentage change compared to the previous period.”
+
+2. Front‑End Implementation
+Install a tooltip library (if not already):
+
+e.g. Tippy.js or use your component library’s <Tooltip>.
+
+KPICard component
+
+tsx
+Copy
+Edit
+import { Tooltip } from '…';
+import { InfoIcon } from 'lucide-react';
+
+interface KPICardProps {
+  title: string;
+  value: string | number;
+  tooltip: string;
+  // …other props (icon, delta, etc)
+}
+
+export function KPICard({ title, value, tooltip }: KPICardProps) {
+  return (
+    <div className="relative bg-card p-4 rounded-lg shadow-sm">
+      <div className="flex items-start justify-between">
+        <h3 className="text-sm font-medium">{title}</h3>
+        <Tooltip content={tooltip} placement="top">
+          <InfoIcon className="w-4 h-4 text-gray-400 hover:text-green-500 cursor-help" />
+        </Tooltip>
+      </div>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+Consume KPICard
+Replace existing card markup with <KPICard> calls:
+
+tsx
+Copy
+Edit
+<KPICard
+  title="Total Revenue"
+  value={`$${analytics.monthlyRevenue}`}
+  tooltip="Sum of all payments received this month."
+/>
+<KPICard
+  title="YTD Revenue"
+  value={`$${analytics.ytdRevenue}`}
+  tooltip="Total revenue from January 1 to today."
+/>
+// ...and so on for every KPI
+Styling adjustments
+
+Ensure the relative wrapper on the card allows the icon to sit flush at the top right.
+
+Adjust padding/margins so text and icon never collide or wrap.
+
+3. Accessibility
+Keyboard: Make the icon focusable (tabIndex={0}) so screen‑reader users can activate the tooltip via keyboard.
+
+ARIA: Add aria-label={tooltip} to the icon or use the tooltip library’s ARIA props to announce content.
+
+Contrast: Validate that icon color contrast meets WCAG AA both idle and on hover.
+
+4. Testing
+Visual QA
+
+Hover over each info icon on desktop & mobile emulation.
+
+Confirm tooltip text is accurate, fully visible, and disappears on mouse‑leave.
+
+Keyboard
+
+Tab to each icon, verify the tooltip appears on focus, and can be dismissed with Esc.
+
+Cross‑Browser
+
+Spot‑check in Chrome, Firefox, and Safari to ensure consistent behavior.
+
+
+Objective: Populate the database with three full months of realistic business activity so that both the Admin Dashboard and Analytics Dashboard display consistent, believable trends and statistics. All data—sessions, players, signups, payments, and notifications—must align so metrics like “Total Revenue,” “Monthly Growth,” “Fill Rate,” and “Player Growth” all make sense together.
+
+1. Date Range & Growth Patterns
+Time span: April 1 2025 → June 30 2025 (three calendar months).
+
+Growth trajectory:
+
+April: Soft launch—average 6 players per session, 30 unique players by month’s end.
+
+May: Momentum—average 8 players per session, 50 unique players by month’s end.
+
+June: Peak season—average 10 players per session, 75 unique players by month’s end.
+
+2. Sessions Schedule
+Days: Monday–Friday each week.
+
+Times: 5:00 PM, 6:45 PM, 8:30 PM (1.5 hour each).
+
+Locations: Sugar Sand Park only.
+
+Age Groups/Genders: Cycle evenly through U8–U15 Boys and U8–U15 Girls so that each cohort runs roughly the same number of sessions per month.
+
+Capacity: 12 spots.
+
+Price: $10.00 per session.
+
+3. Parents & Players
+Parents: Create 20 distinct parent accounts with realistic names and emails.
+
+Players: For each parent, assign 1–2 players (so ~30–35 players total), birth years corresponding to U8–U15.
+
+Portal Access:
+
+First half of players get portal access and booking permissions from day 1.
+
+Second half are added gradually: 10 new portal‑enabled players in May, 15 more in June.
+
+4. Signups & Payments
+For each session in April: randomly select 4–8 eligible players to sign up.
+
+In May: 6–10 signups per session.
+
+In June: 8–12 signups per session.
+
+Timing: Generate each signup’s created_at 1–48 hours before the session start.
+
+Payments: Mark all but 10% of signups as paid immediately (simulate some pending in each month). Create payments records with paid_at matching signup time plus a few minutes.
+
+5. Pending Payments & Help Requests
+For each month, leave 5–10% of signups unpaid and older than 1 hour to show up under “Pending Payments.”
+
+Seed 5–8 help requests per month with mixed resolved/unresolved status, so the “Recent Activity” feed shows questions like “Can’t see my booking” or “Forgot my password.”
+
+6. Notification Preferences
+Assign each parent an email opt‑in = true; SMS opt‑in = random true/false.
+
+Seed a few (3–5) SMS reminders and email reminders sent per week, so “Recent Activity” shows actual reminders.
+
+7. Analytics Consistency Checks
+After seeding:
+
+April Revenue: ~ (number of sessions × avg attendees × $10)
+
+May Revenue: ~ 1.5× April
+
+June Revenue: ~ 2× April
+
+Total Players: 30 (April) → 50 (May) → 75 (June)
+
+Monthly Growth% shown on dashboard should match these ratios.
+
+Fill Rate: April ~50%, May ~67%, June ~83%
+
+Sessions This Week: Reflect actual count for current week in June.
+
+Recent Activity: Show a scrolling list of that day’s signups, payments, and help tickets.
+
+Implementation Guidance:
+
+Write or update a seed.ts script using Drizzle‑ORM (or raw SQL) to insert this data.
+
+Use loops over dates and randomization within bounds to generate session and signup records.
+
+Ensure foreign‑key relationships (players → parents; signups → sessions, players; payments → signups).
+
+Run this script against the development database, then launch the app and verify all dashboard cards and charts display the expected numbers and trends.

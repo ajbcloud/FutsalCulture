@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import AdminLayout from "@/components/admin-layout";
 import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KPICard } from "@/components/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -195,80 +196,85 @@ export default function AdminDashboard() {
 
           {/* Primary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {primaryKpis.map((kpi) => {
-              const Icon = kpi.icon;
-              const growthInfo = formatGrowth(kpi.growth);
-              const GrowthIcon = growthInfo.icon;
-              
-              return (
-                <Card key={kpi.title} className={`bg-zinc-900 border-zinc-700 ${kpi.isAlert ? 'border-yellow-500/50' : ''}`}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div>
-                      <CardTitle className="text-sm font-medium text-zinc-400">
-                        {kpi.title}
-                      </CardTitle>
-                      {kpi.subtitle && (
-                        <p className="text-xs text-zinc-500">{kpi.subtitle}</p>
-                      )}
-                    </div>
-                    <Icon className={`w-4 h-4 ${kpi.isAlert ? 'text-yellow-500' : 'text-zinc-400'}`} />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      {kpi.value}
-                    </div>
-                    {kpi.growth !== 0 && kpi.comparison && (
-                      <div className={`text-xs flex items-center ${growthInfo.color}`}>
-                        <GrowthIcon className="w-3 h-3 mr-1" />
-                        {growthInfo.text} {kpi.comparison}
-                      </div>
-                    )}
-                    {kpi.isAlert && (
-                      <div className="text-xs text-yellow-500 flex items-center mt-1">
-                        <Activity className="w-3 h-3 mr-1" />
-                        Needs attention
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+            <KPICard
+              title="Total Revenue"
+              value={`$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`}
+              tooltip="Sum of all payments received this month from session bookings."
+              icon={DollarSign}
+              iconColor="text-green-500"
+              subtitle="This Month"
+              growth={metrics?.revenueGrowth || 0}
+              showGrowth={true}
+            />
+            <KPICard
+              title="Total Players"
+              value={(metrics?.totalPlayers || 0).toString()}
+              tooltip="Number of new player registrations this month."
+              icon={Users}
+              iconColor="text-blue-500"
+              subtitle="This Month"
+              growth={metrics?.playersGrowth || 0}
+              showGrowth={true}
+            />
+            <KPICard
+              title="Total Registrations"
+              value={(metrics?.totalSignups || 0).toString()}
+              tooltip="Session sign-ups created this month across all training sessions."
+              icon={ClipboardList}
+              iconColor="text-purple-500"
+              subtitle="This Month"
+              growth={metrics?.registrationsGrowth || 0}
+              showGrowth={true}
+            />
+            <KPICard
+              title="Sessions This Week"
+              value={(metrics?.sessionsThisWeek || 0).toString()}
+              tooltip="Training sessions scheduled for the current week."
+              icon={Calendar}
+              iconColor="text-orange-500"
+              subtitle="Current Week"
+              growth={metrics?.sessionsGrowth || 0}
+              showGrowth={true}
+            />
+            <KPICard
+              title="Pending Payments"
+              value={(metrics?.pendingPayments || 0).toString()}
+              tooltip="Unpaid reservations older than 1 hour that require attention."
+              icon={CreditCard}
+              iconColor={(metrics?.pendingPayments || 0) > 0 ? "text-yellow-500" : "text-zinc-500"}
+              subtitle="Needs Attention"
+              className={(metrics?.pendingPayments || 0) > 0 ? "border-yellow-500/50" : ""}
+            />
           </div>
 
           {/* Secondary KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {secondaryKpis.map((kpi) => {
-              const Icon = kpi.icon;
-              const growthInfo = formatGrowth(kpi.growth);
-              const GrowthIcon = growthInfo.icon;
-              
-              return (
-                <Card key={kpi.title} className="bg-zinc-900 border-zinc-700">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div>
-                      <CardTitle className="text-sm font-medium text-zinc-400">
-                        {kpi.title}
-                      </CardTitle>
-                      {kpi.subtitle && (
-                        <p className="text-xs text-zinc-500">{kpi.subtitle}</p>
-                      )}
-                    </div>
-                    <Icon className="w-4 h-4 text-zinc-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      {kpi.value}
-                    </div>
-                    {kpi.growth !== 0 && kpi.comparison && (
-                      <div className={`text-xs flex items-center ${growthInfo.color}`}>
-                        <GrowthIcon className="w-3 h-3 mr-1" />
-                        {growthInfo.text} {kpi.comparison}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <KPICard
+              title="YTD Revenue"
+              value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
+              tooltip="Total revenue from January 1 to today across all sessions."
+              icon={DollarSign}
+              iconColor="text-green-500"
+              subtitle="Year to Date"
+              growth={metrics?.ytdRevenueGrowth || 0}
+              showGrowth={true}
+            />
+            <KPICard
+              title="Active Parents"
+              value={(metrics?.activeParents || 0).toString()}
+              tooltip="Parents who logged in within the last 30 days."
+              icon={UserCheck}
+              iconColor="text-blue-500"
+              subtitle="Last 30 Days"
+            />
+            <KPICard
+              title="Fill Rate"
+              value={`${metrics?.fillRate || 0}%`}
+              tooltip="Percentage of session capacity filled across all sessions."
+              icon={TrendingUp}
+              iconColor="text-orange-500"
+              subtitle="Average Capacity"
+            />
           </div>
 
           {/* Alerts and Tasks */}

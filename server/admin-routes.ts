@@ -261,11 +261,10 @@ export function setupAdminRoutes(app: any) {
         .where(eq(signups.paid, false));
       const pendingPayments = pendingPaymentsResult[0]?.count || 0;
 
-      // 9. Active Parents (with any login activity)
+      // 9. Active Parents (count all users for now)
       const activeParentsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(users)
-        .where(sql`${users.lastLogin} IS NOT NULL`);
+        .from(users);
       const activeParents = activeParentsResult[0]?.count || 0;
 
       // 10. Session Fill Rate (simplified calculation)
