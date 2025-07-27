@@ -1,10 +1,11 @@
 #!/usr/bin/env tsx
 
 /*
- * Comprehensive 3-Month Database Seeding Script
+ * Comprehensive 4-Month Database Seeding Script
  * 
- * Generates realistic business data for April-June 2025:
- * - Progressive growth from soft launch to peak season
+ * Generates realistic business data for April-July 2025:
+ * - Progressive growth from soft launch to peak season  
+ * - 3 sessions per day, Monday-Friday for 4 months
  * - Realistic parent/player relationships
  * - Consistent session schedules and signups
  * - Aligned revenue and metrics
@@ -160,7 +161,7 @@ async function createPlayers(parents: UpsertUser[]) {
       playersData.push({
         id: nanoid(),
         firstName,
-        lastName: parent.lastName || 'Unknown',
+        lastName: parent.lastName,
         birthYear,
         gender,
         parentId: parent.id,
@@ -184,11 +185,11 @@ async function createPlayers(parents: UpsertUser[]) {
 }
 
 async function createSessions() {
-  console.log('📅 Creating session schedule (April-June 2025)...');
+  console.log('📅 Creating session schedule (April-July 2025)...');
   
   const sessionsData: InsertSession[] = [];
   const startDate = new Date(2025, 3, 1); // April 1, 2025
-  const endDate = new Date(2025, 5, 30); // June 30, 2025
+  const endDate = new Date(2025, 6, 31); // July 31, 2025
   
   let ageGroupIndex = 0;
   
@@ -207,7 +208,6 @@ async function createSessions() {
         const gender = GENDERS[Math.floor(ageGroupIndex / AGE_GROUPS.length) % GENDERS.length] as 'boys' | 'girls';
         
         sessionsData.push({
-          id: nanoid(),
           title: `${ageGroup} ${gender.charAt(0).toUpperCase() + gender.slice(1)} Training`,
           location: LOCATIONS[0],
           ageGroups: [ageGroup],
@@ -242,7 +242,7 @@ async function createSignupsAndPayments(sessions: InsertSession[], playersData: 
   for (const session of sessions) {
     const sessionMonth = session.startTime.getMonth(); // 3=April, 4=May, 5=June
     
-    // Growth pattern: April (4-8 players), May (6-10 players), June (8-12 players)
+    // Growth pattern: April (4-8 players), May (6-10 players), June (8-12 players), July (7-11 players)
     let minPlayers: number, maxPlayers: number;
     if (sessionMonth === 3) { // April
       minPlayers = 4;
@@ -250,9 +250,12 @@ async function createSignupsAndPayments(sessions: InsertSession[], playersData: 
     } else if (sessionMonth === 4) { // May
       minPlayers = 6;
       maxPlayers = 10;
-    } else { // June
+    } else if (sessionMonth === 5) { // June
       minPlayers = 8;
       maxPlayers = 12;
+    } else { // July
+      minPlayers = 7;
+      maxPlayers = 11;
     }
     
     const numSignups = getRandomInt(minPlayers, maxPlayers);
@@ -278,7 +281,6 @@ async function createSignupsAndPayments(sessions: InsertSession[], playersData: 
       const isPaid = Math.random() < 0.9; // 90% paid, 10% pending
       
       signupsData.push({
-        id: signupId,
         playerId: player.id,
         sessionId: session.id,
         paid: isPaid,
@@ -288,7 +290,6 @@ async function createSignupsAndPayments(sessions: InsertSession[], playersData: 
       
       if (isPaid) {
         paymentsData.push({
-          id: nanoid(),
           signupId,
           paymentIntentId: `pi_${nanoid()}`,
           amountCents: PRICE_CENTS,
@@ -323,7 +324,7 @@ async function createHelpRequests(parents: UpsertUser[]) {
     'Booking confirmation email missing'
   ];
   
-  for (let month = 3; month <= 5; month++) { // April-June
+  for (let month = 3; month <= 6; month++) { // April-July
     const numRequests = getRandomInt(5, 8);
     
     for (let i = 0; i < numRequests; i++) {
@@ -332,7 +333,6 @@ async function createHelpRequests(parents: UpsertUser[]) {
       const isResolved = Math.random() < 0.7; // 70% resolved
       
       helpRequestsData.push({
-        id: nanoid(),
         userId: parent.id,
         name: `${parent.firstName} ${parent.lastName}`,
         email: parent.email || 'parent@example.com',
@@ -356,7 +356,7 @@ async function createNotificationPreferences(parents: UpsertUser[]) {
   console.log('🔔 Creating notification preferences...');
   
   const preferencesData: InsertNotificationPreferences[] = parents.map(parent => ({
-    parentId: parent.id,
+    parentId: parent.id!,
     email: true,
     sms: Math.random() < 0.6, // 60% opt into SMS
   }));
