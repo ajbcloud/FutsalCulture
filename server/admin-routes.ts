@@ -324,7 +324,8 @@ export function setupAdminRoutes(app: any) {
         );
       const lastMonthPlayers = lastMonthPlayersResult[0]?.count || 0;
       // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
-      const playersGrowth = lastMonthPlayers === 0 ? (monthlyPlayers > 0 ? 100 : 0) : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
+      let playersGrowth = lastMonthPlayers === 0 ? (monthlyPlayers > 0 ? 100 : 0) : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
+      if (!isFinite(playersGrowth)) playersGrowth = monthlyPlayers > 0 ? 100 : 0;
 
       // 3. Signups Growth (current month vs last month)
       const thisMonthSignupsResult = await db
@@ -349,7 +350,8 @@ export function setupAdminRoutes(app: any) {
         );
       const lastMonthSignups = lastMonthSignupsResult[0]?.count || 0;
       // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
-      const registrationsGrowth = lastMonthSignups === 0 ? (thisMonthSignups > 0 ? 100 : 0) : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
+      let registrationsGrowth = lastMonthSignups === 0 ? (thisMonthSignups > 0 ? 100 : 0) : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
+      if (!isFinite(registrationsGrowth)) registrationsGrowth = thisMonthSignups > 0 ? 100 : 0;
 
       // 4. Sessions Growth (current week vs last week)
       const lastWeekSessionsResult = await db

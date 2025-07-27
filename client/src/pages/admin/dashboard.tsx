@@ -126,6 +126,11 @@ export default function AdminDashboard() {
   };
 
   const formatGrowth = (growth: number) => {
+    // Handle edge cases
+    if (!isFinite(growth) || isNaN(growth)) {
+      return { text: "New", icon: ArrowUp, color: "text-green-500" };
+    }
+    
     if (growth === 0) return { text: "±0.0%", icon: Minus, color: "text-gray-500" };
     if (growth > 0) return { text: `+${growth}%`, icon: ArrowUp, color: "text-green-500" };
     return { text: `${growth}%`, icon: ArrowDown, color: "text-red-500" };
