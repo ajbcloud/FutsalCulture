@@ -679,8 +679,8 @@ export function setupAdminRoutes(app: any) {
           bookingOpenMinute: futsalSessions.bookingOpenMinute,
           createdAt: futsalSessions.createdAt,
           signupCount: sql<number>`CAST(
-            (SELECT COUNT(*) FROM signups
-             WHERE signups.session_id = ${futsalSessions.id}
+            (SELECT COUNT(*) FROM ${signups}
+             WHERE ${signups.sessionId} = ${futsalSessions.id}
             ) AS int
           )`,
         })
