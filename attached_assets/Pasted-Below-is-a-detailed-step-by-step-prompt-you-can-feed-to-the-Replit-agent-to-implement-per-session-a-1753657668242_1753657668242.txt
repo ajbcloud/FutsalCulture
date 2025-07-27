@@ -1,0 +1,120 @@
+Below is a detailed, step‑by‑step prompt you can feed to the Replit agent to implement per‑session accordions with signup metrics—while ensuring you don’t break any existing analytics or data flows. It assumes you already have a signups table linking players to sessions.
+
+csharp
+Copy
+Edit
+We need to enhance the **Admin → Sessions** page with an accordion so that clicking any session row expands it to reveal:
+  • A mini KPI bar: “19 / 20 players” (signed‑up count vs capacity).  
+  • A scrollable list of the signed‑up players (name, age group, gender).  
+
+Do this without breaking existing analytics or data flows:
+
+1. **Server: Extend `/api/admin/sessions`**  
+   - In `server/admin-routes.ts`, locate the handler that returns the session list.  
+   - Modify its Drizzle‑ORM query to also pull the signup count and signup details in a single optimized query. For example:
+     ```ts
+     app.get('/api/admin/sessions', requireAdmin, async (req, res) => {
+       const sessions = await db
+         .select({
+           id:        futsalSessions.id,
+           title:     futsalSessions.title,
+           startTime: futsalSessions.startTime,
+           capacity:  futsalSessions.capacity,
+           ageGroups: futsalSessions.ageGroups,
+           genders:   futsalSessions.genders,
+           signupCount: sql<number>`(
+             SELECT COUNT(*) FROM ${signups}
+             WHERE ${signups.sessionId} = ${futsalSessions.id}
+           )`,
+         })
+         .from(futsalSessions)
+         .orderBy(futsalSessions.startTime);
+ 
+       // Then fetch all player details for those sessions in one go:
+       const allSignups = await db
+         .select({
+           sessionId: signups.sessionId,
+           playerId:  signups.playerId,
+           firstName: users.firstName,
+           lastName:  users.lastName,
+           ageGroup:  players.ageGroup,
+           gender:    players.gender,
+         })
+         .from(signups)
+         .innerJoin(players, eq(signups.playerId, players.id))
+         .innerJoin(users,   eq(players.userId,   users.id))
+         .where(inArray(signups.sessionId, sessions.map(s => s.id)));
+ 
+       // Group signups by session:
+       const signupsBySession = allSignups.reduce((acc, row) => {
+         acc[row.sessionId] = acc[row.sessionId] || [];
+         acc[row.sessionId].push(row);
+         return acc;
+       }, {} as Record<string, typeof allSignups>);
+ 
+       res.json(
+         sessions.map(s => ({
+           ...s,
+           signupCount:    Number(s.signupCount),
+           capacity:       s.capacity,
+           playersSigned:  signupsBySession[s.id] || [],
+         }))
+       );
+     });
+     ```
+   - **Why this matters**:  
+     • You only hit the database twice—once for the session list with counts, once for all signup details.  
+     • Analytics endpoints (`/api/admin/analytics`) remain untouched. They continue to use the same `signups` and `payments` tables.
+
+2. **Client: Accordion UI in `client/src/pages/admin/sessions.tsx`**  
+   - Fetch the extended session objects (with `signupCount` and `playersSigned`) in your `useEffect`.  
+   - Render each row as a clickable `<tr>` inside a `<table>`.  
+   - Beneath each `<tr>`, insert a `<tr>` with a single `<td colSpan={…}>` that contains a `<div>` which is shown/hidden based on React state:
+     ```jsx
+     // inside your map((session, idx) => …)
+     const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+     <tr key={session.id} onClick={() => setOpenIdx(openIdx === idx ? null : idx)}>
+       <td>{session.title}</td>
+       <td>{session.startTime}</td>
+       <td>{session.signupCount} / {session.capacity}</td>
+       {/* …other columns… */}
+     </tr>
+     {openIdx === idx && (
+       <tr>
+         <td colSpan={6}>
+           <div className="p-4 bg-gray-800 rounded-lg">
+             <div className="mb-2 font-medium">
+               Players signed up: {session.signupCount} / {session.capacity}
+             </div>
+             <ul className="max-h-40 overflow-y-auto">
+               {session.playersSigned.map(p => (
+                 <li key={p.playerId} className="flex justify-between text-sm py-1">
+                   <span>{p.firstName} {p.lastName}</span>
+                   <span className="italic">{p.ageGroup}, {p.gender}</span>
+                 </li>
+               ))}
+             </ul>
+           </div>
+         </td>
+       </tr>
+     )}
+     ```
+   - **Styling & UX**:  
+     • Use Tailwind’s `transition-all` on the accordion `<div>` for a smooth height animation.  
+     • Ensure keyboard accessibility (e.g. `tabIndex={0}` and `onKeyDown` toggles).
+
+3. **Analytics & Data Consistency**  
+   - **Analytic “fill rate”** already uses `signupCount / capacity` under the hood. By surfacing this same raw data, analytics will remain accurate.  
+   - **No new tables** are created—this simply repurposes the existing `signups` table.  
+   - Confirm that caching layers, if any, are invalidated or refetched when you update signups.
+
+4. **QA Checklist**  
+   - Seed data already includes several signups across sessions.  
+   - Load `/admin/sessions` and click each row—accordion expands and collapses correctly.  
+   - Verify “19 / 20” matches your seed’s `capacity` and signups count.  
+   - Inspect network tab: only two API calls (sessions list + signups details).  
+   - Run `/api/admin/analytics` and ensure fill‑rate cards unchanged.  
+
+Please implement exactly as above—**no guesses** about new tables or data structures—and let me know when the accordion is live and fully integrated.
+::contentReference[oaicite:0]{index=0}
