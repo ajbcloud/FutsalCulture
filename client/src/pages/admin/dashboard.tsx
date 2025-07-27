@@ -44,6 +44,7 @@ interface DashboardMetrics {
   playersGrowth: number;
   registrationsGrowth: number;
   sessionsGrowth: number;
+  ytdGrowth: number;
 }
 
 interface ActivityItem {
@@ -192,9 +193,9 @@ export default function AdminDashboard() {
     {
       title: "YTD Revenue",
       subtitle: "",
-      value: `$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`,
+      value: `$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`,
       icon: DollarSign,
-      growth: 0, // YTD growth not implemented yet
+      growth: metrics?.ytdGrowth || 0,
       comparison: "vs. last year YTD",
     },
     {
@@ -281,7 +282,7 @@ export default function AdminDashboard() {
               icon={DollarSign}
               iconColor="text-green-500"
               subtitle="Year to Date"
-              growth={0}
+              growth={metrics?.ytdGrowth || 0}
               showGrowth={true}
             />
             <KPICard

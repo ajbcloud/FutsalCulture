@@ -309,7 +309,8 @@ export function setupAdminRoutes(app: any) {
           )
         );
       const lastMonthCents = Number(lastMonthRevenueResult[0]?.sum || 0);
-      const revenueGrowth = lastMonthCents === 0 ? 0 : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
+      // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
+      const revenueGrowth = lastMonthCents === 0 ? (monthlyCents > 0 ? 100 : 0) : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
 
       // 2. Player Growth (current month vs last month new registrations)
       const lastMonthPlayersResult = await db
@@ -322,7 +323,8 @@ export function setupAdminRoutes(app: any) {
           )
         );
       const lastMonthPlayers = lastMonthPlayersResult[0]?.count || 0;
-      const playersGrowth = lastMonthPlayers === 0 ? 0 : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
+      // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
+      const playersGrowth = lastMonthPlayers === 0 ? (monthlyPlayers > 0 ? 100 : 0) : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
 
       // 3. Signups Growth (current month vs last month)
       const thisMonthSignupsResult = await db
@@ -346,7 +348,8 @@ export function setupAdminRoutes(app: any) {
           )
         );
       const lastMonthSignups = lastMonthSignupsResult[0]?.count || 0;
-      const registrationsGrowth = lastMonthSignups === 0 ? 0 : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
+      // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
+      const registrationsGrowth = lastMonthSignups === 0 ? (thisMonthSignups > 0 ? 100 : 0) : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
 
       // 4. Sessions Growth (current week vs last week)
       const lastWeekSessionsResult = await db
@@ -359,7 +362,33 @@ export function setupAdminRoutes(app: any) {
           )
         );
       const lastWeekSessions = lastWeekSessionsResult[0]?.count || 0;
-      const sessionsGrowth = lastWeekSessions === 0 ? 0 : Math.round(((weeklySessions - lastWeekSessions) / lastWeekSessions) * 100);
+      // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
+      const sessionsGrowth = lastWeekSessions === 0 ? (weeklySessions > 0 ? 100 : 0) : Math.round(((weeklySessions - lastWeekSessions) / lastWeekSessions) * 100);
+
+      // 5. YTD Growth (compare YTD revenue with last year's total revenue)
+      const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+      const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+      const lastYearRevenueResult = await db
+        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+        .from(payments)
+        .where(
+          and(
+            sql`${payments.paidAt} IS NOT NULL`,
+            gte(payments.paidAt, lastYearStart),
+            lte(payments.paidAt, lastYearEnd)
+          )
+        );
+      const lastYearCents = Number(lastYearRevenueResult[0]?.sum || 0);
+      const ytdGrowth = lastYearCents === 0 ? (ytdCents > 0 ? 100 : 0) : Math.round(((ytdCents - lastYearCents) / lastYearCents) * 100);
+
+      // Debug growth calculations
+      console.log('→ growth calculations:', {
+        monthlyCents, lastMonthCents, revenueGrowth,
+        monthlyPlayers, lastMonthPlayers, playersGrowth,
+        thisMonthSignups, lastMonthSignups, registrationsGrowth,
+        weeklySessions, lastWeekSessions, sessionsGrowth,
+        ytdCents, lastYearCents, ytdGrowth
+      });
 
       res.json({
         // Primary KPIs
@@ -379,6 +408,7 @@ export function setupAdminRoutes(app: any) {
         playersGrowth,
         registrationsGrowth,
         sessionsGrowth,
+        ytdGrowth,
       });
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
