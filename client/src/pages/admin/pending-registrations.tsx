@@ -16,6 +16,7 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { format } from 'date-fns';
 import { Check, X, User, Users } from 'lucide-react';
+import { queryClient } from '../../lib/queryClient';
 
 interface PendingRegistration {
   id: string;
@@ -75,8 +76,13 @@ export default function AdminPendingRegistrations() {
         description: `${type === 'parent' ? 'Parent' : 'Player'} registration approved`,
       });
 
-      // Refresh the list
+      // Refresh the list and invalidate related queries
       fetchPendingRegistrations();
+      
+      // Invalidate queries to refresh dashboard counters and recent activity
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
     } catch (error) {
       console.error('Error approving registration:', error);
       toast({

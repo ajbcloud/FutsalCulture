@@ -361,22 +361,41 @@ export function setupAdminRoutes(app: any) {
         });
       });
 
-      // Get recent registration approvals 
-      const recentApprovals = await db
+      // Get recent registration approvals (players)
+      const recentPlayerApprovals = await db
         .select()
         .from(players)
         .where(sql`${players.approvedAt} >= ${startTime} AND ${players.approvedAt} <= ${endTime}`)
         .orderBy(desc(players.approvedAt))
         .limit(5);
 
-      recentApprovals.forEach(player => {
+      recentPlayerApprovals.forEach(player => {
         activities.push({
-          id: `approval-${player.id}`,
+          id: `player-approval-${player.id}`,
           type: 'approval',
           icon: '✅',
-          message: `Registration approved: ${player.firstName} ${player.lastName}`,
+          message: `Player registration approved: ${player.firstName} ${player.lastName}`,
           timestamp: player.approvedAt,
           timeAgo: getTimeAgo(player.approvedAt)
+        });
+      });
+
+      // Get recent registration approvals (parents)
+      const recentParentApprovals = await db
+        .select()
+        .from(users)
+        .where(sql`${users.approvedAt} >= ${startTime} AND ${users.approvedAt} <= ${endTime}`)
+        .orderBy(desc(users.approvedAt))
+        .limit(5);
+
+      recentParentApprovals.forEach(user => {
+        activities.push({
+          id: `parent-approval-${user.id}`,
+          type: 'approval',
+          icon: '✅',
+          message: `Parent registration approved: ${user.firstName} ${user.lastName}`,
+          timestamp: user.approvedAt,
+          timeAgo: getTimeAgo(user.approvedAt)
         });
       });
 
