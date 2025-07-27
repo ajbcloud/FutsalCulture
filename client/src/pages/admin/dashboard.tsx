@@ -116,7 +116,7 @@ export default function AdminDashboard() {
     {
       title: "Total Revenue",
       subtitle: "(This Month)",
-      value: `$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`,
+      value: `$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`,
       icon: DollarSign,
       growth: metrics?.revenueGrowth || 0,
       comparison: "vs. last month",
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
     {
       title: "YTD Revenue",
       subtitle: "",
-      value: `$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`,
+      value: `$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`,
       icon: DollarSign,
       growth: 0, // YTD growth not implemented yet
       comparison: "vs. last year YTD",
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <KPICard
               title="Total Revenue"
-              value={`$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`}
+              value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
               tooltip="Sum of all payments received this month from session bookings."
               icon={DollarSign}
               iconColor="text-green-500"
