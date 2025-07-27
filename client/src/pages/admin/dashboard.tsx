@@ -5,15 +5,59 @@ import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   DollarSign, 
   Users, 
   Calendar, 
   CreditCard,
   TrendingUp,
+  TrendingDown,
+  UserCheck,
+  ClipboardList,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  ChevronRight,
+  Activity,
   AlertCircle,
-  ChevronRight
+  RefreshCw
 } from "lucide-react";
+
+interface DashboardMetrics {
+  // Primary KPIs
+  totalRevenue: number;
+  totalPlayers: number;
+  totalRegistrations: number;
+  sessionsThisWeek: number;
+  pendingPayments: number;
+  
+  // Secondary KPIs
+  ytdRevenue: number;
+  activeParents: number;
+  
+  // Growth rates
+  revenueGrowth: number;
+  ytdRevenueGrowth: number;
+  playersGrowth: number;
+  registrationsGrowth: number;
+  sessionsGrowth: number;
+  
+  // Additional context
+  lastMonthRevenue: number;
+  lastMonthPlayers: number;
+  lastMonthRegistrations: number;
+  lastWeekSessions: number;
+}
+
+interface ActivityItem {
+  id: string;
+  type: string;
+  icon: string;
+  message: string;
+  timestamp: string;
+  timeAgo: string;
+}
 
 interface AdminStats {
   totalRevenue: number;
@@ -32,7 +76,19 @@ interface AdminStats {
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
-  const { data: stats, isLoading } = useQuery<AdminStats>({
+  
+  // Fetch comprehensive dashboard metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery<DashboardMetrics>({
+    queryKey: ["/api/admin/dashboard-metrics"],
+  });
+
+  // Fetch recent activity
+  const { data: activities, isLoading: activitiesLoading } = useQuery<ActivityItem[]>({
+    queryKey: ["/api/admin/recent-activity"],
+  });
+
+  // Legacy stats for backwards compatibility
+  const { data: stats } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
   });
 
@@ -42,7 +98,13 @@ export default function AdminDashboard() {
     }
   };
 
-  if (isLoading) {
+  const formatGrowth = (growth: number) => {
+    if (growth === 0) return { text: "±0.0%", icon: Minus, color: "text-gray-500" };
+    if (growth > 0) return { text: `+${growth}%`, icon: ArrowUp, color: "text-green-500" };
+    return { text: `${growth}%`, icon: ArrowDown, color: "text-red-500" };
+  };
+
+  if (metricsLoading) {
     return (
       <RequireAdmin>
         <AdminLayout>
@@ -54,34 +116,68 @@ export default function AdminDashboard() {
     );
   }
 
-  const kpiCards = [
+  // Primary KPI Cards
+  const primaryKpis = [
     {
       title: "Total Revenue",
-      value: `$${((stats?.totalRevenue || 0) / 100).toFixed(2)}`,
+      subtitle: "(This Month)",
+      value: `$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`,
       icon: DollarSign,
-      trend: "+12.5%",
-      trendUp: true,
+      growth: metrics?.revenueGrowth || 0,
+      comparison: "vs. last month",
     },
     {
       title: "Total Players",
-      value: stats?.totalPlayers?.toString() || "0",
+      subtitle: "(This Month)",
+      value: (metrics?.totalPlayers || 0).toString(),
       icon: Users,
-      trend: "+3 this week",
-      trendUp: true,
+      growth: metrics?.playersGrowth || 0,
+      comparison: "vs. last month",
+    },
+    {
+      title: "Total Registrations",
+      subtitle: "(This Month)",
+      value: (metrics?.totalRegistrations || 0).toString(),
+      icon: ClipboardList,
+      growth: metrics?.registrationsGrowth || 0,
+      comparison: "vs. last month",
     },
     {
       title: "Sessions This Week",
-      value: stats?.sessionsThisWeek?.toString() || "0",
+      subtitle: "",
+      value: (metrics?.sessionsThisWeek || 0).toString(),
       icon: Calendar,
-      trend: "5 scheduled",
-      trendUp: true,
+      growth: metrics?.sessionsGrowth || 0,
+      comparison: "vs. last week",
     },
     {
       title: "Pending Payments",
-      value: stats?.pendingPayments?.toString() || "0",
+      subtitle: "(Needs attention)",
+      value: (metrics?.pendingPayments || 0).toString(),
       icon: CreditCard,
-      trend: "Needs attention",
-      trendUp: false,
+      growth: 0, // No growth comparison for pending payments
+      comparison: "",
+      isAlert: (metrics?.pendingPayments || 0) > 0,
+    },
+  ];
+
+  // Secondary KPI Cards
+  const secondaryKpis = [
+    {
+      title: "YTD Revenue",
+      subtitle: "",
+      value: `$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`,
+      icon: DollarSign,
+      growth: metrics?.ytdRevenueGrowth || 0,
+      comparison: "vs. last year YTD",
+    },
+    {
+      title: "Active Parents",
+      subtitle: "(Last 30 days)",
+      value: (metrics?.activeParents || 0).toString(),
+      icon: UserCheck,
+      growth: 0, // No historical comparison yet
+      comparison: "",
     },
   ];
 
@@ -97,28 +193,78 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {kpiCards.map((card) => {
-              const Icon = card.icon;
+          {/* Primary KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {primaryKpis.map((kpi) => {
+              const Icon = kpi.icon;
+              const growthInfo = formatGrowth(kpi.growth);
+              const GrowthIcon = growthInfo.icon;
+              
               return (
-                <Card key={card.title} className="bg-zinc-900 border-zinc-700">
+                <Card key={kpi.title} className={`bg-zinc-900 border-zinc-700 ${kpi.isAlert ? 'border-yellow-500/50' : ''}`}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-zinc-400">
-                      {card.title}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-sm font-medium text-zinc-400">
+                        {kpi.title}
+                      </CardTitle>
+                      {kpi.subtitle && (
+                        <p className="text-xs text-zinc-500">{kpi.subtitle}</p>
+                      )}
+                    </div>
+                    <Icon className={`w-4 h-4 ${kpi.isAlert ? 'text-yellow-500' : 'text-zinc-400'}`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-white mb-1">
+                      {kpi.value}
+                    </div>
+                    {kpi.growth !== 0 && kpi.comparison && (
+                      <div className={`text-xs flex items-center ${growthInfo.color}`}>
+                        <GrowthIcon className="w-3 h-3 mr-1" />
+                        {growthInfo.text} {kpi.comparison}
+                      </div>
+                    )}
+                    {kpi.isAlert && (
+                      <div className="text-xs text-yellow-500 flex items-center mt-1">
+                        <Activity className="w-3 h-3 mr-1" />
+                        Needs attention
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Secondary KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {secondaryKpis.map((kpi) => {
+              const Icon = kpi.icon;
+              const growthInfo = formatGrowth(kpi.growth);
+              const GrowthIcon = growthInfo.icon;
+              
+              return (
+                <Card key={kpi.title} className="bg-zinc-900 border-zinc-700">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div>
+                      <CardTitle className="text-sm font-medium text-zinc-400">
+                        {kpi.title}
+                      </CardTitle>
+                      {kpi.subtitle && (
+                        <p className="text-xs text-zinc-500">{kpi.subtitle}</p>
+                      )}
+                    </div>
                     <Icon className="w-4 h-4 text-zinc-400" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-white mb-1">
-                      {card.value}
+                      {kpi.value}
                     </div>
-                    <div className={`text-xs flex items-center ${
-                      card.trendUp ? 'text-green-500' : 'text-yellow-500'
-                    }`}>
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      {card.trend}
-                    </div>
+                    {kpi.growth !== 0 && kpi.comparison && (
+                      <div className={`text-xs flex items-center ${growthInfo.color}`}>
+                        <GrowthIcon className="w-3 h-3 mr-1" />
+                        {growthInfo.text} {kpi.comparison}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -208,38 +354,78 @@ export default function AdminDashboard() {
 
           {/* Recent Activity */}
           <Card className="bg-zinc-900 border-zinc-700">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-white">Recent Activity</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-zinc-400 hover:text-white"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
-                  <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm">Payment confirmed for U-10 Boys session</p>
-                    <p className="text-zinc-400 text-xs">2 minutes ago</p>
+              <ScrollArea className="h-80">
+                <div className="space-y-3">
+                  {activitiesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    </div>
+                  ) : activities && activities.length > 0 ? (
+                    activities.map((activity) => (
+                      <div key={activity.id} className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
+                        <div className="text-2xl">{activity.icon}</div>
+                        <div className="flex-1">
+                          <p className="text-white text-sm">{activity.message}</p>
+                          <p className="text-zinc-400 text-xs">{activity.timeAgo}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                      <p className="text-zinc-400">No recent activity</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+          
+          {/* KPI Definitions Help Section */}
+          <Card className="bg-zinc-900 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-white">KPI Definitions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h4 className="font-semibold text-white mb-2">Revenue Metrics</h4>
+                  <div className="space-y-2 text-zinc-400">
+                    <p><span className="text-white">Total Revenue:</span> Sum of all payments received this month</p>
+                    <p><span className="text-white">YTD Revenue:</span> Total revenue from January 1st to today</p>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm">New player registered: Sarah Johnson</p>
-                    <p className="text-zinc-400 text-xs">15 minutes ago</p>
+                <div>
+                  <h4 className="font-semibold text-white mb-2">Player Metrics</h4>
+                  <div className="space-y-2 text-zinc-400">
+                    <p><span className="text-white">Total Players:</span> New player registrations this month</p>
+                    <p><span className="text-white">Active Parents:</span> Parents who logged in within last 30 days</p>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
-                  <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4" />
+                <div>
+                  <h4 className="font-semibold text-white mb-2">Session Metrics</h4>
+                  <div className="space-y-2 text-zinc-400">
+                    <p><span className="text-white">Sessions This Week:</span> Training sessions scheduled for current week</p>
+                    <p><span className="text-white">Total Registrations:</span> Session signups created this month</p>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm">Session capacity reached: U-12 Girls Friday</p>
-                    <p className="text-zinc-400 text-xs">1 hour ago</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white mb-2">Payment Metrics</h4>
+                  <div className="space-y-2 text-zinc-400">
+                    <p><span className="text-white">Pending Payments:</span> Unpaid reservations older than 1 hour</p>
+                    <p><span className="text-white">Growth %:</span> Percentage change compared to previous period</p>
                   </div>
                 </div>
               </div>

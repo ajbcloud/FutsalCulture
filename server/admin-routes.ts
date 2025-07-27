@@ -5,6 +5,20 @@ import { users, players, signups, futsalSessions, payments, helpRequests, notifi
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 
+// Helper function to calculate time ago
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - new Date(date).getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+}
+
 // Integration helper functions
 function maskCredentials(provider: string, credentials: any): any {
   switch (provider) {
@@ -159,7 +173,315 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
 }
 
 export function setupAdminRoutes(app: any) {
-  // Admin Dashboard Stats
+  // New comprehensive dashboard metrics endpoint
+  app.get('/api/admin/dashboard-metrics', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const now = new Date();
+      
+      // Current month boundaries
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      
+      // Last month boundaries for comparison
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      
+      // Current year boundaries
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      
+      // Last year same date for YTD comparison
+      const lastYearSameDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
+      
+      // Current week boundaries
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      
+      // Last week boundaries
+      const startOfLastWeek = new Date(startOfWeek);
+      startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+      const endOfLastWeek = new Date(endOfWeek);
+      endOfLastWeek.setDate(endOfWeek.getDate() - 7);
+
+      // 1. Total Revenue (This Month)
+      const monthlyRevenueResult = await db
+        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+        .from(payments)
+        .where(and(
+          gte(payments.paidAt, startOfMonth),
+          lte(payments.paidAt, endOfMonth)
+        ));
+      const monthlyRevenue = monthlyRevenueResult[0]?.sumCents || 0;
+
+      // Last month revenue for comparison
+      const lastMonthRevenueResult = await db
+        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+        .from(payments)
+        .where(and(
+          gte(payments.paidAt, startOfLastMonth),
+          lte(payments.paidAt, endOfLastMonth)
+        ));
+      const lastMonthRevenue = lastMonthRevenueResult[0]?.sumCents || 0;
+
+      // 2. YTD Revenue
+      const ytdRevenueResult = await db
+        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+        .from(payments)
+        .where(and(
+          gte(payments.paidAt, startOfYear),
+          lte(payments.paidAt, now)
+        ));
+      const ytdRevenue = ytdRevenueResult[0]?.sumCents || 0;
+
+      // Last year YTD revenue for comparison
+      const lastYearYtdRevenueResult = await db
+        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+        .from(payments)
+        .where(and(
+          gte(payments.paidAt, startOfLastYear),
+          lte(payments.paidAt, lastYearSameDate)
+        ));
+      const lastYearYtdRevenue = lastYearYtdRevenueResult[0]?.sumCents || 0;
+
+      // 3. Total Players (This Month)
+      const monthlyPlayersResult = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${players.id})` })
+        .from(players)
+        .where(and(
+          gte(players.createdAt, startOfMonth),
+          lte(players.createdAt, endOfMonth)
+        ));
+      const monthlyPlayers = monthlyPlayersResult[0]?.count || 0;
+
+      // Last month players for comparison
+      const lastMonthPlayersResult = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${players.id})` })
+        .from(players)
+        .where(and(
+          gte(players.createdAt, startOfLastMonth),
+          lte(players.createdAt, endOfLastMonth)
+        ));
+      const lastMonthPlayers = lastMonthPlayersResult[0]?.count || 0;
+
+      // 4. Total Registrations (This Month)
+      const monthlyRegistrationsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(signups)
+        .where(and(
+          gte(signups.createdAt, startOfMonth),
+          lte(signups.createdAt, endOfMonth)
+        ));
+      const monthlyRegistrations = monthlyRegistrationsResult[0]?.count || 0;
+
+      // Last month registrations for comparison
+      const lastMonthRegistrationsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(signups)
+        .where(and(
+          gte(signups.createdAt, startOfLastMonth),
+          lte(signups.createdAt, endOfLastMonth)
+        ));
+      const lastMonthRegistrations = lastMonthRegistrationsResult[0]?.count || 0;
+
+      // 5. Sessions This Week
+      const weeklySessionsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(futsalSessions)
+        .where(and(
+          gte(futsalSessions.startTime, startOfWeek),
+          lte(futsalSessions.startTime, endOfWeek)
+        ));
+      const weeklySessions = weeklySessionsResult[0]?.count || 0;
+
+      // Last week sessions for comparison
+      const lastWeekSessionsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(futsalSessions)
+        .where(and(
+          gte(futsalSessions.startTime, startOfLastWeek),
+          lte(futsalSessions.startTime, endOfLastWeek)
+        ));
+      const lastWeekSessions = lastWeekSessionsResult[0]?.count || 0;
+
+      // 6. Pending Payments (Needs attention - older than 1 hour)
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const pendingPaymentsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(signups)
+        .where(and(
+          eq(signups.paid, false),
+          lte(signups.createdAt, oneHourAgo)
+        ));
+      const pendingPayments = pendingPaymentsResult[0]?.count || 0;
+
+      // 7. Active Parents (YTD - with activity in last 30 days)
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const activeParentsResult = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${users.id})` })
+        .from(users)
+        .where(
+          gte(users.lastLogin, thirtyDaysAgo)
+        );
+      const activeParents = activeParentsResult[0]?.count || 0;
+
+      // Calculate growth percentages
+      const calculateGrowth = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+      };
+
+      const revenueGrowth = calculateGrowth(monthlyRevenue, lastMonthRevenue);
+      const ytdRevenueGrowth = calculateGrowth(ytdRevenue, lastYearYtdRevenue);
+      const playersGrowth = calculateGrowth(monthlyPlayers, lastMonthPlayers);
+      const registrationsGrowth = calculateGrowth(monthlyRegistrations, lastMonthRegistrations);
+      const sessionsGrowth = calculateGrowth(weeklySessions, lastWeekSessions);
+
+      res.json({
+        // Primary KPIs
+        totalRevenue: monthlyRevenue,
+        totalPlayers: monthlyPlayers,
+        totalRegistrations: monthlyRegistrations,
+        sessionsThisWeek: weeklySessions,
+        pendingPayments,
+        
+        // Secondary KPIs
+        ytdRevenue,
+        activeParents,
+        
+        // Growth rates
+        revenueGrowth,
+        ytdRevenueGrowth,
+        playersGrowth,
+        registrationsGrowth,
+        sessionsGrowth,
+        
+        // Additional context
+        lastMonthRevenue,
+        lastMonthPlayers,
+        lastMonthRegistrations,
+        lastWeekSessions,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard metrics" });
+    }
+  });
+
+  // Recent activity endpoint
+  app.get('/api/admin/recent-activity', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { date = 'today', before } = req.query;
+      const now = new Date();
+      
+      let startTime: Date, endTime: Date;
+      
+      if (date === 'today') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else {
+        // For loading more - get yesterday's events
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        startTime = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+        endTime = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      }
+
+      const activities = [];
+
+      // Get recent payments
+      const recentPayments = await db
+        .select({
+          id: payments.id,
+          createdAt: payments.paidAt,
+          amount: payments.amountCents,
+          signupId: payments.signupId
+        })
+        .from(payments)
+        .where(and(
+          gte(payments.paidAt, startTime),
+          lte(payments.paidAt, endTime)
+        ))
+        .orderBy(desc(payments.paidAt))
+        .limit(10);
+
+      recentPayments.forEach(payment => {
+        activities.push({
+          id: payment.id,
+          type: 'payment',
+          icon: '🎉',
+          message: `Payment received: $${(payment.amount / 100).toFixed(2)}`,
+          timestamp: payment.createdAt,
+          timeAgo: getTimeAgo(payment.createdAt)
+        });
+      });
+
+      // Get recent player registrations
+      const recentPlayers = await db
+        .select({
+          id: players.id,
+          firstName: players.firstName,
+          lastName: players.lastName,
+          createdAt: players.createdAt
+        })
+        .from(players)
+        .where(and(
+          gte(players.createdAt, startTime),
+          lte(players.createdAt, endTime)
+        ))
+        .orderBy(desc(players.createdAt))
+        .limit(10);
+
+      recentPlayers.forEach(player => {
+        activities.push({
+          id: player.id,
+          type: 'registration',
+          icon: '👤',
+          message: `New player registered: ${player.firstName} ${player.lastName}`,
+          timestamp: player.createdAt,
+          timeAgo: getTimeAgo(player.createdAt)
+        });
+      });
+
+      // Get recent help requests
+      const recentHelpRequests = await db
+        .select({
+          id: helpRequests.id,
+          subject: helpRequests.subject,
+          createdAt: helpRequests.createdAt
+        })
+        .from(helpRequests)
+        .where(and(
+          gte(helpRequests.createdAt, startTime),
+          lte(helpRequests.createdAt, endTime)
+        ))
+        .orderBy(desc(helpRequests.createdAt))
+        .limit(5);
+
+      recentHelpRequests.forEach(request => {
+        activities.push({
+          id: request.id,
+          type: 'help',
+          icon: '💬',
+          message: `Help request: ${request.subject}`,
+          timestamp: request.createdAt,
+          timeAgo: getTimeAgo(request.createdAt)
+        });
+      });
+
+      // Sort all activities by timestamp
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.json(activities.slice(0, 20)); // Return max 20 activities
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity" });
+    }
+  });
+
+  // Legacy stats endpoint for backwards compatibility
   app.get('/api/admin/stats', requireAdmin, async (req: Request, res: Response) => {
     try {
       // For now, return basic stats using existing methods
