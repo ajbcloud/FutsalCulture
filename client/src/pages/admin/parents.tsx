@@ -105,6 +105,7 @@ export default function AdminParents() {
     
     // Handle search parameter from recent activity clicks
     if (searchParam) {
+      console.log('Setting search param from URL:', searchParam);
       setFilters(prev => ({
         ...prev,
         search: searchParam
@@ -134,10 +135,14 @@ export default function AdminParents() {
   useEffect(() => {
     // Always apply client-side filtering based on current filter values
     let filtered = parents.filter((parent: any) => {
+      const fullName = `${parent.firstName} ${parent.lastName}`.toLowerCase();
+      const searchTerm = filters.search.toLowerCase();
+      
       const matchesSearch = !filters.search || 
-        parent.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        parent.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        parent.email.toLowerCase().includes(filters.search.toLowerCase());
+        parent.firstName.toLowerCase().includes(searchTerm) ||
+        parent.lastName.toLowerCase().includes(searchTerm) ||
+        parent.email.toLowerCase().includes(searchTerm) ||
+        fullName.includes(searchTerm);
       
       const matchesStatus = !filters.status || filters.status === 'all' ||
         (filters.status === 'active' && parent.playersCount > 0) ||
@@ -148,8 +153,16 @@ export default function AdminParents() {
         (filters.role === 'assistant' && parent.isAssistant) ||
         (filters.role === 'parent' && !parent.isAdmin && !parent.isAssistant);
       
+      if (searchTerm) {
+        console.log('Filtering parent:', fullName, 'Search term:', searchTerm, 'Matches:', matchesSearch);
+      }
+      
       return matchesSearch && matchesStatus && matchesRole;
     });
+    
+    if (filters.search) {
+      console.log('Filtered parents:', filtered.length, 'out of', parents.length, 'for search:', filters.search);
+    }
     setFilteredParents(filtered);
   }, [parents, filters]);
 
