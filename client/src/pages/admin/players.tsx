@@ -58,22 +58,82 @@ export default function AdminPlayers() {
     const searchTerm = urlParams.get('search');
     const playerId = urlParams.get('playerId');
     
-    console.log('URL location:', location);
-    console.log('Search term from URL:', searchTerm);
-    console.log('Player ID from URL:', playerId);
+    console.log('Players page URL params:', { searchTerm, playerId });
     
-    // If search term provided, use it to filter
-    if (searchTerm) {
-      setFilters(prev => ({
-        ...prev,
-        search: searchTerm
-      }));
+    // Load players first, then apply filters
+    loadPlayers(searchTerm, playerId);
+  }, []);
+
+  const loadPlayers = async (searchTerm?: string | null, playerId?: string | null) => {
+    try {
+      setLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (playerId) params.append('playerId', playerId);
+      
+      const queryString = params.toString();
+      const url = queryString ? `/api/admin/players?${queryString}` : '/api/admin/players';
+      
+      const data = await adminPlayers.list();
+      console.log('admin players:', data);
+      
+      setPlayers(data);
+      
+      // If we have URL filters, apply them
+      if (searchTerm || playerId) {
+        let filtered = data;
+        
+        if (playerId) {
+          // Filter to show only the specific player
+          filtered = data.filter((player: any) => player.id === playerId);
+        } else if (searchTerm) {
+          // Filter by search term
+          filtered = data.filter((player: any) => 
+            player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            player.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          setFilters(prev => ({ ...prev, search: searchTerm }));
+        }
+        
+        setFilteredPlayers(filtered);
+      } else {
+        setFilteredPlayers(data);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading players:', error);
+      setLoading(false);
     }
+  };
+
+  // Load players normally when no URL params are present
+  useEffect(() => {
+    // Only load if no URL params were processed above
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('search') && !urlParams.get('playerId')) {
+      adminPlayers.list().then(data => {
+        setPlayers(data);
+        setFilteredPlayers(data);
+        setLoading(false);
+      }).catch(err => {
+        console.error('Error fetching players:', err);
+        setLoading(false);
+      });
+    }
+  }, []);
+
+  // Apply filters when URL changes (for deep linking)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const playerId = urlParams.get('playerId');
     
     if (playerId && players.length > 0) {
       // Find the player and set filters to show only that player
       const targetPlayer = players.find(p => p.id === playerId);
-      console.log('Target player found:', targetPlayer);
       
       if (targetPlayer) {
         const playerName = `${targetPlayer.firstName} ${targetPlayer.lastName}`;
@@ -86,32 +146,6 @@ export default function AdminPlayers() {
       }
     }
   }, [location, players]);
-
-  useEffect(() => {
-    adminPlayers.list().then(data => {
-      console.log('admin players:', data);
-      
-      // Handle error response
-      if (data.message && data.message.includes('Failed')) {
-        console.error('Server error:', data.message);
-        setPlayers([]);
-        setFilteredPlayers([]);
-        setLoading(false);
-        return;
-      }
-      
-      // Ensure data is an array
-      const playersArray = Array.isArray(data) ? data : [];
-      setPlayers(playersArray);
-      setFilteredPlayers(playersArray);
-      setLoading(false);
-    }).catch(err => {
-      console.error('Error fetching players:', err);
-      setPlayers([]);
-      setFilteredPlayers([]);
-      setLoading(false);
-    });
-  }, []);
 
   useEffect(() => {
     let filtered = players.filter((player: any) => {

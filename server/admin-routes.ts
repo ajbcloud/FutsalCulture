@@ -780,6 +780,8 @@ export function setupAdminRoutes(app: any) {
   // Admin Players Management
   app.get('/api/admin/players', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const { search, playerId } = req.query;
+      
       // Get all players with parent information and signup counts
       const allPlayers = await db.select({
         id: players.id,
@@ -811,7 +813,15 @@ export function setupAdminRoutes(app: any) {
       })
       .from(players)
       .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
-      .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`);
+      .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`)
+      .where(
+        playerId ? eq(players.id, playerId as string) : 
+        search ? or(
+          sql`${players.firstName} ILIKE ${`%${search}%`}`,
+          sql`${players.lastName} ILIKE ${`%${search}%`}`,
+          sql`CONCAT(${players.firstName}, ' ', ${players.lastName}) ILIKE ${`%${search}%`}`
+        ) : undefined
+      );
 
       const playersWithData = allPlayers.map(player => ({
         id: player.id,
