@@ -398,45 +398,7 @@ export default function AdminDashboard() {
               </ScrollArea>
             </CardContent>
           </Card>
-          
-          {/* KPI Definitions Help Section */}
-          <Card className="bg-zinc-900 border-zinc-700">
-            <CardHeader>
-              <CardTitle className="text-white">KPI Definitions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Revenue Metrics</h4>
-                  <div className="space-y-2 text-zinc-400">
-                    <p><span className="text-white">Total Revenue:</span> Sum of all payments received this month</p>
-                    <p><span className="text-white">YTD Revenue:</span> Total revenue from January 1st to today</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Player Metrics</h4>
-                  <div className="space-y-2 text-zinc-400">
-                    <p><span className="text-white">Total Players:</span> New player registrations this month</p>
-                    <p><span className="text-white">Active Parents:</span> Parents who logged in within last 30 days</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Session Metrics</h4>
-                  <div className="space-y-2 text-zinc-400">
-                    <p><span className="text-white">Sessions This Week:</span> Training sessions scheduled for current week</p>
-                    <p><span className="text-white">Total Registrations:</span> Session signups created this month</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-2">Payment Metrics</h4>
-                  <div className="space-y-2 text-zinc-400">
-                    <p><span className="text-white">Pending Payments:</span> Unpaid reservations older than 1 hour</p>
-                    <p><span className="text-white">Growth %:</span> Percentage change compared to previous period</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
       </AdminLayout>
     </RequireAdmin>
