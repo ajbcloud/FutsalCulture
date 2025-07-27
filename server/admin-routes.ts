@@ -323,14 +323,9 @@ export function setupAdminRoutes(app: any) {
 
       const activities = [];
 
-      // Get recent payments
+      // Get recent payments  
       const recentPayments = await db
-        .select({
-          id: payments.id,
-          createdAt: payments.paidAt,
-          amount: payments.amountCents,
-          signupId: payments.signupId
-        })
+        .select()
         .from(payments)
         .where(sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`)
         .orderBy(desc(payments.paidAt))
@@ -341,20 +336,15 @@ export function setupAdminRoutes(app: any) {
           id: payment.id,
           type: 'payment',
           icon: '🎉',
-          message: `Payment received: $${(payment.amount / 100).toFixed(2)}`,
-          timestamp: payment.createdAt,
-          timeAgo: getTimeAgo(payment.createdAt)
+          message: `Payment received: $${(payment.amountCents / 100).toFixed(2)}`,
+          timestamp: payment.paidAt,
+          timeAgo: getTimeAgo(payment.paidAt)
         });
       });
 
       // Get recent player registrations
       const recentPlayers = await db
-        .select({
-          id: players.id,
-          firstName: players.firstName,
-          lastName: players.lastName,
-          createdAt: players.createdAt
-        })
+        .select()
         .from(players)
         .where(sql`${players.createdAt} >= ${startTime} AND ${players.createdAt} <= ${endTime}`)
         .orderBy(desc(players.createdAt))
@@ -373,11 +363,7 @@ export function setupAdminRoutes(app: any) {
 
       // Get recent help requests
       const recentHelpRequests = await db
-        .select({
-          id: helpRequests.id,
-          subject: helpRequests.subject,
-          createdAt: helpRequests.createdAt
-        })
+        .select()
         .from(helpRequests)
         .where(sql`${helpRequests.createdAt} >= ${startTime} AND ${helpRequests.createdAt} <= ${endTime}`)
         .orderBy(desc(helpRequests.createdAt))
@@ -467,21 +453,62 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Sessions Management
+  // Admin Sessions Management with Accordion Data
   app.get('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const sessions = await storage.getSessions({});
-      
-      // Add signup counts using existing methods
-      const sessionsWithDetails = await Promise.all(
-        sessions.map(async (session) => {
-          const signupsCount = await storage.getSignupsCount(session.id);
-          return {
-            ...session,
-            signupsCount,
-          };
+      // Get sessions with signup counts in a single optimized query
+      const sessions = await db
+        .select({
+          id: futsalSessions.id,
+          title: futsalSessions.title,
+          location: futsalSessions.location,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          startTime: futsalSessions.startTime,
+          endTime: futsalSessions.endTime,
+          capacity: futsalSessions.capacity,
+          priceCents: futsalSessions.priceCents,
+          status: futsalSessions.status,
+          bookingOpenHour: futsalSessions.bookingOpenHour,
+          bookingOpenMinute: futsalSessions.bookingOpenMinute,
+          createdAt: futsalSessions.createdAt,
+          signupCount: sql<number>`(
+            SELECT COUNT(*) FROM ${signups}
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`,
         })
-      );
+        .from(futsalSessions)
+        .orderBy(desc(futsalSessions.startTime));
+
+      // Fetch all player details for those sessions in one go
+      const allSignups = await db
+        .select({
+          sessionId: signups.sessionId,
+          playerId: signups.playerId,
+          firstName: players.firstName,
+          lastName: players.lastName,
+          birthYear: players.birthYear,
+          gender: players.gender,
+          soccerClub: players.soccerClub,
+          paid: sql<boolean>`${signups.paymentIntentId} IS NOT NULL`,
+        })
+        .from(signups)
+        .innerJoin(players, eq(signups.playerId, players.id))
+        .where(inArray(signups.sessionId, sessions.map(s => s.id)));
+
+      // Group signups by session
+      const signupsBySession = allSignups.reduce((acc, row) => {
+        acc[row.sessionId] = acc[row.sessionId] || [];
+        acc[row.sessionId].push(row);
+        return acc;
+      }, {} as Record<string, typeof allSignups>);
+
+      // Combine sessions with their player details
+      const sessionsWithDetails = sessions.map(s => ({
+        ...s,
+        signupsCount: Number(s.signupCount),
+        playersSigned: signupsBySession[s.id] || [],
+      }));
 
       res.json(sessionsWithDetails);
     } catch (error) {

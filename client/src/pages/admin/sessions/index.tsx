@@ -31,6 +31,7 @@ export default function AdminSessions() {
   const [importing, setImporting] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [massUpdating, setMassUpdating] = useState(false);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     ageGroup: '',
     gender: '',
@@ -342,15 +343,20 @@ export default function AdminSessions() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSessions.map((session: any) => (
-              <TableRow key={session.id} className="border-zinc-800">
-                <TableCell>
-                  <Checkbox
-                    checked={selectedSessions.has(session.id)}
-                    onCheckedChange={(checked) => handleSelectSession(session.id, checked as boolean)}
-                  />
-                </TableCell>
-                <TableCell className="text-white">
+            {filteredSessions.map((session: any, index: number) => (
+              <React.Fragment key={session.id}>
+                <TableRow 
+                  className="border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+                  onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedSessions.has(session.id)}
+                      onCheckedChange={(checked) => handleSelectSession(session.id, checked as boolean)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableCell>
+                  <TableCell className="text-white">
                   {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
                 </TableCell>
                 <TableCell className="text-zinc-300">
@@ -361,7 +367,17 @@ export default function AdminSessions() {
                 </TableCell>
                 <TableCell className="text-zinc-300">{session.location}</TableCell>
                 <TableCell className="text-zinc-300">
-                  {session.signupsCount || 0}/{session.capacity}
+                  <div className="flex items-center space-x-2">
+                    <span>{session.signupsCount || 0}/{session.capacity}</span>
+                    <div className="w-12 bg-zinc-700 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all"
+                        style={{ 
+                          width: `${Math.min(((session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${
@@ -390,6 +406,68 @@ export default function AdminSessions() {
                   </div>
                 </TableCell>
               </TableRow>
+              
+              {/* Accordion Content */}
+              {expandedSession === session.id && (
+                <TableRow className="border-zinc-800">
+                  <TableCell colSpan={8} className="p-0">
+                    <div className="bg-zinc-800 p-6 rounded-lg mx-4 my-2">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-white mb-2">
+                          Players signed up: {session.signupsCount || 0} / {session.capacity}
+                        </h3>
+                        
+                        {/* KPI Bar */}
+                        <div className="w-full bg-zinc-700 rounded-full h-3 mb-4">
+                          <div 
+                            className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.min(((session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Player List */}
+                      {session.playersSigned && session.playersSigned.length > 0 ? (
+                        <div className="max-h-60 overflow-y-auto">
+                          <div className="space-y-2">
+                            {session.playersSigned.map((player: any) => (
+                              <div key={player.playerId} className="flex justify-between items-center p-3 bg-zinc-700 rounded-lg">
+                                <div className="flex-1">
+                                  <span className="text-white font-medium">
+                                    {player.firstName} {player.lastName}
+                                  </span>
+                                  <div className="text-zinc-300 text-sm">
+                                    Age {new Date().getFullYear() - player.birthYear} • {player.gender}
+                                    {player.soccerClub && (
+                                      <span className="ml-2 text-zinc-400">• {player.soccerClub}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    player.paid 
+                                      ? 'bg-green-900 text-green-300' 
+                                      : 'bg-yellow-900 text-yellow-300'
+                                  }`}>
+                                    {player.paid ? 'Paid' : 'Pending'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center text-zinc-400 py-8">
+                          No players signed up yet
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              </React.Fragment>
             ))}
             {filteredSessions.length === 0 && (
               <TableRow className="border-zinc-800">
