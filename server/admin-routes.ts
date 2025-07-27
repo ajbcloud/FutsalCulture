@@ -201,7 +201,7 @@ export function setupAdminRoutes(app: any) {
             lte(payments.paidAt, now)
           )
         );
-      const monthlyCents = monthlyRevenueResult[0]?.sum || 0;
+      const monthlyCents = Number(monthlyRevenueResult[0]?.sum || 0);
 
       // 2. YTD Revenue (year to date)
       const ytdRevenueResult = await db
@@ -214,17 +214,25 @@ export function setupAdminRoutes(app: any) {
             lte(payments.paidAt, now)
           )
         );
-      const ytdCents = ytdRevenueResult[0]?.sum || 0;
+      const ytdCents = Number(ytdRevenueResult[0]?.sum || 0);
 
-      // Debug log to verify calculations
-      console.log('→ revenue calculations:', { monthlyCents, ytdCents, firstOfMonth, startOfYear });
+      // Debug log to verify calculations and growth data
+      console.log('→ revenue calculations:', { 
+        monthlyCents, 
+        ytdCents, 
+        monthlyType: typeof monthlyCents,
+        ytdType: typeof ytdCents,
+        firstOfMonth, 
+        startOfYear,
+        debugTimestamp: new Date().toISOString()
+      });
 
       // 3. Total Revenue (All Time)
       const totalRevenueResult = await db
         .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
         .from(payments)
         .where(sql`${payments.paidAt} IS NOT NULL`);
-      const totalRevenue = totalRevenueResult[0]?.sumCents || 0;
+      const totalRevenue = Number(totalRevenueResult[0]?.sumCents || 0);
 
       // 4. Total Players (All Time)
       const totalPlayersResult = await db
@@ -300,7 +308,7 @@ export function setupAdminRoutes(app: any) {
             lte(payments.paidAt, endOfLastMonth)
           )
         );
-      const lastMonthCents = lastMonthRevenueResult[0]?.sum || 0;
+      const lastMonthCents = Number(lastMonthRevenueResult[0]?.sum || 0);
       const revenueGrowth = lastMonthCents === 0 ? 0 : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
 
       // 2. Player Growth (current month vs last month new registrations)
