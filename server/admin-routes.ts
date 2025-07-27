@@ -721,6 +721,12 @@ export function setupAdminRoutes(app: any) {
         playersSigned: signupsBySession[s.id] || [],
       }));
 
+      console.log('Sessions with signup counts:', sessionsWithDetails.slice(0, 2).map(s => ({ 
+        id: s.id, 
+        signupCount: s.signupCount, 
+        signupsCount: s.signupsCount,
+        capacity: s.capacity 
+      })));
       res.json(sessionsWithDetails);
     } catch (error) {
       console.error("Error fetching admin sessions:", error);
