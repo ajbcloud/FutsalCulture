@@ -196,7 +196,7 @@ export function setupAdminRoutes(app: any) {
         .from(payments)
         .where(
           and(
-            eq(payments.paid, true),
+            sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, firstOfMonth),
             lte(payments.paidAt, now)
           )
@@ -209,7 +209,7 @@ export function setupAdminRoutes(app: any) {
         .from(payments)
         .where(
           and(
-            eq(payments.paid, true),
+            sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, startOfYear),
             lte(payments.paidAt, now)
           )

@@ -28,27 +28,21 @@ import {
 interface DashboardMetrics {
   // Primary KPIs
   totalRevenue: number;
+  monthlyRevenue: number;
+  ytdRevenue: number;
   totalPlayers: number;
-  totalRegistrations: number;
+  monthlyPlayers: number;
+  totalSignups: number;
   sessionsThisWeek: number;
   pendingPayments: number;
-  
-  // Secondary KPIs
-  ytdRevenue: number;
   activeParents: number;
+  fillRate: number;
   
   // Growth rates
   revenueGrowth: number;
-  ytdRevenueGrowth: number;
   playersGrowth: number;
   registrationsGrowth: number;
   sessionsGrowth: number;
-  
-  // Additional context
-  lastMonthRevenue: number;
-  lastMonthPlayers: number;
-  lastMonthRegistrations: number;
-  lastWeekSessions: number;
 }
 
 interface ActivityItem {
@@ -136,9 +130,9 @@ export default function AdminDashboard() {
       comparison: "vs. last month",
     },
     {
-      title: "Total Registrations",
-      subtitle: "(This Month)",
-      value: (metrics?.totalRegistrations || 0).toString(),
+      title: "Total Signups",
+      subtitle: "(All Time)",
+      value: (metrics?.totalSignups || 0).toString(),
       icon: ClipboardList,
       growth: metrics?.registrationsGrowth || 0,
       comparison: "vs. last month",
@@ -169,7 +163,7 @@ export default function AdminDashboard() {
       subtitle: "",
       value: `$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`,
       icon: DollarSign,
-      growth: metrics?.ytdRevenueGrowth || 0,
+      growth: 0, // YTD growth not implemented yet
       comparison: "vs. last year YTD",
     },
     {
@@ -256,7 +250,7 @@ export default function AdminDashboard() {
               icon={DollarSign}
               iconColor="text-green-500"
               subtitle="Year to Date"
-              growth={metrics?.ytdRevenueGrowth || 0}
+              growth={0}
               showGrowth={true}
             />
             <KPICard
