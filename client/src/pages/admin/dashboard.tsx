@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { usePageRefresh } from "@/hooks/use-page-refresh";
 import AdminLayout from "@/components/admin-layout";
 import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,9 +73,18 @@ interface AdminStats {
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   
+  // Automatically refresh data when navigating back to dashboard
+  usePageRefresh([
+    "/api/admin/dashboard-metrics",
+    "/api/admin/recent-activity", 
+    "/api/admin/stats"
+  ]);
+  
   // Fetch comprehensive dashboard metrics
   const { data: metrics, isLoading: metricsLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/admin/dashboard-metrics"],
+    staleTime: 0, // Always refetch for dashboard metrics
+    refetchOnMount: true,
   });
 
   // Fetch recent activity
@@ -82,11 +92,14 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/recent-activity"],
     refetchInterval: 10000, // Auto-refresh every 10 seconds
     staleTime: 0, // Always consider data stale to ensure fresh fetches
+    refetchOnMount: true,
   });
 
   // Legacy stats for backwards compatibility
   const { data: stats } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
+    staleTime: 0, // Always refetch for stats
+    refetchOnMount: true,
   });
 
   const handleTaskClick = (task: AdminStats['pendingTasks'][0]) => {

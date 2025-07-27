@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin-layout';
 import { adminPayments } from '@/lib/adminApi';
 import { queryClient } from '@/lib/queryClient';
+import { usePageRefresh } from '@/hooks/use-page-refresh';
 import { Button } from '../../components/ui/button';
 import {
   Table,
@@ -33,6 +34,9 @@ export default function AdminPayments() {
     dateRange: ''
   });
   const { toast } = useToast();
+  
+  // Refresh payments data when returning to page
+  usePageRefresh(["/api/admin/payments"]);
 
   const loadPayments = async () => {
     try {

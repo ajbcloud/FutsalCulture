@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin-layout';
+import { usePageRefresh } from '@/hooks/use-page-refresh';
 import {
   Table,
   TableBody,
@@ -37,6 +38,9 @@ export default function AdminPendingRegistrations() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Refresh data when returning to page
+  usePageRefresh(["/api/admin/pending-registrations"]);
 
   useEffect(() => {
     fetchPendingRegistrations();
