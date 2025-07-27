@@ -55,13 +55,20 @@ export default function AdminPlayers() {
   // Check for URL parameters on load
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get('search');
     const playerId = urlParams.get('playerId');
     
     console.log('URL location:', location);
-    console.log('Full URL:', window.location.href);
-    console.log('Search params:', window.location.search);
+    console.log('Search term from URL:', searchTerm);
     console.log('Player ID from URL:', playerId);
-    console.log('Players loaded:', players.length);
+    
+    // If search term provided, use it to filter
+    if (searchTerm) {
+      setFilters(prev => ({
+        ...prev,
+        search: searchTerm
+      }));
+    }
     
     if (playerId && players.length > 0) {
       // Find the player and set filters to show only that player

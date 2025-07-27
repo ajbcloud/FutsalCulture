@@ -59,6 +59,17 @@ export default function AdminPayments() {
 
   useEffect(() => {
     loadPayments();
+    
+    // Check for URL search parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchTerm = urlParams.get('search');
+    
+    if (searchTerm) {
+      setFilters(prev => ({
+        ...prev,
+        search: searchTerm
+      }));
+    }
   }, []);
 
   useEffect(() => {

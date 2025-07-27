@@ -400,10 +400,20 @@ export function setupAdminRoutes(app: any) {
 
       const activities = [];
 
-      // Get recent payments  
+      // Get recent payments with player details
       const recentPayments = await db
-        .select()
+        .select({
+          id: payments.id,
+          amountCents: payments.amountCents,
+          paidAt: payments.paidAt,
+          playerId: signups.playerId,
+          playerFirstName: players.firstName,
+          playerLastName: players.lastName,
+          sessionId: signups.sessionId
+        })
         .from(payments)
+        .innerJoin(signups, eq(payments.id, signups.paymentIntentId))
+        .innerJoin(players, eq(signups.playerId, players.id))
         .where(sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`)
         .orderBy(desc(payments.paidAt))
         .limit(10);
@@ -413,9 +423,13 @@ export function setupAdminRoutes(app: any) {
           id: payment.id,
           type: 'payment',
           icon: '🎉',
-          message: `Payment received: $${(payment.amountCents / 100).toFixed(2)}`,
+          message: `Payment received: $${(payment.amountCents / 100).toFixed(2)} from ${payment.playerFirstName} ${payment.playerLastName}`,
           timestamp: payment.paidAt,
-          timeAgo: getTimeAgo(payment.paidAt)
+          timeAgo: getTimeAgo(payment.paidAt),
+          // Navigation metadata
+          navigationUrl: '/admin/payments',
+          searchTerm: `${payment.playerFirstName} ${payment.playerLastName}`,
+          playerId: payment.playerId
         });
       });
 
@@ -434,7 +448,11 @@ export function setupAdminRoutes(app: any) {
           icon: '👤',
           message: `New player registered: ${player.firstName} ${player.lastName}`,
           timestamp: player.createdAt,
-          timeAgo: getTimeAgo(player.createdAt)
+          timeAgo: getTimeAgo(player.createdAt),
+          // Navigation metadata
+          navigationUrl: '/admin/players',
+          searchTerm: `${player.firstName} ${player.lastName}`,
+          playerId: player.id
         });
       });
 
@@ -453,7 +471,34 @@ export function setupAdminRoutes(app: any) {
           icon: '✅',
           message: `Player registration approved: ${player.firstName} ${player.lastName}`,
           timestamp: player.approvedAt,
-          timeAgo: getTimeAgo(player.approvedAt)
+          timeAgo: getTimeAgo(player.approvedAt),
+          // Navigation metadata
+          navigationUrl: '/admin/players',
+          searchTerm: `${player.firstName} ${player.lastName}`,
+          playerId: player.id
+        });
+      });
+
+      // Get recent parent registrations (new signups)
+      const recentParents = await db
+        .select()
+        .from(users)
+        .where(sql`${users.createdAt} >= ${startTime} AND ${users.createdAt} <= ${endTime}`)
+        .orderBy(desc(users.createdAt))
+        .limit(10);
+
+      recentParents.forEach(user => {
+        activities.push({
+          id: `parent-reg-${user.id}`,
+          type: 'registration',
+          icon: '👨‍👩‍👧‍👦',
+          message: `New parent registered: ${user.firstName} ${user.lastName}`,
+          timestamp: user.createdAt,
+          timeAgo: getTimeAgo(user.createdAt),
+          // Navigation metadata  
+          navigationUrl: '/admin/parents',
+          searchTerm: `${user.firstName} ${user.lastName}`,
+          parentId: user.id
         });
       });
 
@@ -474,7 +519,11 @@ export function setupAdminRoutes(app: any) {
           icon: '✅',
           message: `Parent registration approved: ${user.firstName} ${user.lastName}`,
           timestamp: user.approvedAt,
-          timeAgo: getTimeAgo(user.approvedAt)
+          timeAgo: getTimeAgo(user.approvedAt),
+          // Navigation metadata  
+          navigationUrl: '/admin/parents',
+          searchTerm: `${user.firstName} ${user.lastName}`,
+          parentId: user.id
         });
       });
 

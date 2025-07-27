@@ -1,0 +1,61 @@
+Below is a self-contained, step-by-step instruction set you can paste straight into the Replit agent to fix the “0 / 12” capacity bug and make sure capacity and fill-rate everywhere reflect the real number of signups:
+
+typescript
+Copy
+Edit
+We need to correct the session-capacity display and fill-rate calculation on the Admin → Sessions page (and downstream dashboards) so that “X / Y” always shows the true number of signups for that session. Right now it’s hard-coded or mis-typed and always reads “0 / 12.” Follow these exact steps:
+
+1. **Server: ensure `signupCount` is a genuine integer**  
+   - In `server/admin-routes.ts`—in the `/api/admin/sessions` handler—locate the snippet that builds `signupCount`.  
+   - If you used a raw SQL snippet like ``sql<number>`(SELECT COUNT(*)::int …)``, wrap it in `Number(...)` or cast it to ensure Drizzle returns a JS number, not a string.  
+   - For example, change:
+     ```ts
+     signupCount: sql<number>`(
+       SELECT COUNT(*) FROM ${signups}
+       WHERE ${signups.sessionId} = ${futsalSessions.id}
+     )`,
+     ```
+     to:
+     ```ts
+     signupCount: sql<number>`CAST(
+       (SELECT COUNT(*) FROM ${signups}
+        WHERE ${signups.sessionId} = ${futsalSessions.id}
+       ) AS int
+     )`,
+     ```
+     then, **after** you fetch `sessions`, immediately do:
+     ```ts
+     const sessionsWithNumbers = sessions.map(s => ({
+       ...s,
+       signupCount: Number(s.signupCount),
+     }));
+     ```
+   - Return **only** `sessionsWithNumbers` (or include it in your `res.json`).
+
+2. **Client: render capacity from `signupCount` + `capacity`**  
+   - In `client/src/pages/admin/sessions.tsx`, find where you render the “Capacity” column. Replace any hard-coded or incorrect binding (`0/12`) with:
+     ```jsx
+     <td className="px-4 py-2">
+       {session.signupCount} / {session.capacity}
+       <ProgressBar
+         value={session.signupCount}
+         max={session.capacity}
+       />
+     </td>
+     ```
+   - Ensure `session.signupCount` is a number before rendering. You can guard:
+     ```js
+     const count = typeof session.signupCount === 'number' ? session.signupCount : parseInt(session.signupCount, 10) || 0;
+     ```
+   - Use that `count` both to display “count / capacity” and to feed your progress bar component.
+
+3. **Dashboard fill-rate consistency**  
+   - On **both** the Admin Dashboard and Analytics Dashboard, any fill-rate metric that divides “signups ÷ capacity” must pull from this same `signupCount` value, not a stale or separate query.  
+   - Audit `/api/admin/analytics` in `server/admin-routes.ts` and confirm it uses exactly the same COUNT(...) logic and Casting as step 1—so fill-rate matches “X / Y” on Sessions.
+
+4. **QA & smoke tests**  
+   - Run the server locally and hit `/api/admin/sessions` in Postman. Confirm each object has `signupCount: <number>`.  
+   - In the browser, load **Admin → Sessions**, click a session accordion—confirm the header shows “2 / 12” (or whatever your seed data has).  
+   - Verify the fill-rate bar and percentage on the Dashboard reflect `2 / 12` → `16.7 %`.  
+   - Test with an empty signup set → “0 / 12” and `0 %`.  
+   - Test a full session → “12 / 12” and `100 %`.

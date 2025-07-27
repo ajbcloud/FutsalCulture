@@ -53,6 +53,11 @@ interface ActivityItem {
   message: string;
   timestamp: string;
   timeAgo: string;
+  // Navigation metadata for clickable activities
+  navigationUrl?: string;
+  searchTerm?: string;
+  playerId?: string;
+  parentId?: string;
 }
 
 interface AdminStats {
@@ -105,6 +110,17 @@ export default function AdminDashboard() {
   const handleTaskClick = (task: AdminStats['pendingTasks'][0]) => {
     if (task.action) {
       setLocation(task.action);
+    }
+  };
+
+  const handleActivityClick = (activity: ActivityItem) => {
+    if (activity.navigationUrl) {
+      // Navigate to the URL with search parameters if available
+      let url = activity.navigationUrl;
+      if (activity.searchTerm) {
+        url += `?search=${encodeURIComponent(activity.searchTerm)}`;
+      }
+      setLocation(url);
     }
   };
 
@@ -389,12 +405,21 @@ export default function AdminDashboard() {
                     </div>
                   ) : activities && activities.length > 0 ? (
                     activities.map((activity) => (
-                      <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
+                      <div 
+                        key={`${activity.type}-${activity.id}`} 
+                        className={`flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg transition-colors ${
+                          activity.navigationUrl ? 'hover:bg-zinc-700 cursor-pointer' : ''
+                        }`}
+                        onClick={() => activity.navigationUrl && handleActivityClick(activity)}
+                      >
                         <div className="text-2xl">{activity.icon}</div>
                         <div className="flex-1">
                           <p className="text-white text-sm">{activity.message}</p>
                           <p className="text-zinc-400 text-xs">{activity.timeAgo}</p>
                         </div>
+                        {activity.navigationUrl && (
+                          <ChevronRight className="w-4 h-4 text-zinc-400" />
+                        )}
                       </div>
                     ))
                   ) : (

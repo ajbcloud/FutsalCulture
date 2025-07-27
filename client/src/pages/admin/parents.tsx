@@ -100,7 +100,17 @@ export default function AdminParents() {
     // Check for URL filter parameters
     const urlParams = new URLSearchParams(window.location.search);
     const filterParam = urlParams.get('filter');
+    const searchParam = urlParams.get('search');
     const parentIdParam = urlParams.get('parentId');
+    
+    // Handle search parameter from recent activity clicks
+    if (searchParam) {
+      setFilters(prev => ({
+        ...prev,
+        search: searchParam
+      }));
+      setUrlFilter(searchParam);
+    }
     
     if (filterParam || parentIdParam) {
       const decodedFilter = filterParam ? decodeURIComponent(filterParam) : undefined;
