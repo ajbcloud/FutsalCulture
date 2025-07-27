@@ -278,6 +278,80 @@ export function setupAdminRoutes(app: any) {
       const signupsForFill = totalSignupsForFillResult[0]?.count || 0;
       const fillRate = totalCapacity > 0 ? Math.round((signupsForFill / totalCapacity) * 100) : 0;
 
+      // Calculate growth rates by comparing with previous periods
+      
+      // Previous month boundaries for growth calculations
+      const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      
+      // Previous week boundaries
+      const prevWeekStart = new Date(startOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
+      const prevWeekEnd = new Date(endOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+      // 1. Revenue Growth (current month vs last month)
+      const lastMonthRevenueResult = await db
+        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+        .from(payments)
+        .where(
+          and(
+            sql`${payments.paidAt} IS NOT NULL`,
+            gte(payments.paidAt, firstOfLastMonth),
+            lte(payments.paidAt, endOfLastMonth)
+          )
+        );
+      const lastMonthCents = lastMonthRevenueResult[0]?.sum || 0;
+      const revenueGrowth = lastMonthCents === 0 ? 0 : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
+
+      // 2. Player Growth (current month vs last month new registrations)
+      const lastMonthPlayersResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(players)
+        .where(
+          and(
+            gte(players.createdAt, firstOfLastMonth),
+            lte(players.createdAt, endOfLastMonth)
+          )
+        );
+      const lastMonthPlayers = lastMonthPlayersResult[0]?.count || 0;
+      const playersGrowth = lastMonthPlayers === 0 ? 0 : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
+
+      // 3. Signups Growth (current month vs last month)
+      const thisMonthSignupsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(signups)
+        .where(
+          and(
+            gte(signups.createdAt, firstOfMonth),
+            lte(signups.createdAt, now)
+          )
+        );
+      const thisMonthSignups = thisMonthSignupsResult[0]?.count || 0;
+      
+      const lastMonthSignupsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(signups)
+        .where(
+          and(
+            gte(signups.createdAt, firstOfLastMonth),
+            lte(signups.createdAt, endOfLastMonth)
+          )
+        );
+      const lastMonthSignups = lastMonthSignupsResult[0]?.count || 0;
+      const registrationsGrowth = lastMonthSignups === 0 ? 0 : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
+
+      // 4. Sessions Growth (current week vs last week)
+      const lastWeekSessionsResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(futsalSessions)
+        .where(
+          and(
+            gte(futsalSessions.startTime, prevWeekStart),
+            lte(futsalSessions.startTime, prevWeekEnd)
+          )
+        );
+      const lastWeekSessions = lastWeekSessionsResult[0]?.count || 0;
+      const sessionsGrowth = lastWeekSessions === 0 ? 0 : Math.round(((weeklySessions - lastWeekSessions) / lastWeekSessions) * 100);
+
       res.json({
         // Primary KPIs
         totalRevenue,
@@ -291,11 +365,11 @@ export function setupAdminRoutes(app: any) {
         activeParents,
         fillRate,
         
-        // Growth indicators (simplified for now - can be enhanced later)
-        revenueGrowth: 0, // Will implement proper growth tracking later
-        playersGrowth: 0,
-        registrationsGrowth: 0,
-        sessionsGrowth: 0,
+        // Growth indicators with actual calculations
+        revenueGrowth,
+        playersGrowth,
+        registrationsGrowth,
+        sessionsGrowth,
       });
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
