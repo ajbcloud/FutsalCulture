@@ -37,7 +37,9 @@ export default function AdminSessions() {
     gender: '',
     location: '',
     status: '',
-    search: ''
+    search: '',
+    dateFrom: '',
+    dateTo: ''
   });
   const [massUpdateData, setMassUpdateData] = useState({
     title: '',
@@ -64,15 +66,33 @@ export default function AdminSessions() {
 
   useEffect(() => {
     let filtered = sessions.filter((session: any) => {
-      const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || session.ageGroup === filters.ageGroup;
-      const matchesGender = !filters.gender || filters.gender === 'all' || session.gender === filters.gender;
+      const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || 
+        session.ageGroups?.includes(filters.ageGroup) || session.ageGroup === filters.ageGroup;
+      const matchesGender = !filters.gender || filters.gender === 'all' || 
+        session.genders?.includes(filters.gender) || session.gender === filters.gender;
       const matchesLocation = !filters.location || session.location.toLowerCase().includes(filters.location.toLowerCase());
       const matchesStatus = !filters.status || filters.status === 'all' || session.status === filters.status;
       const matchesSearch = !filters.search || 
         session.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         session.location.toLowerCase().includes(filters.search.toLowerCase());
       
-      return matchesAgeGroup && matchesGender && matchesLocation && matchesStatus && matchesSearch;
+      // Date filtering
+      let matchesDate = true;
+      if (filters.dateFrom || filters.dateTo) {
+        const sessionDate = new Date(session.startTime);
+        if (filters.dateFrom) {
+          const fromDate = new Date(filters.dateFrom);
+          fromDate.setHours(0, 0, 0, 0);
+          matchesDate = matchesDate && sessionDate >= fromDate;
+        }
+        if (filters.dateTo) {
+          const toDate = new Date(filters.dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          matchesDate = matchesDate && sessionDate <= toDate;
+        }
+      }
+      
+      return matchesAgeGroup && matchesGender && matchesLocation && matchesStatus && matchesSearch && matchesDate;
     });
     setFilteredSessions(filtered);
   }, [sessions, filters]);
@@ -254,7 +274,7 @@ export default function AdminSessions() {
 
       {/* Filter Controls */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
           <div>
             <Label className="text-zinc-300">Search</Label>
             <Input
@@ -320,7 +340,48 @@ export default function AdminSessions() {
               className="bg-zinc-800 border-zinc-700 text-white"
             />
           </div>
+
+          <div>
+            <Label className="text-zinc-300">From Date</Label>
+            <Input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">To Date</Label>
+            <Input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+              className="bg-zinc-800 border-zinc-700 text-white"
+            />
+          </div>
         </div>
+        
+        {/* Clear Filters Button */}
+        {(filters.search || filters.ageGroup || filters.gender || filters.status || filters.location || filters.dateFrom || filters.dateTo) && (
+          <div className="mt-4 flex justify-end">
+            <Button 
+              variant="outline"
+              onClick={() => setFilters({
+                ageGroup: '',
+                gender: '',
+                location: '',
+                status: '',
+                search: '',
+                dateFrom: '',
+                dateTo: ''
+              })}
+              className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
