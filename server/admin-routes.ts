@@ -321,6 +321,8 @@ export function setupAdminRoutes(app: any) {
         endTime = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
       }
 
+      console.log('Recent activity query:', { startTime, endTime, now });
+
       const activities = [];
 
       // Get recent payments  
@@ -388,6 +390,8 @@ export function setupAdminRoutes(app: any) {
         .orderBy(desc(users.approvedAt))
         .limit(5);
 
+      console.log('Found parent approvals:', recentParentApprovals.length);
+      
       recentParentApprovals.forEach(user => {
         activities.push({
           id: `parent-approval-${user.id}`,

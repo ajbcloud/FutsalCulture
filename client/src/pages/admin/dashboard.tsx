@@ -81,6 +81,7 @@ export default function AdminDashboard() {
   const { data: activities, isLoading: activitiesLoading, refetch: refetchActivity } = useQuery<ActivityItem[]>({
     queryKey: ["/api/admin/recent-activity"],
     refetchInterval: 10000, // Auto-refresh every 10 seconds
+    staleTime: 0, // Always consider data stale to ensure fresh fetches
   });
 
   // Legacy stats for backwards compatibility
