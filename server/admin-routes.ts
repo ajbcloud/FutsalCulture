@@ -646,9 +646,10 @@ export function setupAdminRoutes(app: any) {
           bookingOpenHour: futsalSessions.bookingOpenHour,
           bookingOpenMinute: futsalSessions.bookingOpenMinute,
           createdAt: futsalSessions.createdAt,
-          signupCount: sql<number>`(
-            SELECT COUNT(*) FROM signups
-            WHERE signups.session_id = ${futsalSessions.id}
+          signupCount: sql<number>`CAST(
+            (SELECT COUNT(*) FROM signups
+             WHERE signups.session_id = ${futsalSessions.id}
+            ) AS int
           )`,
         })
         .from(futsalSessions)
@@ -677,10 +678,16 @@ export function setupAdminRoutes(app: any) {
         return acc;
       }, {} as Record<string, typeof allSignups>);
 
-      // Combine sessions with their player details
-      const sessionsWithDetails = sessions.map(s => ({
+      // Convert signupCount to actual numbers and combine with player details
+      const sessionsWithNumbers = sessions.map(s => ({
         ...s,
-        signupsCount: Number(s.signupCount),
+        signupCount: Number(s.signupCount),
+      }));
+
+      // Combine sessions with their player details
+      const sessionsWithDetails = sessionsWithNumbers.map(s => ({
+        ...s,
+        signupsCount: s.signupCount, // Keep both for compatibility
         playersSigned: signupsBySession[s.id] || [],
       }));
 

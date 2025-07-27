@@ -429,12 +429,12 @@ export default function AdminSessions() {
                 <TableCell className="text-zinc-300">{session.location}</TableCell>
                 <TableCell className="text-zinc-300">
                   <div className="flex items-center space-x-2">
-                    <span>{session.signupsCount || 0}/{session.capacity}</span>
+                    <span>{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
                     <div className="w-12 bg-zinc-700 rounded-full h-2">
                       <div 
                         className="bg-blue-600 h-2 rounded-full transition-all"
                         style={{ 
-                          width: `${Math.min(((session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                          width: `${Math.min(((session.signupCount || session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
                         }}
                       />
                     </div>
@@ -475,7 +475,7 @@ export default function AdminSessions() {
                     <div className="bg-zinc-800 p-6 rounded-lg mx-4 my-2">
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-white mb-2">
-                          Players signed up: {session.signupsCount || 0} / {session.capacity}
+                          Players signed up: {session.signupCount || session.signupsCount || 0} / {session.capacity}
                         </h3>
                         
                         {/* KPI Bar */}
@@ -483,7 +483,7 @@ export default function AdminSessions() {
                           <div 
                             className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                             style={{ 
-                              width: `${Math.min(((session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                              width: `${Math.min(((session.signupCount || session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
                             }}
                           />
                         </div>
