@@ -68,40 +68,18 @@ export default function AdminPlayers() {
     try {
       setLoading(true);
       
-      // Build query parameters
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (playerId) params.append('playerId', playerId);
-      
-      const queryString = params.toString();
-      const url = queryString ? `/api/admin/players?${queryString}` : '/api/admin/players';
-      
       const data = await adminPlayers.list();
       console.log('admin players:', data);
       
       setPlayers(data);
       
-      // If we have URL filters, apply them
-      if (searchTerm || playerId) {
-        let filtered = data;
-        
-        if (playerId) {
-          // Filter to show only the specific player
-          filtered = data.filter((player: any) => player.id === playerId);
-        } else if (searchTerm) {
-          // Filter by search term
-          filtered = data.filter((player: any) => 
-            player.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            player.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          setFilters(prev => ({ ...prev, search: searchTerm }));
-        }
-        
-        setFilteredPlayers(filtered);
-      } else {
-        setFilteredPlayers(data);
+      // Update filters state if we have URL parameters
+      if (searchTerm) {
+        setFilters(prev => ({ ...prev, search: searchTerm }));
       }
+      
+      // Don't pre-filter here - let the main filtering useEffect handle it
+      setFilteredPlayers(data);
       
       setLoading(false);
     } catch (error) {
@@ -131,14 +109,12 @@ export default function AdminPlayers() {
         player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
         `${player.firstName} ${player.lastName}`.toLowerCase().includes(filters.search.toLowerCase());
       
-      console.log('Filtering player:', player.firstName, player.lastName);
-      console.log('Search term:', filters.search);
-      console.log('Matches search:', matchesSearch);
+
       
       return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSoccerClub && matchesSearch;
     });
     
-    console.log('Filtered players count:', filtered.length);
+
     setFilteredPlayers(filtered);
   }, [players, filters]);
 
