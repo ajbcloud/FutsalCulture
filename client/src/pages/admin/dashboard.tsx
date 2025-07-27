@@ -78,8 +78,9 @@ export default function AdminDashboard() {
   });
 
   // Fetch recent activity
-  const { data: activities, isLoading: activitiesLoading } = useQuery<ActivityItem[]>({
+  const { data: activities, isLoading: activitiesLoading, refetch: refetchActivity } = useQuery<ActivityItem[]>({
     queryKey: ["/api/admin/recent-activity"],
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
   });
 
   // Legacy stats for backwards compatibility
@@ -360,7 +361,7 @@ export default function AdminDashboard() {
                 variant="ghost"
                 size="sm"
                 className="text-zinc-400 hover:text-white"
-                onClick={() => window.location.reload()}
+                onClick={() => refetchActivity()}
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>
@@ -374,7 +375,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : activities && activities.length > 0 ? (
                     activities.map((activity) => (
-                      <div key={activity.id} className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
+                      <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg">
                         <div className="text-2xl">{activity.icon}</div>
                         <div className="flex-1">
                           <p className="text-white text-sm">{activity.message}</p>

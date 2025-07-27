@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin-layout';
 import { adminPayments } from '@/lib/adminApi';
+import { queryClient } from '@/lib/queryClient';
 import { Button } from '../../components/ui/button';
 import {
   Table,
@@ -84,6 +85,10 @@ export default function AdminPayments() {
       await adminPayments.confirm(signupId);
       toast({ title: "Payment confirmed successfully" });
       loadPayments(); // Refresh data
+      
+      // Refresh recent activity on dashboard
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
     } catch (error) {
       console.error('Error confirming payment:', error);
       toast({ title: "Error confirming payment", variant: "destructive" });

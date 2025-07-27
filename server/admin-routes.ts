@@ -342,7 +342,7 @@ export function setupAdminRoutes(app: any) {
         });
       });
 
-      // Get recent player registrations
+      // Get recent player registrations (including approvals today)
       const recentPlayers = await db
         .select()
         .from(players)
@@ -358,6 +358,25 @@ export function setupAdminRoutes(app: any) {
           message: `New player registered: ${player.firstName} ${player.lastName}`,
           timestamp: player.createdAt,
           timeAgo: getTimeAgo(player.createdAt)
+        });
+      });
+
+      // Get recent registration approvals 
+      const recentApprovals = await db
+        .select()
+        .from(players)
+        .where(sql`${players.approvedAt} >= ${startTime} AND ${players.approvedAt} <= ${endTime}`)
+        .orderBy(desc(players.approvedAt))
+        .limit(5);
+
+      recentApprovals.forEach(player => {
+        activities.push({
+          id: `approval-${player.id}`,
+          type: 'approval',
+          icon: '✅',
+          message: `Registration approved: ${player.firstName} ${player.lastName}`,
+          timestamp: player.approvedAt,
+          timeAgo: getTimeAgo(player.approvedAt)
         });
       });
 
@@ -573,8 +592,23 @@ export function setupAdminRoutes(app: any) {
   app.post('/api/admin/payments/:id/mark-paid', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const signup = await storage.updateSignupPaymentStatus(id, true);
-      res.json(signup);
+      
+      // Get the signup details
+      const signup = await storage.getSignupWithDetails(id);
+      if (!signup) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+      
+      // Create a payment record with current timestamp 
+      await storage.createPayment({
+        signupId: id,
+        amountCents: signup.session?.priceCents || 1000, // Default $10
+        paidAt: new Date()
+      });
+      
+      // Update the signup status
+      const updatedSignup = await storage.updateSignupPaymentStatus(id, true);
+      res.json(updatedSignup);
     } catch (error) {
       console.error("Error marking payment as paid:", error);
       res.status(500).json({ message: "Failed to mark payment as paid" });
