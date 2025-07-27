@@ -155,7 +155,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Recent Changes (July 27, 2025)
 - **Dashboard Growth Metrics Fix**: Fixed growth percentage calculations to show actual comparative data instead of hardcoded values. Revenue growth compares this month vs last month (-6%), player growth shows new players this month (0%), signup growth shows 100% increase, sessions growth compares this week vs last (0%), and YTD growth compares to last year (100%). Added proper handling for edge cases like NaN and Infinity values.
-- **Click-to-Filter Navigation Fix**: Fixed the recent activity section click-through functionality. Clicking on parent or player names now properly navigates to the respective admin pages with search filters applied. Updated both Parents and Players pages to re-run filtering when URL parameters change.
+- **Click-to-Filter Navigation Fix**: Fixed the recent activity section click-through functionality. Clicking on parent or player names now properly navigates to the respective admin pages with search filters applied. Updated both Parents and Players pages to re-run filtering when URL parameters change. Removed problematic logic that prevented client-side filtering when URL parameters were present, and removed the "Filtered by" indicator as requested.
 
 ### Recent Changes (July 26, 2025)
 - **Combined Dashboard Experience**: Merged home page and dashboard into unified parent portal with welcome section, today's sessions, player management, and calendar view

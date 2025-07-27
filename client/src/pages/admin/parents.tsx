@@ -132,14 +132,7 @@ export default function AdminParents() {
   }, [location]); // Re-run when location changes
 
   useEffect(() => {
-    // If we have a URL filter (from clicking parent name), don't apply client-side filtering
-    // The server has already done the filtering
-    if (urlFilter) {
-      setFilteredParents(parents);
-      return;
-    }
-
-    // Only apply client-side filtering when there's no URL filter
+    // Always apply client-side filtering based on current filter values
     let filtered = parents.filter((parent: any) => {
       const matchesSearch = !filters.search || 
         parent.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -158,7 +151,7 @@ export default function AdminParents() {
       return matchesSearch && matchesStatus && matchesRole;
     });
     setFilteredParents(filtered);
-  }, [parents, filters, urlFilter]);
+  }, [parents, filters]);
 
   const handleEdit = (parent: any) => {
     setSelectedParent(parent);
@@ -247,28 +240,7 @@ export default function AdminParents() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-white">Parents Management</h1>
-            {urlFilter && (
-              <div className="flex items-center gap-2 bg-blue-900/30 border border-blue-700 rounded-lg px-3 py-1">
-                <span className="text-sm text-blue-300">Filtered by:</span>
-                <span className="text-sm text-white font-medium">{urlFilter}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 text-blue-300 hover:text-white"
-                  onClick={() => {
-                    setUrlFilter(null);
-                    setFilters(prev => ({ ...prev, search: '' }));
-                    window.history.replaceState({}, '', '/admin/parents');
-                    loadParents(); // Reload all parents when clearing filter
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold text-white">Parents Management</h1>
           <div className="text-sm text-zinc-400">
             Total: {parents.length} accounts
           </div>
