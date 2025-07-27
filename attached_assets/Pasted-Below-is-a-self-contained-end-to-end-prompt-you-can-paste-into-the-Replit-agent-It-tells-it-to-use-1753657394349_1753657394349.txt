@@ -1,0 +1,87 @@
+Below is a self-contained, end-to-end prompt you can paste into the Replit agent. It tells it to use the existing seed data you’ve already loaded, and walks step-by-step through the changes needed—both server and client—to split “Total Revenue (This Month)” from “YTD Revenue,” verify against your seed data, and wire it through the dashboard with proper tooltips. It leaves as little as possible to interpretation:
+
+typescript
+Copy
+Edit
+You already have realistic seed data loaded (multiple payments dated across June, July and earlier this year). I need you to:
+
+1. **Server: `/api/admin/analytics` in `server/admin-routes.ts`**  
+   - Import or compute these two Date boundaries at the top of the handler:
+     ```ts
+     const now         = new Date();
+     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+     const startOfYear  = new Date(now.getFullYear(), 0, 1);
+     ```
+   - Write two separate Drizzle-ORM SUM queries against the **existing** `payments` table seeded in your database:
+     ```ts
+     // monthly revenue in cents
+     const { sum: monthlyCents = 0 } = await db
+       .select({ sum: sql`COALESCE(SUM(${payments.amountCents}),0)` })
+       .from(payments)
+       .where(
+         and(
+           eq(payments.paid, true),
+           gte(payments.paidAt, firstOfMonth),
+           lte(payments.paidAt, now)
+         )
+       )
+       .then(r => r[0]);
+
+     // YTD revenue in cents
+     const { sum: ytdCents = 0 } = await db
+       .select({ sum: sql`COALESCE(SUM(${payments.amountCents}),0)` })
+       .from(payments)
+       .where(
+         and(
+           eq(payments.paid, true),
+           gte(payments.paidAt, startOfYear),
+           lte(payments.paidAt, now)
+         )
+       )
+       .then(r => r[0]);
+     ```
+   - Add a debug log so you can confirm against your seed data:
+     ```ts
+     console.log('→ analytics sums:', { monthlyCents, ytdCents });
+     ```
+   - Return both metrics (converted to dollars) in your JSON payload:
+     ```ts
+     res.json({
+       monthlyRevenue: monthlyCents / 100,
+       ytdRevenue:     ytdCents     / 100,
+       /* …other fields untouched… */
+     });
+     ```
+
+2. **Client: `client/src/pages/admin/analytics.tsx`**  
+   - In your `useEffect`, when calling `adminAnalytics.get()`, make sure you expect both fields:
+     ```ts
+     adminAnalytics.get().then(data => {
+       console.log('analytics payload:', data);
+       setAnalytics({
+         monthlyRevenue: data.monthlyRevenue,
+         ytdRevenue:     data.ytdRevenue,
+         /* …other state… */
+       });
+     });
+     ```
+   - In the JSX for your two KPI cards, bind each value and add a tooltip icon (`<InfoCircle />`) that shows:
+     - **Total Revenue**: “Sum of all payments received this month.”  
+     - **YTD Revenue**: “Total revenue from January 1 to today.”
+
+3. **Verification against existing seed data**  
+   - The seed set includes at least one payment in June, one in early July, and one in mid-July. After you deploy:
+     - **Console** should log, e.g. `{ monthlyCents: 235000, ytdCents: 285000 }`.
+     - **Dashboard** should show “\$2,350.00” for this month and “\$2,850.00” YTD (using that test seed).
+   - If those numbers don’t match, adjust your date filters or payment seed timestamps.
+
+4. **Remove any duplicate or hard-coded revenue logic**  
+   - Ensure there’s no fallback that still writes the same number into both cards.
+   - Remove any old utility that computed revenue only once.
+
+5. **Final QA**  
+   - Manually hit `/api/admin/analytics` in the browser and verify the JSON shape.  
+   - Confirm the admin dashboard renders two distinct values with correct tooltips.
+
+Please update the files accordingly—**using the existing seed data** you’ve already loaded—so that “Total Revenue” and “YTD Revenue” correctly diverge based on actual payment dates.
+::contentReference[oaicite:0]{index=0}

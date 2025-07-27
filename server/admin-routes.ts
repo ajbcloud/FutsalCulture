@@ -173,25 +173,14 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
 }
 
 export function setupAdminRoutes(app: any) {
-  // New comprehensive dashboard metrics endpoint
+  // New comprehensive dashboard metrics endpoint  
   app.get('/api/admin/dashboard-metrics', requireAdmin, async (req: Request, res: Response) => {
     try {
       const now = new Date();
       
-      // Current month boundaries
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      
-      // Last month boundaries for comparison
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-      
-      // Current year boundaries
+      // Date boundaries for calculations
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      
-      // Last year same date for YTD comparison
-      const lastYearSameDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-      const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
       
       // Current week boundaries
       const startOfWeek = new Date(now);
@@ -200,33 +189,42 @@ export function setupAdminRoutes(app: any) {
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
-      
-      // Last week boundaries
-      const startOfLastWeek = new Date(startOfWeek);
-      startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-      const endOfLastWeek = new Date(endOfWeek);
-      endOfLastWeek.setDate(endOfWeek.getDate() - 7);
 
-      // 1. Total Revenue (All Time - since database has limited current data)
+      // 1. Monthly Revenue (current month only)
+      const monthlyRevenueResult = await db
+        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.paid, true),
+            gte(payments.paidAt, firstOfMonth),
+            lte(payments.paidAt, now)
+          )
+        );
+      const monthlyCents = monthlyRevenueResult[0]?.sum || 0;
+
+      // 2. YTD Revenue (year to date)
+      const ytdRevenueResult = await db
+        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.paid, true),
+            gte(payments.paidAt, startOfYear),
+            lte(payments.paidAt, now)
+          )
+        );
+      const ytdCents = ytdRevenueResult[0]?.sum || 0;
+
+      // Debug log to verify calculations
+      console.log('→ revenue calculations:', { monthlyCents, ytdCents, firstOfMonth, startOfYear });
+
+      // 3. Total Revenue (All Time)
       const totalRevenueResult = await db
         .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
         .from(payments)
         .where(sql`${payments.paidAt} IS NOT NULL`);
       const totalRevenue = totalRevenueResult[0]?.sumCents || 0;
-
-      // 2. Monthly Revenue (July 2025 - where our test data is)
-      const monthlyRevenueResult = await db
-        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
-        .from(payments)
-        .where(sql`${payments.paidAt} IS NOT NULL AND EXTRACT(MONTH FROM ${payments.paidAt}) = 7 AND EXTRACT(YEAR FROM ${payments.paidAt}) = 2025`);
-      const monthlyRevenue = monthlyRevenueResult[0]?.sumCents || 0;
-
-      // 3. YTD Revenue (2025)
-      const ytdRevenueResult = await db
-        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
-        .from(payments)
-        .where(sql`${payments.paidAt} IS NOT NULL AND EXTRACT(YEAR FROM ${payments.paidAt}) = 2025`);
-      const ytdRevenue = ytdRevenueResult[0]?.sumCents || 0;
 
       // 4. Total Players (All Time)
       const totalPlayersResult = await db
@@ -283,8 +281,8 @@ export function setupAdminRoutes(app: any) {
       res.json({
         // Primary KPIs
         totalRevenue,
-        monthlyRevenue,
-        ytdRevenue,
+        monthlyRevenue: monthlyCents, // Current month revenue in cents
+        ytdRevenue: ytdCents, // Year-to-date revenue in cents
         totalPlayers,
         monthlyPlayers,
         totalSignups,
