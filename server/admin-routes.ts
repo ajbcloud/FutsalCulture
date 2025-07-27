@@ -265,18 +265,19 @@ export function setupAdminRoutes(app: any) {
         .from(users);
       const activeParents = activeParentsResult[0]?.count || 0;
 
-      // 10. Session Fill Rate (simplified calculation)
-      const totalSessionsResult = await db
-        .select({ totalCapacity: sql<number>`COALESCE(SUM(${futsalSessions.capacity}), 0)` })
-        .from(futsalSessions);
+      // 10. Session Fill Rate (correct calculation using proper SQL)
+      const fillRateResult = await db.execute(sql`
+        SELECT 
+          COALESCE(SUM(fs.capacity), 0) as total_capacity,
+          COALESCE(COUNT(s.id), 0) as total_signups
+        FROM futsal_sessions fs
+        LEFT JOIN signups s ON fs.id = s.session_id
+      `);
       
-      const totalSignupsForFillResult = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(signups);
-      
-      const totalCapacity = totalSessionsResult[0]?.totalCapacity || 0;
-      const signupsForFill = totalSignupsForFillResult[0]?.count || 0;
-      const fillRate = totalCapacity > 0 ? Math.round((signupsForFill / totalCapacity) * 100) : 0;
+      const fillRateRow = fillRateResult.rows[0] as { total_capacity: number; total_signups: number };
+      const totalCapacity = Number(fillRateRow.total_capacity);
+      const signupsForFillRate = Number(fillRateRow.total_signups);
+      const fillRate = totalCapacity > 0 ? Math.round((signupsForFillRate / totalCapacity) * 100) : 0;
 
       // Calculate growth rates by comparing with previous periods
       
@@ -589,8 +590,8 @@ export function setupAdminRoutes(app: any) {
           bookingOpenMinute: futsalSessions.bookingOpenMinute,
           createdAt: futsalSessions.createdAt,
           signupCount: sql<number>`(
-            SELECT COUNT(*) FROM ${signups}
-            WHERE ${signups.sessionId} = ${futsalSessions.id}
+            SELECT COUNT(*) FROM signups
+            WHERE signups.session_id = ${futsalSessions.id}
           )`,
         })
         .from(futsalSessions)
