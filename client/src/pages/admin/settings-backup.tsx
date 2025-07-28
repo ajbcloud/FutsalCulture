@@ -7,8 +7,9 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2 } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface SystemSettings {
@@ -301,57 +302,325 @@ export default function AdminSettings() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <Zap className="w-5 h-5 mr-2" />
-              Integrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-zinc-300">Third-party Services</Label>
-                <p className="text-sm text-zinc-400">
-                  Configure email, SMS, payments, accounting, and other external service integrations
-                </p>
-                <div className="flex gap-2 mt-2">
-                  {integrations.slice(0, 3).map((integration) => (
-                    <div
-                      key={integration.id}
-                      className={`px-2 py-1 rounded text-xs ${
-                        integration.enabled 
-                          ? 'bg-green-900 text-green-300' 
-                          : 'bg-zinc-700 text-zinc-400'
-                      }`}
-                    >
-                      {integration.provider}
-                    </div>
-                  ))}
-                  {integrations.length > 3 && (
-                    <div className="px-2 py-1 rounded text-xs bg-zinc-700 text-zinc-400">
-                      +{integrations.length - 3} more
-                    </div>
-                  )}
-                </div>
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 bg-zinc-800 border-zinc-700">
+          <TabsTrigger value="general" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            General & Registration
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            Sessions & Schedule
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            Service Billing
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            Integrations
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6">
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                General Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="businessName" className="text-zinc-300">Business Name</Label>
+                <Input
+                  id="businessName"
+                  value={settings.businessName}
+                  onChange={(e) => setSettings(prev => ({ ...prev, businessName: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Your business or organization name"
+                />
               </div>
-              <Link href="/admin/integrations">
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  Manage All
-                  <ExternalLink className="w-3 h-3" />
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              General Settings
-            </CardTitle>
-          </CardHeader>
+              <div>
+                <Label htmlFor="contactEmail" className="text-zinc-300">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={settings.contactEmail}
+                  onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Primary contact email address"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supportEmail" className="text-zinc-300">Support Email</Label>
+                <Input
+                  id="supportEmail"
+                  value={settings.supportEmail}
+                  onChange={(e) => setSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Email address for help request notifications"
+                />
+                <p className="text-sm text-zinc-400 mt-1">
+                  Email address that receives notifications when users submit help requests
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="timezone" className="text-zinc-300">Timezone</Label>
+                <Select
+                  value={settings.timezone}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, timezone: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 max-h-60">
+                    {getTimezones().map((tz) => (
+                      <SelectItem key={tz} value={tz} className="text-white hover:bg-zinc-700">
+                        {tz.replace(/_/g, ' ')} ({new Date().toLocaleTimeString('en-US', {
+                          timeZone: tz,
+                          timeZoneName: 'short'
+                        }).split(' ').pop()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                Registration Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-zinc-300">Auto-approve new registrations</Label>
+                  <p className="text-sm text-zinc-400">
+                    When enabled, new parent and player sign-ups are automatically approved. 
+                    When disabled, all registrations require manual admin approval.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.autoApproveRegistrations}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, autoApproveRegistrations: checked }))
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Bell className="w-5 h-5 mr-2" />
+                Notification Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-zinc-300">Email Notifications</Label>
+                  <p className="text-sm text-zinc-400">
+                    Receive email notifications for important events
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.emailNotifications}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, emailNotifications: checked }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-zinc-300">SMS Notifications</Label>
+                  <p className="text-sm text-zinc-400">
+                    Receive SMS notifications for urgent events
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.smsNotifications}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, smsNotifications: checked }))
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions" className="space-y-6">
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Shield className="w-5 h-5 mr-2" />
+                Session Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="capacityWarning" className="text-zinc-300">Session Capacity Warning</Label>
+                <Input
+                  id="capacityWarning"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={settings.sessionCapacityWarning}
+                  onChange={(e) => setSettings(prev => ({ ...prev, sessionCapacityWarning: parseInt(e.target.value) || 3 }))}
+                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                />
+                <p className="text-sm text-zinc-400 mt-1">
+                  Show warning when session capacity drops below this number
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="paymentReminder" className="text-zinc-300">Payment Reminder Minutes</Label>
+                <Input
+                  id="paymentReminder"
+                  type="number"
+                  min="5"
+                  max="1440"
+                  value={settings.paymentReminderMinutes}
+                  onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderMinutes: parseInt(e.target.value) || 60 }))}
+                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                />
+                <p className="text-sm text-zinc-400 mt-1">
+                  Send payment reminders this many minutes before payment deadline
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Business Schedule
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="weekdayStart" className="text-zinc-300">Business Week Start</Label>
+                <Select
+                  value={settings.weekdayStart}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayStart: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                    <SelectValue placeholder="Select start day" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="monday" className="text-white hover:bg-zinc-700">Monday</SelectItem>
+                    <SelectItem value="tuesday" className="text-white hover:bg-zinc-700">Tuesday</SelectItem>
+                    <SelectItem value="wednesday" className="text-white hover:bg-zinc-700">Wednesday</SelectItem>
+                    <SelectItem value="thursday" className="text-white hover:bg-zinc-700">Thursday</SelectItem>
+                    <SelectItem value="friday" className="text-white hover:bg-zinc-700">Friday</SelectItem>
+                    <SelectItem value="saturday" className="text-white hover:bg-zinc-700">Saturday</SelectItem>
+                    <SelectItem value="sunday" className="text-white hover:bg-zinc-700">Sunday</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-zinc-400 mt-1">
+                  First day of your business week for reporting purposes
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="weekdayEnd" className="text-zinc-300">Business Week End</Label>
+                <Select
+                  value={settings.weekdayEnd}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayEnd: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                    <SelectValue placeholder="Select end day" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="monday" className="text-white hover:bg-zinc-700">Monday</SelectItem>
+                    <SelectItem value="tuesday" className="text-white hover:bg-zinc-700">Tuesday</SelectItem>
+                    <SelectItem value="wednesday" className="text-white hover:bg-zinc-700">Wednesday</SelectItem>
+                    <SelectItem value="thursday" className="text-white hover:bg-zinc-700">Thursday</SelectItem>
+                    <SelectItem value="friday" className="text-white hover:bg-zinc-700">Friday</SelectItem>
+                    <SelectItem value="saturday" className="text-white hover:bg-zinc-700">Saturday</SelectItem>
+                    <SelectItem value="sunday" className="text-white hover:bg-zinc-700">Sunday</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Last day of your business week for reporting purposes
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Calendar className="w-5 h-5 mr-2" />
+                Fiscal Year Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="fiscalYearType" className="text-zinc-300">Fiscal Year Type</Label>
+                <Select
+                  value={settings.fiscalYearType}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearType: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                    <SelectValue placeholder="Select fiscal year type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="calendar" className="text-white hover:bg-zinc-700">Calendar Year (Jan 1 - Dec 31)</SelectItem>
+                    <SelectItem value="fiscal" className="text-white hover:bg-zinc-700">Custom Fiscal Year</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Choose between calendar year or custom fiscal year for financial reporting
+                </p>
+              </div>
+              {settings.fiscalYearType === 'fiscal' && (
+                <div>
+                  <Label htmlFor="fiscalYearStartMonth" className="text-zinc-300">Fiscal Year Start Month</Label>
+                  <Select
+                    value={settings.fiscalYearStartMonth.toString()}
+                    onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearStartMonth: parseInt(value) }))}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                      <SelectValue placeholder="Select start month" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      <SelectItem value="1" className="text-white hover:bg-zinc-700">January</SelectItem>
+                      <SelectItem value="2" className="text-white hover:bg-zinc-700">February</SelectItem>
+                      <SelectItem value="3" className="text-white hover:bg-zinc-700">March</SelectItem>
+                      <SelectItem value="4" className="text-white hover:bg-zinc-700">April</SelectItem>
+                      <SelectItem value="5" className="text-white hover:bg-zinc-700">May</SelectItem>
+                      <SelectItem value="6" className="text-white hover:bg-zinc-700">June</SelectItem>
+                      <SelectItem value="7" className="text-white hover:bg-zinc-700">July</SelectItem>
+                      <SelectItem value="8" className="text-white hover:bg-zinc-700">August</SelectItem>
+                      <SelectItem value="9" className="text-white hover:bg-zinc-700">September</SelectItem>
+                      <SelectItem value="10" className="text-white hover:bg-zinc-700">October</SelectItem>
+                      <SelectItem value="11" className="text-white hover:bg-zinc-700">November</SelectItem>
+                      <SelectItem value="12" className="text-white hover:bg-zinc-700">December</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-zinc-400 mt-1">
+                    Month when your fiscal year begins (e.g., July for a July-June fiscal year)
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-6">
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Service Billing Configuration
+              </CardTitle>
+              <p className="text-zinc-400 text-sm">
+                Configure payment information for platform service billing and invoicing
+              </p>
+            </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="businessName" className="text-zinc-300">Business Name</Label>
