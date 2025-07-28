@@ -296,12 +296,25 @@ export default function Dashboard() {
               variant="outline" 
               className="w-full h-12 sm:w-auto sm:h-auto"
               onClick={() => {
-                const calendarSection = document.getElementById('calendar');
-                if (calendarSection) {
-                  calendarSection.scrollIntoView({ behavior: 'smooth' });
+                if (players.length > 0) {
+                  // Build URL with filters based on players' eligibility for multi-player filtering
+                  const playerAgeGroups = Array.from(new Set(players.map(player => calculateAgeGroup(player.birthYear))));
+                  const playerGenders = Array.from(new Set(players.map(player => player.gender)));
+                  
+                  // For multiple players, pass all their age groups and genders as comma-separated values
+                  const params = new URLSearchParams();
+                  if (playerAgeGroups.length > 0) {
+                    params.set('ages', playerAgeGroups.join(','));
+                  }
+                  if (playerGenders.length > 0) {
+                    params.set('genders', playerGenders.join(','));
+                  }
+                  
+                  const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
+                  setLocation(url);
                 } else {
-                  // Navigate to calendar page using proper routing
-                  setLocation('/calendar');
+                  // If no players, go to sessions page without filters
+                  setLocation('/sessions');
                 }
               }}
             >
@@ -348,8 +361,8 @@ export default function Dashboard() {
                     className="mt-4"
                     onClick={() => {
                       // Build URL with filters based on players' eligibility
-                      const playerAgeGroups = [...new Set(players.map(player => calculateAgeGroup(player.birthYear)))];
-                      const playerGenders = [...new Set(players.map(player => player.gender))];
+                      const playerAgeGroups = Array.from(new Set(players.map(player => calculateAgeGroup(player.birthYear))));
+                      const playerGenders = Array.from(new Set(players.map(player => player.gender)));
                       
                       // For multiple players, pass all their age groups and genders as comma-separated values
                       const params = new URLSearchParams();

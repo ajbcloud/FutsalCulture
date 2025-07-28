@@ -7,9 +7,9 @@ import Navbar from "@/components/navbar";
 import SessionCard from "@/components/session-card";
 import CartButton from "@/components/cart-button";
 import SessionCalendar from "@/components/session-calendar";
+import MultiSelectFilter from "@/components/multi-select-filter";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { FutsalSession, Player } from "@shared/schema";
 import { isSessionEligibleForPlayer } from "@shared/utils";
@@ -19,19 +19,15 @@ export default function Sessions() {
   const { addToCart } = useCart();
   const { toast } = useToast();
   
-  // Filter state - separate current values from applied values
-  const [currentAgeFilter, setCurrentAgeFilter] = useState<string>("all");
-  const [currentLocationFilter, setCurrentLocationFilter] = useState<string>("all");
-  const [currentGenderFilter, setCurrentGenderFilter] = useState<string>("all");
+  // Multi-select filter state
+  const [selectedAges, setSelectedAges] = useState<string[]>([]);
+  const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   
-  // Applied filters (used for API calls)
-  const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
-  const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
-  const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
-  
-  // Multi-player filter state (for when parent has multiple players)
-  const [multiPlayerAges, setMultiPlayerAges] = useState<string[]>([]);
-  const [multiPlayerGenders, setMultiPlayerGenders] = useState<string[]>([]);
+  // Applied filters (used for filtering)
+  const [appliedAges, setAppliedAges] = useState<string[]>([]);
+  const [appliedGenders, setAppliedGenders] = useState<string[]>([]);
+  const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
 
   // Check for URL parameters to auto-apply filters
   useEffect(() => {
@@ -40,61 +36,54 @@ export default function Sessions() {
     const genderParam = urlParams.get('gender');
     const locationParam = urlParams.get('location');
     
-    // Handle multi-player filters (comma-separated values)
+    // Handle multi-player filters (comma-separated values from dashboard)
     const agesParam = urlParams.get('ages');
     const gendersParam = urlParams.get('genders');
+    const locationsParam = urlParams.get('locations');
     
-    if (ageParam) {
-      setCurrentAgeFilter(ageParam);
-      setAppliedAgeFilter(ageParam);
-    }
-    if (genderParam) {
-      setCurrentGenderFilter(genderParam);
-      setAppliedGenderFilter(genderParam);
-    }
-    if (locationParam) {
-      setCurrentLocationFilter(locationParam);
-      setAppliedLocationFilter(locationParam);
-    }
+    // Single value filters
+    const initialAges: string[] = [];
+    const initialGenders: string[] = [];
+    const initialLocations: string[] = [];
     
-    // For multiple players, store the multi-select values and show in dropdowns
+    if (ageParam) initialAges.push(ageParam);
+    if (genderParam) initialGenders.push(genderParam);
+    if (locationParam) initialLocations.push(locationParam);
+    
+    // Multi-value filters (from dashboard with multiple players)
     if (agesParam) {
-      const ages = agesParam.split(',');
-      setMultiPlayerAges(ages);
-      // If single age, show in dropdown; if multiple, show "All Ages" but apply multi-filter
-      if (ages.length === 1) {
-        setCurrentAgeFilter(ages[0]);
-        setAppliedAgeFilter(ages[0]);
-      }
+      initialAges.push(...agesParam.split(','));
     }
     if (gendersParam) {
-      const genders = gendersParam.split(',');
-      setMultiPlayerGenders(genders);
-      // If single gender, show in dropdown; if multiple, show "All Genders" but apply multi-filter
-      if (genders.length === 1) {
-        setCurrentGenderFilter(genders[0]);
-        setAppliedGenderFilter(genders[0]);
-      }
+      initialGenders.push(...gendersParam.split(','));
     }
+    if (locationsParam) {
+      initialLocations.push(...locationsParam.split(','));
+    }
+    
+    // Remove duplicates and set filters
+    const uniqueAges = Array.from(new Set(initialAges));
+    const uniqueGenders = Array.from(new Set(initialGenders));
+    const uniqueLocations = Array.from(new Set(initialLocations));
+    
+    setSelectedAges(uniqueAges);
+    setSelectedGenders(uniqueGenders);
+    setSelectedLocations(uniqueLocations);
+    setAppliedAges(uniqueAges);
+    setAppliedGenders(uniqueGenders);
+    setAppliedLocations(uniqueLocations);
   }, []);
 
-  // Build query parameters for sessions API using applied filters
-  const sessionParams = new URLSearchParams();
-  if (appliedAgeFilter !== "all") sessionParams.set("ageGroup", appliedAgeFilter);
-  if (appliedLocationFilter !== "all") sessionParams.set("location", appliedLocationFilter);
-  if (appliedGenderFilter !== "all") sessionParams.set("gender", appliedGenderFilter);
-  
-  const sessionsUrl = `/api/sessions${sessionParams.toString() ? `?${sessionParams.toString()}` : ''}`;
-  
+  // Get all sessions without server-side filtering (we'll filter client-side for multi-select)
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
-    queryKey: [sessionsUrl],
+    queryKey: ["/api/sessions"],
   });
 
   // Apply filters function
   const applyFilters = () => {
-    setAppliedAgeFilter(currentAgeFilter);
-    setAppliedLocationFilter(currentLocationFilter);
-    setAppliedGenderFilter(currentGenderFilter);
+    setAppliedAges(selectedAges);
+    setAppliedGenders(selectedGenders);
+    setAppliedLocations(selectedLocations);
   };
 
   // Get players for authenticated parents
@@ -114,22 +103,26 @@ export default function Sessions() {
       return false;
     }
     
-    // Check multi-player filters first (if coming from dashboard with multiple players)
-    if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
-      const ageMatch = multiPlayerAges.length === 0 || session.ageGroups?.some(age => multiPlayerAges.includes(age));
-      const genderMatch = multiPlayerGenders.length === 0 || session.genders?.some(gender => multiPlayerGenders.includes(gender));
-      if (!ageMatch || !genderMatch) return false;
-    } else {
-      // For authenticated parents with players, only show sessions their players can book
-      if (isAuthenticated && players.length > 0) {
-        const isEligibleForAnyPlayer = players.some(player => isSessionEligibleForPlayer(session, player));
-        if (!isEligibleForAnyPlayer) return false;
-      }
-      
-      // Apply manual filters (using applied filter values)
-      if (appliedAgeFilter !== "all" && !session.ageGroups?.includes(appliedAgeFilter)) return false;
-      if (appliedLocationFilter !== "all" && session.location !== appliedLocationFilter) return false;
-      if (appliedGenderFilter !== "all" && !session.genders?.includes(appliedGenderFilter)) return false;
+    // Apply multi-select filters
+    if (appliedAges.length > 0) {
+      const ageMatch = session.ageGroups?.some(age => appliedAges.includes(age));
+      if (!ageMatch) return false;
+    }
+    
+    if (appliedGenders.length > 0) {
+      const genderMatch = session.genders?.some(gender => appliedGenders.includes(gender));
+      if (!genderMatch) return false;
+    }
+    
+    if (appliedLocations.length > 0) {
+      const locationMatch = appliedLocations.includes(session.location);
+      if (!locationMatch) return false;
+    }
+    
+    // If no filters applied but user is authenticated, show only eligible sessions
+    if (appliedAges.length === 0 && appliedGenders.length === 0 && isAuthenticated && players.length > 0) {
+      const isEligibleForAnyPlayer = players.some(player => isSessionEligibleForPlayer(session, player));
+      if (!isEligibleForAnyPlayer) return false;
     }
     
     return true;
@@ -170,110 +163,97 @@ export default function Sessions() {
                 <p className="text-zinc-400 text-sm sm:text-base">Find the perfect session for your young athlete</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 sm:gap-0">
-                <Select value={currentGenderFilter} onValueChange={setCurrentGenderFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
-                    <SelectValue placeholder="All Genders" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Genders</SelectItem>
-                    {sortedGenders.map((gender: string) => (
-                      <SelectItem key={gender} value={gender}>
-                        {gender === "boys" ? "Boys" : gender === "girls" ? "Girls" : gender === "mixed" ? "Mixed" : gender}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Age Groups"
+                  options={sortedAgeGroups}
+                  selectedValues={selectedAges}
+                  onSelectionChange={setSelectedAges}
+                  placeholder="All Ages"
+                />
                 
-                <Select value={currentAgeFilter} onValueChange={setCurrentAgeFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
-                    <SelectValue placeholder="All Ages" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Ages</SelectItem>
-                    {sortedAgeGroups.map((age: string) => (
-                      <SelectItem key={age} value={age}>{age}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Genders"
+                  options={sortedGenders}
+                  selectedValues={selectedGenders}
+                  onSelectionChange={setSelectedGenders}
+                  placeholder="All Genders"
+                />
                 
-                <Select value={currentLocationFilter} onValueChange={setCurrentLocationFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-48">
-                    <SelectValue placeholder="All Locations" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {sortedLocations.map((location: string) => (
-                      <SelectItem key={location} value={location}>{location}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Locations"
+                  options={sortedLocations}
+                  selectedValues={selectedLocations}
+                  onSelectionChange={setSelectedLocations}
+                  placeholder="All Locations"
+                />
                 
                 <Button 
                   onClick={applyFilters}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                 >
-                  Update
+                  Apply Filters
                 </Button>
               </div>
             </div>
           </div>
 
-          {filteredSessions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No sessions found matching your criteria.</p>
-              <Button 
-                onClick={() => {
-                  setCurrentAgeFilter("all");
-                  setCurrentLocationFilter("all");
-                  setCurrentGenderFilter("all");
-                  setAppliedAgeFilter("all");
-                  setAppliedLocationFilter("all");
-                  setAppliedGenderFilter("all");
-                }}
-                className="mt-4"
-              >
-                Clear Filters
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:grid-cols-3 lg:gap-6">
-              {filteredSessions.map((session) => (
-                <SessionCard 
-                  key={session.id} 
-                  session={session} 
-                  showAddToCart={false}
-                  onAddToCart={(session) => {
-                    addToCart(session);
-                    toast({
-                      title: "Added to cart",
-                      description: `${session.title} added to your cart`,
-                    });
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          
-          <CartButton />
-          
-          {/* Calendar Section - Mobile First */}
-          <div className="mt-12 sm:mt-16" id="calendar">
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className="text-2xl font-bold text-white mb-4 sm:text-3xl">Upcoming Sessions Calendar</h2>
-              <p className="text-zinc-400 text-sm sm:text-base">View all scheduled training sessions at a glance</p>
-            </div>
-            <SessionCalendar 
-              ageGroupFilter={appliedAgeFilter === "all" ? undefined : appliedAgeFilter}
-              genderFilter={appliedGenderFilter === "all" ? undefined : appliedGenderFilter}
-              locationFilter={appliedLocationFilter === "all" ? undefined : appliedLocationFilter}
-              showBookingButtons={true}
-              onSessionClick={(session) => {
-                window.location.href = `/sessions/${session.id}`;
-              }}
-            />
-          </div>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-zinc-900">
+              <TabsTrigger value="list" className="data-[state=active]:bg-zinc-700">List View</TabsTrigger>
+              <TabsTrigger value="calendar" className="data-[state=active]:bg-zinc-700">Calendar View</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="list" className="mt-6">
+              {filteredSessions.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">No sessions found matching your criteria.</p>
+                  <Button 
+                    onClick={() => {
+                      setSelectedAges([]);
+                      setSelectedGenders([]);
+                      setSelectedLocations([]);
+                      setAppliedAges([]);
+                      setAppliedGenders([]);
+                      setAppliedLocations([]);
+                    }}
+                    className="mt-4"
+                    variant="outline"
+                  >
+                    Clear All Filters
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                  {filteredSessions.map((session) => (
+                    <SessionCard
+                      key={session.id}
+                      session={session}
+                      onAddToCart={(session) => {
+                        addToCart(session);
+                        toast({
+                          title: "Added to Cart",
+                          description: `${session.title} has been added to your cart.`,
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="calendar" className="mt-6">
+              <SessionCalendar
+                multiPlayerAges={appliedAges}
+                multiPlayerGenders={appliedGenders}
+                locationFilter={appliedLocations.length === 1 ? appliedLocations[0] : undefined}
+                showBookingButtons={true}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
+      
+      <CartButton />
     </div>
   );
 }
