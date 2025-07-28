@@ -1,0 +1,94 @@
+1. Data Model Changes
+1.1 Add a tenant_id everywhere
+Every table that currently lives in public—users, parents, players, sessions, signups, payments, help_requests, analytics—gets a new tenant_id UUID NOT NULL column, indexed:
+
+sql
+Copy
+Edit
+ALTER TABLE users        ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE parents      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE players      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE sessions     ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE signups      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE payments     ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE help_requests ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+1.2 New Tenants table
+sql
+Copy
+Edit
+CREATE TABLE tenants (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  subdomain  TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+2. Authentication & Authorization
+2.1 Roles
+Super-Admin (global): can see all tenants, switch context, filter across tenants.
+
+Tenant Admin / Tenant Assistant: same as your current Admin/Assistant, but scoped to a single tenant.
+
+2.2 Session + Middleware
+requireSuperAdmin middleware that checks session.user.is_super_admin === true.
+
+requireTenantAdmin & require2FA remain as before, but queries always include tenant_id = session.user.tenant_id.
+
+3. Super-Admin Portal UI
+3.1 Navigation
+scss
+Copy
+Edit
+Super-Admin Portal
+├── Overview (All-Tenants Dashboard)
+├── Tenants
+├── Sessions
+├── Payments
+├── Registrations
+├── Parents
+├── Players
+├── Analytics
+├── Help Requests
+└── Settings & Integrations
+3.2 Overview Dashboard
+Metrics (global & per-tenant filter):
+
+Total Revenue (YTD, This Month, This Quarter)
+
+Total Players (YTD, MTD)
+
+Total Registrations (session signups)
+
+Sessions This Week (all tenants)
+
+Pending Payments (unpaid >1h)
+
+Growth % vs prior period
+
+Quick Filters at top:
+
+Tenant (dropdown multi-select)
+
+Date Range picker
+
+Age Group / Gender
+
+KPI Cards: each with an “ℹ️” tooltip explaining the definition.
+
+3.3 Tenants Management Screen
+Columns:
+
+Tenant Name
+
+Subdomain
+
+Active Admins
+
+Total Players
+
+Total Sessions
+
+Total Revenue (MTD)
+
+Created On
+
+Actions: Edit, Delete, “Log in as Tenant Admin”

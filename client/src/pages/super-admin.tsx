@@ -1,34 +1,41 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import SuperAdminOverview from "@/components/super-admin/overview";
+import SuperAdminTenants from "@/components/super-admin/tenants";
+import SuperAdminAnalytics from "@/components/super-admin/analytics";
+import SuperAdminSettings from "@/components/super-admin/settings";
 
-import { Building2, Plus, Settings, Users, TrendingUp, Sun, Moon, LogOut, User, Shield, UserCheck } from "lucide-react";
-
-interface Tenant {
-  id: string;
-  name: string;
-  subdomain: string;
-  createdAt: string;
-}
+import { 
+  Building2, 
+  Settings, 
+  Users, 
+  Sun, 
+  Moon, 
+  LogOut, 
+  User, 
+  Shield, 
+  UserCheck,
+  BarChart3,
+  Calendar,
+  CreditCard,
+  ClipboardList,
+  HelpCircle,
+  Home,
+  Menu,
+  X
+} from "lucide-react";
 
 export default function SuperAdminPage() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [newTenantName, setNewTenantName] = useState("");
-  const [newTenantSubdomain, setNewTenantSubdomain] = useState("");
+  const [location] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Redirect if not super admin
   if (!user?.isSuperAdmin) {
@@ -46,60 +53,45 @@ export default function SuperAdminPage() {
     );
   }
 
-  const { data: tenants = [], isLoading } = useQuery({
-    queryKey: ["/api/super-admin/tenants"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/super-admin/tenants");
-      return response.json();
-    },
-  });
+  // Navigation items
+  const navigation = [
+    { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
+    { name: "Tenants", href: "/super-admin/tenants", icon: Building2, current: location === "/super-admin/tenants" },
+    { name: "Sessions", href: "/super-admin/sessions", icon: Calendar, current: location === "/super-admin/sessions" },
+    { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: location === "/super-admin/payments" },
+    { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: location === "/super-admin/registrations" },
+    { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: location === "/super-admin/parents" },
+    { name: "Players", href: "/super-admin/players", icon: Users, current: location === "/super-admin/players" },
+    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
+    { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: location === "/super-admin/help" },
+    { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
+  ];
 
-  const createTenantMutation = useMutation({
-    mutationFn: async (data: { name: string; subdomain: string }) => {
-      const response = await apiRequest("POST", "/api/super-admin/tenants", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/tenants"] });
-      setNewTenantName("");
-      setNewTenantSubdomain("");
-      toast({
-        title: "Success",
-        description: "Tenant created successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create tenant",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleCreateTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTenantName || !newTenantSubdomain) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
+  // Render current page content
+  const renderPageContent = () => {
+    switch (location) {
+      case "/super-admin/tenants":
+        return <SuperAdminTenants />;
+      case "/super-admin/analytics":
+        return <SuperAdminAnalytics />;
+      case "/super-admin/settings":
+        return <SuperAdminSettings />;
+      case "/super-admin/sessions":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Sessions Management</h1><p className="text-muted-foreground">Global sessions management across all tenants.</p></div>;
+      case "/super-admin/payments":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Payments Management</h1><p className="text-muted-foreground">Global payments monitoring and management.</p></div>;
+      case "/super-admin/registrations":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Registrations</h1><p className="text-muted-foreground">Monitor and manage registrations across all tenants.</p></div>;
+      case "/super-admin/parents":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Parents Management</h1><p className="text-muted-foreground">Global parent accounts management.</p></div>;
+      case "/super-admin/players":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Players Management</h1><p className="text-muted-foreground">Global player accounts management.</p></div>;
+      case "/super-admin/help":
+        return <div className="p-6"><h1 className="text-2xl font-bold">Help Requests</h1><p className="text-muted-foreground">Global help requests across all tenants.</p></div>;
+      default:
+        return <SuperAdminOverview />;
     }
-    createTenantMutation.mutate({
-      name: newTenantName,
-      subdomain: newTenantSubdomain,
-    });
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,8 +108,19 @@ export default function SuperAdminPage() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              {/* Theme Toggle */}
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+
+            {/* Desktop navigation and user menu */}
+            <div className="hidden md:flex items-center space-x-4">
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -127,14 +130,13 @@ export default function SuperAdminPage() {
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
 
-              {/* User Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
                       <AvatarFallback className="bg-green-600 text-white text-sm">
-                        {user?.firstName?.[0]?.toUpperCase() || 'A'}
+                        {user?.firstName?.[0]?.toUpperCase() || 'S'}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -148,7 +150,6 @@ export default function SuperAdminPage() {
                   </div>
                   <DropdownMenuSeparator />
                   
-                  {/* Portal Navigation */}
                   <DropdownMenuItem asChild>
                     <Link href="/" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
@@ -158,21 +159,14 @@ export default function SuperAdminPage() {
                   
                   <DropdownMenuItem asChild>
                     <Link href="/admin" className="cursor-pointer">
-                      <UserCheck className="mr-2 h-4 w-4" />
+                      <Settings className="mr-2 h-4 w-4" />
                       Admin Portal
                     </Link>
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem asChild>
-                    <Link href="/super-admin" className="cursor-pointer">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Super Admin
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem asChild>
                     <Link href="/help" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
+                      <HelpCircle className="mr-2 h-4 w-4" />
                       Help
                     </Link>
                   </DropdownMenuItem>
@@ -191,151 +185,46 @@ export default function SuperAdminPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Platform Management</h2>
-          <p className="text-muted-foreground">
-            Manage multiple futsal organizations and tenant accounts
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{tenants.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Active organizations
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Platform Health</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">Online</div>
-              <p className="text-xs text-muted-foreground">
-                All systems operational
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Your Access</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">Super Admin</div>
-              <p className="text-xs text-muted-foreground">
-                Full platform access
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Create New Tenant */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Create New Organization
-            </CardTitle>
-            <CardDescription>
-              Add a new futsal organization to the platform
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateTenant} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tenantName">Organization Name</Label>
-                  <Input
-                    id="tenantName"
-                    value={newTenantName}
-                    onChange={(e) => setNewTenantName(e.target.value)}
-                    placeholder="e.g., Elite Soccer Academy"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="tenantSubdomain">Subdomain</Label>
-                  <Input
-                    id="tenantSubdomain"
-                    value={newTenantSubdomain}
-                    onChange={(e) => setNewTenantSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="e.g., elite-soccer"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This will be their unique URL: {newTenantSubdomain || 'subdomain'}.yoursite.com
-                  </p>
-                </div>
-              </div>
-              <Button 
-                type="submit" 
-                disabled={createTenantMutation.isPending}
-                className="w-full md:w-auto"
-              >
-                {createTenantMutation.isPending ? "Creating..." : "Create Organization"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Existing Tenants */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Organizations
-            </CardTitle>
-            <CardDescription>
-              Manage existing futsal organizations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {tenants.length === 0 ? (
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No organizations created yet</p>
-                <p className="text-sm text-muted-foreground">Create your first organization above</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {tenants.map((tenant: Tenant) => (
-                  <div
-                    key={tenant.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+      <div className="flex">
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-card border-r border-border min-h-screen`}>
+          <nav className="p-4">
+            <div className="space-y-2">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      item.current
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    }`}
+                    onClick={() => setSidebarOpen(false)}
                   >
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{tenant.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {tenant.subdomain}.yoursite.com
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Created {new Date(tenant.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">Active</Badge>
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4 mr-1" />
-                        Manage
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    <Icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1">
+          {renderPageContent()}
+        </div>
       </div>
+
+      {/* Mobile menu overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }
