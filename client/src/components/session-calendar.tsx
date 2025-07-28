@@ -74,6 +74,10 @@ export default function SessionCalendar({
     start: monthStart,
     end: monthEnd,
   });
+  
+  // Add empty cells for days before the first day of the month
+  const firstDayOfWeek = monthStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const emptyDays = Array(firstDayOfWeek).fill(null);
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -114,6 +118,11 @@ export default function SessionCalendar({
           </div>
         ))}
 
+        {/* Empty cells for alignment */}
+        {emptyDays.map((_, index) => (
+          <div key={`empty-${index}`} className="min-h-[120px]" />
+        ))}
+        
         {/* Calendar Days */}
         {calendarDays.map(day => {
           const dateKey = format(day, 'yyyy-MM-dd');
