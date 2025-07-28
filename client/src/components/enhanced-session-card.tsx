@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FutsalSession } from "@shared/schema";
-import { getSessionStatusColor, getSessionStatusText } from "@shared/utils";
+import { getSessionStatusColor, getSessionStatusText, isSessionBookingOpen, calculateAgeGroup } from "@shared/utils";
 import VenmoPrompt from "./venmo-prompt";
 
 interface EnhancedSessionCardProps {
@@ -49,11 +49,9 @@ export default function EnhancedSessionCard({
   });
 
   const handleReserveSpot = () => {
-    // For now, we'll use the first available player
-    // In a real app, you might want to show a player selection dialog
-    const players = queryClient.getQueryData<Array<{ id: string; firstName: string; lastName: string }>>(["/api/players"]);
-    const firstPlayer = players?.[0];
-    if (!firstPlayer) {
+    const players = queryClient.getQueryData<Array<{ id: string; firstName: string; lastName: string; birthYear: number; gender: string }>>(["/api/players"]);
+    
+    if (!players || players.length === 0) {
       toast({
         title: "Error",
         description: "No players found. Please add a player first.",
@@ -62,8 +60,28 @@ export default function EnhancedSessionCard({
       return;
     }
     
+    // Find the first eligible player for this session
+    const eligiblePlayers = players.filter(player => {
+      const playerAgeGroup = calculateAgeGroup(player.birthYear);
+      const ageMatch = session.ageGroups?.includes(playerAgeGroup);
+      const genderMatch = session.genders?.includes(player.gender) || session.genders?.includes('mixed');
+      return ageMatch && genderMatch;
+    });
+    
+    if (eligiblePlayers.length === 0) {
+      toast({
+        title: "Error", 
+        description: "No eligible players found for this session.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Use the first eligible player
+    const selectedPlayer = eligiblePlayers[0];
+    
     createSignupMutation.mutate({
-      playerId: firstPlayer.id,
+      playerId: selectedPlayer.id,
       sessionId: session.id
     });
   };
@@ -85,12 +103,21 @@ export default function EnhancedSessionCard({
     if (fillRatio >= 0.7) return "bg-yellow-400";
     return "bg-green-400";
   };
-  const isDisabled = isReserved || isFull || createSignupMutation.isPending;
+  const isBookingOpen = isSessionBookingOpen(session);
+  const isDisabled = isReserved || isFull || createSignupMutation.isPending || !isBookingOpen;
 
   const getButtonText = () => {
     if (createSignupMutation.isPending) return "Reserving...";
     if (isReserved) return "Reserved";
     if (isFull) return "Full";
+    if (!isBookingOpen) {
+      const sessionDate = new Date(session.startTime);
+      const now = new Date();
+      if (sessionDate <= now) return "Session Ended";
+      const isToday = sessionDate.toDateString() === now.toDateString();
+      if (isToday) return "Opens at 8:00 AM";
+      return "Not Yet Available";
+    }
     return "Reserve Spot";
   };
 

@@ -23,19 +23,26 @@ export function isSessionEligibleForPlayer(session: any, player: any): boolean {
 export function isSessionBookingOpen(session: any): boolean {
   const now = new Date();
   const sessionDate = new Date(session.startTime);
-  const bookingOpenTime = new Date(sessionDate);
   
-  // Use per-session booking time if available, otherwise default to 8 AM
-  const hour = session.bookingOpenHour ?? 8;
-  const minute = session.bookingOpenMinute ?? 0;
+  // Sessions must not have started yet (basic rule)
+  if (sessionDate <= now) return false;
   
-  bookingOpenTime.setHours(hour, minute, 0, 0);
-  
-  // Check if it's today and after the specified booking time
+  // Check if session is on the same day as today
   const isToday = sessionDate.toDateString() === now.toDateString();
-  const isAfterBookingTime = now >= bookingOpenTime;
   
-  return isToday && isAfterBookingTime && session.status === "open" && session.status !== "full";
+  // If it's today, check if we're past the booking open time (default 8 AM)
+  if (isToday) {
+    const bookingOpenTime = new Date(sessionDate);
+    const hour = session.bookingOpenHour ?? 8;
+    const minute = session.bookingOpenMinute ?? 0;
+    bookingOpenTime.setHours(hour, minute, 0, 0);
+    
+    const isAfterBookingTime = now >= bookingOpenTime;
+    return isAfterBookingTime && session.status !== "full";
+  }
+  
+  // For future days, sessions are not yet bookable (must wait until 8 AM on session day)
+  return false;
 }
 
 export function getSessionStatusColor(session: any, signupsCount?: number): string {

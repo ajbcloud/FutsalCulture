@@ -219,13 +219,18 @@ export default function Dashboard() {
     new Date(signup.session.startTime) > new Date()
   );
 
-  // Filter today's sessions - only show sessions eligible for parent's players
+  // Filter today's sessions - only show sessions eligible for parent's players AND not yet started
   const todaySessions = sessions.filter(session => {
     const sessionDate = new Date(session.startTime);
+    const now = new Date();
     const today = new Date();
     const isToday = sessionDate.toDateString() === today.toDateString();
     
+    // Only show today's sessions
     if (!isToday) return false;
+    
+    // Only show sessions that haven't started yet
+    if (sessionDate <= now) return false;
     
     // If parent has NO players, show nothing
     if (players.length === 0) {
