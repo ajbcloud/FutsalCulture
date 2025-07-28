@@ -18,21 +18,21 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
+            {/* Mobile hamburger menu button - moved to left */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="mr-3 p-2 text-muted-foreground hover:text-foreground md:hidden h-11 w-11 flex items-center justify-center"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            
             <Link href="/" className="flex-shrink-0">
               <BusinessBranding 
                 variant="default" 
                 textClassName="text-green-400"
               />
             </Link>
-            
-            {/* Mobile hamburger menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="ml-4 p-2 text-muted-foreground hover:text-foreground md:hidden h-11 w-11 flex items-center justify-center"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
             
             {/* Desktop navigation */}
             <div className="hidden md:block ml-10">
@@ -67,11 +67,11 @@ export default function Navbar() {
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Theme Toggle - smaller on mobile */}
+            {/* Theme Toggle - hidden on mobile, shown on desktop */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+              className="hidden md:flex h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent items-center justify-center"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -207,6 +207,16 @@ export default function Navbar() {
                   >
                     Logout
                   </a>
+                  
+                  {/* Theme Toggle in Mobile Menu */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="flex items-center px-4 py-4 w-full text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                  >
+                    {theme === 'dark' ? <Sun className="w-4 h-4 mr-3" /> : <Moon className="w-4 h-4 mr-3" />}
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  </button>
                 </>
               ) : (
                 <>
@@ -237,6 +247,16 @@ export default function Navbar() {
                   >
                     Parent Login
                   </a>
+                  
+                  {/* Theme Toggle in Mobile Menu */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="flex items-center px-4 py-4 w-full text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                  >
+                    {theme === 'dark' ? <Sun className="w-4 h-4 mr-3" /> : <Moon className="w-4 h-4 mr-3" />}
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  </button>
                 </>
               )}
             </div>
