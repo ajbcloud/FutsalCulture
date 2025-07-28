@@ -64,7 +64,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId: tenantId || undefined,
       });
       
-      console.log('Sessions API called:', { tenantId, sessionsCount: sessions.length, filters: { ageGroup, location, status, gender } });
+      console.log('Sessions API called:', { 
+        tenantId, 
+        sessionsCount: sessions.length, 
+        filters: { ageGroup, location, status, gender },
+        futureSessions: sessions.filter(s => new Date(s.startTime) > new Date()).length
+      });
+      
+      if (sessions.length > 0) {
+        const sampleSession = sessions[0];
+        console.log('Sample session data:', { 
+          id: sampleSession.id, 
+          ageGroups: sampleSession.ageGroups, 
+          genders: sampleSession.genders, 
+          location: sampleSession.location,
+          startTime: sampleSession.startTime,
+          isPast: new Date(sampleSession.startTime) < new Date()
+        });
+      }
       
       // Add signup count to each session
       const sessionsWithCounts = await Promise.all(
@@ -93,6 +110,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching session:", error);
       res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  // Session filters endpoint
+  app.get("/api/session-filters", async (req: express.Request, res: express.Response) => {
+    try {
+      let tenantId = null;
+      
+      if (req.user) {
+        const user = await storage.getUser(req.user.claims.sub);
+        tenantId = user?.tenantId;
+      }
+      
+      // Get all sessions for the tenant (including past) to build comprehensive filter options
+      const sessions = await storage.getSessions({ tenantId, includePast: true });
+      
+      // Extract unique values for filters
+      const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(session => session.ageGroups || [])));
+      const uniqueLocations = Array.from(new Set(sessions.map(session => session.location).filter(Boolean)));
+      const uniqueGenders = Array.from(new Set(sessions.flatMap(session => session.genders || [])));
+      
+      const filters = {
+        ageGroups: uniqueAgeGroups.sort(),
+        locations: uniqueLocations.sort(),
+        genders: uniqueGenders.sort(),
+      };
+      
+      console.log('Session filters generated:', { tenantId, totalSessions: sessions.length, filters });
+      
+      res.json(filters);
+    } catch (error) {
+      console.error("Error fetching session filters:", error);
+      res.status(500).json({ error: "Failed to fetch session filters" });
     }
   });
 

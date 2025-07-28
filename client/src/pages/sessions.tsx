@@ -24,8 +24,16 @@ export default function Sessions() {
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [cartMode, setCartMode] = useState(false);
 
+  // Build query parameters for sessions API
+  const sessionParams = new URLSearchParams();
+  if (ageFilter !== "all") sessionParams.set("ageGroup", ageFilter);
+  if (locationFilter !== "all") sessionParams.set("location", locationFilter);
+  if (genderFilter !== "all") sessionParams.set("gender", genderFilter);
+  
+  const sessionsUrl = `/api/sessions${sessionParams.toString() ? `?${sessionParams.toString()}` : ''}`;
+  
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
-    queryKey: ["/api/sessions", { ageGroup: ageFilter, location: locationFilter, gender: genderFilter }],
+    queryKey: [sessionsUrl],
   });
 
   // Get players for authenticated parents
@@ -48,18 +56,15 @@ export default function Sessions() {
     return true;
   });
 
-  // Get unique filter options from all sessions (not just eligible ones)
-  // This ensures filter dropdowns always show available options
-  const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(s => s.ageGroups || [])));
-  const uniqueLocations = Array.from(new Set(sessions.map(s => s.location).filter(Boolean)));
-  const uniqueGenders = Array.from(new Set(sessions.flatMap(s => s.genders || [])));
+  // Get filter options from dedicated endpoint
+  const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery({
+    queryKey: ["/api/session-filters"],
+  });
 
-
-
-  // Sort the unique options for better UX
-  const sortedAgeGroups = uniqueAgeGroups.sort();
-  const sortedLocations = uniqueLocations.sort(); 
-  const sortedGenders = uniqueGenders.sort();
+  // Sort the filter options for better UX
+  const sortedAgeGroups = filterOptions.ageGroups.sort();
+  const sortedLocations = filterOptions.locations.sort(); 
+  const sortedGenders = filterOptions.genders.sort();
 
   if (isLoading) {
     return (

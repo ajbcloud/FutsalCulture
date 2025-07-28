@@ -33,7 +33,7 @@ import {
   type InsertDiscountCode,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, count, sql, or, ilike } from "drizzle-orm";
+import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Tenant operations
@@ -262,12 +262,18 @@ export class DatabaseStorage implements IStorage {
     await db.delete(players).where(eq(players.id, id));
   }
 
-  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string; tenantId?: string }): Promise<FutsalSession[]> {
+  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string; tenantId?: string; includePast?: boolean }): Promise<FutsalSession[]> {
     const conditions = [];
     
     if (filters?.tenantId) {
       conditions.push(eq(futsalSessions.tenantId, filters.tenantId));
     }
+    
+    // By default, only show future sessions unless explicitly requested to include past
+    if (!filters?.includePast) {
+      conditions.push(gte(futsalSessions.startTime, new Date()));
+    }
+    
     if (filters?.ageGroup) {
       conditions.push(sql`${filters.ageGroup} = ANY(${futsalSessions.ageGroups})`);
     }
