@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
@@ -15,7 +16,9 @@ import {
   X,
   UserCheck,
   Tag,
-  Key
+  Key,
+  Sun,
+  Moon
 } from "lucide-react";
 
 const adminNavItems = [
@@ -40,9 +43,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -52,11 +56,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-zinc-900 border-r border-zinc-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700">
-          <h1 className="text-xl font-bold text-white">Admin Portal</h1>
+        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-700">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Portal</h1>
           <Button
             variant="ghost"
             size="sm"
@@ -80,7 +84,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <div className={`flex items-center px-3 py-2 mb-1 rounded-lg transition-colors ${
                     isActive 
                       ? 'bg-blue-600 text-white' 
-                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                      : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white'
                   }`}>
                     <Icon className="w-5 h-5 mr-3" />
                     {item.label}
@@ -92,7 +96,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* User info at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-200 dark:border-zinc-700">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-white">
@@ -100,16 +104,28 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-zinc-400 truncate">
-                {user?.isAdmin ? 'Owner' : 'Assistant'}
-              </p>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">
+                    {user?.isAdmin ? 'Owner' : 'Assistant'}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleTheme}
+                  className="h-8 w-8 p-0 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
           </div>
           <Link href="/api/logout">
-            <Button variant="ghost" size="sm" className="w-full mt-2 text-zinc-400 hover:text-white">
+            <Button variant="ghost" size="sm" className="w-full mt-2 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white">
               Logout
             </Button>
           </Link>
@@ -119,7 +135,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-700 px-4 py-3">
+        <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 py-3">
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -131,7 +147,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-zinc-400">Futsal Culture Admin</span>
+              <span className="text-sm text-gray-600 dark:text-zinc-400">Futsal Culture Admin</span>
             </div>
           </div>
         </div>
