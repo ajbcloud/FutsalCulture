@@ -45,30 +45,24 @@ export default function AdminAnalyticsWorking() {
   const loadAnalyticsData = async () => {
     setLoading(true);
     try {
-      // Get basic analytics
-      const basicAnalytics = await adminAnalytics.get();
-      setAnalytics(basicAnalytics);
+      // Use the same filtered endpoint for initial load with default filters
+      const params = new URLSearchParams();
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.ageGroup && filters.ageGroup !== 'all') params.append('ageGroup', filters.ageGroup);
+      if (filters.gender && filters.gender !== 'all') params.append('gender', filters.gender);
+      if (filters.location) params.append('location', filters.location);
+      params.append('viewBy', filters.viewBy);
       
-      // Generate sample detailed data for charts
-      const last30Days = Array.from({ length: 30 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (29 - i));
-        return date.toISOString().split('T')[0];
-      });
+      // Get filtered analytics data from the same endpoint
+      const response = await fetch(`/api/admin/analytics?${params.toString()}`);
+      const analyticsData = await response.json();
       
-      const sampleData = {
-        revenue: last30Days.map(day => ({
-          day: day.slice(5), // Show MM-DD format
-          amount: Math.floor(Math.random() * 200) + 50
-        })),
-        occupancy: last30Days.map(day => ({
-          day: day.slice(5),
-          fillRate: Math.floor(Math.random() * 30) + 70
-        })),
-        playerGrowth: last30Days.map(day => ({
-          day: day.slice(5),
-          count: Math.floor(Math.random() * 5)
-        })),
+      setAnalytics(analyticsData);
+      setDetailedData({
+        revenue: analyticsData.revenue || [],
+        occupancy: analyticsData.occupancy || [],
+        playerGrowth: analyticsData.playerGrowth || [],
         ageDistribution: [
           { name: 'U8', value: 15, color: '#3b82f6' },
           { name: 'U10', value: 25, color: '#10b981' },
@@ -76,9 +70,7 @@ export default function AdminAnalyticsWorking() {
           { name: 'U14', value: 20, color: '#ef4444' },
           { name: 'U16', value: 10, color: '#8b5cf6' }
         ]
-      };
-      
-      setDetailedData(sampleData);
+      });
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }
@@ -103,27 +95,11 @@ export default function AdminAnalyticsWorking() {
       
       setAnalytics(filteredAnalytics);
       
-      // Update detailed data based on filters
-      const daysDiff = Math.ceil((new Date(filters.endDate).getTime() - new Date(filters.startDate).getTime()) / (1000 * 60 * 60 * 24));
-      const dateRange = Array.from({ length: daysDiff }, (_, i) => {
-        const date = new Date(filters.startDate);
-        date.setDate(date.getDate() + i);
-        return date.toISOString().split('T')[0];
-      });
-      
-      const filteredDetailedData = {
-        revenue: dateRange.map(day => ({
-          day: day.slice(5),
-          amount: Math.floor(Math.random() * 150) + 30 // Varied based on date range
-        })),
-        occupancy: dateRange.map(day => ({
-          day: day.slice(5),
-          fillRate: Math.floor(Math.random() * 25) + 65 // Different range for filtered data
-        })),
-        playerGrowth: dateRange.map(day => ({
-          day: day.slice(5),
-          count: Math.floor(Math.random() * 3) + 1 // Smaller growth for filtered periods
-        })),
+      // Use the real data from the API response
+      setDetailedData({
+        revenue: filteredAnalytics.revenue || [],
+        occupancy: filteredAnalytics.occupancy || [],
+        playerGrowth: filteredAnalytics.playerGrowth || [],
         ageDistribution: filters.ageGroup !== 'all' ? 
           [{ name: filters.ageGroup, value: 100, color: '#3b82f6' }] :
           [
@@ -133,9 +109,7 @@ export default function AdminAnalyticsWorking() {
             { name: 'U14', value: 18, color: '#ef4444' },
             { name: 'U16', value: 7, color: '#8b5cf6' }
           ]
-      };
-      
-      setDetailedData(filteredDetailedData);
+      });
     } catch (error) {
       console.error('Failed to apply filters:', error);
     }
