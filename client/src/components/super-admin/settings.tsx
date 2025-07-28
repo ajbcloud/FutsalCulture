@@ -89,16 +89,19 @@ export default function SuperAdminSettings() {
     }
   });
 
-  const { data: platformUsers, isLoading: usersLoading } = useQuery({
+  const { data: platformUsers, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['/api/super-admin/users'],
     queryFn: async () => {
       const response = await fetch('/api/super-admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
       return response.json();
     }
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings),
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings, 'PATCH'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
       toast({ title: "Success", description: "Platform settings saved successfully!" });
@@ -136,7 +139,7 @@ export default function SuperAdminSettings() {
   }, [platformIntegrations]);
 
   useEffect(() => {
-    if (platformUsers) {
+    if (platformUsers && Array.isArray(platformUsers)) {
       setUsers(platformUsers);
     }
   }, [platformUsers]);
@@ -517,7 +520,7 @@ export default function SuperAdminSettings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {users.map((user) => (
+                {Array.isArray(users) ? users.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div>
@@ -549,7 +552,11 @@ export default function SuperAdminSettings() {
                       </Select>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    {usersError ? 'Failed to load users' : 'No users found'}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

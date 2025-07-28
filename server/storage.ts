@@ -926,8 +926,8 @@ export class DatabaseStorage implements IStorage {
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
-      role: sql<string>`CASE WHEN ${users.isSuperAdmin} THEN 'super-admin' ELSE 'platform-admin' END`,
-      status: sql<string>`CASE WHEN ${users.isActive} THEN 'active' ELSE 'inactive' END`,
+      role: sql<string>`CASE WHEN ${users.isSuperAdmin} = true THEN 'super-admin' ELSE 'platform-admin' END`,
+      status: sql<string>`'active'`, // Default to active since no isActive field exists
       lastLogin: users.createdAt, // Placeholder
       createdAt: users.createdAt,
     })
