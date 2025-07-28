@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { CheckCircle, RefreshCw, DollarSign, XCircle, Info } from 'lucide-react';
+import { CheckCircle, RefreshCw, DollarSign, XCircle, Info, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -33,6 +33,8 @@ export default function AdminPayments() {
     search: '',
     dateRange: ''
   });
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
   // Refresh payments data when returning to page
@@ -153,6 +155,80 @@ export default function AdminPayments() {
       }
     }
   };
+
+  const handleMassConfirmPayments = async () => {
+    if (selectedPayments.size === 0) {
+      toast({ title: "No payments selected", variant: "destructive" });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to confirm ${selectedPayments.size} payment(s)?`)) {
+      return;
+    }
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Process payments one by one for better error handling
+      for (const paymentId of Array.from(selectedPayments)) {
+        try {
+          await adminPayments.confirm(paymentId);
+          successCount++;
+        } catch (error) {
+          console.error(`Error confirming payment ${paymentId}:`, error);
+          errorCount++;
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        toast({ title: `${successCount} payment(s) confirmed successfully` });
+      }
+      if (errorCount > 0) {
+        toast({ 
+          title: `${errorCount} payment(s) failed to confirm`, 
+          variant: "destructive" 
+        });
+      }
+
+      // Clear selection and refresh data
+      setSelectedPayments(new Set());
+      loadPayments();
+      
+      // Refresh all dashboard-related queries
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const togglePaymentSelection = (paymentId: string) => {
+    const newSelection = new Set(selectedPayments);
+    if (newSelection.has(paymentId)) {
+      newSelection.delete(paymentId);
+    } else {
+      newSelection.add(paymentId);
+    }
+    setSelectedPayments(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    const pendingPayments = filteredPayments.filter(p => p.status === 'pending');
+    if (selectedPayments.size === pendingPayments.length) {
+      setSelectedPayments(new Set());
+    } else {
+      setSelectedPayments(new Set(pendingPayments.map(p => p.id)));
+    }
+  };
+
+  const pendingPayments = filteredPayments.filter(p => p.status === 'pending');
+  const selectedPendingCount = Array.from(selectedPayments).filter(id => 
+    pendingPayments.some(p => p.id === id)
+  ).length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -303,11 +379,67 @@ export default function AdminPayments() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {pendingPayments.length > 0 && (
+        <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pendingPayments.length > 0 && selectedPayments.size === pendingPayments.length}
+                  onChange={toggleSelectAll}
+                  className="rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-zinc-300 text-sm">
+                  Select All Pending ({pendingPayments.length})
+                </span>
+              </div>
+              {selectedPendingCount > 0 && (
+                <span className="text-blue-400 text-sm">
+                  {selectedPendingCount} selected
+                </span>
+              )}
+            </div>
+            
+            {selectedPendingCount > 0 && (
+              <Button
+                onClick={handleMassConfirmPayments}
+                disabled={isProcessing}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Confirm {selectedPendingCount} Payment(s)
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Single Payments Table */}
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
+              <TableHead className="text-zinc-300 w-12">
+                {pendingPayments.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={pendingPayments.length > 0 && selectedPayments.size === pendingPayments.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                  />
+                )}
+              </TableHead>
               <TableHead className="text-zinc-300">Player</TableHead>
               <TableHead className="text-zinc-300">Parent</TableHead>
               <TableHead className="text-zinc-300">Session</TableHead>
@@ -320,6 +452,16 @@ export default function AdminPayments() {
           <TableBody>
             {filteredPayments.map((payment: any) => (
               <TableRow key={payment.id} className="border-zinc-800">
+                <TableCell className="w-12">
+                  {payment.status === 'pending' && (
+                    <input
+                      type="checkbox"
+                      checked={selectedPayments.has(payment.id)}
+                      onChange={() => togglePaymentSelection(payment.id)}
+                      className="rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                    />
+                  )}
+                </TableCell>
                 <TableCell className="text-white">
                   {payment.player?.firstName} {payment.player?.lastName}
                 </TableCell>
