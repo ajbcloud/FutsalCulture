@@ -160,11 +160,11 @@ export default function AdminDashboard() {
     },
     {
       title: "Total Players",
-      subtitle: "(This Month)",
+      subtitle: "(All Time)",
       value: (metrics?.totalPlayers || 0).toString(),
       icon: Users,
-      growth: metrics?.playersGrowth || 0,
-      comparison: "vs. last month",
+      growth: 0,
+      comparison: "",
     },
     {
       title: "Total Signups",
@@ -240,12 +240,10 @@ export default function AdminDashboard() {
             <KPICard
               title="Total Players"
               value={(metrics?.totalPlayers || 0).toString()}
-              tooltip="Number of new player registrations this month."
+              tooltip="Total number of registered players in the system."
               icon={Users}
               iconColor="text-blue-500"
-              subtitle="This Month"
-              growth={metrics?.playersGrowth || 0}
-              showGrowth={true}
+              subtitle="All Time"
             />
             <KPICard
               title="Total Registrations"
