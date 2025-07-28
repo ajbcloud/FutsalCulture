@@ -145,10 +145,14 @@ export const payments = pgTable("payments", {
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   status: varchar("status").notNull().default("open"),
-  name: varchar("name").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(), 
   phone: varchar("phone"),
   email: varchar("email").notNull(),
-  note: text("note").notNull(),
+  subject: varchar("subject").notNull(),
+  category: varchar("category").notNull(),
+  priority: varchar("priority").notNull().default("medium"),
+  message: text("message").notNull(),
   resolved: boolean("resolved").default(false),
   resolvedBy: varchar("resolved_by"), // admin user ID who resolved the issue
   resolutionNote: text("resolution_note"), // detailed explanation of resolution
@@ -314,19 +318,30 @@ export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   resolved: true,
   status: true,
 }).extend({
-  name: z.string()
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters")
-    .regex(/^[a-zA-Z\s'-]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes"),
+  firstName: z.string()
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "First name can only contain letters, spaces, hyphens, and apostrophes"),
+  lastName: z.string()
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Last name can only contain letters, spaces, hyphens, and apostrophes"),
   email: z.string()
     .email("Please enter a valid email address")
     .max(100, "Email must be less than 100 characters")
     .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Please enter a valid email address"),
   phone: z.string()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(20, "Phone number must be less than 20 characters")
-    .regex(/^[\d\s()\-+.]+$/, "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
-  note: z.string()
+    .optional()
+    .refine((val) => !val || (val.length >= 10 && val.length <= 20), "Phone number must be 10-20 characters")
+    .refine((val) => !val || /^[\d\s()\-+.]+$/.test(val), "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
+  subject: z.string()
+    .min(5, "Subject must be at least 5 characters")
+    .max(100, "Subject must be less than 100 characters"),
+  category: z.string()
+    .min(1, "Category is required"),
+  priority: z.string()
+    .min(1, "Priority is required"),
+  message: z.string()
     .min(20, "Message must be at least 20 characters")
     .max(1000, "Message must be less than 1000 characters")
     .regex(/^(?!.*(.)\1{5,}).*$/, "Message contains suspicious patterns"),

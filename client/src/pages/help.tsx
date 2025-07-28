@@ -15,21 +15,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
-  name: z.string()
-    .min(1, "Name is required")
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters")
-    .regex(/^[a-zA-Z\s'-]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes"),
+  firstName: z.string()
+    .min(1, "First name is required")
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "First name can only contain letters, spaces, hyphens, and apostrophes"),
+  lastName: z.string()
+    .min(1, "Last name is required")
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be less than 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Last name can only contain letters, spaces, hyphens, and apostrophes"),
   email: z.string()
     .min(1, "Email is required")
     .email("Please enter a valid email address")
     .max(100, "Email must be less than 100 characters")
     .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Please enter a valid email address"),
   phone: z.string()
-    .min(1, "Phone number is required")
-    .min(10, "Phone number must be at least 10 digits")
-    .max(20, "Phone number must be less than 20 characters")
-    .regex(/^[\d\s()\-+.]+$/, "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
+    .optional()
+    .refine((val) => !val || (val.length >= 10 && val.length <= 20), "Phone number must be 10-20 characters")
+    .refine((val) => !val || /^[\d\s()\-+.]+$/.test(val), "Phone number can only contain digits, spaces, parentheses, hyphens, plus signs, and periods"),
+  subject: z.string()
+    .min(1, "Subject is required")
+    .min(5, "Subject must be at least 5 characters")
+    .max(100, "Subject must be less than 100 characters"),
+  category: z.string()
+    .min(1, "Category is required"),
+  priority: z.string()
+    .min(1, "Priority is required"),
   message: z.string()
     .min(1, "Message is required")
     .min(20, "Message must be at least 20 characters")
@@ -75,16 +87,20 @@ export default function Help() {
   const form = useForm<HelpForm>({
     resolver: zodResolver(helpSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
+      subject: "",
+      category: "",
+      priority: "medium",
       message: "",
       captcha: "",
     },
   });
 
   const submitHelpMutation = useMutation({
-    mutationFn: async (data: { name: string; email: string; phone: string; note: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; subject: string; category: string; priority: string; message: string }) => {
       const response = await apiRequest("POST", "/api/help", data);
       return response.json();
     },
@@ -119,12 +135,8 @@ export default function Help() {
       return;
     }
     
-    // Remove captcha and map message to note for backend schema
-    const { captcha, message, ...otherData } = data;
-    const submitData = {
-      ...otherData,
-      note: message, // Backend expects 'note' field
-    };
+    // Remove captcha for submission
+    const { captcha, ...submitData } = data;
     submitHelpMutation.mutate(submitData);
   };
 
@@ -168,24 +180,45 @@ export default function Help() {
 
 
 
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Name <span className="text-red-400">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Your full name" 
-                              {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
-                              required
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">First Name <span className="text-red-400">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="First name" 
+                                {...field} 
+                                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Last Name <span className="text-red-400">*</span></FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Last name" 
+                                {...field} 
+                                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <FormField
                       control={form.control}
@@ -212,11 +245,29 @@ export default function Help() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Phone <span className="text-red-400">*</span></FormLabel>
+                          <FormLabel className="text-white">Phone</FormLabel>
                           <FormControl>
                             <Input 
                               type="tel" 
                               placeholder="(555) 123-4567" 
+                              {...field} 
+                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="subject"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Subject <span className="text-red-400">*</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Brief description of your request" 
                               {...field} 
                               className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
                               required
@@ -226,6 +277,57 @@ export default function Help() {
                         </FormItem>
                       )}
                     />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Category <span className="text-red-400">*</span></FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-zinc-800 border-zinc-600">
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="booking">Booking</SelectItem>
+                                <SelectItem value="payment">Payment</SelectItem>
+                                <SelectItem value="technical">Technical</SelectItem>
+                                <SelectItem value="account">Account</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Priority <span className="text-red-400">*</span></FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-zinc-800 border-zinc-600">
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <FormField
                       control={form.control}

@@ -95,10 +95,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { sendHelpRequestNotification } = await import('./emailService');
         const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@futsalculture.com';
         await sendHelpRequestNotification(supportEmail, {
-          name: helpRequest.name,
+          name: `${helpRequest.firstName} ${helpRequest.lastName}`,
           email: helpRequest.email,
           phone: helpRequest.phone || undefined,
-          note: helpRequest.note
+          note: helpRequest.message
         });
       } catch (emailError) {
         console.error("Failed to send help request notification email:", emailError);
