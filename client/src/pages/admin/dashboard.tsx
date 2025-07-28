@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { 
   DollarSign, 
   Users, 
@@ -83,6 +84,7 @@ interface AdminStats {
 }
 
 export default function AdminDashboard() {
+  const businessName = useBusinessName();
   const [, setLocation] = useLocation();
   
   // Automatically refresh data when navigating back to dashboard
@@ -235,7 +237,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
             <p className="text-zinc-400 mt-2">
-              Welcome to the Futsal Culture management portal
+              Welcome to the {businessName} management portal
             </p>
           </div>
 

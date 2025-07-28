@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
@@ -55,6 +56,7 @@ const helpSchema = z.object({
 type HelpForm = z.infer<typeof helpSchema>;
 
 export default function Help() {
+  const businessName = useBusinessName();
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
@@ -147,7 +149,7 @@ export default function Help() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Get Help</h1>
           <p className="text-zinc-400 text-lg">
-            Need assistance with your Futsal Culture experience? We're here to help!
+            Need assistance with your {businessName} experience? We're here to help!
           </p>
         </div>
 

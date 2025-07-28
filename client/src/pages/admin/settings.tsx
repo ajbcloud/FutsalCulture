@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
 import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2 } from 'lucide-react';
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 
 interface SystemSettings {
@@ -84,6 +85,7 @@ const getTimezones = () => {
 };
 
 export default function AdminSettings() {
+  const businessName = useBusinessName();
   const [settings, setSettings] = useState<SystemSettings>({
     autoApproveRegistrations: true,
     businessName: '',
@@ -473,7 +475,7 @@ export default function AdminSettings() {
                 Service Payment
               </CardTitle>
               <p className="text-zinc-400 text-sm">
-                Pay for your Futsal Culture platform subscription and services
+                Pay for your {businessName} platform subscription and services
               </p>
             </CardHeader>
             <CardContent className="space-y-6">

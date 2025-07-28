@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { CheckCircle, Mail, Lock, User } from "lucide-react";
+import { useBusinessName } from "@/contexts/BusinessContext";
 
 const playerSignupSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -28,6 +29,7 @@ type PlayerSignupForm = z.infer<typeof playerSignupSchema>;
 export default function PlayerInvite() {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
+  const businessName = useBusinessName();
   const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<PlayerSignupForm>({
@@ -151,7 +153,7 @@ export default function PlayerInvite() {
             <User className="w-12 h-12 mx-auto" />
           </div>
           <CardTitle className="text-white text-2xl">
-            Welcome to Futsal Culture
+            Welcome to {businessName}
           </CardTitle>
           <p className="text-zinc-400">
             You've been invited to create your player account

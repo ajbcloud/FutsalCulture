@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
 import { apiRequest } from '../../lib/queryClient';
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { CreditCard, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -90,6 +91,7 @@ const CheckoutForm = () => {
 };
 
 export default function Payment() {
+  const businessName = useBusinessName();
   const [clientSecret, setClientSecret] = useState("");
   const { toast } = useToast();
 
@@ -111,7 +113,7 @@ export default function Payment() {
     // Create PaymentIntent for service billing
     apiRequest("POST", "/api/admin/create-service-payment", { 
       amount: 4999, // $49.99 in cents
-      description: "Futsal Culture Platform Subscription"
+      description: businessName + " Platform Subscription"
     })
       .then((res) => res.json())
       .then((data) => {

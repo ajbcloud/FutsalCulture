@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TimezoneProvider } from "@/contexts/TimezoneContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { BusinessProvider } from "@/contexts/BusinessContext";
 import Landing from "@/pages/landing";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
@@ -96,14 +97,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <TimezoneProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </TimezoneProvider>
-        </AuthProvider>
+        <BusinessProvider>
+          <AuthProvider>
+            <TimezoneProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </TimezoneProvider>
+          </AuthProvider>
+        </BusinessProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

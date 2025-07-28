@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { Mail, Users } from 'lucide-react';
 
 const parent2SignupSchema = z.object({
@@ -22,6 +23,7 @@ const parent2SignupSchema = z.object({
 type Parent2SignupForm = z.infer<typeof parent2SignupSchema>;
 
 export default function Parent2Invite() {
+  const businessName = useBusinessName();
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -111,7 +113,7 @@ export default function Parent2Invite() {
             <div className="text-green-400 mb-4">
               <Users className="w-12 h-12 mx-auto" />
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Welcome to Futsal Culture!</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">Welcome to {businessName}!</h2>
             <p className="text-zinc-400 mb-4">
               Your Parent 2 account has been created successfully. You now have access to the same parent portal features.
             </p>

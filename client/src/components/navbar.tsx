@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusinessName } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -8,6 +9,7 @@ import { Menu, User, X } from "lucide-react";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
+  const businessName = useBusinessName();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -16,7 +18,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-green-400">Futsal Culture</h1>
+              <h1 className="text-2xl font-bold text-green-400">{businessName}</h1>
             </Link>
             <div className="hidden md:block ml-10">
               <div className="flex space-x-8">
