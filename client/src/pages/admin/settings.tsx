@@ -106,9 +106,20 @@ export default function AdminSettings() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check for payment success parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      toast({
+        title: "Payment Successful",
+        description: "Your subscription payment has been processed successfully!",
+      });
+      // Clean up the URL without refreshing the page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     fetchSettings();
     fetchIntegrations();
-  }, []);
+  }, [toast]);
 
   const fetchSettings = async () => {
     try {
