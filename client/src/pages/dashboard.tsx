@@ -332,8 +332,27 @@ export default function Dashboard() {
               ) : (
                 <>
                   <p className="text-gray-500 text-lg">No eligible sessions scheduled for today.</p>
-                  <Button asChild className="mt-4">
-                    <Link href="/sessions">View All Sessions</Link>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => {
+                      // Build URL with filters based on players' eligibility
+                      const playerAgeGroups = players.map(player => calculateAgeGroup(player.birthYear));
+                      const playerGenders = [...new Set(players.map(player => player.gender))];
+                      
+                      // If there's only one age group and one gender, apply them as filters
+                      const params = new URLSearchParams();
+                      if (playerAgeGroups.length === 1) {
+                        params.set('age', playerAgeGroups[0]);
+                      }
+                      if (playerGenders.length === 1) {
+                        params.set('gender', playerGenders[0]);
+                      }
+                      
+                      const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
+                      window.location.href = url;
+                    }}
+                  >
+                    View All Eligible Sessions
                   </Button>
                 </>
               )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
@@ -28,6 +28,27 @@ export default function Sessions() {
   const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
   const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
   const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
+
+  // Check for URL parameters to auto-apply filters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ageParam = urlParams.get('age');
+    const genderParam = urlParams.get('gender');
+    const locationParam = urlParams.get('location');
+    
+    if (ageParam) {
+      setCurrentAgeFilter(ageParam);
+      setAppliedAgeFilter(ageParam);
+    }
+    if (genderParam) {
+      setCurrentGenderFilter(genderParam);
+      setAppliedGenderFilter(genderParam);
+    }
+    if (locationParam) {
+      setCurrentLocationFilter(locationParam);
+      setAppliedLocationFilter(locationParam);
+    }
+  }, []);
 
   // Build query parameters for sessions API using applied filters
   const sessionParams = new URLSearchParams();
