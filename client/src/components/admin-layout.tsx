@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="min-h-screen bg-background">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -57,16 +57,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-700">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex flex-col items-center space-y-2">
             <BusinessBranding 
               variant="small" 
-              textClassName="text-gray-900 dark:text-white"
+              textClassName="text-foreground"
             />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Portal</h1>
+            <h1 className="text-xl font-bold text-foreground">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"
@@ -90,8 +90,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Link key={item.href} href={item.href}>
                   <div className={`flex items-center px-3 py-2 mb-1 rounded-lg transition-colors ${
                     isActive 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   }`}>
                     <Icon className="w-5 h-5 mr-3" />
                     {item.label}
@@ -103,20 +103,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* User info at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-sm font-medium text-primary-foreground">
                 {user?.firstName?.[0] || 'A'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {user?.isAdmin ? 'Owner' : 'Assistant'}
                   </p>
                 </div>
