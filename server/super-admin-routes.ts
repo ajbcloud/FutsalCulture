@@ -208,13 +208,15 @@ export function setupSuperAdminRoutes(app: Express) {
   // Get global players across all tenants
   app.get('/api/super-admin/players', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
-      const { tenantId, search, ageGroup, gender, portalAccess } = req.query;
+      const { tenantId, search, ageGroup, gender, portalAccess, dateFrom, dateTo } = req.query;
       const players = await storage.getSuperAdminPlayers({
         tenantId: tenantId as string,
         search: search as string,
         ageGroup: ageGroup as string,
         gender: gender as string,
-        portalAccess: portalAccess as string
+        portalAccess: portalAccess as string,
+        dateFrom: dateFrom as string,
+        dateTo: dateTo as string
       });
       res.json(players);
     } catch (error) {

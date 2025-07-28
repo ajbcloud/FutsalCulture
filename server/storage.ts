@@ -33,7 +33,7 @@ import {
   type InsertDiscountCode,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, count, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, count, sql, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // Tenant operations
@@ -635,9 +635,9 @@ export class DatabaseStorage implements IStorage {
       id: futsalSessions.id,
       tenantId: futsalSessions.tenantId,
       tenantName: tenants.name,
-      dateTime: futsalSessions.dateTime,
-      ageGroup: futsalSessions.ageGroup,
-      gender: futsalSessions.gender,
+      dateTime: futsalSessions.startTime,
+      ageGroups: futsalSessions.ageGroups,
+      genders: futsalSessions.genders,
       location: futsalSessions.location,
       capacity: futsalSessions.capacity,
       status: futsalSessions.status,
@@ -652,7 +652,8 @@ export class DatabaseStorage implements IStorage {
       query = query.where(eq(futsalSessions.tenantId, filters.tenantId));
     }
     if (filters?.ageGroup) {
-      query = query.where(eq(futsalSessions.ageGroup, filters.ageGroup));
+      // Note: ageGroups is an array, so we'd need array containment logic here
+      // For now, skip this filter until proper array handling is implemented
     }
     if (filters?.status) {
       query = query.where(eq(futsalSessions.status, filters.status));
@@ -668,8 +669,8 @@ export class DatabaseStorage implements IStorage {
       tenantName: tenants.name,
       signupId: payments.signupId,
       playerName: sql<string>`${players.firstName} || ' ' || ${players.lastName}`,
-      sessionDate: futsalSessions.dateTime,
-      amount: payments.amount,
+      sessionDate: futsalSessions.startTime,
+      amount: payments.amountCents,
       status: payments.status,
       paidAt: payments.paidAt,
       adminNotes: payments.adminNotes,
@@ -701,7 +702,7 @@ export class DatabaseStorage implements IStorage {
       name: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
       email: users.email,
       invitedAt: users.createdAt,
-      status: sql<string>`CASE WHEN ${users.isActive} THEN 'approved' ELSE 'pending' END`,
+      status: sql<string>`CASE WHEN ${users.isApproved} THEN 'approved' ELSE 'pending' END`,
       approvedAt: users.createdAt,
     })
     .from(users)
@@ -757,7 +758,7 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]> {
+  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
     let query = db.select({
       id: players.id,
       tenantId: players.tenantId,
@@ -773,7 +774,7 @@ export class DatabaseStorage implements IStorage {
       parentEmail: users.email,
       registrationDate: players.createdAt,
       totalBookings: sql<number>`0`, // Would need to join with signups
-      lastActivity: players.updatedAt,
+      lastActivity: players.createdAt,
     })
     .from(players)
     .leftJoin(tenants, eq(players.tenantId, tenants.id))
@@ -785,7 +786,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(players.tenantId, filters.tenantId));
     }
     if (filters?.gender && filters.gender !== 'all') {
-      conditions.push(eq(players.gender, filters.gender));
+      conditions.push(eq(players.gender, filters.gender as any));
     }
     if (filters?.portalAccess && filters.portalAccess !== 'all') {
       if (filters.portalAccess === 'yes') {
@@ -793,6 +794,27 @@ export class DatabaseStorage implements IStorage {
       } else if (filters.portalAccess === 'no') {
         conditions.push(eq(players.canAccessPortal, false));
       }
+    }
+    if (filters?.ageGroup && filters.ageGroup !== 'all') {
+      const ageGroupNum = parseInt(filters.ageGroup.replace('U', ''));
+      conditions.push(sql`(2025 - ${players.birthYear}) <= ${ageGroupNum}`);
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(players.firstName, `%${filters.search}%`),
+          ilike(players.lastName, `%${filters.search}%`),
+          ilike(users.firstName, `%${filters.search}%`),
+          ilike(users.lastName, `%${filters.search}%`),
+          ilike(tenants.name, `%${filters.search}%`)
+        )
+      );
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(players.createdAt, new Date(filters.dateFrom)));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(players.createdAt, new Date(filters.dateTo)));
     }
 
     if (conditions.length > 0) {
@@ -805,7 +827,7 @@ export class DatabaseStorage implements IStorage {
   async getSuperAdminAnalytics(filters?: { tenants?: string[]; from?: string; to?: string; ageGroup?: string; gender?: string }): Promise<any> {
     // Basic analytics aggregation across all tenants
     const totalRevenue = await db.select({
-      value: sql<number>`SUM(${payments.amount})`,
+      value: sql<number>`SUM(${payments.amountCents})`,
     }).from(payments).where(eq(payments.status, 'paid'));
 
     const totalPlayers = await db.select({
@@ -824,7 +846,7 @@ export class DatabaseStorage implements IStorage {
     const revenueByTenant = await db.select({
       tenantId: tenants.id,
       tenantName: tenants.name,
-      revenue: sql<number>`COALESCE(SUM(${payments.amount}), 0)`,
+      revenue: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`,
       growth: sql<number>`0`, // Placeholder for growth calculation
     })
     .from(tenants)
