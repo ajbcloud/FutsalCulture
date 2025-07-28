@@ -73,35 +73,44 @@ export default function SuperAdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch platform settings
   const { data: platformSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ['/api/super-admin/settings'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/settings');
+      const response = await fetch('/api/super-admin/settings', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch settings');
       return response.json();
     }
   });
 
+  // Fetch platform integrations
   const { data: platformIntegrations, isLoading: integrationsLoading } = useQuery({
     queryKey: ['/api/super-admin/integrations'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/integrations');
+      const response = await fetch('/api/super-admin/integrations', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch integrations');
       return response.json();
     }
   });
 
-  const { data: platformUsers, isLoading: usersLoading, error: usersError } = useQuery({
+  // Fetch platform users
+  const { data: platformUsers, isLoading: usersLoading } = useQuery({
     queryKey: ['/api/super-admin/users'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
+      const response = await fetch('/api/super-admin/users', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     }
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings, 'PATCH'),
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings, 'POST'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
       toast({ title: "Success", description: "Platform settings saved successfully!" });
@@ -335,39 +344,58 @@ export default function SuperAdminSettings() {
               </CardTitle>
               <CardDescription>Configure email providers for tenant communications</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations.filter(i => i.type === 'email').map((integration) => (
-                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <h4 className="font-medium">{integration.name}</h4>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
-                          {integration.status}
-                        </Badge>
-                        {integration.enabled && (
-                          <Badge variant="outline">Enabled</Badge>
-                        )}
+            <CardContent>
+              <div className="rounded-md border max-h-[300px] overflow-auto">
+                <div className="space-y-2 p-4">
+                  {integrationsLoading ? (
+                    Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
+                        <div className="h-4 bg-muted rounded w-32"></div>
+                        <div className="h-8 bg-muted rounded w-24"></div>
                       </div>
+                    ))
+                  ) : integrations.filter(i => i.type === 'email').length > 0 ? (
+                    integrations.filter(i => i.type === 'email').map((integration) => (
+                      <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h4 className="font-medium">{integration.name}</h4>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                                {integration.status}
+                              </Badge>
+                              {integration.enabled && (
+                                <Badge variant="outline">Enabled</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleIntegrationTest(integration.id)}
+                            disabled={testIntegrationMutation.isPending}
+                          >
+                            <TestTube className="w-4 h-4 mr-1" />
+                            Test
+                          </Button>
+                          <Switch
+                            checked={integration.enabled}
+                            onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Mail className="w-12 h-12 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No email integrations</h3>
+                      <p>No email services have been configured yet.</p>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleIntegrationTest(integration.id)}
-                      disabled={testIntegrationMutation.isPending}
-                    >
-                      <TestTube className="w-4 h-4 mr-1" />
-                      Test
-                    </Button>
-                    <Switch
-                      checked={integration.enabled}
-                      onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
-                    />
-                  </div>
+                  )}
                 </div>
-              ))}
+              </div>
             </CardContent>
           </Card>
 
@@ -519,44 +547,57 @@ export default function SuperAdminSettings() {
               <CardDescription>Manage platform administrators and their permissions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {Array.isArray(users) ? users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <h4 className="font-medium">{user.firstName} {user.lastName}</h4>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge variant={user.role === 'super-admin' ? 'default' : 'secondary'}>
-                            {user.role}
-                          </Badge>
-                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                            {user.status}
-                          </Badge>
+              <div className="rounded-md border max-h-[600px] overflow-auto">
+                <div className="space-y-2 p-4">
+                  {usersLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 border rounded-lg animate-pulse">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-4 bg-muted rounded w-32"></div>
+                        </div>
+                        <div className="h-8 bg-muted rounded w-24"></div>
+                      </div>
+                    ))
+                  ) : Array.isArray(users) && users.length > 0 ? users.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <h4 className="font-medium">{user.firstName} {user.lastName}</h4>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge variant={user.role === 'super-admin' ? 'default' : 'secondary'}>
+                              {user.role}
+                            </Badge>
+                            <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                              {user.status}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Key className="w-4 h-4 mr-1" />
+                          Reset Password
+                        </Button>
+                        <Select defaultValue={user.role}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="super-admin">Super Admin</SelectItem>
+                            <SelectItem value="platform-admin">Platform Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Key className="w-4 h-4 mr-1" />
-                        Reset Password
-                      </Button>
-                      <Select defaultValue={user.role}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="super-admin">Super Admin</SelectItem>
-                          <SelectItem value="platform-admin">Platform Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  )) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="w-12 h-12 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">No users found</h3>
+                      <p>No super admin users have been configured yet.</p>
                     </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    {usersError ? 'Failed to load users' : 'No users found'}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
