@@ -47,9 +47,9 @@ interface SubscriptionInfo {
   subscription: {
     id: string;
     status: string;
-    current_period_start: number;
-    current_period_end: number;
-    plan: {
+    current_period_start: number | null;
+    current_period_end: number | null;
+    plan?: {
       id: string;
       nickname: string;
       amount: number;
@@ -60,7 +60,7 @@ interface SubscriptionInfo {
         name: string;
         description: string;
       };
-    };
+    } | null;
     customer: {
       id: string;
       email: string;
@@ -73,7 +73,10 @@ interface SubscriptionInfo {
     created: number;
     period_start: number;
     period_end: number;
+    hosted_invoice_url?: string;
+    invoice_pdf?: string;
   }>;
+  customer_id: string;
 }
 
 
@@ -676,94 +679,122 @@ export default function AdminSettings() {
                 </div>
               ) : subscriptionInfo ? (
                 <>
-                  {/* Current Plan Display */}
-                  <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <h3 className="text-white font-medium">Current Plan</h3>
-                        <p className="text-zinc-400 text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
-                      </div>
-                      <Badge className={subscriptionInfo.subscription.status === 'active' ? "bg-green-900 text-green-300" : "bg-yellow-900 text-yellow-300"}>
-                        {subscriptionInfo.subscription.status === 'active' ? 'Active' : subscriptionInfo.subscription.status}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-zinc-400">Monthly Fee:</span>
-                        <span className="text-white ml-2 font-medium">
-                          ${(subscriptionInfo.subscription.plan.amount / 100).toFixed(2)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-zinc-400">Next Billing:</span>
-                        <span className="text-white ml-2">
-                          {new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-zinc-400">Customer:</span>
-                        <span className="text-white ml-2">{subscriptionInfo.subscription.customer.email}</span>
-                      </div>
-                      <div>
-                        <span className="text-zinc-400">Interval:</span>
-                        <span className="text-white ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Billing History */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-white font-medium">Recent Invoices</h4>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
-                        onClick={openBillingPortal}
-                      >
-                        View All
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {subscriptionInfo.invoices.map((invoice) => (
-                        <div key={invoice.id} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+                  {subscriptionInfo.subscription.status === 'active' && subscriptionInfo.subscription.plan ? (
+                    <>
+                      {/* Current Plan Display */}
+                      <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                        <div className="flex justify-between items-center mb-3">
                           <div>
-                            <p className="text-white text-sm">
-                              {new Date(invoice.created * 1000).toLocaleDateString()}
-                            </p>
-                            <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                            <h3 className="text-white font-medium">Current Plan</h3>
+                            <p className="text-zinc-400 text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-white text-sm font-medium">
-                              ${(invoice.amount_paid / 100).toFixed(2)}
-                            </p>
-                            <Badge className="bg-green-900 text-green-300 text-xs capitalize">
-                              {invoice.status}
-                            </Badge>
+                          <Badge className="bg-green-900 text-green-300">
+                            Active
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-zinc-400">Monthly Fee:</span>
+                            <span className="text-white ml-2 font-medium">
+                              ${(subscriptionInfo.subscription.plan.amount / 100).toFixed(2)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-400">Next Billing:</span>
+                            <span className="text-white ml-2">
+                              {subscriptionInfo.subscription.current_period_end ? 
+                                new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString() 
+                                : 'N/A'
+                              }
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-400">Customer:</span>
+                            <span className="text-white ml-2">{subscriptionInfo.subscription.customer.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-400">Interval:</span>
+                            <span className="text-white ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
 
-                  {/* Action Button */}
-                  <div className="flex justify-center pt-4">
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700 px-8"
-                      onClick={openBillingPortal}
-                    >
-                      Manage Subscription & Billing
-                    </Button>
-                  </div>
+                      {/* Billing History */}
+                      {subscriptionInfo.invoices.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-white font-medium">Recent Invoices</h4>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
+                              onClick={openBillingPortal}
+                            >
+                              View All
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subscriptionInfo.invoices.map((invoice) => (
+                              <div key={invoice.id} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+                                <div>
+                                  <p className="text-white text-sm">
+                                    {new Date(invoice.created * 1000).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-white text-sm font-medium">
+                                    ${(invoice.amount_paid / 100).toFixed(2)}
+                                  </p>
+                                  <Badge className="bg-green-900 text-green-300 text-xs capitalize">
+                                    {invoice.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      <div className="flex justify-center pt-4">
+                        <Button 
+                          className="bg-blue-600 hover:bg-blue-700 px-8"
+                          onClick={openBillingPortal}
+                        >
+                          Manage Subscription & Billing
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    /* No active subscription */
+                    <div className="text-center py-8">
+                      <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 mb-4">
+                        <h3 className="text-white font-medium mb-2">No Active Subscription</h3>
+                        <p className="text-zinc-400 text-sm mb-4">
+                          You don't have an active subscription. Set up billing to access all platform features.
+                        </p>
+                        <Badge className="bg-yellow-900 text-yellow-300">
+                          Inactive
+                        </Badge>
+                      </div>
+                      <Link href="/admin/payment">
+                        <Button className="bg-blue-600 hover:bg-blue-700">
+                          Set Up Subscription
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-zinc-400 mb-4">No subscription information available</p>
-                  <Link href="/admin/payment">
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      Set Up Billing
-                    </Button>
-                  </Link>
+                  <p className="text-zinc-400 mb-4">Unable to load subscription information</p>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={fetchSubscriptionInfo}
+                  >
+                    Retry
+                  </Button>
                 </div>
               )}
             </CardContent>

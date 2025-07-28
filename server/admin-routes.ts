@@ -2533,8 +2533,6 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       const currentUser = (req as any).currentUser;
 
-      // For demo purposes, we'll simulate subscription data
-      // In production, you'd store customer_id and subscription_id in your database
       try {
         // Get business settings
         const settings = await db.select().from(systemSettings);
@@ -2544,62 +2542,87 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         }, {} as any);
         const businessName = settingsMap.businessName || "Futsal Culture";
 
-        // Return mock subscription data that looks real
-        const mockSubscription = {
-          id: "sub_mock_subscription",
-          status: "active",
-          current_period_start: Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60), // 30 days ago
-          current_period_end: Math.floor(Date.now() / 1000) + (5 * 24 * 60 * 60), // 5 days from now
-          plan: {
-            id: "price_professional_platform",
-            nickname: "Professional Platform",
-            amount: 4999, // $49.99
-            currency: "usd",
-            interval: "month",
-            product: {
-              id: "prod_professional",
-              name: "Professional Platform",
-              description: "Advanced futsal management platform with unlimited players and sessions"
+        // Check if we have a stored customer ID for this user
+        let customerId = currentUser?.customerId;
+        
+        if (!customerId) {
+          // Create a new customer in Stripe
+          const customer = await stripe.customers.create({
+            email: currentUser?.email || "admin@futsalculture.com",
+            name: `${currentUser?.firstName || "Admin"} ${currentUser?.lastName || "User"}`,
+            metadata: {
+              user_id: currentUser?.id || "unknown",
+              business_name: businessName,
+              service_type: "platform_subscription"
             }
-          },
-          customer: {
-            id: "cus_mock_customer",
-            email: currentUser?.email || "admin@futsalculture.com"
+          });
+          
+          customerId = customer.id;
+          
+          // Store the customer ID in the database
+          if (currentUser?.id) {
+            await db.update(users)
+              .set({ customerId: customer.id })
+              .where(eq(users.id, currentUser.id));
           }
-        };
+        }
+
+        // Try to get existing subscriptions for this customer
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'all',
+          limit: 1
+        });
+
+        let subscription = null;
+        let invoices = [];
+
+        if (subscriptions.data.length > 0) {
+          // Get the most recent subscription
+          subscription = subscriptions.data[0];
+          
+          // Get invoices for this subscription
+          const invoiceList = await stripe.invoices.list({
+            customer: customerId,
+            limit: 5
+          });
+          
+          invoices = invoiceList.data.map(invoice => ({
+            id: invoice.id,
+            status: invoice.status,
+            amount_paid: invoice.amount_paid,
+            created: invoice.created,
+            period_start: invoice.period_start,
+            period_end: invoice.period_end,
+            hosted_invoice_url: invoice.hosted_invoice_url,
+            invoice_pdf: invoice.invoice_pdf
+          }));
+        } else {
+          // No active subscription found, create a placeholder response
+          subscription = {
+            id: "no_subscription",
+            status: "inactive",
+            current_period_start: null,
+            current_period_end: null,
+            plan: null,
+            customer: {
+              id: customerId,
+              email: currentUser?.email || "admin@futsalculture.com"
+            }
+          };
+        }
 
         res.json({
-          subscription: mockSubscription,
-          invoices: [
-            {
-              id: "in_mock_1",
-              status: "paid",
-              amount_paid: 4999,
-              created: Math.floor(Date.now() / 1000) - (24 * 60 * 60), // 1 day ago
-              period_start: Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60),
-              period_end: Math.floor(Date.now() / 1000)
-            },
-            {
-              id: "in_mock_2", 
-              status: "paid",
-              amount_paid: 4999,
-              created: Math.floor(Date.now() / 1000) - (31 * 24 * 60 * 60), // 31 days ago
-              period_start: Math.floor(Date.now() / 1000) - (61 * 24 * 60 * 60),
-              period_end: Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60)
-            },
-            {
-              id: "in_mock_3",
-              status: "paid", 
-              amount_paid: 4999,
-              created: Math.floor(Date.now() / 1000) - (62 * 24 * 60 * 60), // 62 days ago
-              period_start: Math.floor(Date.now() / 1000) - (92 * 24 * 60 * 60),
-              period_end: Math.floor(Date.now() / 1000) - (61 * 24 * 60 * 60)
-            }
-          ]
+          subscription,
+          invoices,
+          customer_id: customerId
         });
       } catch (stripeError) {
         console.error("Stripe API error:", stripeError);
-        return res.status(500).json({ message: "Failed to fetch subscription data from Stripe" });
+        return res.status(500).json({ 
+          message: "Failed to fetch subscription data from Stripe",
+          error: stripeError.message 
+        });
       }
     } catch (error: any) {
       console.error("Error fetching subscription info:", error);
