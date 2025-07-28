@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 interface AdminSettings {
   businessName: string;
+  businessLogo?: string;
   autoApproveRegistrations: boolean;
   paymentReminderMinutes: number;
   sessionDurationMinutes: number;
@@ -11,6 +12,7 @@ interface AdminSettings {
 
 interface BusinessContextType {
   businessName: string;
+  businessLogo?: string;
   isLoading: boolean;
 }
 
@@ -24,9 +26,10 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   });
 
   const businessName = settings?.businessName || 'Futsal Culture';
+  const businessLogo = settings?.businessLogo;
 
   return (
-    <BusinessContext.Provider value={{ businessName, isLoading }}>
+    <BusinessContext.Provider value={{ businessName, businessLogo, isLoading }}>
       {children}
     </BusinessContext.Provider>
   );

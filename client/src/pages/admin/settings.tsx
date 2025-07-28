@@ -9,13 +9,14 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2 } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 
 interface SystemSettings {
   autoApproveRegistrations: boolean;
   businessName: string;
+  businessLogo?: string;
   contactEmail: string;
   supportEmail: string;
   timezone: string;
@@ -158,7 +159,39 @@ export default function AdminSettings() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Logo file size must be less than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Please upload a PNG, JPEG, or SVG image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setSettings(prev => ({ ...prev, businessLogo: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -248,6 +281,55 @@ export default function AdminSettings() {
                   className="bg-zinc-800 border-zinc-700 text-white"
                   placeholder="Your business or organization name"
                 />
+              </div>
+              <div>
+                <Label className="text-zinc-300">Business Logo</Label>
+                <p className="text-sm text-zinc-400 mb-2">
+                  Upload a logo to replace the business name text. Maximum size: 2MB. Recommended dimensions: 200x60px.
+                </p>
+                <div className="space-y-4">
+                  {settings.businessLogo && (
+                    <div className="relative inline-block">
+                      <img 
+                        src={settings.businessLogo} 
+                        alt="Business Logo" 
+                        className="max-h-16 max-w-48 object-contain bg-zinc-800 rounded p-2"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                        onClick={() => setSettings(prev => ({ ...prev, businessLogo: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="logoUpload"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('logoUpload')?.click()}
+                      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Logo
+                    </Button>
+                    {settings.businessLogo && (
+                      <span className="text-sm text-green-500 flex items-center">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Logo uploaded
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
               <div>
                 <Label htmlFor="contactEmail" className="text-zinc-300">Contact Email</Label>

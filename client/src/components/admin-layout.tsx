@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useBusinessName } from "@/contexts/BusinessContext";
+import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
@@ -45,7 +45,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const businessName = useBusinessName();
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
@@ -149,7 +148,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground">{businessName} Admin</span>
+              <BusinessBranding 
+                variant="small" 
+                textClassName="text-muted-foreground"
+              />
+              <span className="text-sm text-muted-foreground">Admin</span>
             </div>
           </div>
         </div>

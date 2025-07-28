@@ -3,11 +3,9 @@ import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Users, CreditCard } from "lucide-react";
-import { useBusinessName } from "@/contexts/BusinessContext";
+import { BusinessBranding } from "@/components/business-branding";
 
 export default function Landing() {
-  const businessName = useBusinessName();
-  
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
@@ -34,7 +32,7 @@ export default function Landing() {
       <section className="py-16 bg-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">Why Choose {businessName}?</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Why Choose <BusinessBranding variant="default" textClassName="inline" />?</h2>
             <p className="text-xl text-zinc-400">Professional training with flexible booking</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -67,7 +65,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold mb-4 text-[#ffffff]">Ready to Get Started?</h2>
           <p className="text-xl text-gray-600 mb-8">
-            Join hundreds of families who trust {businessName} for their children's development.
+            Join hundreds of families who trust <BusinessBranding variant="default" textClassName="inline" /> for their children's development.
           </p>
           <Button asChild size="lg" className="bg-futsal-600 hover:bg-futsal-700">
             <a href="/api/login">Create Parent Account</a>

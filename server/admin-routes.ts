@@ -1485,6 +1485,7 @@ export function setupAdminRoutes(app: any) {
       const defaultSettings = {
         autoApproveRegistrations: true,
         businessName: "Futsal Culture",
+        businessLogo: "",
         contactEmail: "admin@futsalculture.com",
         supportEmail: "support@futsalculture.com",
         timezone: "America/New_York",
@@ -1514,7 +1515,7 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  app.patch('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
+  app.post('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
       const updates = req.body;
       const adminUserId = (req as any).currentUser?.id;
