@@ -69,16 +69,10 @@ export default function SessionCalendar({
     return acc;
   }, {} as Record<string, FutsalSession[]>);
 
-  // Generate calendar days - only weekdays (Monday-Friday)
-  const allDays = eachDayOfInterval({
+  // Generate calendar days - full week layout including weekends
+  const calendarDays = eachDayOfInterval({
     start: monthStart,
     end: monthEnd,
-  });
-  
-  // Filter to only show weekdays (Monday=1 to Friday=5)
-  const calendarDays = allDays.filter(day => {
-    const dayOfWeek = day.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
-    return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday through Friday only
   });
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -111,10 +105,10 @@ export default function SessionCalendar({
         </div>
       </div>
 
-      {/* Calendar Grid - Weekdays Only */}
-      <div className="grid grid-cols-5 gap-2">
-        {/* Day Headers - Weekdays Only */}
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
+      {/* Calendar Grid - Full Week Layout */}
+      <div className="grid grid-cols-7 gap-2">
+        {/* Day Headers - Full Week */}
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
           <div key={day} className="p-2 text-center text-sm font-medium text-zinc-400">
             {day}
           </div>
@@ -179,7 +173,7 @@ export default function SessionCalendar({
                     statusText = 'open';
                   } else if (isSessionToday && !bookingOpen) {
                     statusColor = 'bg-yellow-700/20';
-                    statusText = 'pending (8 AM Rule)';
+                    statusText = 'upcoming';
                   } else if (isSessionFuture) {
                     // Future sessions should always show as upcoming (yellow)
                     statusColor = 'bg-yellow-700/20';
