@@ -22,8 +22,8 @@ import { Label } from '../../components/ui/label';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
 export default function AdminPayments() {
-  const [pendingPayments, setPendingPayments] = useState([]);
-  const [paidPayments, setPaidPayments] = useState([]);
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
+  const [paidPayments, setPaidPayments] = useState<any[]>([]);
   const [filteredPendingPayments, setFilteredPendingPayments] = useState([]);
   const [filteredPaidPayments, setFilteredPaidPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,6 +218,7 @@ export default function AdminPayments() {
               <TableHeader>
                 <TableRow className="border-zinc-800">
                   <TableHead className="text-zinc-300">Player</TableHead>
+                  <TableHead className="text-zinc-300">Parent</TableHead>
                   <TableHead className="text-zinc-300">Session</TableHead>
                   <TableHead className="text-zinc-300">Reserved At</TableHead>
                   <TableHead className="text-zinc-300">Amount</TableHead>
@@ -229,6 +230,9 @@ export default function AdminPayments() {
                   <TableRow key={payment.id} className="border-zinc-800">
                     <TableCell className="text-white">
                       {payment.player?.firstName} {payment.player?.lastName}
+                    </TableCell>
+                    <TableCell className="text-zinc-300">
+                      {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
                     </TableCell>
                     <TableCell className="text-zinc-300">
                       {payment.session?.title || 'Unknown Session'}
@@ -249,9 +253,9 @@ export default function AdminPayments() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {pendingPayments.length === 0 && (
+                {filteredPendingPayments.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-zinc-400 py-8">
+                    <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
                       No pending payments
                     </TableCell>
                   </TableRow>
@@ -267,6 +271,7 @@ export default function AdminPayments() {
               <TableHeader>
                 <TableRow className="border-zinc-800">
                   <TableHead className="text-zinc-300">Player</TableHead>
+                  <TableHead className="text-zinc-300">Parent</TableHead>
                   <TableHead className="text-zinc-300">Session</TableHead>
                   <TableHead className="text-zinc-300">Paid At</TableHead>
                   <TableHead className="text-zinc-300">Amount</TableHead>
@@ -278,6 +283,9 @@ export default function AdminPayments() {
                   <TableRow key={payment.id} className="border-zinc-800">
                     <TableCell className="text-white">
                       {payment.player?.firstName} {payment.player?.lastName}
+                    </TableCell>
+                    <TableCell className="text-zinc-300">
+                      {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
                     </TableCell>
                     <TableCell className="text-zinc-300">
                       {payment.session?.title || 'Unknown Session'}
@@ -299,9 +307,9 @@ export default function AdminPayments() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {paidPayments.length === 0 && (
+                {filteredPaidPayments.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-zinc-400 py-8">
+                    <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
                       No paid transactions
                     </TableCell>
                   </TableRow>
