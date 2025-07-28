@@ -60,15 +60,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between p-8 border-b border-border">
-          <div className="flex flex-col items-center space-y-8 flex-1">
-            <div className="transform scale-[4] mb-8">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <div className="flex flex-col items-center space-y-4 flex-1">
+            <div className="transform scale-[2.5] my-4">
               <BusinessBranding 
                 variant="small" 
                 textClassName="text-foreground"
               />
             </div>
-            <h1 className="text-3xl font-bold text-foreground text-center mt-4">Admin Portal</h1>
+            <h1 className="text-2xl font-bold text-foreground text-center">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"
