@@ -75,24 +75,30 @@ export default function SuperAdminSettings() {
 
   const { data: platformSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ['/api/super-admin/settings'],
-    queryFn: () => apiRequest('/api/super-admin/settings')
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/settings');
+      return response.json();
+    }
   });
 
   const { data: platformIntegrations, isLoading: integrationsLoading } = useQuery({
     queryKey: ['/api/super-admin/integrations'],
-    queryFn: () => apiRequest('/api/super-admin/integrations')
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/integrations');
+      return response.json();
+    }
   });
 
   const { data: platformUsers, isLoading: usersLoading } = useQuery({
     queryKey: ['/api/super-admin/users'],
-    queryFn: () => apiRequest('/api/super-admin/users')
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/users');
+      return response.json();
+    }
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', {
-      method: 'POST',
-      body: JSON.stringify(newSettings)
-    }),
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
       toast({ title: "Success", description: "Platform settings saved successfully!" });
@@ -100,10 +106,7 @@ export default function SuperAdminSettings() {
   });
 
   const updateIntegrationMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, data, 'PATCH'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/integrations'] });
       toast({ title: "Success", description: "Integration updated successfully!" });
@@ -111,9 +114,7 @@ export default function SuperAdminSettings() {
   });
 
   const testIntegrationMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, {
-      method: 'POST'
-    }),
+    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, {}, 'POST'),
     onSuccess: () => {
       toast({ title: "Success", description: "Integration test completed successfully!" });
     },

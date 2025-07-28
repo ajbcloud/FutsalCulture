@@ -87,7 +87,10 @@ function Router() {
               </>
             )}
             {user?.isSuperAdmin && (
-              <Route path="/super-admin" component={SuperAdmin} />
+              <>
+                <Route path="/super-admin" component={SuperAdmin} />
+                <Route path="/super-admin/:page" component={SuperAdmin} />
+              </>
             )}
           </>
         )}

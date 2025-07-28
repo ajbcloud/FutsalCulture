@@ -35,14 +35,14 @@ export default function SuperAdminTenants() {
 
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ['/api/super-admin/tenants'],
-    queryFn: () => apiRequest('/api/super-admin/tenants')
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/tenants');
+      return response.json();
+    }
   });
 
   const createTenantMutation = useMutation({
-    mutationFn: (tenantData: any) => apiRequest('/api/super-admin/tenants', {
-      method: 'POST',
-      body: JSON.stringify(tenantData)
-    }),
+    mutationFn: (tenantData: any) => apiRequest('/api/super-admin/tenants', tenantData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants'] });
       setIsCreateModalOpen(false);
@@ -51,10 +51,7 @@ export default function SuperAdminTenants() {
   });
 
   const updateTenantMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/tenants/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    }),
+    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/tenants/${id}`, data, 'PATCH'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants'] });
       setEditingTenant(null);
@@ -63,9 +60,7 @@ export default function SuperAdminTenants() {
   });
 
   const deleteTenantMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/super-admin/tenants/${id}`, {
-      method: 'DELETE'
-    }),
+    mutationFn: (id: string) => apiRequest(`/api/super-admin/tenants/${id}`, {}, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants'] });
       toast({ title: "Success", description: "Tenant deleted successfully!" });
