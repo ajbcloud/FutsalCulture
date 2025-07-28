@@ -60,18 +60,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex flex-col items-center space-y-2">
-            <BusinessBranding 
-              variant="small" 
-              textClassName="text-foreground"
-            />
-            <h1 className="text-xl font-bold text-foreground">Admin Portal</h1>
+        <div className="flex items-center justify-between p-8 border-b border-border">
+          <div className="flex flex-col items-center space-y-6 flex-1">
+            <div className="transform scale-[4] mb-4">
+              <BusinessBranding 
+                variant="small" 
+                textClassName="text-foreground"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground text-center">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden"
+            className="lg:hidden absolute top-4 right-4"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="w-5 h-5" />
