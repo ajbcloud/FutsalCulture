@@ -61,7 +61,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-700">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Portal</h1>
+          <div className="flex flex-col items-center space-y-2">
+            <BusinessBranding 
+              variant="small" 
+              textClassName="text-gray-900 dark:text-white"
+            />
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Portal</h1>
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -148,11 +154,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
             
             <div className="flex items-center space-x-2">
-              <BusinessBranding 
-                variant="small" 
-                textClassName="text-muted-foreground"
-              />
-              <span className="text-sm text-muted-foreground">Admin</span>
+              {/* Remove extra admin text since logo/business name is now in sidebar */}
             </div>
           </div>
         </div>
