@@ -29,49 +29,24 @@ export default function Sessions() {
   const [appliedGenders, setAppliedGenders] = useState<string[]>([]);
   const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
 
-  // Check for URL parameters to auto-apply filters
+  // Clear filters when navigating from dashboard "View Full Schedule"
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const ageParam = urlParams.get('age');
-    const genderParam = urlParams.get('gender');
-    const locationParam = urlParams.get('location');
     
-    // Handle multi-player filters (comma-separated values from dashboard)
-    const agesParam = urlParams.get('ages');
-    const gendersParam = urlParams.get('genders');
-    const locationsParam = urlParams.get('locations');
-    
-    // Single value filters
-    const initialAges: string[] = [];
-    const initialGenders: string[] = [];
-    const initialLocations: string[] = [];
-    
-    if (ageParam) initialAges.push(ageParam);
-    if (genderParam) initialGenders.push(genderParam);
-    if (locationParam) initialLocations.push(locationParam);
-    
-    // Multi-value filters (from dashboard with multiple players)
-    if (agesParam) {
-      initialAges.push(...agesParam.split(','));
-    }
-    if (gendersParam) {
-      initialGenders.push(...gendersParam.split(','));
-    }
-    if (locationsParam) {
-      initialLocations.push(...locationsParam.split(','));
+    // If there are URL parameters (from dashboard navigation), clear them
+    // This ensures users start with empty filters and can choose their own
+    if (urlParams.toString()) {
+      // Clear URL parameters without reloading the page
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
     
-    // Remove duplicates and set filters
-    const uniqueAges = Array.from(new Set(initialAges));
-    const uniqueGenders = Array.from(new Set(initialGenders));
-    const uniqueLocations = Array.from(new Set(initialLocations));
-    
-    setSelectedAges(uniqueAges);
-    setSelectedGenders(uniqueGenders);
-    setSelectedLocations(uniqueLocations);
-    setAppliedAges(uniqueAges);
-    setAppliedGenders(uniqueGenders);
-    setAppliedLocations(uniqueLocations);
+    // Always start with empty filters on sessions page
+    setSelectedAges([]);
+    setSelectedGenders([]);
+    setSelectedLocations([]);
+    setAppliedAges([]);
+    setAppliedGenders([]);
+    setAppliedLocations([]);
   }, []);
 
   // Get all sessions without server-side filtering (we'll filter client-side for multi-select)
