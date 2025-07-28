@@ -457,11 +457,13 @@ export function setupAdminRoutes(app: any) {
           sessionId: signups.sessionId
         })
         .from(payments)
-        .innerJoin(signups, eq(payments.id, signups.paymentIntentId))
+        .innerJoin(signups, eq(payments.signupId, signups.id))
         .innerJoin(players, eq(signups.playerId, players.id))
         .where(sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`)
         .orderBy(desc(payments.paidAt))
         .limit(10);
+
+      console.log('Found recent payments:', recentPayments.length);
 
       recentPayments.forEach(payment => {
         activities.push({
