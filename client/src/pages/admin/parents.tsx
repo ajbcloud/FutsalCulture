@@ -105,7 +105,6 @@ export default function AdminParents() {
     
     // Handle search parameter from recent activity clicks
     if (searchParam) {
-      console.log('Setting search param from URL:', searchParam);
       setFilters(prev => ({
         ...prev,
         search: searchParam
@@ -153,16 +152,12 @@ export default function AdminParents() {
         (filters.role === 'assistant' && parent.isAssistant) ||
         (filters.role === 'parent' && !parent.isAdmin && !parent.isAssistant);
       
-      if (searchTerm) {
-        console.log('Filtering parent:', fullName, 'Search term:', searchTerm, 'Matches:', matchesSearch);
-      }
+
       
       return matchesSearch && matchesStatus && matchesRole;
     });
     
-    if (filters.search) {
-      console.log('Filtered parents:', filtered.length, 'out of', parents.length, 'for search:', filters.search);
-    }
+
     setFilteredParents(filtered);
   }, [parents, filters]);
 
