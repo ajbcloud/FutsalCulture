@@ -226,7 +226,18 @@ export default function Dashboard() {
     }
     
     // If parent has players, only show sessions eligible for their players
-    return players.some(player => isSessionEligibleForPlayer(session, player));
+    const isEligible = players.some(player => {
+      const eligible = isSessionEligibleForPlayer(session, player);
+      console.log(`Session ${session.title} eligible for ${player.firstName}?`, eligible, {
+        sessionAgeGroups: session.ageGroups,
+        sessionGenders: session.genders,
+        playerAge: calculateAgeGroup(player.birthYear),
+        playerGender: player.gender
+      });
+      return eligible;
+    });
+    
+    return isEligible;
   });
 
   // Build set of session IDs that the user has already reserved today
