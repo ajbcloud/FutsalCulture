@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { BusinessBranding } from "@/components/business-branding";
+
 import { Building2, Plus, Settings, Users, TrendingUp, Sun, Moon, LogOut, User, Shield, UserCheck } from "lucide-react";
 
 interface Tenant {
@@ -108,14 +108,11 @@ export default function SuperAdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex-shrink-0">
-                <BusinessBranding 
-                  variant="default" 
-                  textClassName="text-green-400"
-                />
-              </Link>
-              <div className="ml-6">
-                <h1 className="text-lg font-semibold text-foreground">Super Admin Portal</h1>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-lg font-semibold text-foreground">Platform Super Admin</h1>
               </div>
             </div>
             
