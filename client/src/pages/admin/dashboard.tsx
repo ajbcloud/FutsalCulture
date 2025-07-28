@@ -85,6 +85,11 @@ export default function AdminDashboard() {
     "/api/admin/recent-activity", 
     "/api/admin/stats"
   ]);
+
+  // Force cache invalidation on mount to ensure fresh data
+  React.useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard-metrics"] });
+  }, []);
   
   // Fetch comprehensive dashboard metrics
   const { data: metrics, isLoading: metricsLoading } = useQuery<DashboardMetrics>({
@@ -92,6 +97,7 @@ export default function AdminDashboard() {
     staleTime: 0, // Always refetch for dashboard metrics
     refetchOnMount: true,
     refetchOnWindowFocus: true, // Refresh when window gains focus
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
   });
 
   // Fetch recent activity
