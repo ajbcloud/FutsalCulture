@@ -50,97 +50,39 @@ export default function SuperAdminHelpRequests() {
   const { data: helpRequests = [], isLoading } = useQuery<HelpRequest[]>({
     queryKey: ["/api/super-admin/help-requests", selectedTenant, selectedStatus, selectedCategory, selectedPriority, dateRange, searchQuery],
     queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return [
-        {
-          id: "1",
-          subject: "Payment not processing",
-          category: "payment",
-          priority: "high",
-          status: "open",
-          submitterName: "Sarah Johnson",
-          submitterEmail: "sarah.johnson@email.com",
-          submitterType: "parent",
-          message: "I tried to pay for my child's session but the payment keeps failing. Can you help?",
-          submittedAt: "2025-07-28T10:30:00Z",
-          replyCount: 2,
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "2",
-          subject: "Cannot access player portal",
-          category: "technical",
-          priority: "medium",
-          status: "replied",
-          submitterName: "Emma Davis",
-          submitterEmail: "emma.davis@email.com",
-          submitterType: "player",
-          message: "I'm 15 years old but I can't log into the player portal. The invite link doesn't work.",
-          submittedAt: "2025-07-27T15:45:00Z",
-          replyCount: 1,
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        },
-        {
-          id: "3",
-          subject: "Session was cancelled",
-          category: "session",
-          priority: "low",
-          status: "resolved",
-          submitterName: "Michael Davis",
-          submitterEmail: "michael.davis@email.com",
-          submitterType: "parent",
-          message: "The morning session was cancelled last minute. Will there be a refund?",
-          submittedAt: "2025-07-26T09:20:00Z",
-          resolvedAt: "2025-07-26T14:30:00Z",
-          resolvedBy: "Admin User",
-          replyCount: 3,
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        },
-        {
-          id: "4",
-          subject: "Booking system error",
-          category: "technical",
-          priority: "high",
-          status: "open",
-          submitterName: "Jennifer Wilson",
-          submitterEmail: "jennifer.wilson@email.com",
-          submitterType: "parent",
-          message: "The booking system shows sessions are full but when I refresh they appear available again.",
-          submittedAt: "2025-07-25T11:45:00Z",
-          replyCount: 0,
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "5",
-          subject: "Profile update request",
-          category: "account",
-          priority: "low",
-          status: "replied",
-          submitterName: "Raj Patel",
-          submitterEmail: "raj.patel@email.com",
-          submitterType: "parent",
-          message: "I need to update my phone number but the form isn't saving changes.",
-          submittedAt: "2025-07-24T16:15:00Z",
-          replyCount: 2,
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        }
-      ].filter(request => {
-        if (selectedTenant !== "all" && request.tenantId !== selectedTenant) return false;
-        if (selectedStatus !== "all" && request.status !== selectedStatus) return false;
-        if (selectedCategory !== "all" && request.category !== selectedCategory) return false;
-        if (selectedPriority !== "all" && request.priority !== selectedPriority) return false;
-        if (searchQuery && 
-            !request.subject.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !request.submitterName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !request.message.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !request.tenantName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
+      const params = new URLSearchParams();
+      if (selectedTenant !== "all") params.set("tenantId", selectedTenant);
+      if (selectedStatus !== "all") params.set("status", selectedStatus);
+      if (selectedCategory !== "all") params.set("category", selectedCategory);
+      if (selectedPriority !== "all") params.set("priority", selectedPriority);
+      if (dateRange?.from) params.set("dateFrom", dateRange.from.toISOString());
+      if (dateRange?.to) params.set("dateTo", dateRange.to.toISOString());
+      if (searchQuery) params.set("search", searchQuery);
+
+      const response = await fetch(`/api/super-admin/help-requests?${params}`, {
+        credentials: 'include'
       });
+      if (!response.ok) throw new Error('Failed to fetch help requests');
+      const data = await response.json();
+      
+      // Transform the data to match the expected interface
+      return data.map((request: any) => ({
+        id: request.id,
+        subject: request.subject,
+        category: request.category,
+        priority: request.priority,
+        status: request.status,
+        submitterName: `${request.firstName || ''} ${request.lastName || ''}`.trim() || request.userName || 'Unknown User',
+        submitterEmail: request.email || 'no-email@example.com',
+        submitterType: "parent", // Default to parent for now
+        message: request.message,
+        submittedAt: request.createdAt,
+        resolvedAt: request.resolvedAt,
+        resolvedBy: request.resolvedBy,
+        replyCount: request.replyHistory?.length || 0,
+        tenantName: request.tenantName || 'Unknown Tenant',
+        tenantId: request.tenantId
+      }));
     },
   });
 

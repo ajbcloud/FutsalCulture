@@ -324,4 +324,15 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
+
+  // Get all help requests across all tenants for Super Admin
+  app.get('/api/super-admin/help-requests', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const helpRequests = await storage.getSuperAdminHelpRequests(req.query);
+      res.json(helpRequests);
+    } catch (error) {
+      console.error("Error fetching super admin help requests:", error);
+      res.status(500).json({ message: "Failed to fetch help requests" });
+    }
+  });
 }

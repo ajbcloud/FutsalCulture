@@ -816,22 +816,38 @@ export class DatabaseStorage implements IStorage {
       id: helpRequests.id,
       tenantId: helpRequests.tenantId,
       tenantName: tenants.name,
+      firstName: helpRequests.firstName,
+      lastName: helpRequests.lastName,
+      email: helpRequests.email,
+      phone: helpRequests.phone,
       subject: helpRequests.subject,
       category: helpRequests.category,
-      userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
       priority: helpRequests.priority,
       status: helpRequests.status,
+      message: helpRequests.message,
+      resolved: helpRequests.resolved,
+      resolvedBy: helpRequests.resolvedBy,
+      resolvedAt: helpRequests.resolvedAt,
+      replyHistory: helpRequests.replyHistory,
       createdAt: helpRequests.createdAt,
     })
     .from(helpRequests)
     .leftJoin(tenants, eq(helpRequests.tenantId, tenants.id))
-    .leftJoin(users, eq(helpRequests.userId, users.id));
+    .orderBy(desc(helpRequests.createdAt));
 
-    if (filters?.tenantId) {
-      query = query.where(eq(helpRequests.tenantId, filters.tenantId));
+    const conditions = [];
+    if (filters?.tenantId && filters.tenantId !== 'all') {
+      conditions.push(eq(helpRequests.tenantId, filters.tenantId));
     }
-    if (filters?.status) {
-      query = query.where(eq(helpRequests.status, filters.status));
+    if (filters?.status && filters.status !== 'all') {
+      conditions.push(eq(helpRequests.status, filters.status));
+    }
+    if (filters?.priority && filters.priority !== 'all') {
+      conditions.push(eq(helpRequests.priority, filters.priority));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
     return await query;

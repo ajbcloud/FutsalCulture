@@ -159,7 +159,7 @@ export default function Help() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Get Help</h1>
           <p className="text-zinc-400 text-lg">
-            Need assistance with your {businessName} experience? We're here to help!
+            Need assistance with PlayHQ or your sports organization management? We're here to help!
           </p>
         </div>
 
@@ -407,7 +407,7 @@ export default function Help() {
                   <Mail className="w-5 h-5 text-blue-400" />
                   <div>
                     <p className="text-white font-medium">Email</p>
-                    <p className="text-zinc-400">{settings?.supportEmail || "support@futsalculture.com"}</p>
+                    <p className="text-zinc-400">support@playhq.app</p>
                   </div>
                 </div>
                 
@@ -415,7 +415,7 @@ export default function Help() {
                   <Phone className="w-5 h-5 text-green-400" />
                   <div>
                     <p className="text-white font-medium">Phone</p>
-                    <p className="text-zinc-400">{settings?.supportPhone || "(555) 123-GOAL"}</p>
+                    <p className="text-zinc-400">(833) PLAY-HQS</p>
                   </div>
                 </div>
                 
@@ -423,15 +423,15 @@ export default function Help() {
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <div>
                     <p className="text-white font-medium">Support Hours</p>
-                    <p className="text-zinc-400">{settings?.supportHours || "Monday - Friday"}</p>
+                    <p className="text-zinc-400">Monday - Friday, 9:00 AM - 6:00 PM EST</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-red-400" />
                   <div>
-                    <p className="text-white font-medium">Location</p>
-                    <p className="text-zinc-400">{settings?.supportLocation || "South Florida"}</p>
+                    <p className="text-white font-medium">Headquarters</p>
+                    <p className="text-zinc-400">Miami, Florida</p>
                   </div>
                 </div>
               </CardContent>
@@ -443,28 +443,28 @@ export default function Help() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="text-white font-medium mb-2">When do sessions open for booking?</h4>
-                  <p className="text-zinc-400 text-sm">Sessions open at 8:00 AM on the day of training.</p>
+                  <h4 className="text-white font-medium mb-2">What is PlayHQ?</h4>
+                  <p className="text-zinc-400 text-sm">PlayHQ is a comprehensive sports management platform that helps organizations manage sessions, players, payments, and communications all in one place.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">How much does each session cost?</h4>
-                  <p className="text-zinc-400 text-sm">Each futsal training session costs $10.</p>
+                  <h4 className="text-white font-medium mb-2">How do I access my organization's portal?</h4>
+                  <p className="text-zinc-400 text-sm">Each organization on PlayHQ has its own custom portal. Your organization admin will provide you with the specific access link.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">Can I cancel a reservation?</h4>
-                  <p className="text-zinc-400 text-sm">Yes, you can cancel from your dashboard before the session starts.</p>
+                  <h4 className="text-white font-medium mb-2">Can I manage multiple organizations?</h4>
+                  <p className="text-zinc-400 text-sm">Yes! PlayHQ supports multi-tenant management, allowing you to oversee multiple sports organizations from a single platform.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">How do age groups work?</h4>
-                  <p className="text-zinc-400 text-sm">Players are automatically assigned to age groups (U8, U10, etc.) based on their birth year.</p>
+                  <h4 className="text-white font-medium mb-2">What payment methods are supported?</h4>
+                  <p className="text-zinc-400 text-sm">PlayHQ integrates with Stripe to support all major credit cards, digital wallets, and secure payment processing.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">How long are the sessions?</h4>
-                  <p className="text-zinc-400 text-sm">Typically the sessions are 60-90 minutes long.</p>
+                  <h4 className="text-white font-medium mb-2">Is my data secure?</h4>
+                  <p className="text-zinc-400 text-sm">Absolutely. PlayHQ uses enterprise-grade security with SSL encryption, secure authentication, and regular security audits to protect your data.</p>
                 </div>
               </CardContent>
             </Card>
