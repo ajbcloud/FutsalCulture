@@ -61,14 +61,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex flex-col items-center space-y-4 flex-1">
-            <div className="transform scale-[2.5] my-4">
-              <BusinessBranding 
-                variant="small" 
-                textClassName="text-foreground"
-              />
+          <div className="flex flex-col items-center space-y-4 flex-1 w-full">
+            <div className="transform scale-[2.5] my-4 w-full flex justify-center max-w-full overflow-hidden">
+              <div className="max-w-full">
+                <BusinessBranding 
+                  variant="small" 
+                  textClassName="text-foreground text-center"
+                />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-foreground text-center">Admin Portal</h1>
+            <h1 className="text-2xl font-bold text-foreground text-center w-full">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"

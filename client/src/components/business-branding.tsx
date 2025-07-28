@@ -46,7 +46,7 @@ export function BusinessBranding({
           className={`${sizes.logo} w-auto object-contain ${logoClassName}`}
         />
       ) : (
-        <span className={`${sizes.text} font-bold ${textClassName}`}>
+        <span className={`${sizes.text} font-bold ${textClassName} break-words text-center leading-tight`}>
           {businessName}
         </span>
       )}
