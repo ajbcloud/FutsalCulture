@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes } from "@shared/schema";
-import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
+import { eq, sql, and, or, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import Stripe from "stripe";
 
@@ -1091,57 +1091,169 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Analytics with detailed data
+  // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const { startDate, endDate, ageGroup, gender, location } = req.query;
+      const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
+      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
-      // Default date range if not provided
-      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const end = endDate ? new Date(endDate as string) : new Date();
+      // Build date filters
+      const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const dateEnd = endDate ? new Date(endDate as string) : new Date();
       
-      // Revenue over time (from payments)
+      // Get filtered sessions
+      let sessionQuery = db
+        .select({
+          id: futsalSessions.id,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          location: futsalSessions.location,
+          capacity: futsalSessions.capacity,
+          startTime: futsalSessions.startTime,
+          signupCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${signups} 
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`,
+        })
+        .from(futsalSessions)
+        .where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd)
+          )
+        );
+
+      // Apply location filter
+      if (location && location !== '') {
+        sessionQuery = sessionQuery.where(eq(futsalSessions.location, location as string));
+      }
+
+      const applicableSessions = await sessionQuery;
+      
+      // Filter sessions by age group and gender
+      let filteredSessions = applicableSessions;
+      if (ageGroup && ageGroup !== 'all') {
+        filteredSessions = filteredSessions.filter(session => 
+          session.ageGroups && session.ageGroups.includes(ageGroup as string)
+        );
+      }
+      if (gender && gender !== 'all') {
+        filteredSessions = filteredSessions.filter(session => 
+          session.genders && session.genders.includes(gender as string)
+        );
+      }
+
+      // Get signups for filtered sessions
+      let filteredSignups: any[] = [];
+      let filteredPayments: any[] = [];
+      if (filteredSessions.length > 0) {
+        const sessionIds = filteredSessions.map(s => s.id);
+        filteredSignups = await db
+          .select()
+          .from(signups)
+          .where(
+            and(
+              inArray(signups.sessionId, sessionIds),
+              gte(signups.createdAt, dateStart),
+              lte(signups.createdAt, dateEnd)
+            )
+          );
+
+        // Get payments for these signups
+        if (filteredSignups.length > 0) {
+          const signupIds = filteredSignups.map(s => s.id);
+          filteredPayments = await db
+            .select()
+            .from(payments)
+            .where(
+              and(
+                inArray(payments.signupId, signupIds),
+                gte(payments.createdAt, dateStart),
+                lte(payments.createdAt, dateEnd)
+              )
+            );
+        }
+      }
+      
+      // Get filtered players
+      let filteredPlayers: any[] = [];
+      if (filteredSignups.length > 0) {
+        const playerIds = Array.from(new Set(filteredSignups.map(s => s.playerId)));
+        filteredPlayers = await db
+          .select()
+          .from(players)
+          .where(inArray(players.id, playerIds));
+          
+        // Apply player-level filters
+        if (ageGroup && ageGroup !== 'all') {
+          const targetAge = parseInt((ageGroup as string).substring(1));
+          filteredPlayers = filteredPlayers.filter(player => {
+            const age = new Date().getFullYear() - player.birthYear;
+            return Math.abs(age - targetAge) <= 2; // Within 2 years
+          });
+        }
+        
+        if (gender && gender !== 'all') {
+          filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
+        }
+      }
+      
+      // Calculate filtered analytics
+      const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
+      const totalSessions = filteredSessions.length;
+      const totalSignups = filteredSignups.length;
+      const totalCapacity = filteredSessions.reduce((sum, session) => sum + session.capacity, 0);
+      const avgFillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
+      
+      // Revenue over time (from filtered payments)
       const revenueData = await db.select({
-        day: sql<string>`date_trunc('day', ${signups.createdAt})::date`,
-        amount: sql<number>`sum(10.0)` // All sessions are $10
+        day: sql<string>`date_trunc('day', ${payments.createdAt})::date`,
+        amount: sql<number>`sum(${payments.amountCents} / 100.0)`
       })
-      .from(signups)
-      .where(sql`${signups.createdAt} BETWEEN ${start} AND ${end}`)
-      .groupBy(sql`date_trunc('day', ${signups.createdAt})`)
-      .orderBy(sql`date_trunc('day', ${signups.createdAt})`);
+      .from(payments)
+      .where(
+        and(
+          gte(payments.createdAt, dateStart),
+          lte(payments.createdAt, dateEnd),
+          filteredPayments.length > 0 ? inArray(payments.id, filteredPayments.map(p => p.id)) : sql`false`
+        )
+      )
+      .groupBy(sql`date_trunc('day', ${payments.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${payments.createdAt})`);
       
-      // Session occupancy trends
-      const occupancyData = await db.select({
-        day: sql<string>`date_trunc('day', sessions.startTime)::date`,
-        fillRate: sql<number>`ROUND(AVG(signups_count::float / sessions.capacity * 100))`
-      })
-      .from(sql`
-        (SELECT 
-          sessions.*,
-          COALESCE(signup_counts.signups_count, 0) as signups_count
-        FROM futsal_sessions sessions
-        LEFT JOIN (
-          SELECT session_id, COUNT(*) as signups_count
-          FROM signups
-          GROUP BY session_id
-        ) signup_counts ON sessions.id = signup_counts.session_id
-        WHERE sessions.start_time BETWEEN ${start} AND ${end}
-        ) as sessions
-      `)
-      .groupBy(sql`date_trunc('day', sessions.start_time)`)
-      .orderBy(sql`date_trunc('day', sessions.start_time)`);
+      // Session occupancy trends for filtered sessions
+      const occupancyData = filteredSessions.map(session => ({
+        day: session.startTime.toISOString().split('T')[0],
+        fillRate: session.capacity > 0 ? Math.round((session.signupCount / session.capacity) * 100) : 0
+      }));
       
-      // Player growth over time
+      // Player growth over time for filtered players
       const playerGrowthData = await db.select({
         day: sql<string>`date_trunc('day', ${players.createdAt})::date`,
         count: sql<number>`count(*)`
       })
       .from(players)
-      .where(sql`${players.createdAt} BETWEEN ${start} AND ${end}`)
+      .where(
+        and(
+          gte(players.createdAt, dateStart),
+          lte(players.createdAt, dateEnd),
+          filteredPlayers.length > 0 ? inArray(players.id, filteredPlayers.map(p => p.id)) : sql`false`
+        )
+      )
       .groupBy(sql`date_trunc('day', ${players.createdAt})`)
       .orderBy(sql`date_trunc('day', ${players.createdAt})`);
       
       res.json({
+        // Summary KPIs
+        monthlyRevenue: totalRevenue,
+        totalRevenue: totalRevenue,
+        totalPlayers: filteredPlayers.length,
+        activeSessions: totalSessions,
+        avgFillRate: avgFillRate,
+        totalSignups: totalSignups,
+        
+        // Detail charts
         revenue: revenueData,
         occupancy: occupancyData,
         playerGrowth: playerGrowthData,
