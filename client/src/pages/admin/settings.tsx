@@ -707,20 +707,13 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-4">
+                  {/* Action Button */}
+                  <div className="flex justify-center pt-4">
                     <Button 
-                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                      className="bg-blue-600 hover:bg-blue-700 px-8"
                       onClick={openBillingPortal}
                     >
-                      Manage Subscription
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
-                      onClick={openBillingPortal}
-                    >
-                      Billing Portal
+                      Manage Subscription & Billing
                     </Button>
                   </div>
                 </>
