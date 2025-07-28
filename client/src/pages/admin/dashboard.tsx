@@ -171,8 +171,8 @@ export default function AdminDashboard() {
       subtitle: "(All Time)",
       value: (metrics?.totalSignups || 0).toString(),
       icon: ClipboardList,
-      growth: metrics?.registrationsGrowth || 0,
-      comparison: "vs. last month",
+      growth: 0,
+      comparison: "",
     },
     {
       title: "Sessions This Week",
@@ -248,12 +248,10 @@ export default function AdminDashboard() {
             <KPICard
               title="Total Registrations"
               value={(metrics?.totalSignups || 0).toString()}
-              tooltip="Session sign-ups created this month across all training sessions."
+              tooltip="Total number of session bookings across all training sessions."
               icon={ClipboardList}
               iconColor="text-purple-500"
-              subtitle="This Month"
-              growth={metrics?.registrationsGrowth || 0}
-              showGrowth={true}
+              subtitle="All Time"
             />
             <KPICard
               title="Sessions This Week"
