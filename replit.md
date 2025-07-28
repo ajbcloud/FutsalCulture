@@ -3,6 +3,8 @@
 ## Overview
 This is a full-stack web application called "Futsal Culture" that allows parents to book limited spots in weekly futsal training sessions for their children. The app features day-of booking (starting at 8 AM), Stripe payment integration, and real-time capacity monitoring.
 
+**MAJOR ARCHITECTURAL CHANGE IN PROGRESS**: Converting from single-tenant to multi-tenant Super-Admin platform to support multiple futsal clubs/organizations. This involves adding tenant_id to all tables, creating Super-Admin role, tenant management, and scoped data access patterns.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

@@ -1,4 +1,5 @@
 import {
+  tenants,
   users,
   players,
   futsalSessions,
@@ -9,6 +10,8 @@ import {
   systemSettings,
   serviceBilling,
   discountCodes,
+  type TenantSelect,
+  type TenantInsert,
   type User,
   type UpsertUser,
   type UpdateUser,
@@ -33,25 +36,33 @@ import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // Tenant operations
+  getTenant(id: string): Promise<TenantSelect | undefined>;
+  getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined>;
+  getTenants(): Promise<TenantSelect[]>;
+  createTenant(tenant: TenantInsert): Promise<TenantSelect>;
+  updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect>;
+  deleteTenant(id: string): Promise<void>;
+  
+  // User operations (required for Replit Auth) - now tenant-aware
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User>;
   updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
   updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void>;
   
-  // Player operations
-  getPlayersByParent(parentId: string): Promise<Player[]>;
-  getPlayer(id: string): Promise<Player | undefined>;
+  // Player operations - now tenant-aware
+  getPlayersByParent(parentId: string, tenantId?: string): Promise<Player[]>;
+  getPlayer(id: string, tenantId?: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
   updatePlayerSettings(playerId: string, settings: { canAccessPortal?: boolean; canBookAndPay?: boolean }): Promise<Player>;
   updatePlayerInvite(playerId: string, method: string, invitedAt: Date): Promise<Player>;
   deletePlayer(id: string): Promise<void>;
   
-  // Session operations
-  getSessions(filters?: { ageGroup?: string; location?: string; status?: string }): Promise<FutsalSession[]>;
-  getSession(id: string): Promise<FutsalSession | undefined>;
+  // Session operations - now tenant-aware
+  getSessions(filters?: { ageGroup?: string; location?: string; status?: string; tenantId?: string }): Promise<FutsalSession[]>;
+  getSession(id: string, tenantId?: string): Promise<FutsalSession | undefined>;
   createSession(session: InsertSession): Promise<FutsalSession>;
   updateSession(id: string, session: Partial<InsertSession>): Promise<FutsalSession>;
   updateSessionStatus(id: string, status: string): Promise<void>;
@@ -101,6 +112,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Tenant operations
+  async getTenant(id: string): Promise<TenantSelect | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    return tenant;
+  }
+
+  async getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain));
+    return tenant;
+  }
+
+  async getTenants(): Promise<TenantSelect[]> {
+    return await db.select().from(tenants).orderBy(desc(tenants.createdAt));
+  }
+
+  async createTenant(tenant: TenantInsert): Promise<TenantSelect> {
+    const [newTenant] = await db.insert(tenants).values(tenant).returning();
+    return newTenant;
+  }
+
+  async updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect> {
+    const [updatedTenant] = await db.update(tenants).set(tenant).where(eq(tenants.id, id)).returning();
+    return updatedTenant;
+  }
+
+  async deleteTenant(id: string): Promise<void> {
+    await db.delete(tenants).where(eq(tenants.id, id));
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -155,8 +195,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(players.parentId, parent1Id));
   }
 
-  async getPlayersByParent(parentId: string): Promise<Player[]> {
-    return await db.select().from(players).where(eq(players.parentId, parentId)).orderBy(desc(players.createdAt));
+  async getPlayersByParent(parentId: string, tenantId?: string): Promise<Player[]> {
+    const conditions = [eq(players.parentId, parentId)];
+    if (tenantId) {
+      conditions.push(eq(players.tenantId, tenantId));
+    }
+    return await db.select().from(players).where(and(...conditions)).orderBy(desc(players.createdAt));
   }
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
@@ -169,8 +213,12 @@ export class DatabaseStorage implements IStorage {
     return updatedPlayer;
   }
 
-  async getPlayer(id: string): Promise<Player | undefined> {
-    const [player] = await db.select().from(players).where(eq(players.id, id));
+  async getPlayer(id: string, tenantId?: string): Promise<Player | undefined> {
+    const conditions = [eq(players.id, id)];
+    if (tenantId) {
+      conditions.push(eq(players.tenantId, tenantId));
+    }
+    const [player] = await db.select().from(players).where(and(...conditions));
     return player;
   }
 
@@ -199,9 +247,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(players).where(eq(players.id, id));
   }
 
-  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string }): Promise<FutsalSession[]> {
+  async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string; tenantId?: string }): Promise<FutsalSession[]> {
     const conditions = [];
     
+    if (filters?.tenantId) {
+      conditions.push(eq(futsalSessions.tenantId, filters.tenantId));
+    }
     if (filters?.ageGroup) {
       conditions.push(sql`${filters.ageGroup} = ANY(${futsalSessions.ageGroups})`);
     }
@@ -224,8 +275,12 @@ export class DatabaseStorage implements IStorage {
     return await baseQuery.orderBy(futsalSessions.startTime);
   }
 
-  async getSession(id: string): Promise<FutsalSession | undefined> {
-    const [session] = await db.select().from(futsalSessions).where(eq(futsalSessions.id, id));
+  async getSession(id: string, tenantId?: string): Promise<FutsalSession | undefined> {
+    const conditions = [eq(futsalSessions.id, id)];
+    if (tenantId) {
+      conditions.push(eq(futsalSessions.tenantId, tenantId));
+    }
+    const [session] = await db.select().from(futsalSessions).where(and(...conditions));
     return session;
   }
 

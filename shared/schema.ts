@@ -26,6 +26,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Tenants table for multi-tenant architecture
+export const tenants = pgTable("tenants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  subdomain: varchar("subdomain").unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Registration status enum
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
 
@@ -37,6 +45,7 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -44,6 +53,7 @@ export const users = pgTable("users", {
   phone: varchar("phone"),
   isAdmin: boolean("is_admin").default(false),
   isAssistant: boolean("is_assistant").default(false),
+  isSuperAdmin: boolean("is_super_admin").default(false), // New Super-Admin role
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   customerId: varchar("customer_id"),
@@ -62,7 +72,9 @@ export const users = pgTable("users", {
   parent2InvitePhone: varchar("parent2_invite_phone"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("users_tenant_id_idx").on(table.tenantId),
+]);
 
 // Gender enum for players and sessions
 export const genderEnum = pgEnum("gender", ["boys", "girls"]);
@@ -70,6 +82,7 @@ export const genderEnum = pgEnum("gender", ["boys", "girls"]);
 // Players table  
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   birthYear: integer("birth_year").notNull(),
@@ -93,6 +106,7 @@ export const players = pgTable("players", {
 }, (table) => [
   // Age validation constraint: Portal access only for players 13+
   check("age_portal_check", sql`(can_access_portal = false OR (2025 - birth_year) >= 13)`),
+  index("players_tenant_id_idx").on(table.tenantId),
 ]);
 
 // Sessions table
@@ -100,6 +114,7 @@ export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full"
 
 export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   title: varchar("title").notNull(),
   location: varchar("location").notNull(),
   ageGroups: text("age_groups").array().notNull(),
@@ -115,11 +130,14 @@ export const futsalSessions = pgTable("futsal_sessions", {
   hasAccessCode: boolean("has_access_code").default(false),
   accessCode: varchar("access_code"), // The actual code needed to book
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("futsal_sessions_tenant_id_idx").on(table.tenantId),
+]);
 
 // Signups table
 export const signups = pgTable("signups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   playerId: varchar("player_id").notNull(),
   sessionId: varchar("session_id").notNull(),
   paid: boolean("paid").default(false),
@@ -129,13 +147,16 @@ export const signups = pgTable("signups", {
   discountCodeApplied: varchar("discount_code_applied"), // The actual code used
   discountAmountCents: integer("discount_amount_cents"), // Amount discounted
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("signups_tenant_id_idx").on(table.tenantId),
+]);
 
 // Payments table
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "refunded"]);
 
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   signupId: varchar("signup_id").notNull(),
   paymentIntentId: varchar("payment_intent_id"),
   amountCents: integer("amount_cents").notNull(),
@@ -146,11 +167,14 @@ export const payments = pgTable("payments", {
   refundedBy: varchar("refunded_by"), // admin user ID who performed the refund
   adminNotes: text("admin_notes"), // admin notes on payment actions
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("payments_tenant_id_idx").on(table.tenantId),
+]);
 
 // Help requests table
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   status: varchar("status").notNull().default("open"),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(), 
@@ -170,32 +194,41 @@ export const helpRequests = pgTable("help_requests", {
     repliedAt: string;
   }>>().default([]), // Array of reply objects
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("help_requests_tenant_id_idx").on(table.tenantId),
+]);
 
 // Notification preferences table
 export const notificationPreferences = pgTable("notification_preferences", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   parentId: varchar("parent_id").notNull().unique(),
   email: boolean("email").default(true),
   sms: boolean("sms").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("notification_preferences_tenant_id_idx").on(table.tenantId),
+]);
 
-// System settings table for global configurations
+// System settings table - can be tenant-specific or global (null tenant_id)
 export const systemSettings = pgTable("system_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  key: varchar("key").unique().notNull(),
+  tenantId: varchar("tenant_id").references(() => tenants.id), // null for global settings
+  key: varchar("key").notNull(),
   value: text("value").notNull(),
   description: text("description"),
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by"), // admin user id
-});
+}, (table) => [
+  index("system_settings_tenant_id_idx").on(table.tenantId),
+]);
 
 // Integrations table for third-party service configuration
 export const integrations = pgTable("integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  provider: integrationProviderEnum("provider").notNull().unique(),
+  tenantId: varchar("tenant_id").references(() => tenants.id), // null for global integrations
+  provider: integrationProviderEnum("provider").notNull(),
   credentials: jsonb("credentials").notNull(), // Store encrypted credentials
   enabled: boolean("enabled").default(false),
   configuredBy: varchar("configured_by"), // admin user id
@@ -204,12 +237,15 @@ export const integrations = pgTable("integrations", {
   testErrorMessage: text("test_error_message"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("integrations_tenant_id_idx").on(table.tenantId),
+]);
 
 // Discount codes table
 export const discountCodes = pgTable("discount_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  code: varchar("code").unique().notNull(),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  code: varchar("code").notNull(),
   description: text("description"),
   // Discount type - 'percentage' or 'fixed' or 'full'
   discountType: varchar("discount_type").notNull().default('full'),
@@ -225,11 +261,14 @@ export const discountCodes = pgTable("discount_codes", {
   createdBy: varchar("created_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("discount_codes_tenant_id_idx").on(table.tenantId),
+]);
 
 // Service billing table for platform service payment configuration
 export const serviceBilling = pgTable("service_billing", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   organizationName: varchar("organization_name").notNull(),
   contactEmail: varchar("contact_email").notNull(),
   billingEmail: varchar("billing_email").notNull(),
@@ -250,10 +289,30 @@ export const serviceBilling = pgTable("service_billing", {
   configuredBy: varchar("configured_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("service_billing_tenant_id_idx").on(table.tenantId),
+]);
 
 // Relations
+export const tenantsRelations = relations(tenants, ({ many }) => ({
+  users: many(users),
+  players: many(players),
+  futsalSessions: many(futsalSessions),
+  signups: many(signups),
+  payments: many(payments),
+  helpRequests: many(helpRequests),
+  notificationPreferences: many(notificationPreferences),
+  systemSettings: many(systemSettings),
+  integrations: many(integrations),
+  discountCodes: many(discountCodes),
+  serviceBilling: many(serviceBilling),
+}));
+
 export const usersRelations = relations(users, ({ many, one }) => ({
+  tenant: one(tenants, {
+    fields: [users.tenantId],
+    references: [tenants.id],
+  }),
   players: many(players),
   notificationPreferences: one(notificationPreferences),
 }));
@@ -305,6 +364,14 @@ export const discountCodesRelations = relations(discountCodes, ({ many }) => ({
 }));
 
 // Insert schemas
+export const insertTenantSchema = createInsertSchema(tenants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TenantInsert = z.infer<typeof insertTenantSchema>;
+export type TenantSelect = typeof tenants.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,

@@ -1,0 +1,166 @@
+ChatGPT said:
+Below is a full spec for turning your single‐tenant admin portal into a multi‐tenant “Super-Admin” platform that can host and manage multiple clubs (clients). It covers database changes, new UI screens and filters, analytics, tenant onboarding flows, and mobile‐friendly requirements.
+
+1. Data Model Changes
+1.1 Add a tenant_id everywhere
+Every table that currently lives in public—users, parents, players, sessions, signups, payments, help_requests, analytics—gets a new tenant_id UUID NOT NULL column, indexed:
+
+sql
+Copy
+Edit
+ALTER TABLE users        ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE parents      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE players      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE sessions     ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE signups      ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE payments     ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+ALTER TABLE help_requests ADD COLUMN tenant_id UUID NOT NULL REFERENCES tenants(id);
+1.2 New Tenants table
+sql
+Copy
+Edit
+CREATE TABLE tenants (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  subdomain  TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+2. Authentication & Authorization
+2.1 Roles
+Super-Admin (global): can see all tenants, switch context, filter across tenants.
+
+Tenant Admin / Tenant Assistant: same as your current Admin/Assistant, but scoped to a single tenant.
+
+2.2 Session + Middleware
+requireSuperAdmin middleware that checks session.user.is_super_admin === true.
+
+requireTenantAdmin & require2FA remain as before, but queries always include tenant_id = session.user.tenant_id.
+
+3. Super-Admin Portal UI
+3.1 Navigation
+scss
+Copy
+Edit
+Super-Admin Portal
+├── Overview (All-Tenants Dashboard)
+├── Tenants
+├── Sessions
+├── Payments
+├── Registrations
+├── Parents
+├── Players
+├── Analytics
+├── Help Requests
+└── Settings & Integrations
+3.2 Overview Dashboard
+Metrics (global & per-tenant filter):
+
+Total Revenue (YTD, This Month, This Quarter)
+
+Total Players (YTD, MTD)
+
+Total Registrations (session signups)
+
+Sessions This Week (all tenants)
+
+Pending Payments (unpaid >1h)
+
+Growth % vs prior period
+
+Quick Filters at top:
+
+Tenant (dropdown multi-select)
+
+Date Range picker
+
+Age Group / Gender
+
+KPI Cards: each with an “ℹ️” tooltip explaining the definition.
+
+3.3 Tenants Management Screen
+Columns:
+
+Tenant Name
+
+Subdomain
+
+Active Admins
+
+Total Players
+
+Total Sessions
+
+Total Revenue (MTD)
+
+Created On
+
+Actions: Edit, Delete, “Log in as Tenant Admin”
+
+3.4 All Other Screens (Sessions/Payments/…)
+Add a Tenant column in the table.
+
+Top-bar filters become: Tenant + (existing filters).
+
+All data queries include WHERE tenant_id IN (selectedTenantIds).
+
+4. Parent & Player Onboarding
+4.1 Parent Signup Flow
+Parents sign up via a tenant-specific subdomain (e.g. yourclub.futsalreserve.app)—the app reads req.hostname to extract subdomain, looks up tenant_id, and attaches it to the parent record.
+
+If signing up on the global Super-Admin domain, only Super-Admin accounts can create new tenants; tenant Admins must invite parents manually.
+
+4.2 Player Creation
+Every time a Tenant Admin or Parent creates a Player, the UI automatically includes tenant_id from the current session context.
+
+Prevent parents from creating players for other tenants.
+
+5. Analytics
+5.1 Global vs. Tenant Toggle
+On the Analytics page for Super-Admin, the Tenant filter defaults to “All Tenants,” but allows drilling-down by tenant.
+
+KPI and charts recalculate based on the selected tenant(s).
+
+All charts (revenue over time, session occupancy, player growth, age distribution, etc.) should accept tenant_id in their API calls.
+
+6. Integrations Settings
+Add a new Settings → Integrations page scoped to Super-Admin (global) and Tenant Admin (per-tenant):
+
+Email: SendGrid / MailGun API keys
+
+SMS: Twilio Account SID & Auth Token
+
+OAuth Providers: Google Client ID/Secret, Microsoft Azure AD, etc.
+
+Webhook Endpoints: for external CRM or BI
+
+Test buttons + validation messages
+
+7. Mobile-Friendly Requirements
+Responsive grid: nav collapses into a hamburger, tables become card lists
+
+Sticky filter bar at top of each listing
+
+Collapsible KPI cards in a 2-column layout on tablet, 1-column on phone
+
+Accessible toggles & selects sized for touch
+
+8. Summary of Key Steps
+Schema: Add tenant_id + tenants table.
+
+Auth: Introduce is_super_admin flag + requireSuperAdmin.
+
+API: Every admin-routes.ts handler must filter by either tenant_id = session.tenant_id (Tenant Admin) or tenant_id IN (queriedTenantIds) (Super-Admin).
+
+UI:
+
+New Super-Admin nav & pages
+
+Add Tenant column & tenant-selector filter everywhere
+
+Deep-link parentId/playerId still works but now scoped by tenant.
+
+Onboarding: Use subdomain or explicit tenant selection to guarantee new records get the correct tenant_id.
+
+Integrations: Build a unified “Integrations” settings page.
+
+Mobile: Ensure all screens collapse into usable mobile cards, filters remain sticky, and touch targets are ≥44px.
