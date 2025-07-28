@@ -212,46 +212,10 @@ export default function AdminSettings() {
     }
   };
 
-  const openBillingPortal = async () => {
-    try {
-      const response = await fetch('/api/admin/create-billing-portal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        window.open(data.url, '_blank');
-      } else {
-        const error = await response.json();
-        
-        // Handle Stripe configuration error specifically
-        if (error.setupUrl) {
-          toast({
-            title: "Stripe Configuration Required",
-            description: "Please configure your Stripe billing portal settings first.",
-            variant: "destructive",
-          });
-          // Optionally open the setup URL
-          window.open(error.setupUrl, '_blank');
-        } else {
-          toast({
-            title: "Error",
-            description: error.message || "Failed to open billing portal",
-            variant: "destructive",
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error opening billing portal:', error);
-      toast({
-        title: "Error",
-        description: "Failed to open billing portal",
-        variant: "destructive",
-      });
-    }
+  const openBillingPortal = () => {
+    // Use the direct Stripe customer portal URL
+    const portalUrl = 'https://billing.stripe.com/p/login/test_14AeVe4GC2cAeVI4Ns2Fa00';
+    window.open(portalUrl, '_blank');
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
