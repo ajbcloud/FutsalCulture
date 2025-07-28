@@ -353,6 +353,10 @@ export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   createdAt: true,
   resolved: true,
   status: true,
+  resolvedBy: true,
+  resolutionNote: true,
+  resolvedAt: true,
+  replyHistory: true,
 }).extend({
   firstName: z.string()
     .min(2, "First name must be at least 2 characters")

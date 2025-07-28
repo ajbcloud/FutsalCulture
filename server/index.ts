@@ -77,7 +77,7 @@ app.use((req, res, next) => {
       const expiredSignups = await storage.getPendingPaymentSignups();
       
       const expiredReservations = expiredSignups.filter(signup => 
-        new Date(signup.createdAt) < cutoff
+        signup.createdAt && new Date(signup.createdAt) < cutoff
       );
       
       for (const signup of expiredReservations) {

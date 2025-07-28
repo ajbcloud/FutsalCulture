@@ -6,13 +6,15 @@ interface BusinessBrandingProps {
   textClassName?: string;
   logoClassName?: string;
   variant?: 'default' | 'small' | 'large';
+  inline?: boolean;
 }
 
 export function BusinessBranding({ 
   className = '', 
   textClassName = '',
   logoClassName = '',
-  variant = 'default' 
+  variant = 'default',
+  inline = false
 }: BusinessBrandingProps) {
   const { businessName, businessLogo } = useBusiness();
 
@@ -57,8 +59,14 @@ export function BusinessBranding({
 
   const responsiveFontSize = getResponsiveFontSize(businessName, sizes.text);
 
+  // Use appropriate container element based on inline prop
+  const Container = inline ? 'span' : 'div';
+  const containerClasses = inline 
+    ? `inline-flex items-center ${className}`
+    : `flex items-center justify-center ${sizes.container} ${className} w-full max-w-full`;
+
   return (
-    <div className={`flex items-center justify-center ${sizes.container} ${className} w-full max-w-full`}>
+    <Container className={containerClasses}>
       {businessLogo ? (
         <img 
           src={businessLogo} 
@@ -66,11 +74,11 @@ export function BusinessBranding({
           className={`${sizes.logo} w-auto object-contain ${logoClassName}`}
         />
       ) : (
-        <span className={`${responsiveFontSize} font-bold ${textClassName} break-words text-center leading-tight max-w-full px-2 hyphens-auto`}
+        <span className={`${responsiveFontSize} font-bold ${textClassName} break-words text-center leading-tight max-w-full ${inline ? '' : 'px-2'} hyphens-auto`}
               style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
           {businessName}
         </span>
       )}
-    </div>
+    </Container>
   );
 }

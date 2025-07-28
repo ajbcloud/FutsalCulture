@@ -384,7 +384,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest> {
-    const [newRequest] = await db.insert(helpRequests).values(helpRequest).returning();
+    const [newRequest] = await db.insert(helpRequests).values([helpRequest]).returning();
     return newRequest;
   }
 
