@@ -45,15 +45,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session routes
-  app.get('/api/sessions', async (req, res) => {
+  app.get('/api/sessions', async (req: any, res) => {
     try {
       const { ageGroup, location, status, gender } = req.query;
+      
+      // Get tenant ID from authenticated user, or allow all sessions for non-authenticated users
+      let tenantId;
+      if (req.user?.claims?.sub) {
+        const user = await storage.getUser(req.user.claims.sub);
+        tenantId = user?.tenantId;
+      }
+      
       const sessions = await storage.getSessions({
         ageGroup: ageGroup as string,
         location: location as string,
         status: status as string,
         gender: gender as string,
+        tenantId: tenantId || undefined,
       });
+      
+      console.log('Sessions API called:', { tenantId, sessionsCount: sessions.length, filters: { ageGroup, location, status, gender } });
       
       // Add signup count to each session
       const sessionsWithCounts = await Promise.all(
