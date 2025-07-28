@@ -15,6 +15,8 @@ interface SessionCalendarProps {
   ageGroupFilter?: string;
   genderFilter?: string;
   locationFilter?: string;
+  multiPlayerAges?: string[];
+  multiPlayerGenders?: string[];
   showBookingButtons?: boolean;
   onSessionClick?: (session: FutsalSession) => void;
 }
@@ -23,6 +25,8 @@ export default function SessionCalendar({
   ageGroupFilter, 
   genderFilter, 
   locationFilter,
+  multiPlayerAges = [],
+  multiPlayerGenders = [],
   showBookingButtons = false, 
   onSessionClick 
 }: SessionCalendarProps) {
@@ -42,11 +46,20 @@ export default function SessionCalendar({
     queryKey: ["/api/sessions"],
   });
 
-  // Always show all sessions in the calendar - no player-based filtering
+  // Filter sessions based on provided criteria
   const sessions = allSessions.filter(session => {
-    // Apply manual filters if provided (for public sessions page)
-    if (ageGroupFilter && !session.ageGroups?.includes(ageGroupFilter)) return false;
-    if (genderFilter && !session.genders?.includes(genderFilter)) return false;
+    // Check multi-player filters first (if coming from dashboard with multiple players)
+    if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
+      const ageMatch = multiPlayerAges.length === 0 || session.ageGroups?.some(age => multiPlayerAges.includes(age));
+      const genderMatch = multiPlayerGenders.length === 0 || session.genders?.some(gender => multiPlayerGenders.includes(gender));
+      if (!ageMatch || !genderMatch) return false;
+    } else {
+      // Apply manual filters if provided (for public sessions page)
+      if (ageGroupFilter && !session.ageGroups?.includes(ageGroupFilter)) return false;
+      if (genderFilter && !session.genders?.includes(genderFilter)) return false;
+    }
+    
+    // Always apply location filter
     if (locationFilter && session.location !== locationFilter) return false;
     return true;
   });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import SessionCalendar from "@/components/session-calendar";
 import Navbar from "@/components/navbar";
@@ -18,6 +18,10 @@ export default function Calendar() {
   const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
   const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
   const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
+  
+  // Multi-player filter state (for when parent has multiple players)
+  const [multiPlayerAges, setMultiPlayerAges] = useState<string[]>([]);
+  const [multiPlayerGenders, setMultiPlayerGenders] = useState<string[]>([]);
 
   // Apply filters function
   const applyFilters = () => {
@@ -25,6 +29,39 @@ export default function Calendar() {
     setAppliedLocationFilter(currentLocationFilter);
     setAppliedGenderFilter(currentGenderFilter);
   };
+
+  // Check for URL parameters to auto-apply filters (same logic as sessions page)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ageParam = urlParams.get('age');
+    const genderParam = urlParams.get('gender');
+    const locationParam = urlParams.get('location');
+    
+    // Handle multi-player filters (comma-separated values)
+    const agesParam = urlParams.get('ages');
+    const gendersParam = urlParams.get('genders');
+    
+    if (ageParam) {
+      setCurrentAgeFilter(ageParam);
+      setAppliedAgeFilter(ageParam);
+    }
+    if (genderParam) {
+      setCurrentGenderFilter(genderParam);
+      setAppliedGenderFilter(genderParam);
+    }
+    if (locationParam) {
+      setCurrentLocationFilter(locationParam);
+      setAppliedLocationFilter(locationParam);
+    }
+    
+    // For multiple players, store the multi-select values
+    if (agesParam) {
+      setMultiPlayerAges(agesParam.split(','));
+    }
+    if (gendersParam) {
+      setMultiPlayerGenders(gendersParam.split(','));
+    }
+  }, []);
 
   // Get filter options from dedicated endpoint
   const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery({
@@ -111,6 +148,8 @@ export default function Calendar() {
             ageGroupFilter={appliedAgeFilter === "all" ? undefined : appliedAgeFilter}
             genderFilter={appliedGenderFilter === "all" ? undefined : appliedGenderFilter}
             locationFilter={appliedLocationFilter === "all" ? undefined : appliedLocationFilter}
+            multiPlayerAges={multiPlayerAges}
+            multiPlayerGenders={multiPlayerGenders}
             showBookingButtons={true}
             onSessionClick={handleSessionClick}
           />

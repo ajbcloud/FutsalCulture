@@ -28,6 +28,10 @@ export default function Sessions() {
   const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
   const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
   const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
+  
+  // Multi-player filter state (for when parent has multiple players)
+  const [multiPlayerAges, setMultiPlayerAges] = useState<string[]>([]);
+  const [multiPlayerGenders, setMultiPlayerGenders] = useState<string[]>([]);
 
   // Check for URL parameters to auto-apply filters
   useEffect(() => {
@@ -35,6 +39,10 @@ export default function Sessions() {
     const ageParam = urlParams.get('age');
     const genderParam = urlParams.get('gender');
     const locationParam = urlParams.get('location');
+    
+    // Handle multi-player filters (comma-separated values)
+    const agesParam = urlParams.get('ages');
+    const gendersParam = urlParams.get('genders');
     
     if (ageParam) {
       setCurrentAgeFilter(ageParam);
@@ -47,6 +55,14 @@ export default function Sessions() {
     if (locationParam) {
       setCurrentLocationFilter(locationParam);
       setAppliedLocationFilter(locationParam);
+    }
+    
+    // For multiple players, store the multi-select values
+    if (agesParam) {
+      setMultiPlayerAges(agesParam.split(','));
+    }
+    if (gendersParam) {
+      setMultiPlayerGenders(gendersParam.split(','));
     }
   }, []);
 
@@ -76,16 +92,24 @@ export default function Sessions() {
   });
 
   const filteredSessions = sessions.filter(session => {
-    // For authenticated parents with players, only show sessions their players can book
-    if (isAuthenticated && players.length > 0) {
-      const isEligibleForAnyPlayer = players.some(player => isSessionEligibleForPlayer(session, player));
-      if (!isEligibleForAnyPlayer) return false;
+    // Check multi-player filters first (if coming from dashboard with multiple players)
+    if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
+      const ageMatch = multiPlayerAges.length === 0 || session.ageGroups?.some(age => multiPlayerAges.includes(age));
+      const genderMatch = multiPlayerGenders.length === 0 || session.genders?.some(gender => multiPlayerGenders.includes(gender));
+      if (!ageMatch || !genderMatch) return false;
+    } else {
+      // For authenticated parents with players, only show sessions their players can book
+      if (isAuthenticated && players.length > 0) {
+        const isEligibleForAnyPlayer = players.some(player => isSessionEligibleForPlayer(session, player));
+        if (!isEligibleForAnyPlayer) return false;
+      }
+      
+      // Apply manual filters (using applied filter values)
+      if (appliedAgeFilter !== "all" && !session.ageGroups?.includes(appliedAgeFilter)) return false;
+      if (appliedLocationFilter !== "all" && session.location !== appliedLocationFilter) return false;
+      if (appliedGenderFilter !== "all" && !session.genders?.includes(appliedGenderFilter)) return false;
     }
     
-    // Apply manual filters (using applied filter values)
-    if (appliedAgeFilter !== "all" && !session.ageGroups?.includes(appliedAgeFilter)) return false;
-    if (appliedLocationFilter !== "all" && session.location !== appliedLocationFilter) return false;
-    if (appliedGenderFilter !== "all" && !session.genders?.includes(appliedGenderFilter)) return false;
     return true;
   });
 

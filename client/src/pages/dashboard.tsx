@@ -336,16 +336,16 @@ export default function Dashboard() {
                     className="mt-4"
                     onClick={() => {
                       // Build URL with filters based on players' eligibility
-                      const playerAgeGroups = players.map(player => calculateAgeGroup(player.birthYear));
+                      const playerAgeGroups = [...new Set(players.map(player => calculateAgeGroup(player.birthYear)))];
                       const playerGenders = [...new Set(players.map(player => player.gender))];
                       
-                      // If there's only one age group and one gender, apply them as filters
+                      // For multiple players, pass all their age groups and genders as comma-separated values
                       const params = new URLSearchParams();
-                      if (playerAgeGroups.length === 1) {
-                        params.set('age', playerAgeGroups[0]);
+                      if (playerAgeGroups.length > 0) {
+                        params.set('ages', playerAgeGroups.join(','));
                       }
-                      if (playerGenders.length === 1) {
-                        params.set('gender', playerGenders[0]);
+                      if (playerGenders.length > 0) {
+                        params.set('genders', playerGenders.join(','));
                       }
                       
                       const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
