@@ -344,7 +344,7 @@ export default function AdminSettings() {
                   Upload a logo to replace the business name text. Maximum size: 2MB. Recommended dimensions: 200x60px.
                 </p>
                 <div className="space-y-4">
-                  {settings.businessLogo && (
+                  {settings.businessLogo ? (
                     <div className="relative inline-block">
                       <img 
                         src={settings.businessLogo} 
@@ -360,7 +360,7 @@ export default function AdminSettings() {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
+                  ) : null}
                   <div className="flex items-center gap-4">
                     <Input
                       id="logoUpload"
@@ -378,12 +378,12 @@ export default function AdminSettings() {
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Logo
                     </Button>
-                    {settings.businessLogo && (
+                    {settings.businessLogo ? (
                       <span className="text-sm text-green-500 flex items-center">
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Logo uploaded
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
