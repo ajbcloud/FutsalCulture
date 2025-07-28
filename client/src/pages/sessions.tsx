@@ -48,14 +48,18 @@ export default function Sessions() {
     return true;
   });
 
-  // Get unique filter options based on eligible sessions only
-  const eligibleSessions = isAuthenticated && players.length > 0 
-    ? sessions.filter(session => players.some(player => isSessionEligibleForPlayer(session, player)))
-    : sessions;
-    
-  const uniqueAgeGroups = Array.from(new Set(eligibleSessions.flatMap(s => s.ageGroups || [])));
-  const uniqueLocations = Array.from(new Set(eligibleSessions.map(s => s.location)));
-  const uniqueGenders = Array.from(new Set(eligibleSessions.flatMap(s => s.genders || [])));
+  // Get unique filter options from all sessions (not just eligible ones)
+  // This ensures filter dropdowns always show available options
+  const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(s => s.ageGroups || [])));
+  const uniqueLocations = Array.from(new Set(sessions.map(s => s.location).filter(Boolean)));
+  const uniqueGenders = Array.from(new Set(sessions.flatMap(s => s.genders || [])));
+
+
+
+  // Sort the unique options for better UX
+  const sortedAgeGroups = uniqueAgeGroups.sort();
+  const sortedLocations = uniqueLocations.sort(); 
+  const sortedGenders = uniqueGenders.sort();
 
   if (isLoading) {
     return (
@@ -94,9 +98,9 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Genders</SelectItem>
-                    {uniqueGenders.map(gender => (
+                    {sortedGenders.map(gender => (
                       <SelectItem key={gender} value={gender}>
-                        {gender === "boys" ? "Boys" : "Girls"}
+                        {gender === "boys" ? "Boys" : gender === "girls" ? "Girls" : gender === "mixed" ? "Mixed" : gender}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -108,7 +112,7 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Ages</SelectItem>
-                    {uniqueAgeGroups.map(age => (
+                    {sortedAgeGroups.map(age => (
                       <SelectItem key={age} value={age}>{age}</SelectItem>
                     ))}
                   </SelectContent>
@@ -119,7 +123,7 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Locations</SelectItem>
-                    {uniqueLocations.map(location => (
+                    {sortedLocations.map(location => (
                       <SelectItem key={location} value={location}>{location}</SelectItem>
                     ))}
                   </SelectContent>
