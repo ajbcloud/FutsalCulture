@@ -18,6 +18,7 @@ import { useToast } from '../../hooks/use-toast';
 import { format } from 'date-fns';
 import { Check, X, User, Users } from 'lucide-react';
 import { queryClient } from '../../lib/queryClient';
+import { Pagination } from '../../components/pagination';
 
 interface PendingRegistration {
   id: string;
@@ -37,6 +38,9 @@ export default function AdminPendingRegistrations() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
+  const [paginatedRegistrations, setPaginatedRegistrations] = useState<PendingRegistration[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const { toast } = useToast();
   
   // Refresh data when returning to page
@@ -46,12 +50,29 @@ export default function AdminPendingRegistrations() {
     fetchPendingRegistrations();
   }, []);
 
+  // Apply pagination whenever registrations or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedRegistrations(registrations.slice(startIndex, endIndex));
+  }, [registrations, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   const fetchPendingRegistrations = async () => {
     try {
       const response = await fetch('/api/admin/pending-registrations');
       if (!response.ok) throw new Error('Failed to fetch pending registrations');
       const data = await response.json();
       setRegistrations(data);
+      setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       console.error('Error fetching pending registrations:', error);
       toast({
@@ -159,6 +180,18 @@ export default function AdminPendingRegistrations() {
         </Badge>
       </div>
 
+      {/* Top Pagination */}
+      {registrations.length > 0 && (
+        <Pagination
+          totalItems={registrations.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
+
       {registrations.length === 0 ? (
         <div className="bg-zinc-900 rounded-lg p-8 text-center">
           <Users className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
@@ -180,7 +213,7 @@ export default function AdminPendingRegistrations() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registrations.map((registration) => (
+              {paginatedRegistrations.map((registration) => (
                 <TableRow key={registration.id} className="border-zinc-700 hover:bg-zinc-800/30">
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -279,6 +312,18 @@ export default function AdminPendingRegistrations() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {/* Bottom Pagination */}
+      {registrations.length > 0 && (
+        <Pagination
+          totalItems={registrations.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
       )}
     </AdminLayout>
   );

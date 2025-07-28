@@ -19,6 +19,7 @@ import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X } f
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
 import { useLocation, Link } from 'wouter';
+import { Pagination } from '../../components/pagination';
 
 export default function AdminParents() {
   const [parents, setParents] = useState<any[]>([]);
@@ -43,6 +44,9 @@ export default function AdminParents() {
     role: ''
   });
   const [urlFilter, setUrlFilter] = useState<string | null>(null);
+  const [paginatedParents, setPaginatedParents] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const { toast } = useToast();
   const [location] = useLocation();
 
@@ -159,7 +163,24 @@ export default function AdminParents() {
     
 
     setFilteredParents(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [parents, filters]);
+
+  // Apply pagination whenever filtered parents or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedParents(filteredParents.slice(startIndex, endIndex));
+  }, [filteredParents, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const handleEdit = (parent: any) => {
     setSelectedParent(parent);
@@ -351,6 +372,18 @@ export default function AdminParents() {
           </div>
         </div>
 
+        {/* Top Pagination */}
+        {filteredParents.length > 0 && (
+          <Pagination
+            totalItems={filteredParents.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          />
+        )}
+
         {/* Parents Table */}
         <div className="bg-zinc-900 rounded-lg overflow-hidden">
           <Table>
@@ -366,7 +399,7 @@ export default function AdminParents() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredParents.map((parent: any) => {
+              {paginatedParents.map((parent: any) => {
                 const isExpanded = expandedParentIds.has(parent.id);
                 return (
                   <React.Fragment key={parent.id}>
@@ -470,16 +503,28 @@ export default function AdminParents() {
                   </React.Fragment>
                 );
               })}
-              {filteredParents.length === 0 && (
+              {paginatedParents.length === 0 && (
                 <TableRow className="border-zinc-800">
                   <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
-                    No parents found
+                    {filteredParents.length === 0 ? 'No parents found' : 'No parents on this page'}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Bottom Pagination */}
+        {filteredParents.length > 0 && (
+          <Pagination
+            totalItems={filteredParents.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          />
+        )}
       </div>
 
       {/* Edit Modal */}

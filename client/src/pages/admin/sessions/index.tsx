@@ -21,10 +21,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AGE_GROUPS } from '@shared/constants';
+import { Pagination } from '@/components/pagination';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
+  const [paginatedSessions, setPaginatedSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
@@ -50,6 +52,11 @@ export default function AdminSessions() {
     bookingOpenHour: '',
     bookingOpenMinute: '',
   });
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -95,7 +102,24 @@ export default function AdminSessions() {
       return matchesAgeGroup && matchesGender && matchesLocation && matchesStatus && matchesSearch && matchesDate;
     });
     setFilteredSessions(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [sessions, filters]);
+
+  // Apply pagination whenever filtered sessions or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedSessions(filteredSessions.slice(startIndex, endIndex));
+  }, [filteredSessions, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this session?')) {
@@ -110,7 +134,7 @@ export default function AdminSessions() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedSessions(new Set(filteredSessions.map((s: any) => s.id)));
+      setSelectedSessions(new Set(paginatedSessions.map((s: any) => s.id)));
     } else {
       setSelectedSessions(new Set());
     }
@@ -384,13 +408,25 @@ export default function AdminSessions() {
         )}
       </div>
 
+      {/* Top Pagination */}
+      {filteredSessions.length > 0 && (
+        <Pagination
+          totalItems={filteredSessions.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
+
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
               <TableHead className="text-zinc-300 w-12">
                 <Checkbox
-                  checked={selectedSessions.size === filteredSessions.length && filteredSessions.length > 0}
+                  checked={paginatedSessions.length > 0 && paginatedSessions.every((s: any) => selectedSessions.has(s.id))}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -404,7 +440,7 @@ export default function AdminSessions() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSessions.map((session: any, index: number) => (
+            {paginatedSessions.map((session: any, index: number) => (
               <React.Fragment key={session.id}>
                 <TableRow 
                   className="border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors"
@@ -424,7 +460,7 @@ export default function AdminSessions() {
                   {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroup || 'N/A'}
                 </TableCell>
                 <TableCell className="text-zinc-300">
-                  {Array.isArray(session.genders) ? session.genders.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
+                  {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </TableCell>
                 <TableCell className="text-zinc-300">{session.location}</TableCell>
                 <TableCell className="text-zinc-300">
@@ -530,16 +566,28 @@ export default function AdminSessions() {
               )}
               </React.Fragment>
             ))}
-            {filteredSessions.length === 0 && (
+            {paginatedSessions.length === 0 && (
               <TableRow className="border-zinc-800">
                 <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
-                  No sessions found
+                  {filteredSessions.length === 0 ? 'No sessions found' : 'No sessions on this page'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Bottom Pagination */}
+      {filteredSessions.length > 0 && (
+        <Pagination
+          totalItems={filteredSessions.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
 
       {/* Import Modal */}
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>

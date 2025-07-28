@@ -22,10 +22,12 @@ import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
+import { Pagination } from '@/components/pagination';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<any[]>([]);
+  const [paginatedPlayers, setPaginatedPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -49,6 +51,11 @@ export default function AdminPlayers() {
     soccerClub: '',
     search: ''
   });
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  
   const { toast } = useToast();
   const [location] = useLocation();
 
@@ -116,7 +123,24 @@ export default function AdminPlayers() {
     
 
     setFilteredPlayers(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [players, filters]);
+
+  // Apply pagination whenever filtered players or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedPlayers(filteredPlayers.slice(startIndex, endIndex));
+  }, [filteredPlayers, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -314,6 +338,18 @@ export default function AdminPlayers() {
         </div>
       </div>
 
+      {/* Top Pagination */}
+      {filteredPlayers.length > 0 && (
+        <Pagination
+          totalItems={filteredPlayers.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
+
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -330,7 +366,7 @@ export default function AdminPlayers() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPlayers.map((player: any) => (
+            {paginatedPlayers.map((player: any) => (
               <TableRow key={player.id} className="border-zinc-800">
                 <TableCell className="text-white">
                   <button
@@ -385,16 +421,28 @@ export default function AdminPlayers() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredPlayers.length === 0 && (
+            {paginatedPlayers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
-                  No players found
+                  {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Bottom Pagination */}
+      {filteredPlayers.length > 0 && (
+        <Pagination
+          totalItems={filteredPlayers.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
 
       {/* Import Modal */}
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>

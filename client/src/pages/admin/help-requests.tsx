@@ -18,10 +18,12 @@ import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
+import { Pagination } from '@/components/pagination';
 
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
+  const [paginatedRequests, setPaginatedRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [replyMessage, setReplyMessage] = useState('');
@@ -34,6 +36,10 @@ export default function AdminHelpRequests() {
   const [statusFilter, setStatusFilter] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   
   const { toast } = useToast();
 
@@ -85,7 +91,24 @@ export default function AdminHelpRequests() {
     }
 
     setFilteredRequests(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [helpRequests, userFilter, statusFilter, startDateFilter, endDateFilter]);
+
+  // Apply pagination whenever filtered requests or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedRequests(filteredRequests.slice(startIndex, endIndex));
+  }, [filteredRequests, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const handleMarkResolved = async (request: any) => {
     setResolvingRequest(request);
@@ -252,6 +275,18 @@ export default function AdminHelpRequests() {
           )}
         </div>
 
+        {/* Top Pagination */}
+        {filteredRequests.length > 0 && (
+          <Pagination
+            totalItems={filteredRequests.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          />
+        )}
+
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -265,7 +300,7 @@ export default function AdminHelpRequests() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRequests.map((request: any) => (
+            {paginatedRequests.map((request: any) => (
               <TableRow key={request.id} className="border-zinc-800">
                 <TableCell className="text-zinc-300">
                   <div>
@@ -360,7 +395,7 @@ export default function AdminHelpRequests() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredRequests.length === 0 && (
+            {paginatedRequests.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
                   {helpRequests.length === 0 ? 'No help requests found' : 'No help requests match the current filters'}
@@ -370,6 +405,18 @@ export default function AdminHelpRequests() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Bottom Pagination */}
+      {filteredRequests.length > 0 && (
+        <Pagination
+          totalItems={filteredRequests.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
 
       {/* Reply Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>

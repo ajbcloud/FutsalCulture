@@ -21,10 +21,12 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
+import { Pagination } from '@/components/pagination';
 
 export default function AdminPayments() {
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<any[]>([]);
+  const [paginatedPayments, setPaginatedPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -35,6 +37,11 @@ export default function AdminPayments() {
   });
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  
   const { toast } = useToast();
   
   // Refresh payments data when returning to page
@@ -119,7 +126,24 @@ export default function AdminPayments() {
     };
 
     setFilteredPayments(filterPayments(allPayments));
+    setCurrentPage(1); // Reset to first page when filters change
   }, [allPayments, filters]);
+
+  // Apply pagination whenever filtered payments or pagination settings change
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedPayments(filteredPayments.slice(startIndex, endIndex));
+  }, [filteredPayments, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const handleConfirmPayment = async (signupId: string) => {
     try {
@@ -425,6 +449,18 @@ export default function AdminPayments() {
         </div>
       )}
 
+      {/* Top Pagination */}
+      {filteredPayments.length > 0 && (
+        <Pagination
+          totalItems={filteredPayments.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
+
       {/* Single Payments Table */}
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
@@ -451,7 +487,7 @@ export default function AdminPayments() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPayments.map((payment: any) => (
+            {paginatedPayments.map((payment: any) => (
               <TableRow key={payment.id} className="border-zinc-800">
                 <TableCell className="w-12">
                   {payment.status === 'pending' && (
@@ -545,16 +581,28 @@ export default function AdminPayments() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredPayments.length === 0 && (
+            {paginatedPayments.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
-                  No payments found
+                  {filteredPayments.length === 0 ? 'No payments found' : 'No payments on this page'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Bottom Pagination */}
+      {filteredPayments.length > 0 && (
+        <Pagination
+          totalItems={filteredPayments.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+        />
+      )}
     </AdminLayout>
   );
 }
