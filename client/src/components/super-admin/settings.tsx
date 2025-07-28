@@ -1,485 +1,554 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   Settings, 
   Mail, 
   MessageSquare, 
-  Key, 
-  Webhook, 
+  Users, 
+  Globe, 
+  Shield,
   TestTube,
   Check,
   X,
-  AlertCircle,
-  Shield,
-  Globe
+  Key,
+  Webhook
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
-interface IntegrationSettings {
-  email: {
-    provider: string;
-    apiKey: string;
-    enabled: boolean;
-  };
-  sms: {
-    accountSid: string;
-    authToken: string;
-    phoneNumber: string;
-    enabled: boolean;
-  };
-  oauth: {
-    googleClientId: string;
-    googleClientSecret: string;
-    microsoftClientId: string;
-    microsoftClientSecret: string;
-    enabled: boolean;
-  };
-  webhooks: {
-    crmEndpoint: string;
-    biEndpoint: string;
-    secretKey: string;
-    enabled: boolean;
-  };
+interface Integration {
+  id: string;
+  name: string;
+  type: 'email' | 'sms' | 'oauth' | 'webhook';
+  enabled: boolean;
+  config: Record<string, any>;
+  status: 'connected' | 'disconnected' | 'testing';
 }
 
 interface PlatformSettings {
-  platformName: string;
-  supportEmail: string;
-  supportPhone: string;
-  maxTenantsPerRegion: number;
-  defaultSessionDuration: number;
-  maintenanceMode: boolean;
+  autoApproveTenants: boolean;
+  enableMfaByDefault: boolean;
+  defaultBookingWindowHours: number;
+  maxTenantsPerAdmin: number;
+  enableTenantSubdomains: boolean;
+  requireTenantApproval: boolean;
+  defaultSessionCapacity: number;
+  platformMaintenanceMode: boolean;
+}
+
+interface SuperAdminUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'super-admin' | 'platform-admin';
+  status: 'active' | 'inactive';
+  lastLogin: string;
+  createdAt: string;
 }
 
 export default function SuperAdminSettings() {
+  const [settings, setSettings] = useState<PlatformSettings>({
+    autoApproveTenants: false,
+    enableMfaByDefault: true,
+    defaultBookingWindowHours: 24,
+    maxTenantsPerAdmin: 5,
+    enableTenantSubdomains: true,
+    requireTenantApproval: true,
+    defaultSessionCapacity: 15,
+    platformMaintenanceMode: false
+  });
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [users, setUsers] = useState<SuperAdminUser[]>([]);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [testingProvider, setTestingProvider] = useState<string | null>(null);
 
-  // Fetch current settings
-  const { data: integrations, isLoading: integrationsLoading } = useQuery<IntegrationSettings>({
-    queryKey: ["/api/super-admin/integrations"],
-    queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return {
-        email: {
-          provider: "sendgrid",
-          apiKey: "SG.***.***",
-          enabled: true,
-        },
-        sms: {
-          accountSid: "AC***",
-          authToken: "***",
-          phoneNumber: "+1234567890",
-          enabled: true,
-        },
-        oauth: {
-          googleClientId: "***-google.apps.googleusercontent.com",
-          googleClientSecret: "***",
-          microsoftClientId: "***",
-          microsoftClientSecret: "***",
-          enabled: false,
-        },
-        webhooks: {
-          crmEndpoint: "https://api.example.com/webhook",
-          biEndpoint: "https://bi.example.com/webhook",
-          secretKey: "wh_***",
-          enabled: false,
-        },
-      };
-    },
+  const { data: platformSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['/api/super-admin/settings'],
+    queryFn: () => apiRequest('/api/super-admin/settings')
   });
 
-  const { data: platformSettings, isLoading: platformLoading } = useQuery<PlatformSettings>({
-    queryKey: ["/api/super-admin/platform-settings"],
-    queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return {
-        platformName: "Futsal Platform",
-        supportEmail: "support@futsalplatform.com",
-        supportPhone: "+1-800-FUTSAL",
-        maxTenantsPerRegion: 100,
-        defaultSessionDuration: 90,
-        maintenanceMode: false,
-      };
-    },
+  const { data: platformIntegrations, isLoading: integrationsLoading } = useQuery({
+    queryKey: ['/api/super-admin/integrations'],
+    queryFn: () => apiRequest('/api/super-admin/integrations')
   });
 
-  // Test integration function
-  const testIntegration = async (provider: string) => {
-    setTestingProvider(provider);
-    try {
-      // Mock test - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast({
-        title: "Test Successful",
-        description: `${provider} integration is working correctly`,
-      });
-    } catch (error) {
-      toast({
-        title: "Test Failed",
-        description: `${provider} integration test failed`,
-        variant: "destructive",
-      });
-    } finally {
-      setTestingProvider(null);
+  const { data: platformUsers, isLoading: usersLoading } = useQuery({
+    queryKey: ['/api/super-admin/users'],
+    queryFn: () => apiRequest('/api/super-admin/users')
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', {
+      method: 'POST',
+      body: JSON.stringify(newSettings)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
+      toast({ title: "Success", description: "Platform settings saved successfully!" });
     }
+  });
+
+  const updateIntegrationMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/integrations'] });
+      toast({ title: "Success", description: "Integration updated successfully!" });
+    }
+  });
+
+  const testIntegrationMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, {
+      method: 'POST'
+    }),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Integration test completed successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Integration test failed. Please check your configuration." });
+    }
+  });
+
+  useEffect(() => {
+    if (platformSettings) {
+      setSettings(platformSettings);
+    }
+  }, [platformSettings]);
+
+  useEffect(() => {
+    if (platformIntegrations) {
+      setIntegrations(platformIntegrations);
+    }
+  }, [platformIntegrations]);
+
+  useEffect(() => {
+    if (platformUsers) {
+      setUsers(platformUsers);
+    }
+  }, [platformUsers]);
+
+  const handleSettingsSave = () => {
+    setSaving(true);
+    saveSettingsMutation.mutate(settings);
+    setSaving(false);
   };
 
-  if (integrationsLoading || platformLoading) {
+  const handleIntegrationToggle = (id: string, enabled: boolean) => {
+    updateIntegrationMutation.mutate({ id, enabled });
+  };
+
+  const handleIntegrationTest = (id: string) => {
+    testIntegrationMutation.mutate(id);
+  };
+
+  const handleIntegrationUpdate = (id: string, config: Record<string, any>) => {
+    updateIntegrationMutation.mutate({ id, config });
+  };
+
+  if (settingsLoading || integrationsLoading || usersLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Platform Settings</h1>
+        </div>
+        <div className="grid gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Platform Settings & Integrations</h1>
-        <p className="text-muted-foreground">Configure global platform settings and third-party integrations</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-2xl font-bold">Platform Settings</h1>
+          <p className="text-muted-foreground">Configure global platform settings and integrations</p>
+        </div>
       </div>
 
       <Tabs defaultValue="platform" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="platform" className="flex items-center">
-            <Globe className="w-4 h-4 mr-2" />
-            Platform Settings
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="flex items-center">
-            <Shield className="w-4 h-4 mr-2" />
-            Integrations
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="platform">Platform Settings</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
         </TabsList>
 
+        {/* Platform Settings Tab */}
         <TabsContent value="platform" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Globe className="w-5 h-5 mr-2" />
-                Global Platform Configuration
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="w-5 h-5" />
+                <span>Global Platform Settings</span>
               </CardTitle>
+              <CardDescription>Configure default settings that apply across all tenants</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="platformName">Platform Name</Label>
-                  <Input
-                    id="platformName"
-                    defaultValue={platformSettings?.platformName}
-                    placeholder="e.g., Futsal Platform"
-                  />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="autoApproveTenants">Auto-approve new tenants</Label>
+                      <p className="text-sm text-muted-foreground">Automatically approve new tenant registrations</p>
+                    </div>
+                    <Switch
+                      id="autoApproveTenants"
+                      checked={settings.autoApproveTenants}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoApproveTenants: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="enableMfaByDefault">Enable MFA by default</Label>
+                      <p className="text-sm text-muted-foreground">Require multi-factor authentication for new users</p>
+                    </div>
+                    <Switch
+                      id="enableMfaByDefault"
+                      checked={settings.enableMfaByDefault}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableMfaByDefault: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="enableTenantSubdomains">Enable tenant subdomains</Label>
+                      <p className="text-sm text-muted-foreground">Allow tenants to use custom subdomains</p>
+                    </div>
+                    <Switch
+                      id="enableTenantSubdomains"
+                      checked={settings.enableTenantSubdomains}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableTenantSubdomains: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="requireTenantApproval">Require tenant approval</Label>
+                      <p className="text-sm text-muted-foreground">Require super admin approval for tenant changes</p>
+                    </div>
+                    <Switch
+                      id="requireTenantApproval"
+                      checked={settings.requireTenantApproval}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, requireTenantApproval: checked }))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="supportEmail">Support Email</Label>
-                  <Input
-                    id="supportEmail"
-                    type="email"
-                    defaultValue={platformSettings?.supportEmail}
-                    placeholder="support@platform.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="supportPhone">Support Phone</Label>
-                  <Input
-                    id="supportPhone"
-                    defaultValue={platformSettings?.supportPhone}
-                    placeholder="+1-800-SUPPORT"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="maxTenants">Max Tenants Per Region</Label>
-                  <Input
-                    id="maxTenants"
-                    type="number"
-                    defaultValue={platformSettings?.maxTenantsPerRegion}
-                    placeholder="100"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sessionDuration">Default Session Duration (minutes)</Label>
-                  <Input
-                    id="sessionDuration"
-                    type="number"
-                    defaultValue={platformSettings?.defaultSessionDuration}
-                    placeholder="90"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="maintenanceMode"
-                    defaultChecked={platformSettings?.maintenanceMode}
-                  />
-                  <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="defaultBookingWindowHours">Default booking window (hours)</Label>
+                    <Input
+                      id="defaultBookingWindowHours"
+                      type="number"
+                      min="1"
+                      max="168"
+                      value={settings.defaultBookingWindowHours}
+                      onChange={(e) => setSettings(prev => ({ ...prev, defaultBookingWindowHours: parseInt(e.target.value) }))}
+                    />
+                    <p className="text-sm text-muted-foreground">How far in advance users can book sessions</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="maxTenantsPerAdmin">Max tenants per admin</Label>
+                    <Input
+                      id="maxTenantsPerAdmin"
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={settings.maxTenantsPerAdmin}
+                      onChange={(e) => setSettings(prev => ({ ...prev, maxTenantsPerAdmin: parseInt(e.target.value) }))}
+                    />
+                    <p className="text-sm text-muted-foreground">Maximum number of tenants one admin can manage</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="defaultSessionCapacity">Default session capacity</Label>
+                    <Input
+                      id="defaultSessionCapacity"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={settings.defaultSessionCapacity}
+                      onChange={(e) => setSettings(prev => ({ ...prev, defaultSessionCapacity: parseInt(e.target.value) }))}
+                    />
+                    <p className="text-sm text-muted-foreground">Default capacity for new sessions</p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="platformMaintenanceMode">Maintenance mode</Label>
+                      <p className="text-sm text-muted-foreground">Enable platform-wide maintenance mode</p>
+                    </div>
+                    <Switch
+                      id="platformMaintenanceMode"
+                      checked={settings.platformMaintenanceMode}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, platformMaintenanceMode: checked }))}
+                    />
+                  </div>
                 </div>
               </div>
-              <Button>Save Platform Settings</Button>
+
+              <div className="flex justify-end pt-6 border-t">
+                <Button onClick={handleSettingsSave} disabled={saving}>
+                  {saving ? "Saving..." : "Save Settings"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Integrations Tab */}
         <TabsContent value="integrations" className="space-y-6">
-          {/* Email Integration */}
+          {/* Email Integrations */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Mail className="w-5 h-5 mr-2" />
-                  Email Integration
-                </div>
-                <Badge variant={integrations?.email.enabled ? "default" : "secondary"}>
-                  {integrations?.email.enabled ? "Active" : "Inactive"}
-                </Badge>
+              <CardTitle className="flex items-center space-x-2">
+                <Mail className="w-5 h-5" />
+                <span>Email Services</span>
               </CardTitle>
+              <CardDescription>Configure email providers for tenant communications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="emailProvider">Provider</Label>
-                  <Input
-                    id="emailProvider"
-                    defaultValue={integrations?.email.provider}
-                    placeholder="sendgrid"
-                  />
+              {integrations.filter(i => i.type === 'email').map((integration) => (
+                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <h4 className="font-medium">{integration.name}</h4>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                          {integration.status}
+                        </Badge>
+                        {integration.enabled && (
+                          <Badge variant="outline">Enabled</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleIntegrationTest(integration.id)}
+                      disabled={testIntegrationMutation.isPending}
+                    >
+                      <TestTube className="w-4 h-4 mr-1" />
+                      Test
+                    </Button>
+                    <Switch
+                      checked={integration.enabled}
+                      onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="emailApiKey">API Key</Label>
-                  <Input
-                    id="emailApiKey"
-                    type="password"
-                    defaultValue={integrations?.email.apiKey}
-                    placeholder="SG.***"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="emailEnabled"
-                  defaultChecked={integrations?.email.enabled}
-                />
-                <Label htmlFor="emailEnabled">Enable Email Integration</Label>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => testIntegration("Email")}
-                  disabled={testingProvider === "Email"}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  {testingProvider === "Email" ? "Testing..." : "Test Connection"}
-                </Button>
-                <Button>Save Email Settings</Button>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* SMS Integration */}
+          {/* SMS Integrations */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" />
-                  SMS Integration (Twilio)
-                </div>
-                <Badge variant={integrations?.sms.enabled ? "default" : "secondary"}>
-                  {integrations?.sms.enabled ? "Active" : "Inactive"}
-                </Badge>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="w-5 h-5" />
+                <span>SMS Services</span>
               </CardTitle>
+              <CardDescription>Configure SMS providers for notifications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="twilioSid">Account SID</Label>
-                  <Input
-                    id="twilioSid"
-                    type="password"
-                    defaultValue={integrations?.sms.accountSid}
-                    placeholder="AC***"
-                  />
+              {integrations.filter(i => i.type === 'sms').map((integration) => (
+                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <h4 className="font-medium">{integration.name}</h4>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                          {integration.status}
+                        </Badge>
+                        {integration.enabled && (
+                          <Badge variant="outline">Enabled</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleIntegrationTest(integration.id)}
+                      disabled={testIntegrationMutation.isPending}
+                    >
+                      <TestTube className="w-4 h-4 mr-1" />
+                      Test
+                    </Button>
+                    <Switch
+                      checked={integration.enabled}
+                      onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="twilioToken">Auth Token</Label>
-                  <Input
-                    id="twilioToken"
-                    type="password"
-                    defaultValue={integrations?.sms.authToken}
-                    placeholder="***"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="twilioPhone">Phone Number</Label>
-                  <Input
-                    id="twilioPhone"
-                    defaultValue={integrations?.sms.phoneNumber}
-                    placeholder="+1234567890"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="smsEnabled"
-                  defaultChecked={integrations?.sms.enabled}
-                />
-                <Label htmlFor="smsEnabled">Enable SMS Integration</Label>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => testIntegration("SMS")}
-                  disabled={testingProvider === "SMS"}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  {testingProvider === "SMS" ? "Testing..." : "Test Connection"}
-                </Button>
-                <Button>Save SMS Settings</Button>
-              </div>
+              ))}
             </CardContent>
           </Card>
 
           {/* OAuth Providers */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Key className="w-5 h-5 mr-2" />
-                  OAuth Providers
-                </div>
-                <Badge variant={integrations?.oauth.enabled ? "default" : "secondary"}>
-                  {integrations?.oauth.enabled ? "Active" : "Inactive"}
-                </Badge>
+              <CardTitle className="flex items-center space-x-2">
+                <Globe className="w-5 h-5" />
+                <span>OAuth Providers</span>
               </CardTitle>
+              <CardDescription>Configure social authentication providers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label className="font-medium">Google OAuth</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              {integrations.filter(i => i.type === 'oauth').map((integration) => (
+                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
                     <div>
-                      <Label htmlFor="googleClientId">Client ID</Label>
-                      <Input
-                        id="googleClientId"
-                        defaultValue={integrations?.oauth.googleClientId}
-                        placeholder="***-google.apps.googleusercontent.com"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="googleClientSecret">Client Secret</Label>
-                      <Input
-                        id="googleClientSecret"
-                        type="password"
-                        defaultValue={integrations?.oauth.googleClientSecret}
-                        placeholder="***"
-                      />
+                      <h4 className="font-medium">{integration.name}</h4>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                          {integration.status}
+                        </Badge>
+                        {integration.enabled && (
+                          <Badge variant="outline">Enabled</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div>
-                  <Label className="font-medium">Microsoft Azure AD</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <Label htmlFor="microsoftClientId">Client ID</Label>
-                      <Input
-                        id="microsoftClientId"
-                        defaultValue={integrations?.oauth.microsoftClientId}
-                        placeholder="***"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="microsoftClientSecret">Client Secret</Label>
-                      <Input
-                        id="microsoftClientSecret"
-                        type="password"
-                        defaultValue={integrations?.oauth.microsoftClientSecret}
-                        placeholder="***"
-                      />
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleIntegrationTest(integration.id)}
+                      disabled={testIntegrationMutation.isPending}
+                    >
+                      <TestTube className="w-4 h-4 mr-1" />
+                      Test
+                    </Button>
+                    <Switch
+                      checked={integration.enabled}
+                      onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
+                    />
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="oauthEnabled"
-                  defaultChecked={integrations?.oauth.enabled}
-                />
-                <Label htmlFor="oauthEnabled">Enable OAuth Providers</Label>
-              </div>
-              <Button>Save OAuth Settings</Button>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Webhooks */}
+          {/* Webhook Endpoints */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Webhook className="w-5 h-5 mr-2" />
-                  Webhook Endpoints
-                </div>
-                <Badge variant={integrations?.webhooks.enabled ? "default" : "secondary"}>
-                  {integrations?.webhooks.enabled ? "Active" : "Inactive"}
-                </Badge>
+              <CardTitle className="flex items-center space-x-2">
+                <Webhook className="w-5 h-5" />
+                <span>Webhook Endpoints</span>
               </CardTitle>
+              <CardDescription>Configure webhook endpoints for external integrations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label htmlFor="crmEndpoint">CRM Webhook Endpoint</Label>
-                  <Input
-                    id="crmEndpoint"
-                    defaultValue={integrations?.webhooks.crmEndpoint}
-                    placeholder="https://api.example.com/webhook"
-                  />
+              {integrations.filter(i => i.type === 'webhook').map((integration) => (
+                <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <h4 className="font-medium">{integration.name}</h4>
+                      <p className="text-sm text-muted-foreground">{integration.config?.url}</p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                          {integration.status}
+                        </Badge>
+                        {integration.enabled && (
+                          <Badge variant="outline">Enabled</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleIntegrationTest(integration.id)}
+                      disabled={testIntegrationMutation.isPending}
+                    >
+                      <TestTube className="w-4 h-4 mr-1" />
+                      Test
+                    </Button>
+                    <Switch
+                      checked={integration.enabled}
+                      onCheckedChange={(checked) => handleIntegrationToggle(integration.id, checked)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="biEndpoint">BI Webhook Endpoint</Label>
-                  <Input
-                    id="biEndpoint"
-                    defaultValue={integrations?.webhooks.biEndpoint}
-                    placeholder="https://bi.example.com/webhook"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="webhookSecret">Webhook Secret Key</Label>
-                  <Input
-                    id="webhookSecret"
-                    type="password"
-                    defaultValue={integrations?.webhooks.secretKey}
-                    placeholder="wh_***"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="webhooksEnabled"
-                  defaultChecked={integrations?.webhooks.enabled}
-                />
-                <Label htmlFor="webhooksEnabled">Enable Webhooks</Label>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => testIntegration("Webhooks")}
-                  disabled={testingProvider === "Webhooks"}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  {testingProvider === "Webhooks" ? "Testing..." : "Test Endpoints"}
-                </Button>
-                <Button>Save Webhook Settings</Button>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* User Management Tab */}
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="w-5 h-5" />
+                <span>Super Admin Users</span>
+              </CardTitle>
+              <CardDescription>Manage platform administrators and their permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <h4 className="font-medium">{user.firstName} {user.lastName}</h4>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge variant={user.role === 'super-admin' ? 'default' : 'secondary'}>
+                            {user.role}
+                          </Badge>
+                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                            {user.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="sm">
+                        <Key className="w-4 h-4 mr-1" />
+                        Reset Password
+                      </Button>
+                      <Select defaultValue={user.role}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="super-admin">Super Admin</SelectItem>
+                          <SelectItem value="platform-admin">Platform Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

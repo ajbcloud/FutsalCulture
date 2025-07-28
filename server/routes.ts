@@ -520,8 +520,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Booking opens at 8:00 AM on session day" });
       }
       
+      // Get current user to access tenantId
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      
       // Create signup with paid = false (reserved but payment pending)
       const signup = await storage.createSignup({
+        tenantId: currentUser?.tenantId || session.tenantId,
         playerId,
         sessionId,
         paid: false,
@@ -638,6 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create signup with paid set to true (no payment required)
         return await storage.createSignup({
+          tenantId: session.tenantId,
           playerId,
           sessionId,
           paid: true,

@@ -1,323 +1,497 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { KPICard } from "@/components/kpi-card";
+import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   DollarSign, 
   Users, 
   Calendar, 
-  CreditCard,
-  Building2,
-  TrendingUp,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  BarChart3
+  Building2, 
+  TrendingUp, 
+  TrendingDown, 
+  Info,
+  Download,
+  Filter
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { addDays, subDays, format } from "date-fns";
+import { DateRange } from "react-day-picker";
 
 interface AnalyticsData {
-  revenue: number;
-  players: number;
-  sessions: number;
-  tenants: number;
+  totalRevenue: number;
+  monthlyRevenue: number;
+  totalPlayers: number;
+  monthlyPlayers: number;
+  totalSessions: number;
+  weeklySessions: number;
+  activeTenants: number;
   revenueGrowth: number;
   playersGrowth: number;
   sessionsGrowth: number;
+  tenantGrowth: number;
+  revenueByTenant: Array<{
+    tenantId: string;
+    tenantName: string;
+    revenue: number;
+    growth: number;
+  }>;
+  playersByTenant: Array<{
+    tenantId: string;
+    tenantName: string;
+    players: number;
+    growth: number;
+  }>;
+  sessionsByTenant: Array<{
+    tenantId: string;
+    tenantName: string;
+    sessions: number;
+    occupancy: number;
+  }>;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
 }
 
 export default function SuperAdminAnalytics() {
-  const [selectedTenant, setSelectedTenant] = useState("all");
-  const [dateRange, setDateRange] = useState<any>(null);
-  const [ageGroup, setAgeGroup] = useState("all");
-  const [gender, setGender] = useState("all");
+  const [selectedTenants, setSelectedTenants] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
+  const [ageGroupFilter, setAgeGroupFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
 
-  // Fetch tenants for filter
   const { data: tenants = [] } = useQuery({
-    queryKey: ["/api/super-admin/tenants"],
-    queryFn: async () => {
-      const response = await fetch("/api/super-admin/tenants", {
-        credentials: 'include'
-      });
-      return response.json();
-    },
+    queryKey: ['/api/super-admin/tenants'],
+    queryFn: () => apiRequest('/api/super-admin/tenants')
   });
 
-  // Fetch analytics data with filters
-  const { data: analytics, isLoading } = useQuery<AnalyticsData>({
-    queryKey: ["/api/super-admin/analytics", selectedTenant, dateRange, ageGroup, gender],
-    queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return {
-        revenue: selectedTenant === "all" ? 125000 : 45000,
-        players: selectedTenant === "all" ? 850 : 320,
-        sessions: selectedTenant === "all" ? 240 : 85,
-        tenants: selectedTenant === "all" ? 8 : 1,
-        revenueGrowth: 12,
-        playersGrowth: 8,
-        sessionsGrowth: 15,
-      };
-    },
-  });
-
-  const formatGrowth = (growth: number) => {
-    if (!isFinite(growth) || isNaN(growth)) {
-      return { text: "New", icon: ArrowUp, color: "text-green-500" };
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ['/api/super-admin/analytics', selectedTenants, dateRange, ageGroupFilter, genderFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (selectedTenants.length > 0) {
+        params.append('tenants', selectedTenants.join(','));
+      }
+      if (dateRange?.from) {
+        params.append('from', dateRange.from.toISOString());
+      }
+      if (dateRange?.to) {
+        params.append('to', dateRange.to.toISOString());
+      }
+      if (ageGroupFilter !== 'all') {
+        params.append('ageGroup', ageGroupFilter);
+      }
+      if (genderFilter !== 'all') {
+        params.append('gender', genderFilter);
+      }
+      return apiRequest(`/api/super-admin/analytics?${params.toString()}`);
     }
-    
-    if (growth === 0) return { text: "±0.0%", icon: Minus, color: "text-gray-500" };
-    if (growth > 0) return { text: `+${growth}%`, icon: ArrowUp, color: "text-green-500" };
-    return { text: `${growth}%`, icon: ArrowDown, color: "text-red-500" };
+  });
+
+  const handleTenantToggle = (tenantId: string) => {
+    setSelectedTenants(prev => {
+      if (prev.includes(tenantId)) {
+        return prev.filter(id => id !== tenantId);
+      } else {
+        return [...prev, tenantId];
+      }
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedTenants([]);
+    setDateRange({ from: subDays(new Date(), 30), to: new Date() });
+    setAgeGroupFilter("all");
+    setGenderFilter("all");
   };
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Platform Analytics</h1>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
-  const kpis = [
-    {
-      title: "Revenue",
-      subtitle: selectedTenant === "all" ? "(All Tenants)" : "(Selected Tenant)",
-      value: `$${((analytics?.revenue || 0) / 100).toFixed(2)}`,
-      icon: DollarSign,
-      growth: analytics?.revenueGrowth || 0,
-      comparison: "vs. previous period",
-      definition: selectedTenant === "all" 
-        ? "Total revenue across all tenants for the selected period" 
-        : "Revenue for the selected tenant and period"
-    },
-    {
-      title: "Players",
-      subtitle: selectedTenant === "all" ? "(Platform Wide)" : "(Selected Tenant)",
-      value: (analytics?.players || 0).toString(),
-      icon: Users,
-      growth: analytics?.playersGrowth || 0,
-      comparison: "vs. previous period",
-      definition: selectedTenant === "all"
-        ? "Total registered players across all tenants"
-        : "Total registered players for the selected tenant"
-    },
-    {
-      title: "Sessions",
-      subtitle: "(Selected Period)",
-      value: (analytics?.sessions || 0).toString(),
-      icon: Calendar,
-      growth: analytics?.sessionsGrowth || 0,
-      comparison: "vs. previous period",
-      definition: "Number of training sessions scheduled for the selected period and filters"
-    },
-    {
-      title: "Active Tenants",
-      subtitle: "(Organizations)",
-      value: selectedTenant === "all" ? (analytics?.tenants || 0).toString() : "1",
-      icon: Building2,
-      growth: 0,
-      comparison: "",
-      definition: selectedTenant === "all" 
-        ? "Number of active tenant organizations on the platform"
-        : "Currently viewing single tenant"
-    },
-  ];
+  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const formatGrowth = (growth: number) => {
+    const formatted = Math.abs(growth).toFixed(1);
+    return growth >= 0 ? `+${formatted}%` : `-${formatted}%`;
+  };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Platform Analytics</h1>
-          <p className="text-muted-foreground">
-            {selectedTenant === "all" 
-              ? "Global analytics across all tenants" 
-              : `Analytics for ${tenants.find((t: any) => t.id === selectedTenant)?.name || 'selected tenant'}`
-            }
-          </p>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+          <div>
+            <h1 className="text-2xl font-bold">Platform Analytics</h1>
+            <p className="text-muted-foreground">
+              {selectedTenants.length === 0 
+                ? "Global analytics across all tenants" 
+                : `Analytics for ${selectedTenants.length} selected tenant(s)`
+              }
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
-        
+
         {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              Analytics Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Tenant</label>
-                <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select tenant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tenants</SelectItem>
-                    {tenants.map((tenant: any) => (
-                      <SelectItem key={tenant.id} value={tenant.id}>
-                        {tenant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Tenant Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tenants</label>
+                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+                  {tenants.map((tenant: Tenant) => (
+                    <label key={tenant.id} className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedTenants.includes(tenant.id)}
+                        onChange={() => handleTenantToggle(tenant.id)}
+                        className="rounded"
+                      />
+                      <span>{tenant.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Date Range</label>
-                <DatePickerWithRange
-                  date={dateRange}
-                  setDate={setDateRange}
-                  placeholder="Select dates"
-                />
+
+              {/* Date Range */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="date"
+                    value={dateRange?.from?.toISOString().split('T')[0] || ''}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
+                  />
+                  <Input
+                    type="date"
+                    value={dateRange?.to?.toISOString().split('T')[0] || ''}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
+                  />
+                </div>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Age Group</label>
-                <Select value={ageGroup} onValueChange={setAgeGroup}>
+
+              {/* Age Group Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Age Group</label>
+                <Select value={ageGroupFilter} onValueChange={setAgeGroupFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All ages" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Ages</SelectItem>
-                    <SelectItem value="U8">Under 8</SelectItem>
-                    <SelectItem value="U10">Under 10</SelectItem>
-                    <SelectItem value="U12">Under 12</SelectItem>
-                    <SelectItem value="U14">Under 14</SelectItem>
-                    <SelectItem value="U16">Under 16</SelectItem>
-                    <SelectItem value="U18">Under 18</SelectItem>
+                    <SelectItem value="U8">U8</SelectItem>
+                    <SelectItem value="U10">U10</SelectItem>
+                    <SelectItem value="U12">U12</SelectItem>
+                    <SelectItem value="U14">U14</SelectItem>
+                    <SelectItem value="U16">U16</SelectItem>
+                    <SelectItem value="U18">U18</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium mb-2 block">Gender</label>
-                <Select value={gender} onValueChange={setGender}>
+
+              {/* Gender Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Gender</label>
+                <Select value={genderFilter} onValueChange={setGenderFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All genders" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Genders</SelectItem>
-                    <SelectItem value="boys">Boys</SelectItem>
-                    <SelectItem value="girls">Girls</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
                     <SelectItem value="mixed">Mixed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex items-end">
-                <div className="flex space-x-2">
-                  <Badge variant="secondary" className="px-3 py-1">
-                    {selectedTenant === "all" ? "Global View" : "Tenant View"}
-                  </Badge>
-                  {dateRange && (
-                    <Badge variant="outline" className="px-3 py-1">
-                      Custom Range
-                    </Badge>
-                  )}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi) => {
-          const growthInfo = formatGrowth(kpi.growth);
-          const GrowthIcon = growthInfo.icon;
-          
-          return (
-            <KPICard
-              key={kpi.title}
-              title={kpi.title}
-              subtitle={kpi.subtitle}
-              value={kpi.value}
-              icon={kpi.icon}
-              definition={kpi.definition}
-            >
-              {kpi.growth !== 0 && (
-                <div className={`flex items-center space-x-1 ${growthInfo.color}`}>
-                  <GrowthIcon className="w-3 h-3" />
-                  <span className="text-xs font-medium">{growthInfo.text}</span>
-                  {kpi.comparison && (
-                    <span className="text-xs text-muted-foreground">{kpi.comparison}</span>
+        {/* Global KPIs */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Sum of all payments received across all tenants</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {(analytics?.revenueGrowth || 0) >= 0 ? (
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-600" />
                   )}
+                  <span className={`text-sm font-medium ${
+                    (analytics?.revenueGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatGrowth(analytics?.revenueGrowth || 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-sm font-medium text-muted-foreground">Total Players</p>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Number of registered players across all tenants</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-bold">{analytics?.totalPlayers || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {(analytics?.playersGrowth || 0) >= 0 ? (
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    (analytics?.playersGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatGrowth(analytics?.playersGrowth || 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-sm font-medium text-muted-foreground">Total Sessions</p>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Number of training sessions across all tenants</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-bold">{analytics?.totalSessions || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {(analytics?.sessionsGrowth || 0) >= 0 ? (
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    (analytics?.sessionsGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatGrowth(analytics?.sessionsGrowth || 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-sm font-medium text-muted-foreground">Active Tenants</p>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Number of active tenant organizations</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-bold">{analytics?.activeTenants || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {(analytics?.tenantGrowth || 0) >= 0 ? (
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    (analytics?.tenantGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatGrowth(analytics?.tenantGrowth || 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Revenue by Tenant */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue by Tenant</CardTitle>
+            <CardDescription>Compare revenue performance across tenant organizations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics?.revenueByTenant?.map((tenant) => (
+                <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline">{tenant.tenantName}</Badge>
+                    <span className="font-medium">{formatCurrency(tenant.revenue)}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {tenant.growth >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                    <span className={`text-sm font-medium ${
+                      tenant.growth >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatGrowth(tenant.growth)}
+                    </span>
+                  </div>
+                </div>
+              )) || (
+                <div className="text-center py-8 text-muted-foreground">
+                  No revenue data available for the selected filters.
                 </div>
               )}
-            </KPICard>
-          );
-        })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Players by Tenant */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Players by Tenant</CardTitle>
+            <CardDescription>Track player registration across tenant organizations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics?.playersByTenant?.map((tenant) => (
+                <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline">{tenant.tenantName}</Badge>
+                    <span className="font-medium">{tenant.players} players</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {tenant.growth >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                    <span className={`text-sm font-medium ${
+                      tenant.growth >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatGrowth(tenant.growth)}
+                    </span>
+                  </div>
+                </div>
+              )) || (
+                <div className="text-center py-8 text-muted-foreground">
+                  No player data available for the selected filters.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Session Occupancy by Tenant */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Session Occupancy by Tenant</CardTitle>
+            <CardDescription>Monitor session utilization across tenant organizations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics?.sessionsByTenant?.map((tenant) => (
+                <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline">{tenant.tenantName}</Badge>
+                    <span className="font-medium">{tenant.sessions} sessions</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-24 bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${Math.min(tenant.occupancy, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium">{tenant.occupancy.toFixed(1)}%</span>
+                  </div>
+                </div>
+              )) || (
+                <div className="text-center py-8 text-muted-foreground">
+                  No session data available for the selected filters.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Over Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Revenue chart will be implemented here</p>
-                <p className="text-sm">Showing data for {selectedTenant === "all" ? "all tenants" : "selected tenant"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Player Growth</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Player growth chart will be implemented here</p>
-                <p className="text-sm">Filtered by: {ageGroup !== "all" ? ageGroup : "All ages"}, {gender !== "all" ? gender : "All genders"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Session Occupancy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Session occupancy chart will be implemented here</p>
-                <p className="text-sm">Average fill rate and trends</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Age Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Age distribution chart will be implemented here</p>
-                <p className="text-sm">Player demographics across {selectedTenant === "all" ? "all tenants" : "selected tenant"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }

@@ -109,6 +109,21 @@ export interface IStorage {
   
   // Access code validation
   validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
+  
+  // Super Admin operations
+  getSuperAdminSessions(filters?: { tenantId?: string; ageGroup?: string; gender?: string; location?: string; dateFrom?: string; dateTo?: string; status?: string }): Promise<any[]>;
+  getSuperAdminPayments(filters?: { tenantId?: string; status?: string; dateFrom?: string; dateTo?: string; amountMin?: number; amountMax?: number }): Promise<any[]>;
+  getSuperAdminRegistrations(filters?: { tenantId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
+  getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]>;
+  getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]>;
+  getSuperAdminAnalytics(filters?: { tenants?: string[]; from?: string; to?: string; ageGroup?: string; gender?: string }): Promise<any>;
+  getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
+  getSuperAdminSettings(): Promise<any>;
+  updateSuperAdminSettings(settings: any): Promise<any>;
+  getSuperAdminIntegrations(): Promise<any[]>;
+  updateSuperAdminIntegration(id: string, data: any): Promise<any>;
+  testSuperAdminIntegration(id: string): Promise<any>;
+  getSuperAdminUsers(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -612,6 +627,298 @@ export class DatabaseStorage implements IStorage {
     }
     
     return session.accessCode === accessCode;
+  }
+
+  // Super Admin operations
+  async getSuperAdminSessions(filters?: { tenantId?: string; ageGroup?: string; gender?: string; location?: string; dateFrom?: string; dateTo?: string; status?: string }): Promise<any[]> {
+    let query = db.select({
+      id: futsalSessions.id,
+      tenantId: futsalSessions.tenantId,
+      tenantName: tenants.name,
+      dateTime: futsalSessions.dateTime,
+      ageGroup: futsalSessions.ageGroup,
+      gender: futsalSessions.gender,
+      location: futsalSessions.location,
+      capacity: futsalSessions.capacity,
+      status: futsalSessions.status,
+      signupsCount: sql<number>`COUNT(${signups.id})`,
+    })
+    .from(futsalSessions)
+    .leftJoin(tenants, eq(futsalSessions.tenantId, tenants.id))
+    .leftJoin(signups, eq(futsalSessions.id, signups.sessionId))
+    .groupBy(futsalSessions.id, tenants.name);
+
+    if (filters?.tenantId) {
+      query = query.where(eq(futsalSessions.tenantId, filters.tenantId));
+    }
+    if (filters?.ageGroup) {
+      query = query.where(eq(futsalSessions.ageGroup, filters.ageGroup));
+    }
+    if (filters?.status) {
+      query = query.where(eq(futsalSessions.status, filters.status));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminPayments(filters?: { tenantId?: string; status?: string; dateFrom?: string; dateTo?: string; amountMin?: number; amountMax?: number }): Promise<any[]> {
+    let query = db.select({
+      id: payments.id,
+      tenantId: payments.tenantId,
+      tenantName: tenants.name,
+      signupId: payments.signupId,
+      playerName: sql<string>`${players.firstName} || ' ' || ${players.lastName}`,
+      sessionDate: futsalSessions.dateTime,
+      amount: payments.amount,
+      status: payments.status,
+      paidAt: payments.paidAt,
+      adminNotes: payments.adminNotes,
+    })
+    .from(payments)
+    .leftJoin(tenants, eq(payments.tenantId, tenants.id))
+    .leftJoin(signups, eq(payments.signupId, signups.id))
+    .leftJoin(players, eq(signups.playerId, players.id))
+    .leftJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id));
+
+    if (filters?.tenantId) {
+      query = query.where(eq(payments.tenantId, filters.tenantId));
+    }
+    if (filters?.status) {
+      query = query.where(eq(payments.status, filters.status));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminRegistrations(filters?: { tenantId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
+    // This would combine parent and player registrations
+    // For now, return user registrations as a proxy
+    let query = db.select({
+      id: users.id,
+      tenantId: users.tenantId,
+      tenantName: tenants.name,
+      type: sql<string>`'parent'`,
+      name: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
+      email: users.email,
+      invitedAt: users.createdAt,
+      status: sql<string>`CASE WHEN ${users.isActive} THEN 'approved' ELSE 'pending' END`,
+      approvedAt: users.createdAt,
+    })
+    .from(users)
+    .leftJoin(tenants, eq(users.tenantId, tenants.id));
+
+    if (filters?.tenantId) {
+      query = query.where(eq(users.tenantId, filters.tenantId));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]> {
+    let query = db.select({
+      id: users.id,
+      tenantId: users.tenantId,
+      tenantName: tenants.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+      phone: users.phone,
+      isActive: users.isActive,
+      createdAt: users.createdAt,
+      playerCount: sql<number>`COUNT(${players.id})`,
+    })
+    .from(users)
+    .leftJoin(tenants, eq(users.tenantId, tenants.id))
+    .leftJoin(players, eq(users.id, players.parentId))
+    .groupBy(users.id, tenants.name);
+
+    if (filters?.tenantId) {
+      query = query.where(eq(users.tenantId, filters.tenantId));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]> {
+    let query = db.select({
+      id: players.id,
+      tenantId: players.tenantId,
+      tenantName: tenants.name,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      birthYear: players.birthYear,
+      gender: players.gender,
+      canAccessPortal: players.canAccessPortal,
+      canBookAndPay: players.canBookAndPay,
+      parentName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
+      createdAt: players.createdAt,
+    })
+    .from(players)
+    .leftJoin(tenants, eq(players.tenantId, tenants.id))
+    .leftJoin(users, eq(players.parentId, users.id));
+
+    if (filters?.tenantId) {
+      query = query.where(eq(players.tenantId, filters.tenantId));
+    }
+    if (filters?.gender) {
+      query = query.where(eq(players.gender, filters.gender));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminAnalytics(filters?: { tenants?: string[]; from?: string; to?: string; ageGroup?: string; gender?: string }): Promise<any> {
+    // Basic analytics aggregation across all tenants
+    const totalRevenue = await db.select({
+      value: sql<number>`SUM(${payments.amount})`,
+    }).from(payments).where(eq(payments.status, 'paid'));
+
+    const totalPlayers = await db.select({
+      value: sql<number>`COUNT(*)`,
+    }).from(players);
+
+    const totalSessions = await db.select({
+      value: sql<number>`COUNT(*)`,
+    }).from(futsalSessions);
+
+    const activeTenants = await db.select({
+      value: sql<number>`COUNT(*)`,
+    }).from(tenants);
+
+    // Revenue by tenant
+    const revenueByTenant = await db.select({
+      tenantId: tenants.id,
+      tenantName: tenants.name,
+      revenue: sql<number>`COALESCE(SUM(${payments.amount}), 0)`,
+      growth: sql<number>`0`, // Placeholder for growth calculation
+    })
+    .from(tenants)
+    .leftJoin(payments, eq(tenants.id, payments.tenantId))
+    .groupBy(tenants.id, tenants.name);
+
+    return {
+      totalRevenue: totalRevenue[0]?.value || 0,
+      totalPlayers: totalPlayers[0]?.value || 0,
+      totalSessions: totalSessions[0]?.value || 0,
+      activeTenants: activeTenants[0]?.value || 0,
+      revenueGrowth: 0,
+      playersGrowth: 0,
+      sessionsGrowth: 0,
+      tenantGrowth: 0,
+      revenueByTenant,
+      playersByTenant: [],
+      sessionsByTenant: [],
+    };
+  }
+
+  async getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
+    let query = db.select({
+      id: helpRequests.id,
+      tenantId: helpRequests.tenantId,
+      tenantName: tenants.name,
+      subject: helpRequests.subject,
+      category: helpRequests.category,
+      userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
+      priority: helpRequests.priority,
+      status: helpRequests.status,
+      createdAt: helpRequests.createdAt,
+    })
+    .from(helpRequests)
+    .leftJoin(tenants, eq(helpRequests.tenantId, tenants.id))
+    .leftJoin(users, eq(helpRequests.userId, users.id));
+
+    if (filters?.tenantId) {
+      query = query.where(eq(helpRequests.tenantId, filters.tenantId));
+    }
+    if (filters?.status) {
+      query = query.where(eq(helpRequests.status, filters.status));
+    }
+
+    return await query;
+  }
+
+  async getSuperAdminSettings(): Promise<any> {
+    // Mock platform settings for now
+    return {
+      autoApproveTenants: false,
+      enableMfaByDefault: true,
+      defaultBookingWindowHours: 24,
+      maxTenantsPerAdmin: 5,
+      enableTenantSubdomains: true,
+      requireTenantApproval: true,
+      defaultSessionCapacity: 15,
+      platformMaintenanceMode: false,
+    };
+  }
+
+  async updateSuperAdminSettings(settings: any): Promise<any> {
+    // Mock implementation - would update platform settings table
+    return settings;
+  }
+
+  async getSuperAdminIntegrations(): Promise<any[]> {
+    // Mock integrations for now
+    return [
+      {
+        id: '1',
+        name: 'SendGrid',
+        type: 'email',
+        enabled: true,
+        status: 'connected',
+        config: {}
+      },
+      {
+        id: '2',
+        name: 'Twilio',
+        type: 'sms',
+        enabled: false,
+        status: 'disconnected',
+        config: {}
+      },
+      {
+        id: '3',
+        name: 'Google OAuth',
+        type: 'oauth',
+        enabled: true,
+        status: 'connected',
+        config: {}
+      },
+      {
+        id: '4',
+        name: 'Payment Webhook',
+        type: 'webhook',
+        enabled: true,
+        status: 'connected',
+        config: { url: 'https://api.example.com/webhook' }
+      }
+    ];
+  }
+
+  async updateSuperAdminIntegration(id: string, data: any): Promise<any> {
+    // Mock implementation - would update integration settings
+    return { id, ...data };
+  }
+
+  async testSuperAdminIntegration(id: string): Promise<any> {
+    // Mock implementation - would test integration
+    return { success: true, message: 'Integration test successful' };
+  }
+
+  async getSuperAdminUsers(): Promise<any[]> {
+    const superAdminUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: sql<string>`CASE WHEN ${users.isSuperAdmin} THEN 'super-admin' ELSE 'platform-admin' END`,
+      status: sql<string>`CASE WHEN ${users.isActive} THEN 'active' ELSE 'inactive' END`,
+      lastLogin: users.createdAt, // Placeholder
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.isSuperAdmin, true));
+
+    return superAdminUsers;
   }
 }
 
