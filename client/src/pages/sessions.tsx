@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Home } from "lucide-react";
+import { Link } from "wouter";
 import { FutsalSession, Player } from "@shared/schema";
 import { isSessionEligibleForPlayer } from "@shared/utils";
 
@@ -70,58 +72,68 @@ export default function Sessions() {
       
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Training Sessions</h1>
-              <p className="text-zinc-400 mt-2">Find the perfect session for your young athlete</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              {isAuthenticated && (
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="cart-mode"
-                    checked={cartMode}
-                    onCheckedChange={setCartMode}
-                  />
-                  <Label htmlFor="cart-mode" className="text-white text-sm">Multi-select mode</Label>
+          <div className="mb-8">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-4 mb-2">
+                  <Link href="/">
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-white">
+                      <Home className="w-4 h-4" />
+                      Home
+                    </Button>
+                  </Link>
+                  <h1 className="text-3xl font-bold text-white">Training Sessions</h1>
                 </div>
-              )}
-              <Select value={genderFilter} onValueChange={setGenderFilter}>
-                <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
-                  <SelectValue placeholder="All Genders" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  <SelectItem value="all">All Genders</SelectItem>
-                  {uniqueGenders.map(gender => (
-                    <SelectItem key={gender} value={gender}>
-                      {gender === "boys" ? "Boys" : "Girls"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={ageFilter} onValueChange={setAgeFilter}>
-                <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
-                  <SelectValue placeholder="All Ages" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  <SelectItem value="all">All Ages</SelectItem>
-                  {uniqueAgeGroups.map(age => (
-                    <SelectItem key={age} value={age}>{age}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger className="w-48 bg-zinc-900 border-zinc-700">
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {uniqueLocations.map(location => (
-                    <SelectItem key={location} value={location}>{location}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <p className="text-zinc-400">Find the perfect session for your young athlete</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {isAuthenticated && (
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="cart-mode"
+                      checked={cartMode}
+                      onCheckedChange={setCartMode}
+                    />
+                    <Label htmlFor="cart-mode" className="text-white text-sm">Multi-select mode</Label>
+                  </div>
+                )}
+                <Select value={genderFilter} onValueChange={setGenderFilter}>
+                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
+                    <SelectValue placeholder="All Genders" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                    <SelectItem value="all">All Genders</SelectItem>
+                    {uniqueGenders.map(gender => (
+                      <SelectItem key={gender} value={gender}>
+                        {gender === "boys" ? "Boys" : "Girls"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={ageFilter} onValueChange={setAgeFilter}>
+                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
+                    <SelectValue placeholder="All Ages" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                    <SelectItem value="all">All Ages</SelectItem>
+                    {uniqueAgeGroups.map(age => (
+                      <SelectItem key={age} value={age}>{age}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-48 bg-zinc-900 border-zinc-700">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {uniqueLocations.map(location => (
+                      <SelectItem key={location} value={location}>{location}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
