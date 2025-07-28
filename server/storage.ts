@@ -723,17 +723,35 @@ export class DatabaseStorage implements IStorage {
       lastName: users.lastName,
       email: users.email,
       phone: users.phone,
-      isActive: users.isActive,
-      createdAt: users.createdAt,
+      registrationDate: users.createdAt,
+      status: sql<string>`CASE WHEN ${users.isApproved} = true THEN 'active' ELSE 'pending' END`,
+      registrationStatus: users.registrationStatus,
       playerCount: sql<number>`COUNT(${players.id})`,
+      totalBookings: sql<number>`0`, // Would need to join with signups
+      totalSpent: sql<number>`0`, // Would need to join with payments
+      lastActivity: users.updatedAt,
     })
     .from(users)
     .leftJoin(tenants, eq(users.tenantId, tenants.id))
     .leftJoin(players, eq(users.id, players.parentId))
-    .groupBy(users.id, tenants.name);
+    .where(eq(users.isAdmin, false)) // Only get parent accounts, not admin accounts
+    .groupBy(users.id, tenants.name, users.updatedAt)
+    .orderBy(desc(users.createdAt));
 
-    if (filters?.tenantId) {
-      query = query.where(eq(users.tenantId, filters.tenantId));
+    const conditions = [];
+    if (filters?.tenantId && filters.tenantId !== 'all') {
+      conditions.push(eq(users.tenantId, filters.tenantId));
+    }
+    if (filters?.status && filters.status !== 'all') {
+      if (filters.status === 'active') {
+        conditions.push(eq(users.isApproved, true));
+      } else if (filters.status === 'pending') {
+        conditions.push(eq(users.isApproved, false));
+      }
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
     return await query;
@@ -747,21 +765,38 @@ export class DatabaseStorage implements IStorage {
       firstName: players.firstName,
       lastName: players.lastName,
       birthYear: players.birthYear,
+      age: sql<number>`(2025 - ${players.birthYear})`,
       gender: players.gender,
-      canAccessPortal: players.canAccessPortal,
-      canBookAndPay: players.canBookAndPay,
+      portalAccess: players.canAccessPortal,
+      bookingPermission: players.canBookAndPay,
       parentName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
-      createdAt: players.createdAt,
+      parentEmail: users.email,
+      registrationDate: players.createdAt,
+      totalBookings: sql<number>`0`, // Would need to join with signups
+      lastActivity: players.updatedAt,
     })
     .from(players)
     .leftJoin(tenants, eq(players.tenantId, tenants.id))
-    .leftJoin(users, eq(players.parentId, users.id));
+    .leftJoin(users, eq(players.parentId, users.id))
+    .orderBy(desc(players.createdAt));
 
-    if (filters?.tenantId) {
-      query = query.where(eq(players.tenantId, filters.tenantId));
+    const conditions = [];
+    if (filters?.tenantId && filters.tenantId !== 'all') {
+      conditions.push(eq(players.tenantId, filters.tenantId));
     }
-    if (filters?.gender) {
-      query = query.where(eq(players.gender, filters.gender));
+    if (filters?.gender && filters.gender !== 'all') {
+      conditions.push(eq(players.gender, filters.gender));
+    }
+    if (filters?.portalAccess && filters.portalAccess !== 'all') {
+      if (filters.portalAccess === 'yes') {
+        conditions.push(eq(players.canAccessPortal, true));
+      } else if (filters.portalAccess === 'no') {
+        conditions.push(eq(players.canAccessPortal, false));
+      }
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
 
     return await query;

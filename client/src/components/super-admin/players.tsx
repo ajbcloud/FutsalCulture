@@ -50,111 +50,20 @@ export default function SuperAdminPlayers() {
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/super-admin/players", selectedTenant, selectedAgeGroup, selectedGender, portalAccessFilter, dateRange, searchQuery],
     queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return [
-        {
-          id: "1",
-          firstName: "Alex",
-          lastName: "Johnson",
-          birthYear: 2012,
-          age: 13,
-          gender: "boys",
-          parentName: "Sarah Johnson",
-          parentEmail: "sarah.johnson@email.com",
-          registrationDate: "2025-06-15T10:30:00Z",
-          totalBookings: 8,
-          portalAccess: true,
-          bookingPermission: true,
-          lastActivity: "2025-07-28T14:30:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "2",
-          firstName: "Emma",
-          lastName: "Davis",
-          birthYear: 2010,
-          age: 15,
-          gender: "girls",
-          parentName: "Michael Davis",
-          parentEmail: "michael.davis@email.com",
-          registrationDate: "2025-07-20T09:15:00Z",
-          totalBookings: 5,
-          portalAccess: true,
-          bookingPermission: false,
-          lastActivity: "2025-07-28T15:45:00Z",
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        },
-        {
-          id: "3",
-          firstName: "Tyler",
-          lastName: "Wilson",
-          birthYear: 2015,
-          age: 10,
-          gender: "boys",
-          parentName: "Jennifer Wilson",
-          parentEmail: "jennifer.wilson@email.com",
-          registrationDate: "2025-05-10T16:20:00Z",
-          totalBookings: 4,
-          portalAccess: false,
-          bookingPermission: false,
-          lastActivity: "2025-07-15T10:20:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "4",
-          firstName: "Maya",
-          lastName: "Patel",
-          birthYear: 2013,
-          age: 12,
-          gender: "girls",
-          parentName: "Raj Patel",
-          parentEmail: "raj.patel@email.com",
-          registrationDate: "2025-04-05T11:45:00Z",
-          totalBookings: 12,
-          portalAccess: false,
-          bookingPermission: false,
-          lastActivity: "2025-07-27T09:15:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "5",
-          firstName: "Connor",
-          lastName: "Chen",
-          birthYear: 2009,
-          age: 16,
-          gender: "boys",
-          parentName: "Lisa Chen",
-          parentEmail: "lisa.chen@email.com",
-          registrationDate: "2025-03-20T14:30:00Z",
-          totalBookings: 18,
-          portalAccess: true,
-          bookingPermission: true,
-          lastActivity: "2025-07-28T12:00:00Z",
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        }
-      ].filter(player => {
-        if (selectedTenant !== "all" && player.tenantId !== selectedTenant) return false;
-        if (selectedGender !== "all" && player.gender !== selectedGender) return false;
-        if (portalAccessFilter !== "all") {
-          if (portalAccessFilter === "yes" && !player.portalAccess) return false;
-          if (portalAccessFilter === "no" && player.portalAccess) return false;
-        }
-        if (selectedAgeGroup !== "all") {
-          const ageGroupNum = parseInt(selectedAgeGroup.replace('U', ''));
-          if (player.age >= ageGroupNum) return false;
-        }
-        if (searchQuery && 
-            !player.firstName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !player.lastName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !player.parentName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !player.tenantName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
+      const params = new URLSearchParams();
+      if (selectedTenant !== "all") params.set("tenantId", selectedTenant);
+      if (selectedAgeGroup !== "all") params.set("ageGroup", selectedAgeGroup);
+      if (selectedGender !== "all") params.set("gender", selectedGender);
+      if (portalAccessFilter !== "all") params.set("portalAccess", portalAccessFilter);
+      if (dateRange?.from) params.set("dateFrom", dateRange.from.toISOString());
+      if (dateRange?.to) params.set("dateTo", dateRange.to.toISOString());
+      if (searchQuery) params.set("search", searchQuery);
+
+      const response = await fetch(`/api/super-admin/players?${params}`, {
+        credentials: 'include'
       });
+      if (!response.ok) throw new Error('Failed to fetch players');
+      return response.json();
     },
   });
 
@@ -350,22 +259,44 @@ export default function SuperAdminPlayers() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Player</TableHead>
-                <TableHead>Age & Gender</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead>Total Bookings</TableHead>
-                <TableHead>Portal Access</TableHead>
-                <TableHead>Booking Permission</TableHead>
-                <TableHead>Last Activity</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {players.map((player) => (
+          <div className="rounded-md border max-h-[600px] overflow-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background">
+                <TableRow>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Player</TableHead>
+                  <TableHead>Age & Gender</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Registered</TableHead>
+                  <TableHead>Total Bookings</TableHead>
+                  <TableHead>Portal Access</TableHead>
+                  <TableHead>Booking Permission</TableHead>
+                  <TableHead>Last Activity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : players.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No players found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  players.map((player) => (
                 <TableRow key={player.id}>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -430,17 +361,11 @@ export default function SuperAdminPlayers() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {players.length === 0 && (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No players found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters to see more players.</p>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

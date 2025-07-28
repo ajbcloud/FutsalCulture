@@ -46,93 +46,18 @@ export default function SuperAdminParents() {
   const { data: parents = [], isLoading } = useQuery<Parent[]>({
     queryKey: ["/api/super-admin/parents", selectedTenant, selectedStatus, dateRange, searchQuery],
     queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return [
-        {
-          id: "1",
-          firstName: "Sarah",
-          lastName: "Johnson",
-          email: "sarah.johnson@email.com",
-          phone: "+1234567890",
-          registrationDate: "2025-06-15T10:30:00Z",
-          status: "active",
-          playerCount: 2,
-          totalBookings: 15,
-          totalSpent: 37500,
-          lastActivity: "2025-07-28T14:30:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "2",
-          firstName: "Michael",
-          lastName: "Davis",
-          email: "michael.davis@email.com",
-          phone: "+1987654321",
-          registrationDate: "2025-07-20T09:15:00Z",
-          status: "active",
-          playerCount: 1,
-          totalBookings: 5,
-          totalSpent: 15000,
-          lastActivity: "2025-07-28T15:45:00Z",
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        },
-        {
-          id: "3",
-          firstName: "Jennifer",
-          lastName: "Wilson",
-          email: "jennifer.wilson@email.com",
-          phone: "+1122334455",
-          registrationDate: "2025-05-10T16:20:00Z",
-          status: "inactive",
-          playerCount: 1,
-          totalBookings: 8,
-          totalSpent: 20000,
-          lastActivity: "2025-07-15T10:20:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "4",
-          firstName: "Raj",
-          lastName: "Patel",
-          email: "raj.patel@email.com",
-          phone: "+1555666777",
-          registrationDate: "2025-04-05T11:45:00Z",
-          status: "active",
-          playerCount: 2,
-          totalBookings: 22,
-          totalSpent: 55000,
-          lastActivity: "2025-07-27T09:15:00Z",
-          tenantName: "Futsal Culture",
-          tenantId: "tenant1"
-        },
-        {
-          id: "5",
-          firstName: "Lisa",
-          lastName: "Chen",
-          email: "lisa.chen@email.com",
-          phone: "+1777888999",
-          registrationDate: "2025-03-20T14:30:00Z",
-          status: "pending",
-          playerCount: 1,
-          totalBookings: 0,
-          totalSpent: 0,
-          lastActivity: "2025-07-28T12:00:00Z",
-          tenantName: "Elite Footwork Academy",
-          tenantId: "tenant2"
-        }
-      ].filter(parent => {
-        if (selectedTenant !== "all" && parent.tenantId !== selectedTenant) return false;
-        if (selectedStatus !== "all" && parent.status !== selectedStatus) return false;
-        if (searchQuery && 
-            !parent.firstName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !parent.lastName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !parent.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            !parent.tenantName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
+      const params = new URLSearchParams();
+      if (selectedTenant !== "all") params.set("tenantId", selectedTenant);
+      if (selectedStatus !== "all") params.set("status", selectedStatus);
+      if (dateRange?.from) params.set("dateFrom", dateRange.from.toISOString());
+      if (dateRange?.to) params.set("dateTo", dateRange.to.toISOString());
+      if (searchQuery) params.set("search", searchQuery);
+
+      const response = await fetch(`/api/super-admin/parents?${params}`, {
+        credentials: 'include'
       });
+      if (!response.ok) throw new Error('Failed to fetch parents');
+      return response.json();
     },
   });
 
@@ -303,22 +228,44 @@ export default function SuperAdminParents() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead>Players</TableHead>
-                <TableHead>Total Bookings</TableHead>
-                <TableHead>Total Spent</TableHead>
-                <TableHead>Last Activity</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {parents.map((parent) => (
+          <div className="rounded-md border max-h-[600px] overflow-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background">
+                <TableRow>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Registered</TableHead>
+                  <TableHead>Players</TableHead>
+                  <TableHead>Total Bookings</TableHead>
+                  <TableHead>Total Spent</TableHead>
+                  <TableHead>Last Activity</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : parents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No parents found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  parents.map((parent) => (
                 <TableRow key={parent.id}>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -376,17 +323,11 @@ export default function SuperAdminParents() {
                     {getStatusBadge(parent.status)}
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {parents.length === 0 && (
-            <div className="text-center py-8">
-              <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No parents found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters to see more parents.</p>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
