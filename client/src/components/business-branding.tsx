@@ -37,17 +37,7 @@ export function BusinessBranding({
 
   const sizes = sizeClasses[variant];
 
-  if (businessLogo) {
-    return (
-      <div className={`flex items-center ${sizes.container} ${className}`}>
-        <img 
-          src={businessLogo} 
-          alt={businessName}
-          className={`${sizes.logo} w-auto object-contain ${logoClassName}`}
-        />
-      </div>
-    );
-  }
+  
 
   return (
     <span className={`${sizes.text} font-bold ${textClassName} ${className}`}>
