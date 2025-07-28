@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -19,7 +21,10 @@ import {
   Tag,
   Key,
   Sun,
-  Moon
+  Moon,
+  LogOut,
+  User,
+  Shield
 } from "lucide-react";
 
 const adminNavItems = [
@@ -106,38 +111,87 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* User info at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-primary-foreground">
-                {user?.firstName?.[0] || 'A'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user?.isAdmin ? 'Owner' : 'Assistant'}
-                  </p>
+          <div className="flex items-center justify-between">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2 w-full justify-start">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+                    <AvatarFallback className="bg-green-600 text-white text-sm">
+                      {user?.firstName?.[0]?.toUpperCase() || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user?.isSuperAdmin ? 'Super Admin' : user?.isAdmin ? 'Owner' : 'Assistant'}
+                    </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="start" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.isSuperAdmin ? 'Super Admin' : user?.isAdmin ? 'Owner' : 'Assistant'}
+                    </p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
-                  aria-label="Toggle theme"
-                >
-                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+                <DropdownMenuSeparator />
+                
+                {/* Portal Navigation */}
+                <DropdownMenuItem asChild>
+                  <Link href="/" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Parent Profile
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link href="/admin" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Portal
+                  </Link>
+                </DropdownMenuItem>
+                
+                {user?.isSuperAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/super-admin" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Super Admin
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuItem asChild>
+                  <Link href="/help" className="cursor-pointer">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Help
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="/api/logout" className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </div>
-          <Link href="/api/logout">
-            <Button variant="ghost" size="sm" className="w-full mt-2 text-muted-foreground hover:text-foreground">
-              Logout
-            </Button>
-          </Link>
         </div>
       </div>
 

@@ -1,14 +1,19 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building2, Plus, Settings, Users, TrendingUp } from "lucide-react";
+import { BusinessBranding } from "@/components/business-branding";
+import { Building2, Plus, Settings, Users, TrendingUp, Sun, Moon, LogOut, User, Shield, UserCheck } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -19,6 +24,7 @@ interface Tenant {
 
 export default function SuperAdminPage() {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newTenantName, setNewTenantName] = useState("");
@@ -97,9 +103,100 @@ export default function SuperAdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Header */}
+      <header className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link href="/" className="flex-shrink-0">
+                <BusinessBranding 
+                  variant="default" 
+                  textClassName="text-green-400"
+                />
+              </Link>
+              <div className="ml-6">
+                <h1 className="text-lg font-semibold text-foreground">Super Admin Portal</h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {/* Theme Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              {/* User Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+                      <AvatarFallback className="bg-green-600 text-white text-sm">
+                        {user?.firstName?.[0]?.toUpperCase() || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-xs text-muted-foreground">Super Admin</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Portal Navigation */}
+                  <DropdownMenuItem asChild>
+                    <Link href="/" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Parent Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="cursor-pointer">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Admin Portal
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/super-admin" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Super Admin
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/help" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Help
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a href="/api/logout" className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Super Admin Portal</h1>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Platform Management</h2>
           <p className="text-muted-foreground">
             Manage multiple futsal organizations and tenant accounts
           </p>

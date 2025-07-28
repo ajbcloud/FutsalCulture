@@ -5,8 +5,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Menu, User, X, Sun, Moon } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle } from "lucide-react";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
@@ -93,25 +93,55 @@ export default function Navbar() {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user?.isSuperAdmin ? 'Super Admin' : user?.isAdmin ? 'Owner' : 'Parent'}
+                      </p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Parent Profile</Link>
+                    <Link href="/" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Parent Profile
+                    </Link>
                   </DropdownMenuItem>
+                  
                   {(user?.isAdmin || user?.isAssistant) && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">Admin Portal</Link>
+                      <Link href="/admin" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Portal
+                      </Link>
                     </DropdownMenuItem>
                   )}
+                  
                   {user?.isSuperAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/super-admin">Super Admin</Link>
+                      <Link href="/super-admin" className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Super Admin
+                      </Link>
                     </DropdownMenuItem>
                   )}
+                  
                   <DropdownMenuItem asChild>
-                    <Link href="/help">Help</Link>
+                    <Link href="/help" className="cursor-pointer">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Help
+                    </Link>
                   </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <a href="/api/logout">Logout</a>
+                    <a href="/api/logout" className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </a>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
