@@ -119,7 +119,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   variant="ghost"
                   size="sm"
                   onClick={toggleTheme}
-                  className="h-8 w-8 p-0 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </Button>
@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </div>
           <Link href="/api/logout">
-            <Button variant="ghost" size="sm" className="w-full mt-2 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white">
+            <Button variant="ghost" size="sm" className="w-full mt-2 text-muted-foreground hover:text-foreground">
               Logout
             </Button>
           </Link>
@@ -137,7 +137,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4 py-3">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -149,7 +149,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
             
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600 dark:text-zinc-400">{businessName} Admin</span>
+              <span className="text-sm text-muted-foreground">{businessName} Admin</span>
             </div>
           </div>
         </div>

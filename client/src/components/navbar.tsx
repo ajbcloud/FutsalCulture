@@ -2,18 +2,20 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessName } from "@/contexts/BusinessContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Menu, User, X } from "lucide-react";
+import { Menu, User, X, Sun, Moon } from "lucide-react";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
   const businessName = useBusinessName();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="bg-zinc-900 border-b border-zinc-700">
+    <nav className="bg-card border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -23,21 +25,21 @@ export default function Navbar() {
             <div className="hidden md:block ml-10">
               <div className="flex space-x-8">
                 {!isAuthenticated && (
-                  <Link href="/sessions" className="text-white font-medium hover:text-green-400">
+                  <Link href="/sessions" className="text-foreground font-medium hover:text-primary">
                     Sessions
                   </Link>
                 )}
                 {isAuthenticated && (
                   <>
-                    <Link href="/dashboard" className="text-zinc-400 hover:text-white">
+                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
                       Dashboard
                     </Link>
-                    <Link href="/calendar" className="text-zinc-400 hover:text-white">
+                    <Link href="/calendar" className="text-muted-foreground hover:text-foreground">
                       Calendar
                     </Link>
                   </>
                 )}
-                <Link href="/help" className="text-zinc-400 hover:text-white">
+                <Link href="/help" className="text-muted-foreground hover:text-foreground">
                   Help
                 </Link>
               </div>
@@ -45,6 +47,16 @@ export default function Navbar() {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            
             {!isAuthenticated ? (
               <Button asChild>
                 <a href="/api/login">Parent Login</a>
@@ -95,23 +107,23 @@ export default function Navbar() {
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-zinc-800">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-muted">
               {!isAuthenticated && (
-                <Link href="/sessions" className="block px-3 py-2 text-white font-medium hover:text-green-400">
+                <Link href="/sessions" className="block px-3 py-2 text-foreground font-medium hover:text-primary">
                   Sessions
                 </Link>
               )}
               {isAuthenticated && (
                 <>
-                  <Link href="/dashboard" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                  <Link href="/dashboard" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
                     Dashboard
                   </Link>
-                  <Link href="/calendar" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                  <Link href="/calendar" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
                     Calendar
                   </Link>
                 </>
               )}
-              <Link href="/help" className="block px-3 py-2 text-zinc-400 hover:text-white">
+              <Link href="/help" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
                 Help
               </Link>
               {!isAuthenticated ? (

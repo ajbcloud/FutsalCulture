@@ -71,10 +71,6 @@
   --ring: hsl(240, 4.9%, 83.9%);
 }
 
-body {
-  @apply bg-black text-white;
-}
-
 @layer base {
   * {
     @apply border-border;
