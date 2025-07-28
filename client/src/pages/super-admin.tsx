@@ -10,6 +10,12 @@ import SuperAdminOverview from "@/components/super-admin/overview";
 import SuperAdminTenants from "@/components/super-admin/tenants";
 import SuperAdminAnalytics from "@/components/super-admin/analytics";
 import SuperAdminSettings from "@/components/super-admin/settings";
+import SuperAdminSessions from "@/components/super-admin/sessions";
+import SuperAdminPayments from "@/components/super-admin/payments";
+import SuperAdminRegistrations from "@/components/super-admin/registrations";
+import SuperAdminParents from "@/components/super-admin/parents";
+import SuperAdminPlayers from "@/components/super-admin/players";
+import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 
 import { 
   Building2, 
@@ -77,17 +83,17 @@ export default function SuperAdminPage() {
       case "/super-admin/settings":
         return <SuperAdminSettings />;
       case "/super-admin/sessions":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Sessions Management</h1><p className="text-muted-foreground">Global sessions management across all tenants.</p></div>;
+        return <SuperAdminSessions />;
       case "/super-admin/payments":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Payments Management</h1><p className="text-muted-foreground">Global payments monitoring and management.</p></div>;
+        return <SuperAdminPayments />;
       case "/super-admin/registrations":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Registrations</h1><p className="text-muted-foreground">Monitor and manage registrations across all tenants.</p></div>;
+        return <SuperAdminRegistrations />;
       case "/super-admin/parents":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Parents Management</h1><p className="text-muted-foreground">Global parent accounts management.</p></div>;
+        return <SuperAdminParents />;
       case "/super-admin/players":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Players Management</h1><p className="text-muted-foreground">Global player accounts management.</p></div>;
+        return <SuperAdminPlayers />;
       case "/super-admin/help":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Help Requests</h1><p className="text-muted-foreground">Global help requests across all tenants.</p></div>;
+        return <SuperAdminHelpRequests />;
       default:
         return <SuperAdminOverview />;
     }
