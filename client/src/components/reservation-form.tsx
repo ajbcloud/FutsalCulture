@@ -7,6 +7,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Player, FutsalSession } from "@shared/schema";
 import { calculateAgeGroup } from "@shared/utils";
 import VenmoPrompt from "@/components/venmo-prompt";
@@ -21,6 +22,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [accessCode, setAccessCode] = useState<string>("");
   const [venmoData, setVenmoData] = useState<any>(null);
   const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
 
@@ -43,7 +45,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   }, [preSelectedPlayerId, players, session]);
 
   const createSignupMutation = useMutation({
-    mutationFn: async (data: { playerId: string; sessionId: string }) => {
+    mutationFn: async (data: { playerId: string; sessionId: string; accessCode?: string }) => {
       const response = await apiRequest("POST", "/api/signups", data);
       return response.json();
     },
@@ -110,9 +112,20 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
+    // Check access code if required
+    if (session.hasAccessCode && !accessCode.trim()) {
+      toast({
+        title: "Error",
+        description: "Access code is required for this session",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createSignupMutation.mutate({
       playerId: selectedPlayerId,
       sessionId,
+      ...(session.hasAccessCode && { accessCode: accessCode.trim().toUpperCase() })
     });
   };
 
@@ -166,6 +179,25 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           </Select>
         </div>
 
+        {/* Access Code Input - only show if session requires it */}
+        {session.hasAccessCode && (
+          <div className="space-y-2">
+            <Label htmlFor="accessCode">Access Code</Label>
+            <Input
+              id="accessCode"
+              type="text"
+              placeholder="Enter access code"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              className="bg-zinc-800 border-zinc-600 text-white placeholder-zinc-400"
+              maxLength={20}
+            />
+            <p className="text-sm text-zinc-400">
+              This session requires an access code to book
+            </p>
+          </div>
+        )}
+
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="font-medium mb-2">Reserve & Pay via Venmo</h4>
           <p className="text-sm text-gray-600">
@@ -179,7 +211,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           className={`w-full ${!selectedPlayerId || !isPlayerEligible(selectedPlayerId) ? 
             'bg-zinc-700 text-zinc-400 cursor-not-allowed' : 
             'bg-green-600 hover:bg-green-700'}`}
-          disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId)}
+          disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId) || (session.hasAccessCode && !accessCode.trim())}
         >
           {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
         </Button>

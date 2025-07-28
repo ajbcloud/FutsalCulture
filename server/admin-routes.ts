@@ -2347,4 +2347,66 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.status(500).json({ message: error.message || "Failed to create service payment" });
     }
   });
+
+  // Access Codes Management
+  app.get('/api/admin/sessions-with-access-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const sessions = await db
+        .select({
+          id: futsalSessions.id,
+          title: futsalSessions.title,
+          location: futsalSessions.location,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          startTime: futsalSessions.startTime,
+          endTime: futsalSessions.endTime,
+          capacity: futsalSessions.capacity,
+          priceCents: futsalSessions.priceCents,
+          hasAccessCode: futsalSessions.hasAccessCode,
+          accessCode: futsalSessions.accessCode,
+          signupCount: sql<number>`(
+            SELECT COUNT(*)::int
+            FROM ${signups}
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`
+        })
+        .from(futsalSessions)
+        .orderBy(desc(futsalSessions.startTime));
+
+      res.json(sessions);
+    } catch (error: any) {
+      console.error("Error fetching sessions with access codes:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch sessions" });
+    }
+  });
+
+  app.put('/api/admin/sessions/:sessionId/access-code', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const { hasAccessCode, accessCode } = req.body;
+
+      // Validate input
+      if (hasAccessCode && (!accessCode || accessCode.trim().length === 0)) {
+        return res.status(400).json({ message: "Access code is required when protection is enabled" });
+      }
+
+      // Update session
+      await db
+        .update(futsalSessions)
+        .set({
+          hasAccessCode,
+          accessCode: hasAccessCode ? accessCode.trim().toUpperCase() : null,
+        })
+        .where(eq(futsalSessions.id, sessionId));
+
+      res.json({ 
+        message: hasAccessCode 
+          ? "Session protected with access code" 
+          : "Session access protection removed"
+      });
+    } catch (error: any) {
+      console.error("Error updating session access code:", error);
+      res.status(500).json({ message: error.message || "Failed to update access code" });
+    }
+  });
 }

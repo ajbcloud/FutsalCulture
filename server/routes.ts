@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
-      const { playerId, sessionId } = req.body;
+      const { playerId, sessionId, accessCode } = req.body;
       
       // Check if signup already exists
       const existing = await storage.checkExistingSignup(playerId, sessionId);
@@ -496,6 +496,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (signupsCount >= session.capacity) {
         return res.status(400).json({ message: "Session is full" });
+      }
+
+      // Check access code if session requires it
+      if (session.hasAccessCode) {
+        if (!accessCode || accessCode.trim().length === 0) {
+          return res.status(400).json({ message: "Access code is required for this session" });
+        }
+        
+        if (accessCode.trim().toUpperCase() !== session.accessCode) {
+          return res.status(400).json({ message: "Invalid access code" });
+        }
       }
       
       // Check if session is open for booking (8 AM rule)
