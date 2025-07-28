@@ -466,7 +466,7 @@ export function setupAdminRoutes(app: any) {
         .orderBy(desc(payments.paidAt))
         .limit(10);
 
-      console.log('Found recent payments:', recentPaymentsWithParents.length);
+
 
       recentPaymentsWithParents.forEach(payment => {
         activities.push({
