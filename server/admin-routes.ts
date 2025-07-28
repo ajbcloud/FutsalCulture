@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import Stripe from "stripe";
@@ -2319,6 +2319,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   app.post('/api/admin/create-service-payment', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { amount, description } = req.body;
+      const currentUser = (req as any).currentUser;
       
       if (!process.env.STRIPE_SECRET_KEY) {
         return res.status(400).json({ 
@@ -2328,13 +2329,42 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
 
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       
+      // Get business name from settings
+      const settings = await db.select().from(systemSettings);
+      const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as any);
+      const businessName = settingsMap.businessName || "Futsal Culture";
+      
+      // Create or get customer for better tracking
+      const customerData: any = {
+        name: businessName,
+        description: `${businessName} - Platform Service Subscription`,
+        metadata: {
+          business_name: businessName,
+          user_id: currentUser?.id || "unknown",
+          service_type: "platform_subscription"
+        }
+      };
+
+      // Add email if available
+      if (currentUser?.email) {
+        customerData.email = currentUser.email;
+      }
+
+      const customer = await stripe.customers.create(customerData);
+      
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount), // Amount should already be in cents
         currency: "usd",
-        description: description || "Futsal Culture Platform Service Payment",
+        customer: customer.id,
+        description: `${businessName} - ${description || "Platform Service Payment"}`,
         metadata: {
+          business_name: businessName,
           service: "platform_subscription",
-          adminId: (req as any).currentUser?.id || "unknown"
+          adminId: currentUser?.id || "unknown",
+          customer_type: "business_subscription"
         }
       });
       
