@@ -57,7 +57,9 @@ export default function AdminHelpRequests() {
     if (userFilter) {
       const searchTerm = userFilter.toLowerCase();
       filtered = filtered.filter(req => 
-        req.name?.toLowerCase().includes(searchTerm) ||
+        req.firstName?.toLowerCase().includes(searchTerm) ||
+        req.lastName?.toLowerCase().includes(searchTerm) ||
+        `${req.firstName} ${req.lastName}`.toLowerCase().includes(searchTerm) ||
         req.email?.toLowerCase().includes(searchTerm)
       );
     }
@@ -267,13 +269,18 @@ export default function AdminHelpRequests() {
               <TableRow key={request.id} className="border-zinc-800">
                 <TableCell className="text-zinc-300">
                   <div>
-                    <div className="font-medium text-white">{request.name || 'Anonymous'}</div>
+                    <div className="font-medium text-white">{request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}</div>
                     <div className="text-sm text-zinc-400">{request.email}</div>
                     {request.phone && <div className="text-sm text-zinc-400">{request.phone}</div>}
                   </div>
                 </TableCell>
                 <TableCell className="text-white font-medium">
-                  {request.note?.substring(0, 50) + (request.note?.length > 50 ? '...' : '')}
+                  <div className="space-y-1">
+                    <div className="font-semibold">{request.subject}</div>
+                    <div className="text-sm text-zinc-400">
+                      {request.message?.substring(0, 50) + (request.message?.length > 50 ? '...' : '')}
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Badge 
@@ -375,12 +382,20 @@ export default function AdminHelpRequests() {
             <div className="space-y-4">
               <div className="bg-zinc-800 p-4 rounded-lg">
                 <p className="text-sm text-zinc-400 mb-2">
-                  From: {selectedRequest.name} ({selectedRequest.email}) | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
+                  From: {selectedRequest.firstName} {selectedRequest.lastName} ({selectedRequest.email}) | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
                 </p>
                 {selectedRequest.phone && (
                   <p className="text-sm text-zinc-400 mb-2">Phone: {selectedRequest.phone}</p>
                 )}
-                <p className="text-zinc-300">{selectedRequest.note}</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-400">
+                    <span className="font-medium">Subject:</span> {selectedRequest.subject}
+                  </p>
+                  <p className="text-sm text-zinc-400">
+                    <span className="font-medium">Category:</span> {selectedRequest.category} | <span className="font-medium">Priority:</span> {selectedRequest.priority}
+                  </p>
+                  <p className="text-zinc-300">{selectedRequest.message}</p>
+                </div>
               </div>
 
               <div>
@@ -432,9 +447,14 @@ export default function AdminHelpRequests() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-zinc-300">Request from {resolvingRequest?.name}</Label>
+              <Label className="text-zinc-300">Request from {resolvingRequest?.firstName} {resolvingRequest?.lastName}</Label>
               <div className="p-3 bg-zinc-800 rounded-lg border border-zinc-700 mt-1">
-                <p className="text-white whitespace-pre-wrap">{resolvingRequest?.note}</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-400">
+                    <span className="font-medium">Subject:</span> {resolvingRequest?.subject}
+                  </p>
+                  <p className="text-white whitespace-pre-wrap">{resolvingRequest?.message}</p>
+                </div>
               </div>
             </div>
             <div>
