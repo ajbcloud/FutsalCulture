@@ -51,13 +51,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-20 bg-black bg-opacity-50 sm:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+      {/* Sidebar - Mobile First */}
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out sm:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex items-center justify-between p-4 border-b border-border">
@@ -73,8 +73,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           <Button
             variant="ghost"
-            size="sm"
-            className="lg:hidden absolute top-4 right-4"
+            className="h-11 w-11 sm:hidden absolute top-4 right-4"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="w-5 h-5" />
@@ -142,15 +141,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="lg:pl-64">
+      {/* Main content - Mobile First */}
+      <div className="sm:pl-64">
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
-              size="sm"
-              className="lg:hidden"
+              className="h-11 w-11 sm:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="w-5 h-5" />
@@ -162,8 +160,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </div>
 
-        {/* Page content */}
-        <main className="p-6">
+        {/* Page content - Mobile First */}
+        <main className="p-4 sm:p-6">
           {children}
         </main>
       </div>

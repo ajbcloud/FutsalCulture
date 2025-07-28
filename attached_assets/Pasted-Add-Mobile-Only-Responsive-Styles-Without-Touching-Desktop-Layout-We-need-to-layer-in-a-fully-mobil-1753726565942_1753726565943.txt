@@ -1,0 +1,102 @@
+Add Mobile-Only Responsive Styles Without Touching Desktop Layout
+
+We need to layer in a fully mobile-friendly experience for parents and players—without altering the existing desktop design—by using responsive CSS breakpoints or Tailwind utilities. Please implement the following:
+
+1. Approach
+Mobile-First Base
+All unprefixed CSS/Tailwind classes apply to mobile (≤640px).
+
+Desktop Overrides
+Wrap desktop-only styles in sm: or @media (min-width: 640px) so they take effect only on larger screens.
+
+This ensures our current desktop layout remains untouched, and mobile users get the optimized styles automatically.
+
+2. Navigation & Layout
+Hamburger Menu
+
+Hide sidebar and show hamburger button by default (mobile).
+
+Use Tailwind:
+
+html
+Copy
+Edit
+<button class="sm:hidden p-4" @click="open = !open">☰</button>
+<nav :class="open ? 'block' : 'hidden' sm:block">…desktop sidebar…</nav>
+Single-Column Stacking
+
+Make all cards, tables, and form sections full-width (w-full) by default.
+
+Restore multi-column on sm: and above, e.g.:
+
+html
+Copy
+Edit
+<div class="w-full sm:w-1/2 lg:w-1/4 p-4">…card…</div>
+3. Components
+Buttons & Tap Targets
+
+Ensure all buttons and clickable elements use at least p-4 or h-11 w-11 for a 44×44 px tappable area.
+
+Add sm:p-2 if you want smaller padding on desktop only.
+
+Forms
+
+Inputs: w-full with labels above.
+
+Multi-selects: default native full-screen pickers on mobile; wrap in sm:appearance-none sm:bg-white for desktop styling.
+
+Tables → Cards
+
+Hide desktop tables on mobile:
+
+html
+Copy
+Edit
+<table class="hidden sm:table">…</table>
+Show card list on mobile:
+
+html
+Copy
+Edit
+<div class="space-y-4 sm:hidden">
+  <template v-for="row in rows">
+    <div class="p-4 bg-white rounded shadow">…row details…</div>
+  </template>
+</div>
+Charts & KPI Cards
+
+By default show a vertical scrollable list of the top 2–3 KPI Cards (overflow-x-auto).
+
+Desktop grid reinstated under sm:grid sm:grid-cols-2 lg:grid-cols-4.
+
+4. Touch & Gestures
+Accordions:
+
+Mobile: tap to expand/collapse session details.
+
+Use cursor-pointer and focus:outline-none on mobile rows.
+
+Pull-to-Refresh:
+
+Wrap key lists in a container that listens for pull-down gestures (overscroll-y-auto).
+
+Swipe Actions:
+
+Implement swipe-left to reveal “Edit/Delete” on parent/player cards using a lightweight JS library or CSS.
+
+5. Performance & Accessibility
+Lazy Load charts and lists with v-lazy or intersection-observer.
+
+Optimize images/SVGs to <100 KB.
+
+ARIA & Contrast: ensure all mobile elements have aria-label, sufficient color contrast, and logical tab order.
+
+6. Testing
+Use BrowserStack or device emulators to test on iOS & Android Chrome/Safari at widths 320–640 px.
+
+Run Lighthouse audits for mobile performance and accessibility.
+
+Beta-test with actual parents on phones to catch any “fat-finger” or layout issues.
+
+Implement all mobile-only CSS in a separate Tailwind file or within your existing Tailwind config using unprefixed classes for mobile and sm: prefixed classes for desktop. Do not modify any existing desktop-only styles—those should remain in place under their sm:, md:, or lg: prefixes.

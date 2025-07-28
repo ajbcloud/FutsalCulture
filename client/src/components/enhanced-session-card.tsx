@@ -104,12 +104,12 @@ export default function EnhancedSessionCard({
   return (
     <Card className="bg-zinc-900 border border-zinc-700">
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start sm:gap-0">
+          <div className="flex-1">
             <CardTitle className="text-white text-lg">{session.title}</CardTitle>
-            <p className="text-zinc-400">{session.location}</p>
+            <p className="text-zinc-400 text-sm">{session.location}</p>
           </div>
-          <Badge className={getSessionStatusColor(session)}>
+          <Badge className={`${getSessionStatusColor(session)} self-start`}>
             {getSessionStatusText(session)}
           </Badge>
         </div>
@@ -124,7 +124,7 @@ export default function EnhancedSessionCard({
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-zinc-400">Age Group:</span>
-            <span className="text-white">{session.ageGroup}</span>
+            <span className="text-white">{session.ageGroups?.join(', ') || 'All Ages'}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-zinc-400">Price:</span>
@@ -150,7 +150,7 @@ export default function EnhancedSessionCard({
           <Button
             onClick={handleReserveSpot}
             disabled={isDisabled}
-            className={`w-full ${getButtonStyles()}`}
+            className={`w-full h-12 sm:h-auto ${getButtonStyles()}`}
           >
             {getButtonText()}
           </Button>

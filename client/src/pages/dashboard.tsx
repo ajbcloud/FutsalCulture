@@ -243,27 +243,27 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#18181b]">
       <Navbar />
       
-      {/* Welcome Section */}
+      {/* Welcome Section - Mobile First */}
       <section className="from-futsal-600 to-brand-600 text-white bg-[#18181b]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
           <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
+            <h1 className="text-2xl font-bold mb-4 sm:text-3xl md:text-4xl">
               Welcome Back{user?.firstName ? `, ${user.firstName}` : ''}!
             </h1>
-            <p className="text-lg md:text-xl text-futsal-100">
+            <p className="text-base text-futsal-100 sm:text-lg md:text-xl">
               Ready to book today's training sessions?
             </p>
           </div>
         </div>
       </section>
 
-      {/* Quick Actions */}
-      <section className="py-8 bg-[#18181b]">
+      {/* Quick Actions - Mobile First */}
+      <section className="py-6 bg-[#18181b] sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="bg-green-600 hover:bg-green-700">
+                <Button className="w-full h-12 bg-green-600 hover:bg-green-700 sm:w-auto sm:h-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Player
                 </Button>
@@ -281,7 +281,7 @@ export default function Dashboard() {
 
             <Button 
               variant="outline" 
-              size="lg"
+              className="w-full h-12 sm:w-auto sm:h-auto"
               onClick={() => {
                 document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' });
               }}
@@ -292,13 +292,13 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Today's Sessions */}
-      <section className="py-8 bg-[#18181b]">
+      {/* Today's Sessions - Mobile First */}
+      <section className="py-6 bg-[#18181b] sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
             <div>
-              <h2 className="text-3xl font-bold bg-[#ffffff00] text-[#ffffff]">Today's Sessions</h2>
-              <p className="text-gray-600 mt-2">Available for booking at 8:00 AM</p>
+              <h2 className="text-2xl font-bold bg-[#ffffff00] text-[#ffffff] sm:text-3xl">Today's Sessions</h2>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base sm:mt-2">Available for booking at 8:00 AM</p>
             </div>
           </div>
 
@@ -332,7 +332,7 @@ export default function Dashboard() {
               )}
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:grid-cols-3 lg:gap-6">
               {todaySessions.map((session) => (
                 <EnhancedSessionCard 
                   key={session.id} 
@@ -356,13 +356,13 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Player Management Section */}
-      <section className="py-8 bg-[#18181b]">
+      {/* Player Management Section - Mobile First */}
+      <section className="py-6 bg-[#18181b] sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white mb-8">Your Players</h2>
+          <h2 className="text-2xl font-bold text-white mb-6 sm:text-3xl sm:mb-8">Your Players</h2>
 
         {/* Player Management Cards */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {players.length === 0 ? (
             <Card className="bg-zinc-900 border border-zinc-700">
               <CardContent className="text-center py-8">
@@ -395,22 +395,26 @@ export default function Dashboard() {
               return (
                 <Card key={player.id} className="bg-zinc-900 border border-zinc-700">
                   <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
                       <div>
-                        <CardTitle className="text-white text-xl">
+                        <CardTitle className="text-white text-lg sm:text-xl">
                           {player.firstName} {player.lastName}
                         </CardTitle>
-                        <p className="text-zinc-400">
+                        <p className="text-zinc-400 text-sm sm:text-base">
                           {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old
                         </p>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 self-start sm:self-center">
                         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={() => {
-                              setEditingPlayer(player);
-                              setIsEditDialogOpen(true);
-                            }}>
+                            <Button 
+                              variant="ghost" 
+                              className="h-11 w-11 sm:h-8 sm:w-8" 
+                              onClick={() => {
+                                setEditingPlayer(player);
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
                           </DialogTrigger>
@@ -429,7 +433,7 @@ export default function Dashboard() {
                         </Dialog>
                         <Button 
                           variant="ghost" 
-                          size="sm" 
+                          className="h-11 w-11 sm:h-8 sm:w-8" 
                           onClick={() => deletePlayerMutation.mutate(player.id)}
                           disabled={deletePlayerMutation.isPending}
                         >
@@ -445,37 +449,39 @@ export default function Dashboard() {
                       {playerUpcomingReservations.length > 0 ? (
                         <div className="space-y-3">
                           {playerUpcomingReservations.map(reservation => (
-                            <div key={reservation.id} className="bg-zinc-800 border border-zinc-600 rounded p-3 flex justify-between items-center">
-                              <div className="flex-1">
-                                <p className="font-medium text-white">{reservation.session.title}</p>
-                                <p className="text-sm text-zinc-400">
-                                  {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
-                                </p>
-                                <p className="text-sm text-zinc-400">{reservation.session.location}</p>
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <span className={`px-2 py-1 rounded text-sm font-medium ${
-                                  reservation.paid ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'
-                                }`}>
-                                  {reservation.paid ? 'Paid' : 'Pending Payment'}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    cancelSignupMutation.mutate(reservation.id);
-                                    // Update local state to re-enable reserve button
-                                    setLocalReservedSessions(prev => {
-                                      const next = new Set(prev);
-                                      next.delete(reservation.sessionId);
-                                      return next;
-                                    });
-                                  }}
-                                  disabled={cancelSignupMutation.isPending}
-                                  className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
-                                >
-                                  Cancel
-                                </Button>
+                            <div key={reservation.id} className="bg-zinc-800 border border-zinc-600 rounded p-3">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
+                                <div className="flex-1">
+                                  <p className="font-medium text-white">{reservation.session.title}</p>
+                                  <p className="text-sm text-zinc-400">
+                                    {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
+                                  </p>
+                                  <p className="text-sm text-zinc-400">{reservation.session.location}</p>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3">
+                                  <span className={`px-2 py-1 rounded text-sm font-medium text-center sm:text-left ${
+                                    reservation.paid ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'
+                                  }`}>
+                                    {reservation.paid ? 'Paid' : 'Pending Payment'}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      cancelSignupMutation.mutate(reservation.id);
+                                      // Update local state to re-enable reserve button
+                                      setLocalReservedSessions(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(reservation.sessionId);
+                                        return next;
+                                      });
+                                    }}
+                                    disabled={cancelSignupMutation.isPending}
+                                    className="w-full border-red-600 text-red-400 hover:bg-red-600 hover:text-white sm:w-auto"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           ))}

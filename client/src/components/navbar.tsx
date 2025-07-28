@@ -24,6 +24,17 @@ export default function Navbar() {
                 textClassName="text-green-400"
               />
             </Link>
+            
+            {/* Mobile hamburger menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="ml-4 p-2 text-muted-foreground hover:text-foreground md:hidden h-11 w-11 flex items-center justify-center"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            
+            {/* Desktop navigation */}
             <div className="hidden md:block ml-10">
               <div className="flex border-b border-border">
                 {isAuthenticated ? (
@@ -55,25 +66,25 @@ export default function Navbar() {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Theme Toggle - smaller on mobile */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+              className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             
             {!isAuthenticated ? (
-              <Button asChild>
+              <Button asChild className="h-11 px-4 sm:h-auto sm:px-3">
                 <a href="/api/login">Parent Login</a>
               </Button>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button variant="ghost" className="relative h-11 w-11 sm:h-8 sm:w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.profileImageUrl || undefined} alt={`${user?.firstName} ${user?.lastName}` || "User"} />
                       <AvatarFallback>
@@ -97,58 +108,87 @@ export default function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </Button>
           </div>
         </div>
         
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-muted">
-              <Link href="/" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
-                Home
-              </Link>
-              {!isAuthenticated && (
-                <Link href="/sessions" className="block px-3 py-2 text-foreground font-medium hover:text-primary">
-                  Sessions
-                </Link>
-              )}
-              {isAuthenticated && (
-                <Link href="/calendar" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
-                  Calendar
-                </Link>
-              )}
-              <Link href="/help" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
-                Help
-              </Link>
-              {!isAuthenticated ? (
-                <a href="/api/login" className="block px-3 py-2 text-blue-400 hover:text-blue-300">
-                  Parent Login
-                </a>
-              ) : (
+            <div className="px-2 pt-2 pb-3 space-y-1 bg-muted border-t border-border">
+              {isAuthenticated ? (
                 <>
-                  <Link href="/profile" className="block px-3 py-2 text-zinc-400 hover:text-white">
-                    Parent Profile
+                  <Link 
+                    href="/" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    href="/calendar" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Calendar
+                  </Link>
+                  <Link 
+                    href="/help" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Help
+                  </Link>
+                  <Link 
+                    href="/profile" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Profile
                   </Link>
                   {(user?.isAdmin || user?.isAssistant) && (
-                    <Link href="/admin" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                    <Link 
+                      href="/admin" 
+                      className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
                       Admin Portal
                     </Link>
                   )}
-                  <a href="/api/logout" className="block px-3 py-2 text-red-400 hover:text-red-300">
+                  <a 
+                    href="/api/logout" 
+                    className="block px-4 py-4 text-red-500 hover:text-red-400 hover:bg-accent rounded-md transition-colors"
+                  >
                     Logout
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href="/" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    href="/sessions" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sessions
+                  </Link>
+                  <Link 
+                    href="/help" 
+                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Help
+                  </Link>
+                  <a 
+                    href="/api/login" 
+                    className="block px-4 py-4 text-primary hover:text-primary/80 hover:bg-accent rounded-md transition-colors"
+                  >
+                    Parent Login
                   </a>
                 </>
               )}

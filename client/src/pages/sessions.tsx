@@ -69,15 +69,15 @@ export default function Sessions() {
     <div className="min-h-screen bg-black text-white">
       <Navbar />
       
-      <section className="py-16">
+      <section className="py-8 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <div className="flex justify-between items-start">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start sm:gap-0">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Training Sessions</h1>
-                <p className="text-zinc-400">Find the perfect session for your young athlete</p>
+                <h1 className="text-2xl font-bold text-white mb-2 sm:text-3xl">Training Sessions</h1>
+                <p className="text-zinc-400 text-sm sm:text-base">Find the perfect session for your young athlete</p>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
                 {isAuthenticated && (
                   <div className="flex items-center space-x-2">
                     <Switch 
@@ -89,7 +89,7 @@ export default function Sessions() {
                   </div>
                 )}
                 <Select value={genderFilter} onValueChange={setGenderFilter}>
-                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
+                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
                     <SelectValue placeholder="All Genders" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -103,7 +103,7 @@ export default function Sessions() {
                 </Select>
                 
                 <Select value={ageFilter} onValueChange={setAgeFilter}>
-                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700">
+                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
                     <SelectValue placeholder="All Ages" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -114,7 +114,7 @@ export default function Sessions() {
                   </SelectContent>
                 </Select>
                 <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="w-48 bg-zinc-900 border-zinc-700">
+                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-48">
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -143,7 +143,7 @@ export default function Sessions() {
               </Button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:grid-cols-3 lg:gap-6">
               {filteredSessions.map((session) => (
                 <SessionCard 
                   key={session.id} 
@@ -163,11 +163,11 @@ export default function Sessions() {
           
           <CartButton />
           
-          {/* Calendar Section */}
-          <div className="mt-16" id="calendar">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-4">Upcoming Sessions Calendar</h2>
-              <p className="text-zinc-400">View all scheduled training sessions at a glance</p>
+          {/* Calendar Section - Mobile First */}
+          <div className="mt-12 sm:mt-16" id="calendar">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl font-bold text-white mb-4 sm:text-3xl">Upcoming Sessions Calendar</h2>
+              <p className="text-zinc-400 text-sm sm:text-base">View all scheduled training sessions at a glance</p>
             </div>
             <SessionCalendar 
               ageGroupFilter={ageFilter === "all" ? undefined : ageFilter}
