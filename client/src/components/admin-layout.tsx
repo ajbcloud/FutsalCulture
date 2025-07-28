@@ -114,14 +114,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     {user?.isAdmin ? 'Owner' : 'Assistant'}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={toggleTheme}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+                  aria-label="Toggle theme"
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                </Button>
+                </button>
               </div>
             </div>
           </div>
