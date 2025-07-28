@@ -242,9 +242,6 @@ export default function AdminSettings() {
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Admin Settings</h1>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
@@ -436,6 +433,13 @@ export default function AdminSettings() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Save Button at bottom of General & Registration tab */}
+          <div className="flex justify-start">
+            <Button onClick={handleSave} disabled={saving} className="px-6">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-6">
@@ -546,6 +550,13 @@ export default function AdminSettings() {
               )}
             </CardContent>
           </Card>
+          
+          {/* Save Button at bottom of Sessions & Schedule tab */}
+          <div className="flex justify-start">
+            <Button onClick={handleSave} disabled={saving} className="px-6">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6">
