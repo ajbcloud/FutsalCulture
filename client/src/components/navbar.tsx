@@ -102,6 +102,14 @@ export default function Navbar() {
                       <Link href="/admin">Admin Portal</Link>
                     </DropdownMenuItem>
                   )}
+                  {user?.isSuperAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/super-admin">Super Admin</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/help">Help</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <a href="/api/logout">Logout</a>
                   </DropdownMenuItem>
@@ -152,6 +160,15 @@ export default function Navbar() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Admin Portal
+                    </Link>
+                  )}
+                  {user?.isSuperAdmin && (
+                    <Link 
+                      href="/super-admin" 
+                      className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Super Admin
                     </Link>
                   )}
                   <a 

@@ -1,0 +1,63 @@
+Objective:
+Generate and insert test data covering the last 3 months and 1 month ahead for our multi-tenant Futsal Reserve platform. All dates, counts, and dollar amounts should be internally consistent—sessions must have matching sign-ups, payments tied to those sign-ups, and analytics metrics (revenue, new players, fill rates, pending payments, growth rates) should compute correctly from the generated data.
+
+Tenants:
+
+Create 2 tenants (e.g. “Futsal Culture” and “Elite Footwork Academy”), each with their own subdomain, contact info, address, and billing settings.
+
+Admins & Users:
+
+For each tenant, seed 1 super-admin and 2 regular admin users.
+
+Seed 20 parents per tenant. Assign each a unique email, phone, and approval timestamp.
+
+Seed 30–40 players per tenant. Each player must reference one of the tenant’s parents (randomly distribute 1–3 players per parent), record DOB so ages span U8–U18, and include created_at timestamps over the past 3 months.
+
+Sessions:
+
+For each tenant, schedule ~3 sessions per week over the past 3 months plus 4 sessions in the coming month.
+
+Vary ageGroups (U8–U18), genders (boys, girls, mixed), locations (3 distinct parks), capacities (8–20).
+
+For closed/past sessions, randomly sign 50–95% of capacity; for future sessions, sign 0–30% to simulate early sign-ups.
+
+Sign-ups & Payments:
+
+For every session sign-up, create a signup record with a payment intent linked.
+
+90% of completed signups should have paid=true with paid_at timestamp within 1 hour of sign-up; 10% should be paid=false and show up as pending payments older than 1 hour.
+
+Charge each sign-up between $15–$25; record amount_cents accordingly.
+
+Help Requests & Notifications:
+
+Insert 5–10 help_requests per tenant over the 3-month window: issues like “Can’t book session,” “Payment didn’t go through,” “Password reset.”
+
+Mark 70% resolved with timestamps and admin replies, leave the rest unresolved.
+
+Analytics Alignment:
+
+Ensure that when you sum payments in each calendar month you get sensible “Total Revenue,” and that the Year-to-Date (YTD) revenue matches the sum from Jan 1 to today.
+
+New registrations per month (players and parents) should track roughly +10% month-over-month to produce positive growth rates.
+
+Fill-rate metrics: compute average capacity utilization per month to show 60–90% fill.
+
+Pending payments widget should display the count of unpaid signups older than 1 hour at “now.”
+
+Future-Dated Data:
+
+Create 4 sessions in next month with realistic sign-up curves (e.g. 5–15% booked), and seed a handful of early sign-ups/payments.
+
+No help requests or new players in the future.
+
+Execution:
+
+Generate this data in your Drizzle-ORM seed script (e.g. seed.ts or expanded-seed.ts).
+
+Use new Date() offsets (e.g. subtract months/weeks) so the timestamps always roll relative to “now.”
+
+After seeding, run your analytics API and verify the dashboard widgets (Total Revenue, Total Players, YTD Revenue, Sessions This Week, Total Registrations, Pending Payments, Growth %) all reflect the seeded numbers.
+
+Goal:
+When you launch the Admin Dashboard and Analytics pages, charts should show a smoothly rising player count, revenue spikes aligned with session schedules, accurate fill-rates, and a handful of pending payments—all drawn directly from this cohesive three-month + one-month-ahead dataset.

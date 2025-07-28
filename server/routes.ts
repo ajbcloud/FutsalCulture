@@ -7,6 +7,7 @@ import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
+import { setupSuperAdminRoutes } from './super-admin-routes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -19,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       
       // Log user for debugging
-      console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant });
+      console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant, isSuperAdmin: user?.isSuperAdmin });
       
       res.json(user);
     } catch (error) {
@@ -746,6 +747,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup admin routes
   setupAdminRoutes(app);
+
+  // Setup super admin routes
+  setupSuperAdminRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

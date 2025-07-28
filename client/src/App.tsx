@@ -26,6 +26,7 @@ import AdminIntegrations from "@/pages/admin/integrations";
 import AdminDiscountCodes from "@/pages/admin/discount-codes";
 import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
+import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -84,6 +85,9 @@ function Router() {
                 <Route path="/admin/integrations" component={AdminIntegrations} />
                 <Route path="/admin/payment" component={AdminPayment} />
               </>
+            )}
+            {user?.isSuperAdmin && (
+              <Route path="/super-admin" component={SuperAdmin} />
             )}
           </>
         )}
