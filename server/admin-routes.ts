@@ -445,8 +445,8 @@ export function setupAdminRoutes(app: any) {
 
       const activities = [];
 
-      // Get recent payments with player details
-      const recentPayments = await db
+      // Get recent payments with player and parent details for search functionality
+      const recentPaymentsWithParents = await db
         .select({
           id: payments.id,
           amountCents: payments.amountCents,
@@ -454,28 +454,31 @@ export function setupAdminRoutes(app: any) {
           playerId: signups.playerId,
           playerFirstName: players.firstName,
           playerLastName: players.lastName,
-          sessionId: signups.sessionId
+          sessionId: signups.sessionId,
+          parentFirstName: users.firstName,
+          parentLastName: users.lastName
         })
         .from(payments)
         .innerJoin(signups, eq(payments.signupId, signups.id))
         .innerJoin(players, eq(signups.playerId, players.id))
+        .innerJoin(users, eq(players.parentId, users.id))
         .where(sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`)
         .orderBy(desc(payments.paidAt))
         .limit(10);
 
-      console.log('Found recent payments:', recentPayments.length);
+      console.log('Found recent payments:', recentPaymentsWithParents.length);
 
-      recentPayments.forEach(payment => {
+      recentPaymentsWithParents.forEach(payment => {
         activities.push({
           id: payment.id,
           type: 'payment',
           icon: '🎉',
-          message: `Payment received: $${(payment.amountCents / 100).toFixed(2)} from ${payment.playerFirstName} ${payment.playerLastName}`,
+          message: `Payment received: $${(payment.amountCents / 100).toFixed(2)} from ${payment.parentFirstName} ${payment.parentLastName} for ${payment.playerFirstName} ${payment.playerLastName}`,
           timestamp: payment.paidAt,
           timeAgo: getTimeAgo(payment.paidAt),
-          // Navigation metadata
+          // Navigation metadata - use parent name for search since payments are filtered by parent
           navigationUrl: '/admin/payments',
-          searchTerm: `${payment.playerFirstName} ${payment.playerLastName}`,
+          searchTerm: `${payment.parentFirstName} ${payment.parentLastName}`,
           playerId: payment.playerId
         });
       });

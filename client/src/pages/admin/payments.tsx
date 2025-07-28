@@ -102,8 +102,10 @@ export default function AdminPayments() {
         const matchesSearch = !filters.search || 
           player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
           player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
+          `${player.firstName} ${player.lastName}`.toLowerCase().includes(filters.search.toLowerCase()) ||
           (payment.parent && payment.parent.firstName && payment.parent.firstName.toLowerCase().includes(filters.search.toLowerCase())) ||
-          (payment.parent && payment.parent.lastName && payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase()));
+          (payment.parent && payment.parent.lastName && payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase())) ||
+          (payment.parent && `${payment.parent.firstName} ${payment.parent.lastName}`.toLowerCase().includes(filters.search.toLowerCase()));
         
         return matchesAgeGroup && matchesGender && matchesSearch;
       });
