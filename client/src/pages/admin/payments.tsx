@@ -59,8 +59,10 @@ export default function AdminPayments() {
 
   useEffect(() => {
     loadPayments();
-    
-    // Check for URL search parameter
+  }, []);
+
+  // Handle URL search parameters when component mounts and when URL changes
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const searchTerm = urlParams.get('search');
     
@@ -70,6 +72,22 @@ export default function AdminPayments() {
         search: searchTerm
       }));
     }
+  }, []);
+
+  // Listen for URL changes to re-apply search filtering  
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchTerm = urlParams.get('search');
+      
+      setFilters(prev => ({
+        ...prev,
+        search: searchTerm || ''
+      }));
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -84,8 +102,8 @@ export default function AdminPayments() {
         const matchesSearch = !filters.search || 
           player.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
           player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
-          payment.parent.firstName.toLowerCase().includes(filters.search.toLowerCase()) ||
-          payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase());
+          (payment.parent && payment.parent.firstName && payment.parent.firstName.toLowerCase().includes(filters.search.toLowerCase())) ||
+          (payment.parent && payment.parent.lastName && payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase()));
         
         return matchesAgeGroup && matchesGender && matchesSearch;
       });

@@ -786,9 +786,68 @@ export function setupAdminRoutes(app: any) {
   // Admin Payments Management  
   app.get('/api/admin/payments', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // Get pending payment signups (unpaid reservations)
-      const pendingSignups = await storage.getPendingPaymentSignups();
-      res.json(pendingSignups);
+      const { status } = req.query;
+      
+      if (status === 'pending') {
+        // Get pending payment signups (unpaid reservations)
+        const pendingSignups = await storage.getPendingPaymentSignups();
+        res.json(pendingSignups);
+      } else if (status === 'paid') {
+        // Get paid signups with full details including parent info
+        const paidSignups = await db
+          .select({
+            id: signups.id,
+            playerId: signups.playerId,
+            sessionId: signups.sessionId,
+            paid: signups.paid,
+            createdAt: signups.createdAt,
+            // Player info
+            player: {
+              id: players.id,
+              firstName: players.firstName,
+              lastName: players.lastName,
+              birthYear: players.birthYear,
+              gender: players.gender,
+              parentId: players.parentId,
+              soccerClub: players.soccerClub,
+            },
+            // Session info
+            session: {
+              id: futsalSessions.id,
+              title: futsalSessions.title,
+              location: futsalSessions.location,
+              ageGroups: futsalSessions.ageGroups,
+              genders: futsalSessions.genders,
+              startTime: futsalSessions.startTime,
+              endTime: futsalSessions.endTime,
+              capacity: futsalSessions.capacity,
+              priceCents: futsalSessions.priceCents,
+            },
+            // Parent info
+            parent: {
+              id: users.id,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              email: users.email,
+            },
+            // Payment info
+            paidAt: payments.paidAt,
+            paymentAmount: payments.amountCents,
+          })
+          .from(signups)
+          .innerJoin(players, eq(signups.playerId, players.id))
+          .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+          .innerJoin(users, eq(players.parentId, users.id))
+          .leftJoin(payments, eq(signups.id, payments.signupId))
+          .where(eq(signups.paid, true))
+          .orderBy(desc(payments.paidAt));
+        
+        res.json(paidSignups);
+      } else {
+        // Return all (both pending and paid)
+        const pendingSignups = await storage.getPendingPaymentSignups();
+        res.json(pendingSignups);
+      }
     } catch (error) {
       console.error("Error fetching admin payments:", error);
       res.status(500).json({ message: "Failed to fetch payments" });
