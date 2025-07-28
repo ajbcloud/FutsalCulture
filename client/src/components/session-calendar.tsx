@@ -69,10 +69,16 @@ export default function SessionCalendar({
     return acc;
   }, {} as Record<string, FutsalSession[]>);
 
-  // Generate calendar days
-  const calendarDays = eachDayOfInterval({
+  // Generate calendar days - only weekdays (Monday-Friday)
+  const allDays = eachDayOfInterval({
     start: monthStart,
     end: monthEnd,
+  });
+  
+  // Filter to only show weekdays (Monday=1 to Friday=5)
+  const calendarDays = allDays.filter(day => {
+    const dayOfWeek = day.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday through Friday only
   });
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -105,10 +111,10 @@ export default function SessionCalendar({
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
-        {/* Day Headers */}
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+      {/* Calendar Grid - Weekdays Only */}
+      <div className="grid grid-cols-5 gap-2">
+        {/* Day Headers - Weekdays Only */}
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => (
           <div key={day} className="p-2 text-center text-sm font-medium text-zinc-400">
             {day}
           </div>
@@ -145,25 +151,37 @@ export default function SessionCalendar({
                 {daySessions.slice(0, 3).map(session => {
                   const sessionDate = new Date(session.startTime);
                   const today = new Date();
-                  const isToday = sessionDate.toDateString() === today.toDateString();
-                  const currentHour = today.getHours();
-                  const bookingOpen = isToday && currentHour >= 8;
+                  const isSessionToday = sessionDate.toDateString() === today.toDateString();
                   const sessionStarted = new Date() >= new Date(session.startTime);
-                  const canBook = bookingOpen && !sessionStarted && session.status !== 'full';
+                  const isSessionFuture = sessionDate > today;
+                  
+                  // Use the proper booking time from session or default to 8 AM
+                  const bookingHour = session.bookingOpenHour ?? 8;
+                  const bookingMinute = session.bookingOpenMinute ?? 0;
+                  const bookingOpenTime = new Date(sessionDate);
+                  bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
+                  
+                  const bookingOpen = isSessionToday && today >= bookingOpenTime;
                   
                   let statusColor = 'bg-blue-700/20';
                   let statusText = session.status;
                   
+                  // Override status based on real-time conditions
                   if (sessionStarted) {
                     statusColor = 'bg-zinc-700/20';
                     statusText = 'closed';
-                  } else if (session.status === 'full') {
+                  } else if (isSessionToday && session.status === 'full') {
+                    // Only show red (full) on the day of the session when it's actually full
                     statusColor = 'bg-red-700/20';
                     statusText = 'full';
-                  } else if (canBook) {
+                  } else if (isSessionToday && bookingOpen && session.status !== 'full') {
                     statusColor = 'bg-green-700/20 hover:bg-green-700/30';
                     statusText = 'open';
-                  } else if (!bookingOpen) {
+                  } else if (isSessionToday && !bookingOpen) {
+                    statusColor = 'bg-yellow-700/20';
+                    statusText = 'pending (8 AM Rule)';
+                  } else if (isSessionFuture) {
+                    // Future sessions should always show as upcoming (yellow)
                     statusColor = 'bg-yellow-700/20';
                     statusText = 'upcoming';
                   }
