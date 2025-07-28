@@ -786,7 +786,7 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Payments Management  
+  // Admin Payments Management - Unified endpoint
   app.get('/api/admin/payments', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { status } = req.query;
@@ -796,7 +796,7 @@ export function setupAdminRoutes(app: any) {
         const pendingSignups = await storage.getPendingPaymentSignups();
         res.json(pendingSignups);
       } else if (status === 'paid') {
-        // Get paid signups with full details including parent info
+        // Get paid signups with full details including parent info and payment status
         const paidSignups = await db
           .select({
             id: signups.id,
@@ -833,9 +833,12 @@ export function setupAdminRoutes(app: any) {
               lastName: users.lastName,
               email: users.email,
             },
-            // Payment info
+            // Payment info including refund status
             paidAt: payments.paidAt,
             paymentAmount: payments.amountCents,
+            refundedAt: payments.refundedAt,
+            refundReason: payments.refundReason,
+            paymentStatus: payments.status,
           })
           .from(signups)
           .innerJoin(players, eq(signups.playerId, players.id))
@@ -847,9 +850,63 @@ export function setupAdminRoutes(app: any) {
         
         res.json(paidSignups);
       } else {
-        // Return all (both pending and paid)
-        const pendingSignups = await storage.getPendingPaymentSignups();
-        res.json(pendingSignups);
+        // Return all payments (pending, paid, and refunded)
+        const [pendingSignups, paidSignups] = await Promise.all([
+          storage.getPendingPaymentSignups(),
+          db
+            .select({
+              id: signups.id,
+              playerId: signups.playerId,
+              sessionId: signups.sessionId,
+              paid: signups.paid,
+              createdAt: signups.createdAt,
+              // Player info
+              player: {
+                id: players.id,
+                firstName: players.firstName,
+                lastName: players.lastName,
+                birthYear: players.birthYear,
+                gender: players.gender,
+                parentId: players.parentId,
+                soccerClub: players.soccerClub,
+              },
+              // Session info
+              session: {
+                id: futsalSessions.id,
+                title: futsalSessions.title,
+                location: futsalSessions.location,
+                ageGroups: futsalSessions.ageGroups,
+                genders: futsalSessions.genders,
+                startTime: futsalSessions.startTime,
+                endTime: futsalSessions.endTime,
+                capacity: futsalSessions.capacity,
+                priceCents: futsalSessions.priceCents,
+              },
+              // Parent info
+              parent: {
+                id: users.id,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                email: users.email,
+              },
+              // Payment info including refund status
+              paidAt: payments.paidAt,
+              paymentAmount: payments.amountCents,
+              refundedAt: payments.refundedAt,
+              refundReason: payments.refundReason,
+              paymentStatus: payments.status,
+            })
+            .from(signups)
+            .innerJoin(players, eq(signups.playerId, players.id))
+            .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+            .innerJoin(users, eq(players.parentId, users.id))
+            .leftJoin(payments, eq(signups.id, payments.signupId))
+            .where(eq(signups.paid, true))
+            .orderBy(desc(payments.paidAt))
+        ]);
+        
+        // Combine and return all payments
+        res.json([...pendingSignups, ...paidSignups]);
       }
     } catch (error) {
       console.error("Error fetching admin payments:", error);
@@ -2050,6 +2107,54 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     } catch (error) {
       console.error('Error deleting parent:', error);
       res.status(500).json({ error: 'Failed to delete parent' });
+    }
+  });
+
+  // Refund payment endpoint
+  app.post('/api/admin/payments/:id/refund', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      if (!reason || reason.trim().length < 5) {
+        return res.status(400).json({ message: "Refund reason is required and must be at least 5 characters" });
+      }
+
+      // Find the payment record
+      const payment = await db.select().from(payments).where(eq(payments.signupId, id)).limit(1);
+      
+      if (!payment.length) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      if (payment[0].refundedAt) {
+        return res.status(400).json({ message: "Payment has already been refunded" });
+      }
+
+      // Update the payment record to mark as refunded
+      await db.update(payments)
+        .set({
+          status: 'refunded',
+          refundedAt: new Date(),
+          refundReason: reason.trim()
+        })
+        .where(eq(payments.signupId, id));
+
+      // Update the signup to mark as unpaid
+      await db.update(signups)
+        .set({
+          paid: false
+        })
+        .where(eq(signups.id, id));
+
+      res.json({ 
+        message: "Refund processed successfully",
+        refundedAt: new Date(),
+        reason: reason.trim()
+      });
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ message: "Failed to process refund" });
     }
   });
 }

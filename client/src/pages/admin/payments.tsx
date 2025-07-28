@@ -12,22 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { CheckCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, RefreshCw, DollarSign, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Badge } from '../../components/ui/badge';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
 export default function AdminPayments() {
-  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
-  const [paidPayments, setPaidPayments] = useState<any[]>([]);
-  const [filteredPendingPayments, setFilteredPendingPayments] = useState([]);
-  const [filteredPaidPayments, setFilteredPaidPayments] = useState([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
+    status: 'all',
     ageGroup: '',
     gender: '',
     search: '',
@@ -44,12 +43,16 @@ export default function AdminPayments() {
         adminPayments.list('pending'),
         adminPayments.list('paid')
       ]);
-      console.log('admin payments (pending):', pending);
-      console.log('admin payments (paid):', paid);
-      setPendingPayments(pending);
-      setPaidPayments(paid);
-      setFilteredPendingPayments(pending);
-      setFilteredPaidPayments(paid);
+      
+      // Combine all payments and add status field
+      const combined = [
+        ...pending.map((p: any) => ({ ...p, status: 'pending' })),
+        ...paid.map((p: any) => ({ ...p, status: p.refundedAt ? 'refunded' : 'paid' }))
+      ];
+      
+      console.log('admin payments (combined):', combined);
+      setAllPayments(combined);
+      setFilteredPayments(combined);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -97,6 +100,7 @@ export default function AdminPayments() {
         const age = new Date().getFullYear() - player.birthYear;
         const ageGroup = calculateAgeGroupFromAge(age);
         
+        const matchesStatus = filters.status === 'all' || payment.status === filters.status;
         const matchesAgeGroup = !filters.ageGroup || filters.ageGroup === 'all' || ageGroup === filters.ageGroup;
         const matchesGender = !filters.gender || filters.gender === 'all' || player.gender === filters.gender;
         const matchesSearch = !filters.search || 
@@ -107,13 +111,12 @@ export default function AdminPayments() {
           (payment.parent && payment.parent.lastName && payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase())) ||
           (payment.parent && `${payment.parent.firstName} ${payment.parent.lastName}`.toLowerCase().includes(filters.search.toLowerCase()));
         
-        return matchesAgeGroup && matchesGender && matchesSearch;
+        return matchesStatus && matchesAgeGroup && matchesGender && matchesSearch;
       });
     };
 
-    setFilteredPendingPayments(filterPayments(pendingPayments));
-    setFilteredPaidPayments(filterPayments(paidPayments));
-  }, [pendingPayments, paidPayments, filters]);
+    setFilteredPayments(filterPayments(allPayments));
+  }, [allPayments, filters]);
 
   const handleConfirmPayment = async (signupId: string) => {
     try {
@@ -132,15 +135,70 @@ export default function AdminPayments() {
   };
 
   const handleRefund = async (paymentId: string) => {
-    if (confirm('Are you sure you want to issue a refund?')) {
+    const reason = prompt('Please provide a reason for the refund:');
+    if (reason && confirm('Are you sure you want to issue a refund?')) {
       try {
-        await adminPayments.refund(paymentId);
+        await adminPayments.refund(paymentId, reason);
         toast({ title: "Refund processed successfully" });
         loadPayments(); // Refresh data
+        
+        // Refresh all dashboard-related queries
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
       } catch (error) {
         console.error('Error processing refund:', error);
         toast({ title: "Error processing refund", variant: "destructive" });
       }
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</Badge>;
+      case 'paid':
+        return <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Paid</Badge>;
+      case 'refunded':
+        return <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Refunded</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getActionButton = (payment: any) => {
+    switch (payment.status) {
+      case 'pending':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => handleConfirmPayment(payment.id)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Confirm Payment
+          </Button>
+        );
+      case 'paid':
+        return (
+          <Button 
+            size="sm" 
+            variant="destructive"
+            onClick={() => handleRefund(payment.id)}
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            Refund
+          </Button>
+        );
+      case 'refunded':
+        return (
+          <Badge variant="outline" className="text-gray-500">
+            <XCircle className="h-4 w-4 mr-1" />
+            Refunded
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -160,7 +218,7 @@ export default function AdminPayments() {
 
       {/* Filter Controls */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <Label className="text-zinc-300">Search</Label>
             <Input
@@ -169,6 +227,21 @@ export default function AdminPayments() {
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               className="bg-zinc-800 border-zinc-700 text-white"
             />
+          </div>
+
+          <div>
+            <Label className="text-zinc-300">Status</Label>
+            <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div>
@@ -202,123 +275,54 @@ export default function AdminPayments() {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="bg-zinc-800 border-zinc-700">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-zinc-700">
-            Pending ({filteredPendingPayments.length})
-          </TabsTrigger>
-          <TabsTrigger value="paid" className="data-[state=active]:bg-zinc-700">
-            Paid ({filteredPaidPayments.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending" className="mt-6">
-          <div className="bg-zinc-900 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-zinc-300">Player</TableHead>
-                  <TableHead className="text-zinc-300">Parent</TableHead>
-                  <TableHead className="text-zinc-300">Session</TableHead>
-                  <TableHead className="text-zinc-300">Reserved At</TableHead>
-                  <TableHead className="text-zinc-300">Amount</TableHead>
-                  <TableHead className="text-zinc-300">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPendingPayments.map((payment: any) => (
-                  <TableRow key={payment.id} className="border-zinc-800">
-                    <TableCell className="text-white">
-                      {payment.player?.firstName} {payment.player?.lastName}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {payment.session?.title || 'Unknown Session'}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {format(new Date(payment.createdAt), 'MMM d, yyyy h:mm a')}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">$10.00</TableCell>
-                    <TableCell>
-                      <Button 
-                        onClick={() => handleConfirmPayment(payment.id)}
-                        className="bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Confirm Payment
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredPendingPayments.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
-                      No pending payments
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="paid" className="mt-6">
-          <div className="bg-zinc-900 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-zinc-300">Player</TableHead>
-                  <TableHead className="text-zinc-300">Parent</TableHead>
-                  <TableHead className="text-zinc-300">Session</TableHead>
-                  <TableHead className="text-zinc-300">Paid At</TableHead>
-                  <TableHead className="text-zinc-300">Amount</TableHead>
-                  <TableHead className="text-zinc-300">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPaidPayments.map((payment: any) => (
-                  <TableRow key={payment.id} className="border-zinc-800">
-                    <TableCell className="text-white">
-                      {payment.player?.firstName} {payment.player?.lastName}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {payment.session?.title || 'Unknown Session'}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {payment.paidAt ? format(new Date(payment.paidAt), 'MMM d, yyyy h:mm a') : 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-zinc-300">$10.00</TableCell>
-                    <TableCell>
-                      <Button 
-                        onClick={() => handleRefund(payment.id)}
-                        variant="outline"
-                        className="text-red-400 hover:text-red-300"
-                        size="sm"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Refund
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredPaidPayments.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
-                      No paid transactions
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {/* Single Payments Table */}
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-800">
+              <TableHead className="text-zinc-300">Player</TableHead>
+              <TableHead className="text-zinc-300">Parent</TableHead>
+              <TableHead className="text-zinc-300">Session</TableHead>
+              <TableHead className="text-zinc-300">Status</TableHead>
+              <TableHead className="text-zinc-300">Reserved At</TableHead>
+              <TableHead className="text-zinc-300">Amount</TableHead>
+              <TableHead className="text-zinc-300">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPayments.map((payment: any) => (
+              <TableRow key={payment.id} className="border-zinc-800">
+                <TableCell className="text-white">
+                  {payment.player?.firstName} {payment.player?.lastName}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {payment.session?.title || 'Unknown Session'}
+                </TableCell>
+                <TableCell>
+                  {getStatusBadge(payment.status)}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {format(new Date(payment.createdAt), 'MMM d, yyyy h:mm a')}
+                </TableCell>
+                <TableCell className="text-zinc-300">$10.00</TableCell>
+                <TableCell>
+                  {getActionButton(payment)}
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredPayments.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                  No payments found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </AdminLayout>
   );
 }

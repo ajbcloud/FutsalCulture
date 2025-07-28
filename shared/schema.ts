@@ -125,13 +125,17 @@ export const signups = pgTable("signups", {
 });
 
 // Payments table
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "refunded"]);
+
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   signupId: varchar("signup_id").notNull(),
   paymentIntentId: varchar("payment_intent_id"),
   amountCents: integer("amount_cents").notNull(),
+  status: paymentStatusEnum("status").default("paid"),
   paidAt: timestamp("paid_at"),
   refundedAt: timestamp("refunded_at"),
+  refundReason: text("refund_reason"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
