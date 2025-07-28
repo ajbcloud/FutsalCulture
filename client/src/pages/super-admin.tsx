@@ -127,15 +127,6 @@ export default function SuperAdminPage() {
 
             {/* Desktop navigation and user menu */}
             <div className="hidden md:flex items-center space-x-4">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -193,7 +184,7 @@ export default function SuperAdminPage() {
 
       <div className="flex">
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-card border-r border-border min-h-screen`}>
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-card border-r border-border min-h-screen relative`}>
           <nav className="p-4">
             <div className="space-y-2">
               {navigation.map((item) => {
@@ -216,6 +207,79 @@ export default function SuperAdminPage() {
               })}
             </div>
           </nav>
+          
+          {/* User info and theme toggle at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2 w-full justify-start">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm">
+                        {user?.firstName?.[0]?.toUpperCase() || 'S'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {user?.firstName} {user?.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Super Admin
+                      </p>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="start" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-xs text-muted-foreground">Super Admin</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Parent Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Admin Portal
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/help" className="cursor-pointer">
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Help
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <a href="/api/logout" className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Main content */}
