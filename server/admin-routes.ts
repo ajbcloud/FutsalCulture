@@ -2744,4 +2744,102 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.status(500).json({ message: error.message || "Failed to update access code" });
     }
   });
+
+  // Business Insights API endpoint
+  app.get('/api/admin/business-insights', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Get all sessions for peak hours analysis
+      const allSessions = await db
+        .select()
+        .from(futsalSessions);
+
+      // Calculate peak hours based on session start times
+      const hourCounts: { [hour: number]: number } = {};
+      allSessions.forEach(session => {
+        const hour = new Date(session.startTime).getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+
+      // Find peak hour range
+      const peakHour = Object.entries(hourCounts)
+        .sort(([,a], [,b]) => b - a)[0]?.[0];
+      const peakHourStr = peakHour ? 
+        `${parseInt(peakHour) > 12 ? parseInt(peakHour) - 12 : parseInt(peakHour)}${parseInt(peakHour) >= 12 ? ' PM' : ' AM'}` : 
+        '6 PM';
+
+      // Get all players for age group analysis
+      const allPlayers = await db
+        .select()
+        .from(players);
+
+      // Calculate age group distribution
+      const ageGroupCounts: { [ageGroup: string]: number } = {};
+      allPlayers.forEach(player => {
+        const age = calculateAge(player.birthYear);
+        const ageGroup = `U${Math.ceil(age / 2) * 2}`; // Round to nearest even number
+        ageGroupCounts[ageGroup] = (ageGroupCounts[ageGroup] || 0) + 1;
+      });
+
+      // Find most popular age groups (top 2)
+      const popularAgeGroups = Object.entries(ageGroupCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 2)
+        .map(([ageGroup]) => ageGroup);
+
+      // Calculate revenue growth (this month vs last month)
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+      const thisMonthPayments = await db
+        .select()
+        .from(payments)
+        .where(gte(payments.createdAt, thisMonthStart));
+
+      const lastMonthPayments = await db
+        .select()
+        .from(payments)
+        .where(
+          and(
+            gte(payments.createdAt, lastMonthStart),
+            lte(payments.createdAt, lastMonthEnd)
+          )
+        );
+
+      const thisMonthRevenue = thisMonthPayments.reduce((sum, p) => sum + p.amountCents, 0) / 100;
+      const lastMonthRevenue = lastMonthPayments.reduce((sum, p) => sum + p.amountCents, 0) / 100;
+      
+      const revenueGrowth = lastMonthRevenue > 0 
+        ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+        : thisMonthRevenue > 0 ? 100 : 0;
+
+      // Calculate session utilization rate
+      const allSignups = await db
+        .select()
+        .from(signups);
+
+      const totalCapacity = allSessions.reduce((sum, session) => sum + session.capacity, 0);
+      const totalBookings = allSignups.length;
+      const utilizationRate = totalCapacity > 0 ? Math.round((totalBookings / totalCapacity) * 100) : 0;
+
+      res.json({
+        peakHours: `Most sessions scheduled around ${peakHourStr}`,
+        popularAgeGroups: popularAgeGroups.length > 0 
+          ? `${popularAgeGroups.join(' and ')} have highest enrollment`
+          : 'Building diverse age group participation',
+        revenueGrowth: revenueGrowth !== 0 
+          ? `${revenueGrowth > 0 ? '+' : ''}${revenueGrowth}% change month-over-month`
+          : 'Establishing revenue baseline',
+        utilizationRate: `${utilizationRate}% average session capacity filled`,
+        totalSessions: allSessions.length,
+        totalPlayers: allPlayers.length,
+        thisMonthRevenue: thisMonthRevenue,
+        lastMonthRevenue: lastMonthRevenue
+      });
+    } catch (error) {
+      console.error("Error fetching business insights:", error);
+      res.status(500).json({ message: "Failed to fetch business insights" });
+    }
+  });
 }

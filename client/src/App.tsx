@@ -18,7 +18,7 @@ import AdminSessionDetail from "@/pages/admin/sessions/[id]";
 import AdminPayments from "@/pages/admin/payments";
 import AdminPlayers from "@/pages/admin/players";
 import AdminParents from "@/pages/admin/parents";
-import AdminAnalyticsWorking from "@/pages/admin/analytics-working";
+import AdminAnalytics from "@/pages/admin/analytics";
 import AdminPendingRegistrations from "@/pages/admin/pending-registrations";
 import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
@@ -79,7 +79,7 @@ function Router() {
                 <Route path="/admin/players" component={AdminPlayers} />
                 <Route path="/admin/parents" component={AdminParents} />
                 <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />
-                <Route path="/admin/analytics" component={AdminAnalyticsWorking} />
+                <Route path="/admin/analytics" component={AdminAnalytics} />
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/admin/integrations" component={AdminIntegrations} />
