@@ -273,19 +273,24 @@ export function setupAdminRoutes(app: any) {
         .from(users);
       const activeParents = activeParentsResult[0]?.count || 0;
 
-      // 10. Session Fill Rate (correct calculation using proper SQL)
+      // 10. Session Fill Rate (correct calculation - average fill rate per session)
       const fillRateResult = await db.execute(sql`
         SELECT 
-          COALESCE(SUM(fs.capacity), 0) as total_capacity,
-          COALESCE(COUNT(s.id), 0) as total_signups
-        FROM futsal_sessions fs
-        LEFT JOIN signups s ON fs.id = s.session_id
+          COALESCE(AVG(session_fill_rate), 0) as average_fill_rate
+        FROM (
+          SELECT 
+            fs.id,
+            fs.capacity,
+            COUNT(s.id) as signups_count,
+            (COUNT(s.id)::numeric / fs.capacity) * 100 as session_fill_rate
+          FROM futsal_sessions fs
+          LEFT JOIN signups s ON fs.id = s.session_id
+          GROUP BY fs.id, fs.capacity
+        ) session_stats
       `);
       
-      const fillRateRow = fillRateResult.rows[0] as { total_capacity: number; total_signups: number };
-      const totalCapacity = Number(fillRateRow.total_capacity);
-      const signupsForFillRate = Number(fillRateRow.total_signups);
-      const fillRate = totalCapacity > 0 ? Math.round((signupsForFillRate / totalCapacity) * 100) : 0;
+      const fillRateRow = fillRateResult.rows[0] as { average_fill_rate: number };
+      const fillRate = Math.round(Number(fillRateRow.average_fill_rate) || 0);
 
       // Calculate growth rates by comparing with previous periods
       
