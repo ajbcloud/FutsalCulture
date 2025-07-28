@@ -257,7 +257,7 @@ export default function Dashboard() {
                           {player.firstName} {player.lastName}
                         </CardTitle>
                         <p className="text-zinc-400">
-                          {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old
+                          {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old • {player.gender}
                         </p>
                       </div>
                       <div className="flex space-x-2">

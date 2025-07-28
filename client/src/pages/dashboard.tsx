@@ -408,7 +408,7 @@ export default function Dashboard() {
                           {player.firstName} {player.lastName}
                         </CardTitle>
                         <p className="text-zinc-400 text-sm sm:text-base">
-                          {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old
+                          {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old • {player.gender}
                         </p>
                       </div>
                       <div className="flex space-x-2 self-start sm:self-center">
