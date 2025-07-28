@@ -22,6 +22,7 @@ import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
 import AdminIntegrations from "@/pages/admin/integrations";
 import AdminDiscountCodes from "@/pages/admin/discount-codes";
+import AdminPayment from "@/pages/admin/payment";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -77,6 +78,7 @@ function Router() {
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/admin/integrations" component={AdminIntegrations} />
+                <Route path="/admin/payment" component={AdminPayment} />
               </>
             )}
           </>

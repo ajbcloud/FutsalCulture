@@ -31,7 +31,7 @@ export default function Calendar() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-[#18181b] text-white">
         {content}
       </div>
     </>

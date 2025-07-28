@@ -2313,4 +2313,21 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.status(500).json({ message: error.message || "Failed to save service billing configuration" });
     }
   });
+
+  // Create service payment endpoint for Stripe integration
+  app.post('/api/admin/create-service-payment', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { amount, description } = req.body;
+      
+      // This would integrate with Stripe when keys are available
+      // For now, return a mock response structure
+      res.json({ 
+        clientSecret: 'mock_client_secret_for_service_payment',
+        message: 'Service payment intent created successfully' 
+      });
+    } catch (error: any) {
+      console.error("Error creating service payment:", error);
+      res.status(500).json({ message: error.message || "Failed to create service payment" });
+    }
+  });
 }

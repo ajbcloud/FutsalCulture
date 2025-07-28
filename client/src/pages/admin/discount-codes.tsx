@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import AdminLayout from "@/components/admin-layout";
 import { format } from "date-fns";
 import { Plus, Trash2, Edit, Copy } from "lucide-react";
 import type { DiscountCode } from "@shared/schema";
@@ -150,7 +151,7 @@ export default function DiscountCodes() {
       maxUses: code.maxUses,
       validFrom: code.validFrom ? format(new Date(code.validFrom), "yyyy-MM-dd'T'HH:mm") : "",
       validUntil: code.validUntil ? format(new Date(code.validUntil), "yyyy-MM-dd'T'HH:mm") : "",
-      isActive: code.isActive,
+      isActive: code.isActive ?? true,
     });
   };
 
@@ -168,7 +169,8 @@ export default function DiscountCodes() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AdminLayout>
+      <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-white">Discount Codes</h1>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -508,6 +510,7 @@ export default function DiscountCodes() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

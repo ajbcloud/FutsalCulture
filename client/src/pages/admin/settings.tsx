@@ -647,6 +647,119 @@ export default function AdminSettings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Stripe Payment Processing Card */}
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <CreditCard className="w-5 h-5 mr-2" />
+                Service Payment
+              </CardTitle>
+              <p className="text-zinc-400 text-sm">
+                Pay for your Futsal Culture platform subscription and services
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current Plan Display */}
+              <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h3 className="text-white font-medium">Current Plan</h3>
+                    <p className="text-zinc-400 text-sm">Professional Platform</p>
+                  </div>
+                  <Badge className="bg-green-900 text-green-300">Active</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-zinc-400">Monthly Fee:</span>
+                    <span className="text-white ml-2 font-medium">$49.99</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Next Billing:</span>
+                    <span className="text-white ml-2">Aug 28, 2025</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Players:</span>
+                    <span className="text-white ml-2">30 / 50</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Sessions:</span>
+                    <span className="text-white ml-2">Unlimited</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-4">
+                <h4 className="text-white font-medium">Payment Method</h4>
+                <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                      VISA
+                    </div>
+                    <div>
+                      <p className="text-white">•••• •••• •••• 4242</p>
+                      <p className="text-zinc-400 text-sm">Expires 12/27</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+                  >
+                    Update
+                  </Button>
+                </div>
+              </div>
+
+              {/* Billing History */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-white font-medium">Recent Invoices</h4>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
+                  >
+                    View All
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { date: "Jul 28, 2025", amount: "$49.99", status: "Paid" },
+                    { date: "Jun 28, 2025", amount: "$49.99", status: "Paid" },
+                    { date: "May 28, 2025", amount: "$49.99", status: "Paid" }
+                  ].map((invoice, index) => (
+                    <div key={index} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+                      <div>
+                        <p className="text-white text-sm">{invoice.date}</p>
+                        <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white text-sm font-medium">{invoice.amount}</p>
+                        <Badge className="bg-green-900 text-green-300 text-xs">{invoice.status}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Link href="/admin/payment">
+                  <Button className="bg-blue-600 hover:bg-blue-700 flex-1">
+                    Make Payment
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+                >
+                  Download Invoice
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-6">
