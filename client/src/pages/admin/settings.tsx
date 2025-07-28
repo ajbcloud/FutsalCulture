@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface SystemSettings {
@@ -21,6 +21,12 @@ interface SystemSettings {
   smsNotifications: boolean;
   sessionCapacityWarning: number;
   paymentReminderMinutes: number;
+  // Business schedule settings
+  weekdayStart: string; // Day of week that starts the business week
+  weekdayEnd: string; // Day of week that ends the business week
+  // Fiscal year settings
+  fiscalYearType: string; // 'calendar' or 'fiscal'
+  fiscalYearStartMonth: number; // 1-12, only used when fiscalYearType is 'fiscal'
 }
 
 interface Integration {
@@ -110,7 +116,11 @@ export default function AdminSettings() {
     emailNotifications: true,
     smsNotifications: false,
     sessionCapacityWarning: 3,
-    paymentReminderMinutes: 60
+    paymentReminderMinutes: 60,
+    weekdayStart: 'monday',
+    weekdayEnd: 'sunday',
+    fiscalYearType: 'calendar',
+    fiscalYearStartMonth: 1
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -421,6 +431,122 @@ export default function AdminSettings() {
                 }
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <Clock className="w-5 h-5 mr-2" />
+              Business Schedule
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="weekdayStart" className="text-zinc-300">Business Week Start</Label>
+              <Select
+                value={settings.weekdayStart}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayStart: value }))}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                  <SelectValue placeholder="Select start day" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="monday" className="text-white hover:bg-zinc-700">Monday</SelectItem>
+                  <SelectItem value="tuesday" className="text-white hover:bg-zinc-700">Tuesday</SelectItem>
+                  <SelectItem value="wednesday" className="text-white hover:bg-zinc-700">Wednesday</SelectItem>
+                  <SelectItem value="thursday" className="text-white hover:bg-zinc-700">Thursday</SelectItem>
+                  <SelectItem value="friday" className="text-white hover:bg-zinc-700">Friday</SelectItem>
+                  <SelectItem value="saturday" className="text-white hover:bg-zinc-700">Saturday</SelectItem>
+                  <SelectItem value="sunday" className="text-white hover:bg-zinc-700">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-zinc-400 mt-1">
+                Define which day starts your business week for reporting and analytics
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="weekdayEnd" className="text-zinc-300">Business Week End</Label>
+              <Select
+                value={settings.weekdayEnd}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayEnd: value }))}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                  <SelectValue placeholder="Select end day" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="monday" className="text-white hover:bg-zinc-700">Monday</SelectItem>
+                  <SelectItem value="tuesday" className="text-white hover:bg-zinc-700">Tuesday</SelectItem>
+                  <SelectItem value="wednesday" className="text-white hover:bg-zinc-700">Wednesday</SelectItem>
+                  <SelectItem value="thursday" className="text-white hover:bg-zinc-700">Thursday</SelectItem>
+                  <SelectItem value="friday" className="text-white hover:bg-zinc-700">Friday</SelectItem>
+                  <SelectItem value="saturday" className="text-white hover:bg-zinc-700">Saturday</SelectItem>
+                  <SelectItem value="sunday" className="text-white hover:bg-zinc-700">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-zinc-400 mt-1">
+                Define which day ends your business week for reporting and analytics
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <Calendar className="w-5 h-5 mr-2" />
+              Fiscal Year Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="fiscalYearType" className="text-zinc-300">Fiscal Year Type</Label>
+              <Select
+                value={settings.fiscalYearType}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearType: value }))}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                  <SelectValue placeholder="Select fiscal year type" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="calendar" className="text-white hover:bg-zinc-700">Calendar Year (Jan 1 - Dec 31)</SelectItem>
+                  <SelectItem value="fiscal" className="text-white hover:bg-zinc-700">Custom Fiscal Year</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-zinc-400 mt-1">
+                Choose between calendar year or custom fiscal year for financial reporting
+              </p>
+            </div>
+            {settings.fiscalYearType === 'fiscal' && (
+              <div>
+                <Label htmlFor="fiscalYearStartMonth" className="text-zinc-300">Fiscal Year Start Month</Label>
+                <Select
+                  value={settings.fiscalYearStartMonth.toString()}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearStartMonth: parseInt(value) }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                    <SelectValue placeholder="Select start month" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="1" className="text-white hover:bg-zinc-700">January</SelectItem>
+                    <SelectItem value="2" className="text-white hover:bg-zinc-700">February</SelectItem>
+                    <SelectItem value="3" className="text-white hover:bg-zinc-700">March</SelectItem>
+                    <SelectItem value="4" className="text-white hover:bg-zinc-700">April</SelectItem>
+                    <SelectItem value="5" className="text-white hover:bg-zinc-700">May</SelectItem>
+                    <SelectItem value="6" className="text-white hover:bg-zinc-700">June</SelectItem>
+                    <SelectItem value="7" className="text-white hover:bg-zinc-700">July</SelectItem>
+                    <SelectItem value="8" className="text-white hover:bg-zinc-700">August</SelectItem>
+                    <SelectItem value="9" className="text-white hover:bg-zinc-700">September</SelectItem>
+                    <SelectItem value="10" className="text-white hover:bg-zinc-700">October</SelectItem>
+                    <SelectItem value="11" className="text-white hover:bg-zinc-700">November</SelectItem>
+                    <SelectItem value="12" className="text-white hover:bg-zinc-700">December</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Month when your fiscal year begins (e.g., July for a July-June fiscal year)
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

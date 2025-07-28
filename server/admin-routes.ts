@@ -1443,7 +1443,13 @@ export function setupAdminRoutes(app: any) {
         emailNotifications: true,
         smsNotifications: false,
         sessionCapacityWarning: 3,
-        paymentReminderMinutes: 240, // 4 hours = 240 minutes
+        paymentReminderMinutes: 60, // Default to 60 minutes
+        // Business schedule settings
+        weekdayStart: "monday", // Business week starts on Monday by default
+        weekdayEnd: "sunday", // Business week ends on Sunday by default
+        // Fiscal year settings
+        fiscalYearType: "calendar", // Default to calendar year
+        fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
         ...settingsMap
       };
       
