@@ -226,11 +226,23 @@ export default function AdminSettings() {
         window.open(data.url, '_blank');
       } else {
         const error = await response.json();
-        toast({
-          title: "Error",
-          description: error.message || "Failed to open billing portal",
-          variant: "destructive",
-        });
+        
+        // Handle Stripe configuration error specifically
+        if (error.setupUrl) {
+          toast({
+            title: "Stripe Configuration Required",
+            description: "Please configure your Stripe billing portal settings first.",
+            variant: "destructive",
+          });
+          // Optionally open the setup URL
+          window.open(error.setupUrl, '_blank');
+        } else {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to open billing portal",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error opening billing portal:', error);

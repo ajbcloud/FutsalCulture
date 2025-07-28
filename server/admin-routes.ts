@@ -2496,9 +2496,21 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         });
 
         res.json({ url: session.url });
-      } catch (stripeError) {
+      } catch (stripeError: any) {
         console.error("Stripe portal error:", stripeError);
-        return res.status(500).json({ message: "Failed to create billing portal session" });
+        
+        // Handle specific Stripe billing portal configuration error
+        if (stripeError.type === 'StripeInvalidRequestError' && 
+            stripeError.message?.includes('No configuration provided')) {
+          return res.status(400).json({ 
+            message: "Stripe billing portal not configured. Please set up your customer portal settings in your Stripe dashboard first.",
+            setupUrl: "https://dashboard.stripe.com/test/settings/billing/portal"
+          });
+        }
+        
+        return res.status(500).json({ 
+          message: "Failed to create billing portal session. Please check your Stripe configuration."
+        });
       }
     } catch (error: any) {
       console.error("Error creating billing portal:", error);
