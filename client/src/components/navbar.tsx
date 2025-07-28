@@ -26,9 +26,14 @@ export default function Navbar() {
                   </Link>
                 )}
                 {isAuthenticated && (
-                  <Link href="/dashboard" className="text-zinc-400 hover:text-white">
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link href="/dashboard" className="text-zinc-400 hover:text-white">
+                      Dashboard
+                    </Link>
+                    <Link href="/calendar" className="text-zinc-400 hover:text-white">
+                      Calendar
+                    </Link>
+                  </>
                 )}
                 <Link href="/help" className="text-zinc-400 hover:text-white">
                   Help
@@ -95,9 +100,14 @@ export default function Navbar() {
                 </Link>
               )}
               {isAuthenticated && (
-                <Link href="/dashboard" className="block px-3 py-2 text-zinc-400 hover:text-white">
-                  Dashboard
-                </Link>
+                <>
+                  <Link href="/dashboard" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                    Dashboard
+                  </Link>
+                  <Link href="/calendar" className="block px-3 py-2 text-zinc-400 hover:text-white">
+                    Calendar
+                  </Link>
+                </>
               )}
               <Link href="/help" className="block px-3 py-2 text-zinc-400 hover:text-white">
                 Help

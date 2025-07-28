@@ -153,6 +153,10 @@ Preferred communication style: Simple, everyday language.
 - **Age-Based Filtering**: Authenticated parents see only sessions eligible for their players' age groups
 - **Unified Dashboard**: Calendar integrated into parent dashboard with today's sessions and player management
 
+### Recent Changes (July 28, 2025)
+- **Calendar Navigation Update**: Moved the Upcoming Sessions Calendar from the dashboard to its own dedicated page in the main navigation. Calendar now appears as a tab between Dashboard and Help for authenticated users. This provides more space for the calendar view and simplifies the dashboard layout.
+- **Discount Codes System**: Implemented comprehensive discount code management system for admin portal. Features include three discount types (full 100% off, percentage-based, and fixed amount), usage tracking with limits, date validity ranges, and admin UI for creating/editing/deleting codes. Database schema includes discount_codes table and tracking fields on signups.
+
 ### Recent Changes (July 27, 2025)
 - **Dashboard Growth Metrics Fix**: Fixed growth percentage calculations to show actual comparative data instead of hardcoded values. Revenue growth compares this month vs last month (-6%), player growth shows new players this month (0%), signup growth shows 100% increase, sessions growth compares this week vs last (0%), and YTD growth compares to last year (100%). Added proper handling for edge cases like NaN and Infinity values.
 - **Click-to-Filter Navigation Fix**: Fixed the recent activity section click-through functionality. Clicking on parent or player names now properly navigates to the respective admin pages with search filters applied. Updated both Parents and Players pages to re-run filtering when URL parameters change. Removed problematic logic that prevented client-side filtering when URL parameters were present, removed the "Filtered by" indicator, and resolved competing filter mechanisms that were preventing results from displaying correctly.

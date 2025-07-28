@@ -9,6 +9,7 @@ import Landing from "@/pages/landing";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
+import Calendar from "@/pages/calendar";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminSessions from "@/pages/admin/sessions/index";
 import AdminSessionDetail from "@/pages/admin/sessions/[id]";
@@ -55,6 +56,7 @@ function Router() {
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/dashboard" component={Dashboard} />
+            <Route path="/calendar" component={Calendar} />
             <Route path="/profile" component={Profile} />
             <Route path="/multi-checkout" component={MultiCheckout} />
             <Route path="/player-invite/:token" component={PlayerInvite} />

@@ -10,7 +10,7 @@ import PlayerPortalControls from "@/components/player-portal-controls";
 import PlayerForm from "@/components/player-form";
 import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
-import SessionCalendar from "@/components/session-calendar";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -495,21 +495,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Calendar Section */}
-      <section className="py-16 bg-[#18181b]" id="calendar">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Upcoming Sessions Calendar</h2>
-            <p className="text-zinc-400">View your personalized schedule based on your players' age groups</p>
-          </div>
-          <SessionCalendar 
-            showBookingButtons={true}
-            onSessionClick={(session) => {
-              window.location.href = `/sessions/${session.id}`;
-            }}
-          />
-        </div>
-      </section>
+
 
     </div>
   );
