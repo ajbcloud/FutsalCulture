@@ -38,23 +38,7 @@ interface Integration {
   updatedAt: string;
 }
 
-interface ServiceBilling {
-  id?: string;
-  organizationName: string;
-  contactEmail: string;
-  billingEmail: string;
-  phoneNumber: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  taxId: string;
-  billingFrequency: string;
-  paymentMethod: string;
-  preferredInvoiceDay: number;
-  notes: string;
-}
+
 
 const getTimezones = () => {
   const priorityTimezones = [
@@ -116,32 +100,14 @@ export default function AdminSettings() {
     fiscalYearStartMonth: 1
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [serviceBilling, setServiceBilling] = useState<ServiceBilling>({
-    organizationName: '',
-    contactEmail: '',
-    billingEmail: '',
-    phoneNumber: '',
-    address: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: 'United States',
-    taxId: '',
-    billingFrequency: 'monthly',
-    paymentMethod: 'invoice',
-    preferredInvoiceDay: 1,
-    notes: ''
-  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingBilling, setSavingBilling] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
     fetchIntegrations();
-    fetchServiceBilling();
   }, []);
 
   const fetchSettings = async () => {
@@ -179,49 +145,7 @@ export default function AdminSettings() {
     }
   };
 
-  const fetchServiceBilling = async () => {
-    try {
-      const response = await fetch('/api/admin/service-billing');
-      if (!response.ok) throw new Error('Failed to fetch service billing');
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-        setServiceBilling(data);
-      }
-    } catch (error) {
-      console.error('Error fetching service billing:', error);
-    }
-  };
 
-  const handleSaveBilling = async () => {
-    setSavingBilling(true);
-    try {
-      const response = await fetch('/api/admin/service-billing', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(serviceBilling),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save service billing configuration');
-      }
-
-      toast({
-        title: "Success",
-        description: "Service billing configuration saved successfully",
-      });
-    } catch (error) {
-      console.error('Error saving service billing:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save service billing configuration",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingBilling(false);
-    }
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -530,124 +454,6 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <CreditCard className="w-5 h-5 mr-2" />
-                Service Billing Configuration
-              </CardTitle>
-              <p className="text-zinc-400 text-sm">
-                Configure payment information for platform service billing and invoicing
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="organizationName" className="text-zinc-300">Organization Name *</Label>
-                  <Input
-                    id="organizationName"
-                    value={serviceBilling.organizationName}
-                    onChange={(e) => setServiceBilling(prev => ({ ...prev, organizationName: e.target.value }))}
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    placeholder="Your organization name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contactEmail" className="text-zinc-300">Contact Email *</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={serviceBilling.contactEmail}
-                    onChange={(e) => setServiceBilling(prev => ({ ...prev, contactEmail: e.target.value }))}
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    placeholder="Primary contact email"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="billingEmail" className="text-zinc-300">Billing Email *</Label>
-                  <Input
-                    id="billingEmail"
-                    type="email"
-                    value={serviceBilling.billingEmail}
-                    onChange={(e) => setServiceBilling(prev => ({ ...prev, billingEmail: e.target.value }))}
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    placeholder="Email for invoices and billing"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber" className="text-zinc-300">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    value={serviceBilling.phoneNumber}
-                    onChange={(e) => setServiceBilling(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                    className="bg-zinc-800 border-zinc-700 text-white"
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="billingFrequency" className="text-zinc-300">Billing Frequency</Label>
-                  <Select
-                    value={serviceBilling.billingFrequency}
-                    onValueChange={(value) => setServiceBilling(prev => ({ ...prev, billingFrequency: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700">
-                      <SelectItem value="monthly" className="text-white hover:bg-zinc-700">Monthly</SelectItem>
-                      <SelectItem value="quarterly" className="text-white hover:bg-zinc-700">Quarterly</SelectItem>
-                      <SelectItem value="annually" className="text-white hover:bg-zinc-700">Annually</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="paymentMethod" className="text-zinc-300">Payment Method</Label>
-                  <Select
-                    value={serviceBilling.paymentMethod}
-                    onValueChange={(value) => setServiceBilling(prev => ({ ...prev, paymentMethod: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700">
-                      <SelectItem value="invoice" className="text-white hover:bg-zinc-700">Invoice (Net 30)</SelectItem>
-                      <SelectItem value="credit_card" className="text-white hover:bg-zinc-700">Credit Card</SelectItem>
-                      <SelectItem value="ach" className="text-white hover:bg-zinc-700">ACH/Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes" className="text-zinc-300">Special Instructions</Label>
-                <textarea
-                  id="notes"
-                  value={serviceBilling.notes}
-                  onChange={(e) => setServiceBilling(prev => ({ ...prev, notes: e.target.value }))}
-                  className="w-full bg-zinc-800 border-zinc-700 text-white rounded-md p-3 mt-1"
-                  placeholder="Any special billing instructions..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button 
-                  onClick={handleSaveBilling}
-                  disabled={savingBilling || !serviceBilling.organizationName || !serviceBilling.contactEmail || !serviceBilling.billingEmail}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {savingBilling ? 'Saving...' : 'Save Billing Configuration'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Stripe Payment Processing Card */}
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
