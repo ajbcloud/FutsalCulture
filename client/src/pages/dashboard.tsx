@@ -50,7 +50,14 @@ export default function Dashboard() {
   });
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery<FutsalSession[]>({
-    queryKey: ["/api/sessions"],
+    queryKey: ["/api/sessions", "includePast"],
+    queryFn: async () => {
+      const response = await fetch("/api/sessions?includePast=true");
+      if (!response.ok) {
+        throw new Error("Failed to fetch sessions");
+      }
+      return response.json();
+    },
     enabled: isAuthenticated,
   });
 
@@ -226,18 +233,7 @@ export default function Dashboard() {
     }
     
     // If parent has players, only show sessions eligible for their players
-    const isEligible = players.some(player => {
-      const eligible = isSessionEligibleForPlayer(session, player);
-      console.log(`Session ${session.title} eligible for ${player.firstName}?`, eligible, {
-        sessionAgeGroups: session.ageGroups,
-        sessionGenders: session.genders,
-        playerAge: calculateAgeGroup(player.birthYear),
-        playerGender: player.gender
-      });
-      return eligible;
-    });
-    
-    return isEligible;
+    return players.some(player => isSessionEligibleForPlayer(session, player));
   });
 
   // Build set of session IDs that the user has already reserved today

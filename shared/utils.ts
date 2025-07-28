@@ -8,8 +8,15 @@ export function calculateAgeGroup(birthYear: number): string {
 
 export function isSessionEligibleForPlayer(session: any, player: any): boolean {
   const playerAgeGroup = calculateAgeGroup(player.birthYear);
-  const ageMatch = session.ageGroup === playerAgeGroup;
-  const genderMatch = session.gender === player.gender;
+  
+  // Check if player's age group is in the session's age groups array
+  const ageMatch = session.ageGroups?.includes(playerAgeGroup) || session.ageGroup === playerAgeGroup;
+  
+  // Check if player's gender is in the session's genders array or if session accepts "mixed"
+  const genderMatch = session.genders?.includes(player.gender) || 
+                     session.genders?.includes('mixed') || 
+                     session.gender === player.gender;
+                     
   return ageMatch && genderMatch;
 }
 

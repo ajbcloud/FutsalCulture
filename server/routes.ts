@@ -47,7 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session routes
   app.get('/api/sessions', async (req: any, res) => {
     try {
-      const { ageGroup, location, status, gender } = req.query;
+      const { ageGroup, location, status, gender, includePast } = req.query;
       
       // Get tenant ID from authenticated user, or allow all sessions for non-authenticated users
       let tenantId;
@@ -62,13 +62,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: status as string,
         gender: gender as string,
         tenantId: tenantId || undefined,
+        includePast: includePast === 'true',
       });
       
       console.log('Sessions API called:', { 
         tenantId, 
         sessionsCount: sessions.length, 
-        filters: { ageGroup, location, status, gender },
-        futureSessions: sessions.filter(s => new Date(s.startTime) > new Date()).length
+        filters: { ageGroup, location, status, gender, includePast },
+        futureSessions: sessions.filter(s => new Date(s.startTime) > new Date()).length,
+        todaySessions: sessions.filter(s => new Date(s.startTime).toDateString() === new Date().toDateString()).length
       });
       
       if (sessions.length > 0) {
