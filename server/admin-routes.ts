@@ -4,6 +4,7 @@ import { db } from "./db";
 import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
+import Stripe from "stripe";
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -2319,10 +2320,26 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     try {
       const { amount, description } = req.body;
       
-      // This would integrate with Stripe when keys are available
-      // For now, return a mock response structure
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(400).json({ 
+          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." 
+        });
+      }
+
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount), // Amount should already be in cents
+        currency: "usd",
+        description: description || "Futsal Culture Platform Service Payment",
+        metadata: {
+          service: "platform_subscription",
+          adminId: (req as any).currentUser?.id || "unknown"
+        }
+      });
+      
       res.json({ 
-        clientSecret: 'mock_client_secret_for_service_payment',
+        clientSecret: paymentIntent.client_secret,
         message: 'Service payment intent created successfully' 
       });
     } catch (error: any) {
