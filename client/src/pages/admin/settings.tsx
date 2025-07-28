@@ -40,6 +40,39 @@ interface Integration {
   updatedAt: string;
 }
 
+interface SubscriptionInfo {
+  subscription: {
+    id: string;
+    status: string;
+    current_period_start: number;
+    current_period_end: number;
+    plan: {
+      id: string;
+      nickname: string;
+      amount: number;
+      currency: string;
+      interval: string;
+      product: {
+        id: string;
+        name: string;
+        description: string;
+      };
+    };
+    customer: {
+      id: string;
+      email: string;
+    };
+  };
+  invoices: Array<{
+    id: string;
+    status: string;
+    amount_paid: number;
+    created: number;
+    period_start: number;
+    period_end: number;
+  }>;
+}
+
 
 
 const getTimezones = () => {
@@ -103,8 +136,10 @@ export default function AdminSettings() {
     fiscalYearStartMonth: 1
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
 
   const { toast } = useToast();
 
@@ -122,6 +157,7 @@ export default function AdminSettings() {
 
     fetchSettings();
     fetchIntegrations();
+    fetchSubscriptionInfo();
   }, [toast]);
 
   const fetchSettings = async () => {
@@ -156,6 +192,53 @@ export default function AdminSettings() {
       setIntegrations(data);
     } catch (error) {
       console.error('Error fetching integrations:', error);
+    }
+  };
+
+  const fetchSubscriptionInfo = async () => {
+    setLoadingSubscription(true);
+    try {
+      const response = await fetch('/api/admin/subscription-info');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionInfo(data);
+      } else {
+        console.error('Failed to fetch subscription info');
+      }
+    } catch (error) {
+      console.error('Error fetching subscription info:', error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    try {
+      const response = await fetch('/api/admin/create-billing-portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        window.open(data.url, '_blank');
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.message || "Failed to open billing portal",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error opening billing portal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open billing portal",
+        variant: "destructive",
+      });
     }
   };
 
@@ -572,104 +655,109 @@ export default function AdminSettings() {
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Current Plan Display */}
-              <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <h3 className="text-white font-medium">Current Plan</h3>
-                    <p className="text-zinc-400 text-sm">Professional Platform</p>
-                  </div>
-                  <Badge className="bg-green-900 text-green-300">Active</Badge>
+              {loadingSubscription ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-zinc-400">Loading subscription info...</div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-zinc-400">Monthly Fee:</span>
-                    <span className="text-white ml-2 font-medium">$49.99</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Next Billing:</span>
-                    <span className="text-white ml-2">Aug 28, 2025</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Players:</span>
-                    <span className="text-white ml-2">30 / 50</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Sessions:</span>
-                    <span className="text-white ml-2">Unlimited</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="space-y-4">
-                <h4 className="text-white font-medium">Payment Method</h4>
-                <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                      VISA
-                    </div>
-                    <div>
-                      <p className="text-white">•••• •••• •••• 4242</p>
-                      <p className="text-zinc-400 text-sm">Expires 12/27</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
-                  >
-                    Update
-                  </Button>
-                </div>
-              </div>
-
-              {/* Billing History */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-white font-medium">Recent Invoices</h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
-                  >
-                    View All
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { date: "Jul 28, 2025", amount: "$49.99", status: "Paid" },
-                    { date: "Jun 28, 2025", amount: "$49.99", status: "Paid" },
-                    { date: "May 28, 2025", amount: "$49.99", status: "Paid" }
-                  ].map((invoice, index) => (
-                    <div key={index} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+              ) : subscriptionInfo ? (
+                <>
+                  {/* Current Plan Display */}
+                  <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                    <div className="flex justify-between items-center mb-3">
                       <div>
-                        <p className="text-white text-sm">{invoice.date}</p>
-                        <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                        <h3 className="text-white font-medium">Current Plan</h3>
+                        <p className="text-zinc-400 text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-white text-sm font-medium">{invoice.amount}</p>
-                        <Badge className="bg-green-900 text-green-300 text-xs">{invoice.status}</Badge>
+                      <Badge className={subscriptionInfo.subscription.status === 'active' ? "bg-green-900 text-green-300" : "bg-yellow-900 text-yellow-300"}>
+                        {subscriptionInfo.subscription.status === 'active' ? 'Active' : subscriptionInfo.subscription.status}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-zinc-400">Monthly Fee:</span>
+                        <span className="text-white ml-2 font-medium">
+                          ${(subscriptionInfo.subscription.plan.amount / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Next Billing:</span>
+                        <span className="text-white ml-2">
+                          {new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Customer:</span>
+                        <span className="text-white ml-2">{subscriptionInfo.subscription.customer.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-400">Interval:</span>
+                        <span className="text-white ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Link href="/admin/payment">
-                  <Button className="bg-blue-600 hover:bg-blue-700 flex-1">
-                    Make Payment
-                  </Button>
-                </Link>
-                <Button 
-                  variant="outline" 
-                  className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
-                >
-                  Download Invoice
-                </Button>
-              </div>
+                  {/* Billing History */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-white font-medium">Recent Invoices</h4>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
+                        onClick={openBillingPortal}
+                      >
+                        View All
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {subscriptionInfo.invoices.map((invoice) => (
+                        <div key={invoice.id} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+                          <div>
+                            <p className="text-white text-sm">
+                              {new Date(invoice.created * 1000).toLocaleDateString()}
+                            </p>
+                            <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-white text-sm font-medium">
+                              ${(invoice.amount_paid / 100).toFixed(2)}
+                            </p>
+                            <Badge className="bg-green-900 text-green-300 text-xs capitalize">
+                              {invoice.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                      onClick={openBillingPortal}
+                    >
+                      Manage Subscription
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+                      onClick={openBillingPortal}
+                    >
+                      Billing Portal
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-zinc-400 mb-4">No subscription information available</p>
+                  <Link href="/admin/payment">
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      Set Up Billing
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
