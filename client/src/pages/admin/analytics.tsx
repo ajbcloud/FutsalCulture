@@ -17,6 +17,11 @@ interface DashboardMetrics {
   pendingPayments: number;
   activeParents: number;
   fillRate: number;
+  revenueGrowth: number;
+  playersGrowth: number;
+  registrationsGrowth: number;
+  sessionsGrowth: number;
+  ytdGrowth: number;
 }
 
 export default function AdminAnalytics() {
@@ -49,7 +54,7 @@ export default function AdminAnalytics() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Total Revenue"
-              value={`$${((metrics?.totalRevenue || 0) / 100).toFixed(2)}`}
+              value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
               tooltip="Sum of all payments received from session bookings across all time periods."
               icon={DollarSign}
               iconColor="text-green-500"
@@ -109,6 +114,37 @@ export default function AdminAnalytics() {
             />
           </div>
 
+          {/* Dynamic Business Insights */}
+          <div className="bg-zinc-900 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-white mb-4">Business Insights</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h3 className="text-white font-medium mb-2">Peak Performance</h3>
+                <p className="text-zinc-400">
+                  {(metrics?.fillRate || 0) >= 80 
+                    ? "Strong session utilization at " + (metrics?.fillRate || 0) + "% capacity" 
+                    : "Room for growth at " + (metrics?.fillRate || 0) + "% session capacity"}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-white font-medium mb-2">Revenue Trends</h3>
+                <p className="text-zinc-400">
+                  {metrics?.monthlyRevenue && (metrics.monthlyRevenue / 100) > 1000
+                    ? `Strong monthly performance at $${((metrics.monthlyRevenue || 0) / 100).toFixed(0)}`
+                    : `Growing revenue base: $${((metrics.monthlyRevenue || 0) / 100).toFixed(0)} this month`}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-white font-medium mb-2">Player Engagement</h3>
+                <p className="text-zinc-400">
+                  {metrics?.totalPlayers && metrics.totalPlayers >= 25
+                    ? `Healthy player base with ${metrics.totalPlayers} registered`
+                    : `Building community with ${metrics?.totalPlayers || 0} players`}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Data Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="bg-zinc-900 border-zinc-700">
@@ -150,8 +186,8 @@ export default function AdminAnalytics() {
                   <div className="flex items-center justify-between">
                     <span className="text-zinc-400">Avg Revenue per Player:</span>
                     <span className="text-white font-semibold">
-                      {metrics?.totalRevenue && metrics?.totalPlayers 
-                        ? `$${((metrics.totalRevenue / metrics.totalPlayers) / 100).toFixed(2)}`
+                      {metrics?.ytdRevenue && metrics?.totalPlayers 
+                        ? `$${((metrics.ytdRevenue / metrics.totalPlayers) / 100).toFixed(2)}`
                         : '$0.00'}
                     </span>
                   </div>
@@ -207,24 +243,7 @@ export default function AdminAnalytics() {
         </Card>
       </div>
 
-      {/* Additional Insights */}
-      <div className="bg-zinc-900 p-6 rounded-lg">
-        <h2 className="text-lg font-semibold text-white mb-4">Business Insights</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h3 className="text-white font-medium mb-2">Peak Hours</h3>
-            <p className="text-zinc-400">Most bookings occur between 6-8 PM</p>
-          </div>
-          <div>
-            <h3 className="text-white font-medium mb-2">Popular Age Groups</h3>
-            <p className="text-zinc-400">U12 and U14 have highest enrollment</p>
-          </div>
-          <div>
-            <h3 className="text-white font-medium mb-2">Revenue Growth</h3>
-            <p className="text-zinc-400">15% increase month-over-month</p>
-          </div>
-        </div>
-      </div>
+
     </AdminLayout>
   );
 }

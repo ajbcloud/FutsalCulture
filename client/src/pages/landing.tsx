@@ -77,7 +77,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="col-span-2">
-              <h3 className="text-2xl font-bold text-futsal-400 mb-4">{businessName}</h3>
+              <h3 className="text-2xl font-bold text-futsal-400 mb-4">
+                <BusinessBranding variant="default" textClassName="text-futsal-400" />
+              </h3>
               <p className="text-gray-300 mb-4">
                 Elite futsal training for young athletes. Professional coaching with flexible scheduling.
               </p>
@@ -100,7 +102,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 {businessName}. All rights reserved.</p>
+            <p>&copy; 2024 <BusinessBranding variant="small" textClassName="inline text-gray-400" />. All rights reserved.</p>
           </div>
         </div>
       </footer>
