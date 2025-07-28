@@ -300,7 +300,7 @@ export default function Dashboard() {
                 }
               }}
             >
-              View Schedule
+              View Full Schedule
             </Button>
           </div>
         </div>

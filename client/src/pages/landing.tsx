@@ -22,7 +22,7 @@ export default function Landing() {
                 <a href="/api/login">Start Reserving</a>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-green-600">
-                <a href="/sessions#calendar">View Schedule</a>
+                <a href="/sessions#calendar">View Full Schedule</a>
               </Button>
             </div>
           </div>

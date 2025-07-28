@@ -83,7 +83,7 @@ export default function Home() {
                 }
               }}
             >
-              View Schedule
+              View Full Schedule
             </Button>
           </div>
         </div>
