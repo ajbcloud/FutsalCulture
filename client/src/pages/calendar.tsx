@@ -2,69 +2,81 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import SessionCalendar from "@/components/session-calendar";
 import Navbar from "@/components/navbar";
+import MultiSelectFilter from "@/components/multi-select-filter";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Calendar() {
   const [location] = useLocation();
   
-  // Filter state - separate current values from applied values
-  const [currentAgeFilter, setCurrentAgeFilter] = useState<string>("all");
-  const [currentLocationFilter, setCurrentLocationFilter] = useState<string>("all");
-  const [currentGenderFilter, setCurrentGenderFilter] = useState<string>("all");
+  // Multi-select filter state
+  const [selectedAges, setSelectedAges] = useState<string[]>([]);
+  const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   
-  // Applied filters (used for calendar)
-  const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
-  const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
-  const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
-  
-  // Multi-player filter state (for when parent has multiple players)
-  const [multiPlayerAges, setMultiPlayerAges] = useState<string[]>([]);
-  const [multiPlayerGenders, setMultiPlayerGenders] = useState<string[]>([]);
+  // Applied filters (used for filtering)
+  const [appliedAges, setAppliedAges] = useState<string[]>([]);
+  const [appliedGenders, setAppliedGenders] = useState<string[]>([]);
+  const [appliedLocations, setAppliedLocations] = useState<string[]>([]);
 
   // Apply filters function
   const applyFilters = () => {
-    setAppliedAgeFilter(currentAgeFilter);
-    setAppliedLocationFilter(currentLocationFilter);
-    setAppliedGenderFilter(currentGenderFilter);
+    setAppliedAges(selectedAges);
+    setAppliedGenders(selectedGenders);
+    setAppliedLocations(selectedLocations);
   };
 
-  // Check for URL parameters to auto-apply filters (same logic as sessions page)
+  // Check for URL parameters to auto-apply filters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const ageParam = urlParams.get('age');
     const genderParam = urlParams.get('gender');
     const locationParam = urlParams.get('location');
     
-    // Handle multi-player filters (comma-separated values)
+    // Handle multi-player filters (comma-separated values from dashboard)
     const agesParam = urlParams.get('ages');
     const gendersParam = urlParams.get('genders');
+    const locationsParam = urlParams.get('locations');
     
-    if (ageParam) {
-      setCurrentAgeFilter(ageParam);
-      setAppliedAgeFilter(ageParam);
-    }
-    if (genderParam) {
-      setCurrentGenderFilter(genderParam);
-      setAppliedGenderFilter(genderParam);
-    }
-    if (locationParam) {
-      setCurrentLocationFilter(locationParam);
-      setAppliedLocationFilter(locationParam);
-    }
+    // Single value filters
+    const initialAges: string[] = [];
+    const initialGenders: string[] = [];
+    const initialLocations: string[] = [];
     
-    // For multiple players, store the multi-select values
+    if (ageParam) initialAges.push(ageParam);
+    if (genderParam) initialGenders.push(genderParam);
+    if (locationParam) initialLocations.push(locationParam);
+    
+    // Multi-value filters (from dashboard with multiple players)
     if (agesParam) {
-      setMultiPlayerAges(agesParam.split(','));
+      initialAges.push(...agesParam.split(','));
     }
     if (gendersParam) {
-      setMultiPlayerGenders(gendersParam.split(','));
+      initialGenders.push(...gendersParam.split(','));
     }
+    if (locationsParam) {
+      initialLocations.push(...locationsParam.split(','));
+    }
+    
+    // Remove duplicates and set filters
+    const uniqueAges = Array.from(new Set(initialAges));
+    const uniqueGenders = Array.from(new Set(initialGenders));
+    const uniqueLocations = Array.from(new Set(initialLocations));
+    
+    setSelectedAges(uniqueAges);
+    setSelectedGenders(uniqueGenders);
+    setSelectedLocations(uniqueLocations);
+    setAppliedAges(uniqueAges);
+    setAppliedGenders(uniqueGenders);
+    setAppliedLocations(uniqueLocations);
   }, []);
 
   // Get filter options from dedicated endpoint
-  const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery({
+  const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery<{
+    ageGroups: string[];
+    locations: string[];
+    genders: string[];
+  }>({
     queryKey: ["/api/session-filters"],
   });
 
@@ -96,60 +108,44 @@ export default function Calendar() {
               
               {/* Filter Controls */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 sm:gap-0">
-                <Select value={currentGenderFilter} onValueChange={setCurrentGenderFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
-                    <SelectValue placeholder="All Genders" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Genders</SelectItem>
-                    {sortedGenders.map(gender => (
-                      <SelectItem key={gender} value={gender}>
-                        {gender === "boys" ? "Boys" : gender === "girls" ? "Girls" : gender === "mixed" ? "Mixed" : gender}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Age Groups"
+                  options={sortedAgeGroups}
+                  selectedValues={selectedAges}
+                  onSelectionChange={setSelectedAges}
+                  placeholder="All Ages"
+                />
                 
-                <Select value={currentAgeFilter} onValueChange={setCurrentAgeFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
-                    <SelectValue placeholder="All Ages" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Ages</SelectItem>
-                    {sortedAgeGroups.map(age => (
-                      <SelectItem key={age} value={age}>{age}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Genders"
+                  options={sortedGenders}
+                  selectedValues={selectedGenders}
+                  onSelectionChange={setSelectedGenders}
+                  placeholder="All Genders"
+                />
                 
-                <Select value={currentLocationFilter} onValueChange={setCurrentLocationFilter}>
-                  <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-48">
-                    <SelectValue placeholder="All Locations" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {sortedLocations.map(location => (
-                      <SelectItem key={location} value={location}>{location}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  title="Locations"
+                  options={sortedLocations}
+                  selectedValues={selectedLocations}
+                  onSelectionChange={setSelectedLocations}
+                  placeholder="All Locations"
+                />
                 
                 <Button 
                   onClick={applyFilters}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                 >
-                  Update
+                  Apply Filters
                 </Button>
               </div>
             </div>
           </div>
 
           <SessionCalendar 
-            ageGroupFilter={appliedAgeFilter === "all" ? undefined : appliedAgeFilter}
-            genderFilter={appliedGenderFilter === "all" ? undefined : appliedGenderFilter}
-            locationFilter={appliedLocationFilter === "all" ? undefined : appliedLocationFilter}
-            multiPlayerAges={multiPlayerAges}
-            multiPlayerGenders={multiPlayerGenders}
+            multiPlayerAges={appliedAges}
+            multiPlayerGenders={appliedGenders}
+            locationFilter={appliedLocations.length === 1 ? appliedLocations[0] : undefined}
             showBookingButtons={true}
             onSessionClick={handleSessionClick}
           />
