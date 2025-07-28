@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [localReservedSessions, setLocalReservedSessions] = useState<Set<string>>(new Set());
+  const [, setLocation] = useLocation();
 
   // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
@@ -283,7 +284,13 @@ export default function Dashboard() {
               variant="outline" 
               className="w-full h-12 sm:w-auto sm:h-auto"
               onClick={() => {
-                document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' });
+                const calendarSection = document.getElementById('calendar');
+                if (calendarSection) {
+                  calendarSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  // Navigate to calendar page using proper routing
+                  setLocation('/calendar');
+                }
               }}
             >
               View Schedule

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { FutsalSession } from "@shared/schema";
 export default function Home() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -77,8 +78,8 @@ export default function Home() {
                 if (calendarSection) {
                   calendarSection.scrollIntoView({ behavior: 'smooth' });
                 } else {
-                  // If calendar not found on current page, navigate to calendar page
-                  window.location.href = '/calendar';
+                  // Navigate to calendar page using proper routing
+                  setLocation('/calendar');
                 }
               }}
             >
