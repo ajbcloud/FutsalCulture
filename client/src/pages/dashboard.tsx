@@ -296,26 +296,8 @@ export default function Dashboard() {
               variant="outline" 
               className="w-full h-12 sm:w-auto sm:h-auto"
               onClick={() => {
-                if (players.length > 0) {
-                  // Build URL with filters based on players' eligibility for multi-player filtering
-                  const playerAgeGroups = Array.from(new Set(players.map(player => calculateAgeGroup(player.birthYear))));
-                  const playerGenders = Array.from(new Set(players.map(player => player.gender)));
-                  
-                  // For multiple players, pass all their age groups and genders as comma-separated values
-                  const params = new URLSearchParams();
-                  if (playerAgeGroups.length > 0) {
-                    params.set('ages', playerAgeGroups.join(','));
-                  }
-                  if (playerGenders.length > 0) {
-                    params.set('genders', playerGenders.join(','));
-                  }
-                  
-                  const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
-                  setLocation(url);
-                } else {
-                  // If no players, go to sessions page without filters
-                  setLocation('/sessions');
-                }
+                // View Full Schedule - always go without filters to show everything
+                setLocation('/sessions');
               }}
             >
               View Full Schedule
@@ -373,8 +355,11 @@ export default function Dashboard() {
                         params.set('genders', playerGenders.join(','));
                       }
                       
+                      // Add eligibleOnly flag to indicate this came from the eligible sessions button
+                      params.set('eligibleOnly', 'true');
+                      
                       const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
-                      window.location.href = url;
+                      setLocation(url);
                     }}
                   >
                     View All Eligible Sessions

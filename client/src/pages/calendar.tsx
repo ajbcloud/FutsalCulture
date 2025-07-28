@@ -26,24 +26,77 @@ export default function Calendar() {
     setAppliedLocations(selectedLocations);
   };
 
-  // Clear filters when navigating from dashboard "View Full Schedule"
+  // Handle different navigation scenarios from dashboard
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const isEligibleOnly = urlParams.get('eligibleOnly') === 'true';
     
-    // If there are URL parameters (from dashboard navigation), clear them
-    // This ensures users start with empty filters and can choose their own
-    if (urlParams.toString()) {
-      // Clear URL parameters without reloading the page
-      window.history.replaceState({}, document.title, window.location.pathname);
+    if (isEligibleOnly) {
+      // Coming from "View All Eligible Sessions" - apply the filters  
+      const ageParam = urlParams.get('age');
+      const genderParam = urlParams.get('gender');
+      const locationParam = urlParams.get('location');
+      
+      // Handle multi-player filters (comma-separated values from dashboard)
+      const agesParam = urlParams.get('ages');
+      const gendersParam = urlParams.get('genders');
+      const locationsParam = urlParams.get('locations');
+      
+      // Single value filters
+      const initialAges: string[] = [];
+      const initialGenders: string[] = [];
+      const initialLocations: string[] = [];
+      
+      if (ageParam) initialAges.push(ageParam);
+      if (genderParam) initialGenders.push(genderParam);
+      if (locationParam) initialLocations.push(locationParam);
+      
+      // Multi-value filters (from dashboard with multiple players)
+      if (agesParam) {
+        initialAges.push(...agesParam.split(','));
+      }
+      if (gendersParam) {
+        initialGenders.push(...gendersParam.split(','));
+      }
+      if (locationsParam) {
+        initialLocations.push(...locationsParam.split(','));
+      }
+      
+      // Remove duplicates and set filters
+      const uniqueAges = Array.from(new Set(initialAges));
+      const uniqueGenders = Array.from(new Set(initialGenders));
+      const uniqueLocations = Array.from(new Set(initialLocations));
+      
+      setSelectedAges(uniqueAges);
+      setSelectedGenders(uniqueGenders);
+      setSelectedLocations(uniqueLocations);
+      setAppliedAges(uniqueAges);
+      setAppliedGenders(uniqueGenders);
+      setAppliedLocations(uniqueLocations);
+      
+      // Clean up URL by removing the eligibleOnly flag but keeping the filters visible
+      const cleanParams = new URLSearchParams();
+      if (uniqueAges.length > 0) cleanParams.set('ages', uniqueAges.join(','));
+      if (uniqueGenders.length > 0) cleanParams.set('genders', uniqueGenders.join(','));
+      if (uniqueLocations.length > 0) cleanParams.set('locations', uniqueLocations.join(','));
+      
+      const newUrl = `/calendar${cleanParams.toString() ? `?${cleanParams.toString()}` : ''}`;
+      window.history.replaceState({}, document.title, newUrl);
+    } else {
+      // Coming from "View Full Schedule" or direct navigation - clear all filters
+      if (urlParams.toString()) {
+        // Clear URL parameters without reloading the page
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      
+      // Start with empty filters
+      setSelectedAges([]);
+      setSelectedGenders([]);
+      setSelectedLocations([]);
+      setAppliedAges([]);
+      setAppliedGenders([]);
+      setAppliedLocations([]);
     }
-    
-    // Always start with empty filters on calendar page
-    setSelectedAges([]);
-    setSelectedGenders([]);
-    setSelectedLocations([]);
-    setAppliedAges([]);
-    setAppliedGenders([]);
-    setAppliedLocations([]);
   }, []);
 
   // Get filter options from dedicated endpoint
