@@ -8,6 +8,7 @@ import {
   notificationPreferences,
   systemSettings,
   serviceBilling,
+  discountCodes,
   type User,
   type UpsertUser,
   type UpdateUser,
@@ -25,6 +26,8 @@ import {
   type InsertNotificationPreferences,
   type ServiceBillingInsert,
   type ServiceBillingSelect,
+  type DiscountCode,
+  type InsertDiscountCode,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql } from "drizzle-orm";
@@ -84,6 +87,17 @@ export interface IStorage {
   // Service billing operations
   getServiceBilling(): Promise<ServiceBillingSelect | undefined>;
   upsertServiceBilling(billing: ServiceBillingInsert): Promise<ServiceBillingSelect>;
+  
+  // Discount code operations
+  getDiscountCodes(): Promise<DiscountCode[]>;
+  getDiscountCode(code: string): Promise<DiscountCode | undefined>;
+  createDiscountCode(discountCode: InsertDiscountCode): Promise<DiscountCode>;
+  updateDiscountCode(id: string, discountCode: Partial<InsertDiscountCode>): Promise<DiscountCode>;
+  deleteDiscountCode(id: string): Promise<void>;
+  incrementDiscountCodeUsage(id: string): Promise<void>;
+  
+  // Access code validation
+  validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -482,6 +496,67 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+  
+  // Discount code operations
+  async getDiscountCodes(): Promise<DiscountCode[]> {
+    return await db.select().from(discountCodes).orderBy(desc(discountCodes.createdAt));
+  }
+
+  async getDiscountCode(code: string): Promise<DiscountCode | undefined> {
+    const [discount] = await db
+      .select()
+      .from(discountCodes)
+      .where(eq(discountCodes.code, code));
+    return discount;
+  }
+
+  async createDiscountCode(discountCode: InsertDiscountCode): Promise<DiscountCode> {
+    const [created] = await db
+      .insert(discountCodes)
+      .values(discountCode)
+      .returning();
+    return created;
+  }
+
+  async updateDiscountCode(id: string, discountCode: Partial<InsertDiscountCode>): Promise<DiscountCode> {
+    const [updated] = await db
+      .update(discountCodes)
+      .set({
+        ...discountCode,
+        updatedAt: new Date(),
+      })
+      .where(eq(discountCodes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDiscountCode(id: string): Promise<void> {
+    await db.delete(discountCodes).where(eq(discountCodes.id, id));
+  }
+
+  async incrementDiscountCodeUsage(id: string): Promise<void> {
+    await db
+      .update(discountCodes)
+      .set({
+        currentUses: sql`${discountCodes.currentUses} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(discountCodes.id, id));
+  }
+  
+  // Access code validation
+  async validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean> {
+    const [session] = await db
+      .select()
+      .from(futsalSessions)
+      .where(eq(futsalSessions.id, sessionId));
+      
+    if (!session || !session.hasAccessCode || !session.accessCode) {
+      return true; // No access code required
+    }
+    
+    return session.accessCode === accessCode;
   }
 }
 

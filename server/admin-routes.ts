@@ -1706,6 +1706,54 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Discount Code Management
+  app.get('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const codes = await storage.getDiscountCodes();
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching discount codes:", error);
+      res.status(500).json({ message: "Failed to fetch discount codes" });
+    }
+  });
+
+  app.post('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const adminUserId = (req as any).currentUser?.id;
+      const discountData = {
+        ...req.body,
+        createdBy: adminUserId,
+      };
+      const code = await storage.createDiscountCode(discountData);
+      res.json(code);
+    } catch (error) {
+      console.error("Error creating discount code:", error);
+      res.status(500).json({ message: "Failed to create discount code" });
+    }
+  });
+
+  app.put('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const code = await storage.updateDiscountCode(id, req.body);
+      res.json(code);
+    } catch (error) {
+      console.error("Error updating discount code:", error);
+      res.status(500).json({ message: "Failed to update discount code" });
+    }
+  });
+
+  app.delete('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDiscountCode(id);
+      res.json({ message: "Discount code deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting discount code:", error);
+      res.status(500).json({ message: "Failed to delete discount code" });
+    }
+  });
+
   // Session management endpoints
   app.get('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {

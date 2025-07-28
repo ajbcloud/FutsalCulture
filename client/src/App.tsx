@@ -20,6 +20,7 @@ import AdminPendingRegistrations from "@/pages/admin/pending-registrations";
 import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
 import AdminIntegrations from "@/pages/admin/integrations";
+import AdminDiscountCodes from "@/pages/admin/discount-codes";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
@@ -66,6 +67,7 @@ function Router() {
                 <Route path="/admin/sessions" component={AdminSessions} />
                 <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
                 <Route path="/admin/payments" component={AdminPayments} />
+                <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
                 <Route path="/admin/players" component={AdminPlayers} />
                 <Route path="/admin/parents" component={AdminParents} />
                 <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />

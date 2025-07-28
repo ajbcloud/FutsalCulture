@@ -111,6 +111,9 @@ export const futsalSessions = pgTable("futsal_sessions", {
   status: sessionsEnum("status").notNull().default("upcoming"),
   bookingOpenHour: integer("booking_open_hour").default(8), // Hour when booking opens (0-23)
   bookingOpenMinute: integer("booking_open_minute").default(0), // Minute when booking opens (0-59)
+  // Access code protection
+  hasAccessCode: boolean("has_access_code").default(false),
+  accessCode: varchar("access_code"), // The actual code needed to book
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -121,6 +124,10 @@ export const signups = pgTable("signups", {
   sessionId: varchar("session_id").notNull(),
   paid: boolean("paid").default(false),
   paymentIntentId: varchar("payment_intent_id"),
+  // Discount code tracking
+  discountCodeId: varchar("discount_code_id"),
+  discountCodeApplied: varchar("discount_code_applied"), // The actual code used
+  discountAmountCents: integer("discount_amount_cents"), // Amount discounted
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -199,6 +206,27 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Discount codes table
+export const discountCodes = pgTable("discount_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").unique().notNull(),
+  description: text("description"),
+  // Discount type - 'percentage' or 'fixed' or 'full'
+  discountType: varchar("discount_type").notNull().default('full'),
+  discountValue: integer("discount_value"), // percentage (0-100) or cents amount
+  // Usage limits
+  maxUses: integer("max_uses"), // null = unlimited
+  currentUses: integer("current_uses").default(0),
+  // Time limits
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  // Status
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by"), // admin user id
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Service billing table for platform service payment configuration
 export const serviceBilling = pgTable("service_billing", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -252,6 +280,10 @@ export const signupsRelations = relations(signups, ({ one, many }) => ({
     references: [futsalSessions.id],
   }),
   payments: many(payments),
+  discountCode: one(discountCodes, {
+    fields: [signups.discountCodeId],
+    references: [discountCodes.id],
+  }),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -266,6 +298,10 @@ export const notificationPreferencesRelations = relations(notificationPreference
     fields: [notificationPreferences.parentId],
     references: [users.id],
   }),
+}));
+
+export const discountCodesRelations = relations(discountCodes, ({ many }) => ({
+  signups: many(signups),
 }));
 
 // Insert schemas
@@ -359,6 +395,13 @@ export const insertIntegrationSchema = createInsertSchema(integrations).omit({
   updatedAt: true,
 });
 
+export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
+  id: true,
+  currentUses: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for upsert operations (includes id)
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -380,3 +423,5 @@ export type NotificationPreferences = typeof notificationPreferences.$inferSelec
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
 export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+export type DiscountCode = typeof discountCodes.$inferSelect;
+export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
