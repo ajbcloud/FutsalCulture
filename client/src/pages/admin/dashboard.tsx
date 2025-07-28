@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { usePageRefresh } from "@/hooks/use-page-refresh";
+import { useEffect } from "react";
+import { queryClient } from "@/lib/queryClient";
 import AdminLayout from "@/components/admin-layout";
 import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,7 +89,7 @@ export default function AdminDashboard() {
   ]);
 
   // Force cache invalidation on mount to ensure fresh data
-  React.useEffect(() => {
+  useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard-metrics"] });
   }, []);
   
