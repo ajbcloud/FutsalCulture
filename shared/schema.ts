@@ -136,6 +136,8 @@ export const payments = pgTable("payments", {
   paidAt: timestamp("paid_at"),
   refundedAt: timestamp("refunded_at"),
   refundReason: text("refund_reason"),
+  refundedBy: varchar("refunded_by"), // admin user ID who performed the refund
+  adminNotes: text("admin_notes"), // admin notes on payment actions
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -446,6 +446,7 @@ export default function AdminPayments() {
               <TableHead className="text-zinc-300">Status</TableHead>
               <TableHead className="text-zinc-300">Reserved At</TableHead>
               <TableHead className="text-zinc-300">Amount</TableHead>
+              <TableHead className="text-zinc-300">Notes/Actions</TableHead>
               <TableHead className="text-zinc-300">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -478,6 +479,67 @@ export default function AdminPayments() {
                   {format(new Date(payment.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
                 <TableCell className="text-zinc-300">$10.00</TableCell>
+                <TableCell className="max-w-xs">
+                  {payment.status === 'refunded' ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-blue-400" />
+                            <span className="text-sm text-zinc-400 truncate">
+                              {payment.refundReason || 'Refunded'}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-800 border-zinc-700 text-white p-3 max-w-sm">
+                          <div className="space-y-2">
+                            <div>
+                              <p className="font-semibold">Refund Reason:</p>
+                              <p className="text-sm">{payment.refundReason || 'No reason provided'}</p>
+                            </div>
+                            {payment.refundedAt && (
+                              <div>
+                                <p className="font-semibold">Refunded:</p>
+                                <p className="text-sm">{format(new Date(payment.refundedAt), 'MMM d, yyyy h:mm a')}</p>
+                              </div>
+                            )}
+                            {payment.refundedBy && (
+                              <div>
+                                <p className="font-semibold">Refunded By:</p>
+                                <p className="text-sm">Admin ID: {payment.refundedBy}</p>
+                              </div>
+                            )}
+                            {payment.adminNotes && (
+                              <div>
+                                <p className="font-semibold">Admin Notes:</p>
+                                <p className="text-sm">{payment.adminNotes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : payment.adminNotes ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-blue-400" />
+                            <span className="text-sm text-zinc-400 truncate">Admin notes</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-800 border-zinc-700 text-white p-3 max-w-sm">
+                          <div>
+                            <p className="font-semibold">Admin Notes:</p>
+                            <p className="text-sm">{payment.adminNotes}</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-zinc-500 text-sm">-</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   {getActionButton(payment)}
                 </TableCell>
@@ -485,7 +547,7 @@ export default function AdminPayments() {
             ))}
             {filteredPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
                   No payments found
                 </TableCell>
               </TableRow>

@@ -881,6 +881,8 @@ export function setupAdminRoutes(app: any) {
             paymentAmount: payments.amountCents,
             refundedAt: payments.refundedAt,
             refundReason: payments.refundReason,
+            refundedBy: payments.refundedBy,
+            adminNotes: payments.adminNotes,
             paymentStatus: payments.status,
           })
           .from(signups)
@@ -937,6 +939,8 @@ export function setupAdminRoutes(app: any) {
               paymentAmount: payments.amountCents,
               refundedAt: payments.refundedAt,
               refundReason: payments.refundReason,
+              refundedBy: payments.refundedBy,
+              adminNotes: payments.adminNotes,
               paymentStatus: payments.status,
             })
             .from(signups)
@@ -2211,7 +2215,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         .set({
           status: 'refunded',
           refundedAt: new Date(),
-          refundReason: reason.trim()
+          refundReason: reason.trim(),
+          refundedBy: adminUserId
         })
         .where(eq(payments.signupId, id));
 
