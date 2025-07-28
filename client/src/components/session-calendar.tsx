@@ -132,18 +132,19 @@ export default function SessionCalendar({
         </div>
       </div>
 
-      {/* Calendar Grid - Full Week Layout */}
-      <div className="grid grid-cols-7 gap-2">
-        {/* Day Headers - Full Week */}
+      {/* Calendar Grid - Responsive Layout */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
+        {/* Day Headers - Responsive */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="p-2 text-center text-sm font-medium text-zinc-400">
-            {day}
+          <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-zinc-400">
+            <span className="hidden sm:inline">{day}</span>
+            <span className="sm:hidden">{day.charAt(0)}</span>
           </div>
         ))}
 
         {/* Empty cells for alignment */}
         {emptyDays.map((_, index) => (
-          <div key={`empty-${index}`} className="min-h-[120px]" />
+          <div key={`empty-${index}`} className="min-h-[80px] sm:min-h-[120px]" />
         ))}
         
         {/* Calendar Days */}
@@ -156,7 +157,7 @@ export default function SessionCalendar({
           return (
             <div
               key={dateKey}
-              className={`min-h-[120px] p-2 border border-zinc-800 rounded-lg cursor-pointer transition-colors ${
+              className={`min-h-[80px] sm:min-h-[120px] p-1 sm:p-2 border border-zinc-800 rounded cursor-pointer transition-colors ${
                 isToday ? 'bg-blue-900/20 border-blue-500 hover:bg-blue-900/30' : 
                 isPast ? 'bg-zinc-900/50 hover:bg-zinc-900/70' : 'bg-zinc-900 hover:bg-zinc-800'
               }`}
@@ -165,16 +166,16 @@ export default function SessionCalendar({
                 setIsDialogOpen(true);
               }}
             >
-              <div className={`text-sm font-medium mb-2 ${
+              <div className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${
                 isToday ? 'text-blue-400' : 
                 isPast ? 'text-zinc-500' : 'text-white'
               }`}>
                 {format(day, 'd')}
               </div>
 
-              {/* Sessions for this day */}
-              <div className="space-y-1">
-                {daySessions.slice(0, 3).map(session => {
+              {/* Sessions for this day - Mobile Optimized */}
+              <div className="space-y-0.5 sm:space-y-1">
+                {daySessions.slice(0, 2).map(session => {
                   const sessionDate = new Date(session.startTime);
                   const today = new Date();
                   const isSessionToday = sessionDate.toDateString() === today.toDateString();
@@ -197,7 +198,6 @@ export default function SessionCalendar({
                     statusColor = 'bg-zinc-700/20';
                     statusText = 'closed';
                   } else if (isSessionToday && session.status === 'full') {
-                    // Only show red (full) on the day of the session when it's actually full
                     statusColor = 'bg-red-700/20';
                     statusText = 'full';
                   } else if (isSessionToday && bookingOpen && session.status !== 'full') {
@@ -207,34 +207,48 @@ export default function SessionCalendar({
                     statusColor = 'bg-yellow-700/20';
                     statusText = 'upcoming';
                   } else if (isSessionFuture) {
-                    // Future sessions should always show as upcoming (yellow)
                     statusColor = 'bg-yellow-700/20';
                     statusText = 'upcoming';
                   }
                   
                   return (
-                    <Card 
+                    <div 
                       key={session.id} 
-                      className={`p-1 cursor-pointer border-none transition-colors ${statusColor}`}
-                      onClick={() => {
+                      className={`p-0.5 sm:p-1 cursor-pointer border-none transition-colors rounded text-white ${statusColor}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (onSessionClick) {
                           onSessionClick(session);
                         }
                       }}
                     >
-                      <CardContent className="p-1">
-                        <div className="text-xs text-white font-medium truncate">
+                      {/* Mobile Format - Compact */}
+                      <div className="sm:hidden">
+                        <div className="text-[10px] font-medium truncate mb-0.5">
+                          {format12Hour(format(new Date(session.startTime), 'HH:mm'))}
+                        </div>
+                        <div className="text-[9px] text-zinc-300 truncate mb-0.5">
+                          {session.ageGroups?.slice(0, 2).join(', ') || 'N/A'}
+                        </div>
+                        <div className="text-[8px] text-zinc-400 capitalize truncate">
+                          {statusText}
+                        </div>
+                      </div>
+
+                      {/* Desktop Format - Full Details */}
+                      <div className="hidden sm:block">
+                        <div className="text-xs text-white font-medium truncate mb-1">
                           {session.title}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-300">
+                        <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
                           <Clock className="w-3 h-3" />
-                          {format(new Date(session.startTime), 'HH:mm')}
+                          {format12Hour(format(new Date(session.startTime), 'HH:mm'))}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-300">
+                        <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
                           <MapPin className="w-3 h-3" />
                           <span className="truncate">{session.location}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between">
                           <Badge 
                             variant="secondary" 
                             className="text-xs px-1 py-0"
@@ -248,14 +262,14 @@ export default function SessionCalendar({
                             {statusText}
                           </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   );
                 })}
                 
-                {daySessions.length > 3 && (
-                  <div className="text-xs text-zinc-400 text-center">
-                    +{daySessions.length - 3} more
+                {daySessions.length > 2 && (
+                  <div className="text-[9px] sm:text-xs text-zinc-400 text-center">
+                    +{daySessions.length - 2} more
                   </div>
                 )}
               </div>
@@ -264,23 +278,23 @@ export default function SessionCalendar({
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-center space-x-4 mt-6 text-sm">
-        <div className="flex items-center space-x-2">
+      {/* Legend - Mobile Responsive */}
+      <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 sm:gap-4 mt-6 text-xs sm:text-sm">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-green-700/20 border border-green-700 rounded"></div>
-          <span className="text-zinc-300">Open for Booking</span>
+          <span className="text-zinc-300">Open</span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-yellow-700/20 border border-yellow-700 rounded"></div>
-          <span className="text-zinc-300">Pending (8 AM Rule)</span>
+          <span className="text-zinc-300">Upcoming</span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-red-700/20 border border-red-700 rounded"></div>
           <span className="text-zinc-300">Full</span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-zinc-700/20 border border-zinc-700 rounded"></div>
-          <span className="text-zinc-300">Started/Closed</span>
+          <span className="text-zinc-300">Closed</span>
         </div>
       </div>
 
