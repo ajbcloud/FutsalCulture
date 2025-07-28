@@ -92,6 +92,16 @@ export default function Sessions() {
   });
 
   const filteredSessions = sessions.filter(session => {
+    // Filter by date: only show current day or future sessions up to 2 weeks out
+    const sessionDate = new Date(session.startTime);
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const twoWeeksFromToday = new Date(todayStart.getTime() + (14 * 24 * 60 * 60 * 1000));
+    
+    if (sessionDate < todayStart || sessionDate > twoWeeksFromToday) {
+      return false;
+    }
+    
     // Check multi-player filters first (if coming from dashboard with multiple players)
     if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
       const ageMatch = multiPlayerAges.length === 0 || session.ageGroups?.some(age => multiPlayerAges.includes(age));
@@ -114,7 +124,11 @@ export default function Sessions() {
   });
 
   // Get filter options from dedicated endpoint
-  const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery({
+  const { data: filterOptions = { ageGroups: [], locations: [], genders: [] } } = useQuery<{
+    ageGroups: string[];
+    locations: string[];
+    genders: string[];
+  }>({
     queryKey: ["/api/session-filters"],
   });
 
@@ -150,7 +164,7 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Genders</SelectItem>
-                    {sortedGenders.map(gender => (
+                    {sortedGenders.map((gender: string) => (
                       <SelectItem key={gender} value={gender}>
                         {gender === "boys" ? "Boys" : gender === "girls" ? "Girls" : gender === "mixed" ? "Mixed" : gender}
                       </SelectItem>
@@ -164,7 +178,7 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Ages</SelectItem>
-                    {sortedAgeGroups.map(age => (
+                    {sortedAgeGroups.map((age: string) => (
                       <SelectItem key={age} value={age}>{age}</SelectItem>
                     ))}
                   </SelectContent>
@@ -176,7 +190,7 @@ export default function Sessions() {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="all">All Locations</SelectItem>
-                    {sortedLocations.map(location => (
+                    {sortedLocations.map((location: string) => (
                       <SelectItem key={location} value={location}>{location}</SelectItem>
                     ))}
                   </SelectContent>

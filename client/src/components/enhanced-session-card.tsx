@@ -107,7 +107,9 @@ export default function EnhancedSessionCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start sm:gap-0">
           <div className="flex-1">
             <CardTitle className="text-white text-lg">{session.title}</CardTitle>
-            <p className="text-zinc-400 text-sm">{session.location}</p>
+            <p className="text-zinc-400 text-sm">
+              {format(new Date(session.startTime), 'EEEE, MMM d')} • {session.location}
+            </p>
           </div>
           <Badge className={`${getSessionStatusColor(session)} self-start`}>
             {getSessionStatusText(session)}

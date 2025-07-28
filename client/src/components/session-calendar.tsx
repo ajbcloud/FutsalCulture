@@ -48,6 +48,16 @@ export default function SessionCalendar({
 
   // Filter sessions based on provided criteria
   const sessions = allSessions.filter(session => {
+    // Filter by date: only show current day or future sessions up to 2 weeks out
+    const sessionDate = new Date(session.startTime);
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const twoWeeksFromToday = new Date(todayStart.getTime() + (14 * 24 * 60 * 60 * 1000));
+    
+    if (sessionDate < todayStart || sessionDate > twoWeeksFromToday) {
+      return false;
+    }
+    
     // Check multi-player filters first (if coming from dashboard with multiple players)
     if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
       const ageMatch = multiPlayerAges.length === 0 || session.ageGroups?.some(age => multiPlayerAges.includes(age));

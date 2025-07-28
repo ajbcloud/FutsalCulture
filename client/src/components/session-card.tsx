@@ -55,7 +55,9 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-xl font-semibold text-white">{session.title}</h3>
-            <p className="text-zinc-400">{session.location}</p>
+            <p className="text-zinc-400">
+              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {session.location}
+            </p>
           </div>
           {getStatusBadge()}
         </div>
@@ -75,7 +77,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           </div>
           <div className="flex items-center text-zinc-400">
             <MapPin className="w-4 h-4 mr-2" />
-            <span>{session.ageGroup} {session.gender === "boys" ? "Boys" : "Girls"}</span>
+            <span>{session.ageGroups?.join(', ') || 'All Ages'} • {session.genders?.join(', ') || 'All Genders'}</span>
           </div>
           <div className="flex items-center text-zinc-400">
             <DollarSign className="w-4 h-4 mr-2" />
