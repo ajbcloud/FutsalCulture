@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface SystemSettings {
@@ -37,6 +37,24 @@ interface Integration {
   testStatus?: 'success' | 'failure' | 'pending';
   createdAt: string;
   updatedAt: string;
+}
+
+interface ServiceBilling {
+  id?: string;
+  organizationName: string;
+  contactEmail: string;
+  billingEmail: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  taxId: string;
+  billingFrequency: string;
+  paymentMethod: string;
+  preferredInvoiceDay: number;
+  notes: string;
 }
 
 // Get all available timezones with US zones prioritized
@@ -123,14 +141,32 @@ export default function AdminSettings() {
     fiscalYearStartMonth: 1
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [serviceBilling, setServiceBilling] = useState<ServiceBilling>({
+    organizationName: '',
+    contactEmail: '',
+    billingEmail: '',
+    phoneNumber: '',
+    address: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'United States',
+    taxId: '',
+    billingFrequency: 'monthly',
+    paymentMethod: 'invoice',
+    preferredInvoiceDay: 1,
+    notes: ''
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingBilling, setSavingBilling] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSettings();
     fetchIntegrations();
+    fetchServiceBilling();
   }, []);
 
   const fetchSettings = async () => {
@@ -166,6 +202,50 @@ export default function AdminSettings() {
       setIntegrations(data);
     } catch (error) {
       console.error('Error fetching integrations:', error);
+    }
+  };
+
+  const fetchServiceBilling = async () => {
+    try {
+      const response = await fetch('/api/admin/service-billing');
+      if (!response.ok) throw new Error('Failed to fetch service billing');
+      const data = await response.json();
+      if (data && Object.keys(data).length > 0) {
+        setServiceBilling(data);
+      }
+    } catch (error) {
+      console.error('Error fetching service billing:', error);
+    }
+  };
+
+  const handleSaveBilling = async () => {
+    setSavingBilling(true);
+    try {
+      const response = await fetch('/api/admin/service-billing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(serviceBilling),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save service billing configuration');
+      }
+
+      toast({
+        title: "Success",
+        description: "Service billing configuration saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving service billing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save service billing configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingBilling(false);
     }
   };
 
@@ -487,6 +567,200 @@ export default function AdminSettings() {
               <p className="text-sm text-zinc-400 mt-1">
                 Define which day ends your business week for reporting and analytics
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <CreditCard className="w-5 h-5 mr-2" />
+              Service Billing Configuration
+            </CardTitle>
+            <p className="text-zinc-400 text-sm">
+              Configure payment information for platform service billing and invoicing
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="organizationName" className="text-zinc-300">Organization Name *</Label>
+                <Input
+                  id="organizationName"
+                  value={serviceBilling.organizationName}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, organizationName: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Your organization name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactEmail" className="text-zinc-300">Contact Email *</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={serviceBilling.contactEmail}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, contactEmail: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Primary contact email"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="billingEmail" className="text-zinc-300">Billing Email *</Label>
+                <Input
+                  id="billingEmail"
+                  type="email"
+                  value={serviceBilling.billingEmail}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, billingEmail: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Email for invoices and billing"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phoneNumber" className="text-zinc-300">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  value={serviceBilling.phoneNumber}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="address" className="text-zinc-300">Business Address</Label>
+              <Input
+                id="address"
+                value={serviceBilling.address}
+                onChange={(e) => setServiceBilling(prev => ({ ...prev, address: e.target.value }))}
+                className="bg-zinc-800 border-zinc-700 text-white"
+                placeholder="Street address"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="city" className="text-zinc-300">City</Label>
+                <Input
+                  id="city"
+                  value={serviceBilling.city}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, city: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <Label htmlFor="state" className="text-zinc-300">State</Label>
+                <Input
+                  id="state"
+                  value={serviceBilling.state}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, state: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="State/Province"
+                />
+              </div>
+              <div>
+                <Label htmlFor="postalCode" className="text-zinc-300">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  value={serviceBilling.postalCode}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, postalCode: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="12345"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="taxId" className="text-zinc-300">Tax ID / EIN</Label>
+                <Input
+                  id="taxId"
+                  value={serviceBilling.taxId}
+                  onChange={(e) => setServiceBilling(prev => ({ ...prev, taxId: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="12-3456789"
+                />
+              </div>
+              <div>
+                <Label htmlFor="billingFrequency" className="text-zinc-300">Billing Frequency</Label>
+                <Select
+                  value={serviceBilling.billingFrequency}
+                  onValueChange={(value) => setServiceBilling(prev => ({ ...prev, billingFrequency: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="monthly" className="text-white hover:bg-zinc-700">Monthly</SelectItem>
+                    <SelectItem value="quarterly" className="text-white hover:bg-zinc-700">Quarterly</SelectItem>
+                    <SelectItem value="annually" className="text-white hover:bg-zinc-700">Annually</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="paymentMethod" className="text-zinc-300">Preferred Payment Method</Label>
+                <Select
+                  value={serviceBilling.paymentMethod}
+                  onValueChange={(value) => setServiceBilling(prev => ({ ...prev, paymentMethod: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="invoice" className="text-white hover:bg-zinc-700">Invoice (Net 30)</SelectItem>
+                    <SelectItem value="credit_card" className="text-white hover:bg-zinc-700">Credit Card</SelectItem>
+                    <SelectItem value="ach" className="text-white hover:bg-zinc-700">ACH/Bank Transfer</SelectItem>
+                    <SelectItem value="wire" className="text-white hover:bg-zinc-700">Wire Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="invoiceDay" className="text-zinc-300">Preferred Invoice Day</Label>
+                <Select
+                  value={serviceBilling.preferredInvoiceDay.toString()}
+                  onValueChange={(value) => setServiceBilling(prev => ({ ...prev, preferredInvoiceDay: parseInt(value) }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Day of month" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()} className="text-white hover:bg-zinc-700">
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="notes" className="text-zinc-300">Special Instructions / Notes</Label>
+              <textarea
+                id="notes"
+                value={serviceBilling.notes}
+                onChange={(e) => setServiceBilling(prev => ({ ...prev, notes: e.target.value }))}
+                className="w-full bg-zinc-800 border-zinc-700 text-white rounded-md p-3 mt-1"
+                placeholder="Any special billing instructions or notes..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button 
+                onClick={handleSaveBilling}
+                disabled={savingBilling || !serviceBilling.organizationName || !serviceBilling.contactEmail || !serviceBilling.billingEmail}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {savingBilling ? 'Saving...' : 'Save Billing Configuration'}
+              </Button>
             </div>
           </CardContent>
         </Card>

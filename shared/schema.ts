@@ -193,6 +193,31 @@ export const integrations = pgTable("integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Service billing table for platform service payment configuration
+export const serviceBilling = pgTable("service_billing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationName: varchar("organization_name").notNull(),
+  contactEmail: varchar("contact_email").notNull(),
+  billingEmail: varchar("billing_email").notNull(),
+  phoneNumber: varchar("phone_number"),
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country").default('United States'),
+  taxId: varchar("tax_id"), // EIN, VAT number, etc.
+  billingFrequency: varchar("billing_frequency").notNull().default('monthly'), // 'monthly', 'quarterly', 'annually'
+  paymentMethod: varchar("payment_method").notNull().default('invoice'), // 'invoice', 'credit_card', 'ach', 'wire'
+  creditCardToken: varchar("credit_card_token"), // Encrypted card token from payment processor
+  achAccountInfo: jsonb("ach_account_info"), // Encrypted ACH details
+  preferredInvoiceDay: integer("preferred_invoice_day").default(1), // Day of month for billing
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  configuredBy: varchar("configured_by"), // admin user id
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   players: many(players),
@@ -243,6 +268,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertServiceBillingSchema = createInsertSchema(serviceBilling).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ServiceBillingInsert = z.infer<typeof insertServiceBillingSchema>;
+export type ServiceBillingSelect = typeof serviceBilling.$inferSelect;
 
 export const updateUserSchema = createInsertSchema(users).omit({
   id: true,

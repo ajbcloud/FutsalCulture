@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema } from "@shared/schema";
 import { eq, sql, and, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 
@@ -2231,6 +2231,33 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     } catch (error) {
       console.error("Error processing refund:", error);
       res.status(500).json({ message: "Failed to process refund" });
+    }
+  });
+
+  // Service Billing Configuration - For platform service payments
+  app.get('/api/admin/service-billing', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const billing = await storage.getServiceBilling();
+      res.json(billing || {});
+    } catch (error) {
+      console.error("Error fetching service billing:", error);
+      res.status(500).json({ message: "Failed to fetch service billing configuration" });
+    }
+  });
+
+  app.post('/api/admin/service-billing', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const adminUserId = (req as any).currentUser?.id;
+      const billingData = insertServiceBillingSchema.parse({
+        ...req.body,
+        configuredBy: adminUserId,
+      });
+
+      const billing = await storage.upsertServiceBilling(billingData);
+      res.json({ message: "Service billing configuration saved successfully", billing });
+    } catch (error: any) {
+      console.error("Error saving service billing:", error);
+      res.status(500).json({ message: error.message || "Failed to save service billing configuration" });
     }
   });
 }

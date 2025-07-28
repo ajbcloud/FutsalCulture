@@ -7,6 +7,7 @@ import {
   helpRequests,
   notificationPreferences,
   systemSettings,
+  serviceBilling,
   type User,
   type UpsertUser,
   type UpdateUser,
@@ -22,6 +23,8 @@ import {
   type InsertHelpRequest,
   type NotificationPreferences,
   type InsertNotificationPreferences,
+  type ServiceBillingInsert,
+  type ServiceBillingSelect,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql } from "drizzle-orm";
@@ -77,6 +80,10 @@ export interface IStorage {
     avgFillRate: number;
     activeSessions: number;
   }>;
+
+  // Service billing operations
+  getServiceBilling(): Promise<ServiceBillingSelect | undefined>;
+  upsertServiceBilling(billing: ServiceBillingInsert): Promise<ServiceBillingSelect>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -445,6 +452,36 @@ export class DatabaseStorage implements IStorage {
       avgFillRate: 85, // This would need more complex calculation
       activeSessions: activeSessionsCount.count,
     };
+  }
+
+  async getServiceBilling(): Promise<ServiceBillingSelect | undefined> {
+    const [billing] = await db.select().from(serviceBilling).limit(1);
+    return billing;
+  }
+
+  async upsertServiceBilling(billingData: ServiceBillingInsert): Promise<ServiceBillingSelect> {
+    // Check if record exists
+    const existing = await this.getServiceBilling();
+    
+    if (existing) {
+      // Update existing record
+      const [updated] = await db
+        .update(serviceBilling)
+        .set({
+          ...billingData,
+          updatedAt: new Date(),
+        })
+        .where(eq(serviceBilling.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new record
+      const [created] = await db
+        .insert(serviceBilling)
+        .values(billingData)
+        .returning();
+      return created;
+    }
   }
 }
 
