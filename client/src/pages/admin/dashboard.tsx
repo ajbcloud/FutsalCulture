@@ -10,6 +10,7 @@ import { KPICard } from "@/components/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   DollarSign, 
   Users, 
@@ -61,6 +62,9 @@ interface ActivityItem {
   searchTerm?: string;
   playerId?: string;
   parentId?: string;
+  // Refund-specific metadata
+  reasonSnippet?: string;
+  fullReason?: string;
 }
 
 interface AdminStats {
@@ -427,7 +431,26 @@ export default function AdminDashboard() {
                         <div className="text-2xl">{activity.icon}</div>
                         <div className="flex-1">
                           <p className="text-white text-sm">{activity.message}</p>
-                          <p className="text-zinc-400 text-xs">{activity.timeAgo}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-zinc-400 text-xs">{activity.timeAgo}</p>
+                            {activity.type === 'refund' && activity.reasonSnippet && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="text-xs text-zinc-500 bg-zinc-700 px-2 py-1 rounded">
+                                      {activity.reasonSnippet}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <div>
+                                      <p className="font-medium">Refund Reason:</p>
+                                      <p className="text-sm">{activity.fullReason}</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </div>
                         {activity.navigationUrl && (
                           <ChevronRight className="w-4 h-4 text-zinc-400" />

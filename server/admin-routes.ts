@@ -483,6 +483,49 @@ export function setupAdminRoutes(app: any) {
         });
       });
 
+      // Get recent refunds with player and parent details  
+      const recentRefundsWithParents = await db
+        .select({
+          id: payments.id,
+          amountCents: payments.amountCents,
+          refundedAt: payments.refundedAt,
+          refundReason: payments.refundReason,
+          playerId: signups.playerId,
+          playerFirstName: players.firstName,
+          playerLastName: players.lastName,
+          sessionId: signups.sessionId,
+          parentFirstName: users.firstName,
+          parentLastName: users.lastName
+        })
+        .from(payments)
+        .innerJoin(signups, eq(payments.signupId, signups.id))
+        .innerJoin(players, eq(signups.playerId, players.id))
+        .innerJoin(users, eq(players.parentId, users.id))
+        .where(sql`${payments.refundedAt} IS NOT NULL AND ${payments.refundedAt} >= ${startTime} AND ${payments.refundedAt} <= ${endTime}`)
+        .orderBy(desc(payments.refundedAt))
+        .limit(10);
+
+      recentRefundsWithParents.forEach(refund => {
+        const reasonSnippet = refund.refundReason && refund.refundReason.length > 30 
+          ? `${refund.refundReason.substring(0, 30)}...` 
+          : refund.refundReason || 'No reason provided';
+
+        activities.push({
+          id: `refund-${refund.id}`,
+          type: 'refund',
+          icon: '💸',
+          message: `Refund issued: $${(refund.amountCents / 100).toFixed(2)} to ${refund.parentFirstName} ${refund.parentLastName} for ${refund.playerFirstName} ${refund.playerLastName}`,
+          timestamp: refund.refundedAt,
+          timeAgo: getTimeAgo(refund.refundedAt),
+          reasonSnippet,
+          fullReason: refund.refundReason,
+          // Navigation metadata
+          navigationUrl: '/admin/payments',
+          searchTerm: `${refund.parentFirstName} ${refund.parentLastName}`,
+          playerId: refund.playerId
+        });
+      });
+
       // Get recent player registrations (including approvals today)
       const recentPlayers = await db
         .select()
@@ -2119,14 +2162,15 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Refund payment endpoint
   app.post('/api/admin/payments/:id/refund', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const { id } = req.params; // This is the signup ID
       const { reason } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
       
       if (!reason || reason.trim().length < 5) {
         return res.status(400).json({ message: "Refund reason is required and must be at least 5 characters" });
       }
 
-      // Find the payment record
+      // Find the payment record by signup ID
       const payment = await db.select().from(payments).where(eq(payments.signupId, id)).limit(1);
       
       if (!payment.length) {
@@ -2136,6 +2180,31 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       if (payment[0].refundedAt) {
         return res.status(400).json({ message: "Payment has already been refunded" });
       }
+
+      // Get signup and player details for activity log
+      const signupDetails = await db
+        .select({
+          signup: signups,
+          player: {
+            firstName: players.firstName,
+            lastName: players.lastName,
+          },
+          session: {
+            title: futsalSessions.title,
+            startTime: futsalSessions.startTime,
+          }
+        })
+        .from(signups)
+        .innerJoin(players, eq(signups.playerId, players.id))
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .where(eq(signups.id, id))
+        .limit(1);
+
+      if (!signupDetails.length) {
+        return res.status(404).json({ message: "Signup details not found" });
+      }
+
+      const details = signupDetails[0];
 
       // Update the payment record to mark as refunded
       await db.update(payments)
@@ -2156,7 +2225,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.json({ 
         message: "Refund processed successfully",
         refundedAt: new Date(),
-        reason: reason.trim()
+        reason: reason.trim(),
+        refundedBy: adminUserId
       });
     } catch (error) {
       console.error("Error processing refund:", error);

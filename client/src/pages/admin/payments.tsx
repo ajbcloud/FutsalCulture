@@ -12,13 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { CheckCircle, RefreshCw, DollarSign, XCircle } from 'lucide-react';
+import { CheckCircle, RefreshCw, DollarSign, XCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 
 export default function AdminPayments() {
@@ -192,10 +193,37 @@ export default function AdminPayments() {
         );
       case 'refunded':
         return (
-          <Badge variant="outline" className="text-gray-500">
-            <XCircle className="h-4 w-4 mr-1" />
-            Refunded
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-gray-500">
+              <XCircle className="h-4 w-4 mr-1" />
+              Refunded
+            </Badge>
+            {payment.refundReason && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center text-xs text-zinc-400 hover:text-zinc-300">
+                      <Info className="h-3 w-3 mr-1" />
+                      {payment.refundReason.length > 20 
+                        ? `${payment.refundReason.substring(0, 20)}...` 
+                        : payment.refundReason}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <div>
+                      <p className="font-medium">Refund Reason:</p>
+                      <p className="text-sm">{payment.refundReason}</p>
+                      {payment.refundedAt && (
+                        <p className="text-xs text-zinc-400 mt-1">
+                          Refunded: {format(new Date(payment.refundedAt), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         );
       default:
         return null;
