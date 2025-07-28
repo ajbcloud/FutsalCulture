@@ -101,114 +101,57 @@ export default function SuperAdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
-      <header className="bg-card border-b border-border">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center justify-start">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-lg font-semibold text-foreground">Platform Super Admin</h1>
-              </div>
-            </div>
-            
-            {/* Mobile menu button */}
-            <div className="md:hidden">
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
 
-            {/* Desktop navigation and user menu */}
-            <div className="hidden md:flex items-center space-x-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
-                      <AvatarFallback className="bg-green-600 text-white text-sm">
-                        {user?.firstName?.[0]?.toUpperCase() || 'S'}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                      <p className="text-xs text-muted-foreground">Super Admin</p>
-                    </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  
-                  <DropdownMenuItem asChild>
-                    <Link href="/" className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      Parent Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin Portal
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem asChild>
-                    <Link href="/help" className="cursor-pointer">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Help
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-20 bg-black bg-opacity-50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <div className="flex">
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-card border-r border-border min-h-screen relative`}>
-          <nav className="p-4">
-            <div className="space-y-2">
+        {/* Sidebar - Mobile First */}
+        <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex flex-col items-center space-y-3 flex-1 w-full max-w-full">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-foreground text-center w-full">Platform Super Admin</h1>
+            </div>
+            <Button
+              variant="ghost"
+              className="h-11 w-11 md:hidden absolute top-4 right-4"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          <nav className="mt-6">
+            <div className="px-3">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      item.current
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Icon className="mr-3 h-4 w-4" />
-                    {item.name}
+                  <Link key={item.href} href={item.href}>
+                    <div className={`flex items-center px-3 py-2 mb-1 rounded-lg transition-colors ${
+                      item.current 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`}>
+                      <Icon className="w-5 h-5 mr-3" />
+                      {item.name}
+                    </div>
                   </Link>
                 );
               })}
             </div>
           </nav>
-          
-          {/* User info and theme toggle at bottom */}
+
+          {/* User info at bottom */}
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
             <div className="flex items-center justify-between">
               <DropdownMenu>
@@ -239,6 +182,7 @@ export default function SuperAdminPage() {
                   </div>
                   <DropdownMenuSeparator />
                   
+                  {/* Portal Navigation */}
                   <DropdownMenuItem asChild>
                     <Link href="/" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
@@ -282,19 +226,31 @@ export default function SuperAdminPage() {
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex-1">
-          {renderPageContent()}
+        {/* Main content - Mobile First */}
+        <div className="md:pl-64">
+          {/* Top bar */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                className="h-11 w-11 md:hidden"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              
+              <div className="flex items-center space-x-2">
+                {/* Empty for now */}
+              </div>
+            </div>
+          </div>
+
+          {/* Page content - Mobile First */}
+          <main className="p-4 md:p-6">
+            {renderPageContent()}
+          </main>
         </div>
       </div>
-
-      {/* Mobile menu overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -1,0 +1,128 @@
+Goal:
+Build out a fully functional Super-Admin portal that sits “above” each individual tenant’s Admin portal. It uses the same layout, styles, and components you’ve already built for the Admin, but:
+
+Gains access to all tenant data.
+
+Adds a “Tenant” filter at every list and chart view.
+
+Preserves all existing fields, actions, and database reads; augments only where needed for multi-tenant.
+
+Pages to scaffold (in client/src/pages/super-admin/… or similar):
+
+Overview
+
+Show global KPIs across all tenants (Total Revenue YTD, Total Players YTD, Total Sessions This Week, Pending Payments, Active Tenants, Growth %).
+
+Each metric card gets its own “ℹ️” tooltip explaining definition.
+
+“Pending Tasks” & “Recent Activity” feed: include tenant name badge on each row; click any name, parent, player, session → navigates to that detail page with tenant filter applied.
+
+Quick-action buttons: “Add Tenant,” “Import All Players,” “Review All Payments,” “Help Requests.”
+
+Tenants
+
+List all tenants: columns: Subdomain, Organization Name, Contact Email, Status (Active/Inactive), Created At, Actions (View/Edit/Delete).
+
+Filter bar: Search by name/subdomain, Status dropdown.
+
+“New Tenant” modal: reuse Admin “create” form but add billing address, default integrations toggles.
+
+Sessions
+
+Global sessions table: tenant column first, then Date & Time, Age Group, Gender, Location, Capacity (with fill-rate bar), Status.
+
+Filters: Tenant, Age Group, Gender, Location, Date Range, Status.
+
+Clicking a row expands accordion to show sign-ups (player name, age, parent name, payment status).
+
+Payments
+
+Global payments ledger: Tenant, Signup ID, Player Name, Session Date, Amount, Status (Paid/Pending/Refunded), Paid At, Admin Notes.
+
+Filters: Tenant, Status, Date Range, Amount Range.
+
+Actions: “Refund,” “View Payment Intent,” “Send Receipt.”
+
+Registrations
+
+Combines parent & player invites: columns: Tenant, Type (Parent/Player), Name, Email, Invited At, Status (Pending/Approved/Rejected), Approved At.
+
+Filters: Tenant, Type, Status, Date Range.
+
+Actions: Approve/Reject in-line.
+
+Parents & 7. Players
+
+Clone your existing Admin lists, prepended by a Tenant column.
+
+Filters: Tenant + existing filters (Search, Status, Role, Age Group, Gender, Portal Access).
+
+Clickable rows and name links navigate to detail pages with tenant & record filters applied.
+
+Detail pages: show full record plus “Switch Tenant” selector (but locked if record’s tenant mismatches).
+
+Analytics
+
+All your current analytics widgets, but with an additional Tenant filter dropdown (multi-select).
+
+Ensure every chart request includes ?tenantId= param(s).
+
+KPI tooltips, multi-tenant growth comparisons side-by-side.
+
+Help Requests
+
+Global list: Tenant, Subject (or Category if you removed Subject), User Name, Priority, Status, Created At.
+
+Filters: Tenant, Status, Priority, Date Range.
+
+Actions: View/Reply/Resolve inline.
+
+Settings
+
+Integrations sub-tab: configure Twilio, SendGrid, Google OAuth, Microsoft OAuth per tenant defaults.
+
+Super-Admin Settings sub-tab: Global toggles (e.g. “Auto-approve new tenants,” “Enable multi-factor by default,” “Default booking window hours”).
+
+User Management: list of all super-admins & platform users; can reset any password, assign roles (super-admin vs. tenant-admin).
+
+Database & API Adjustments:
+
+Routes: Prefix all super-admin APIs under /api/super-admin/.... Copy existing admin handlers and add tenant scoping logic: if no tenantId passed, return all; else filter by tenantId.
+
+Drizzle-ORM: Extend every where clause to include eq(table.tenantId, params.tenantId) when provided; remove forced single-tenant assumption in super-admin context.
+
+Seed Data: Ensure your seed includes multiple tenants so the super-admin views can be tested immediately.
+
+Routing & Navigation:
+
+In your layout component, detect is_super_admin flag on user context; render the new “Super-Admin” sidebar menu instead of the tenant-scoped Admin menu.
+
+Each page link must include /super-admin/... and preserve query params for tenant filtering.
+
+Access Control:
+
+Middleware requireSuperAdmin that checks session.user.isSuperAdmin === true before any /api/super-admin route.
+
+On the client, hide tenant selector if non-super-admin.
+
+Mobile-Responsive:
+
+Apply your existing mobile-first Tailwind patterns: collapse sidebar to hamburger, stack cards, transform tables into swipeable lists, etc., but only on <sm breakpoints. Desktop view remains unchanged.
+
+Verification:
+
+Create two tenants, seed data accordingly.
+
+Log in as a super-admin: verify you can view/filter across tenants.
+
+Spot-check each page: data loads, filters work, detail links apply tenant filters, actions (approve/refund/etc.) correctly update across all tenant records.
+
+Deliverables:
+
+All new pages under client/src/pages/super-admin/ and matching API handlers under server/admin-routes.ts (or new server/super-admin-routes.ts).
+
+Updated layout to swap in the Super-Admin menu.
+
+Drizzle-ORM query updates for multi-tenant scoping.
+
+A brief README section in /docs describing how to seed multi-tenant test data and how to log in as super-admin.
