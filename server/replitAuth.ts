@@ -131,12 +131,14 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      // Always redirect to home page after logout
-      const redirectUrl = client.buildEndSessionUrl(config, {
-        client_id: process.env.REPL_ID!,
-        post_logout_redirect_uri: `${req.protocol}://${req.hostname}/`,
-      }).href;
-      res.redirect(redirectUrl);
+      // Clear the session and redirect to home page
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+        }
+        // Always redirect to the landing page after logout
+        res.redirect('/');
+      });
     });
   });
 }
