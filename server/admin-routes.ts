@@ -1643,29 +1643,48 @@ export function setupAdminRoutes(app: any) {
       const updates = req.body;
       const adminUserId = (req as any).currentUser?.id;
 
+      console.log('Settings update request:', { 
+        keyCount: Object.keys(updates).length,
+        keys: Object.keys(updates),
+        adminUserId,
+        logoSize: updates.businessLogo ? updates.businessLogo.length : 'N/A'
+      });
+
       // Update each setting in the database
       for (const [key, value] of Object.entries(updates)) {
-        await db.insert(systemSettings)
-          .values({
-            key,
-            value: String(value),
-            updatedBy: adminUserId,
-            updatedAt: new Date(),
-          })
-          .onConflictDoUpdate({
-            target: systemSettings.key,
-            set: {
+        try {
+          console.log(`Updating setting: ${key}, value length: ${String(value).length}`);
+          
+          await db.insert(systemSettings)
+            .values({
+              key,
               value: String(value),
               updatedBy: adminUserId,
               updatedAt: new Date(),
-            },
-          });
+            })
+            .onConflictDoUpdate({
+              target: systemSettings.key,
+              set: {
+                value: String(value),
+                updatedBy: adminUserId,
+                updatedAt: new Date(),
+              },
+            });
+            
+          console.log(`Successfully updated setting: ${key}`);
+        } catch (settingError) {
+          console.error(`Error updating setting ${key}:`, settingError);
+          throw new Error(`Failed to update setting ${key}: ${settingError.message}`);
+        }
       }
 
       res.json({ message: "Settings updated successfully" });
     } catch (error) {
       console.error("Error updating settings:", error);
-      res.status(500).json({ message: "Failed to update settings" });
+      res.status(500).json({ 
+        message: "Failed to update settings", 
+        error: error.message || "Unknown error"
+      });
     }
   });
 
