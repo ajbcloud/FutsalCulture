@@ -9,8 +9,7 @@ import CartButton from "@/components/cart-button";
 import SessionCalendar from "@/components/session-calendar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+
 
 import { FutsalSession, Player } from "@shared/schema";
 import { isSessionEligibleForPlayer } from "@shared/utils";
@@ -19,22 +18,35 @@ export default function Sessions() {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { toast } = useToast();
-  const [ageFilter, setAgeFilter] = useState<string>("all");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [genderFilter, setGenderFilter] = useState<string>("all");
-  const [cartMode, setCartMode] = useState(false);
+  
+  // Filter state - separate current values from applied values
+  const [currentAgeFilter, setCurrentAgeFilter] = useState<string>("all");
+  const [currentLocationFilter, setCurrentLocationFilter] = useState<string>("all");
+  const [currentGenderFilter, setCurrentGenderFilter] = useState<string>("all");
+  
+  // Applied filters (used for API calls)
+  const [appliedAgeFilter, setAppliedAgeFilter] = useState<string>("all");
+  const [appliedLocationFilter, setAppliedLocationFilter] = useState<string>("all");
+  const [appliedGenderFilter, setAppliedGenderFilter] = useState<string>("all");
 
-  // Build query parameters for sessions API
+  // Build query parameters for sessions API using applied filters
   const sessionParams = new URLSearchParams();
-  if (ageFilter !== "all") sessionParams.set("ageGroup", ageFilter);
-  if (locationFilter !== "all") sessionParams.set("location", locationFilter);
-  if (genderFilter !== "all") sessionParams.set("gender", genderFilter);
+  if (appliedAgeFilter !== "all") sessionParams.set("ageGroup", appliedAgeFilter);
+  if (appliedLocationFilter !== "all") sessionParams.set("location", appliedLocationFilter);
+  if (appliedGenderFilter !== "all") sessionParams.set("gender", appliedGenderFilter);
   
   const sessionsUrl = `/api/sessions${sessionParams.toString() ? `?${sessionParams.toString()}` : ''}`;
   
   const { data: sessions = [], isLoading } = useQuery<FutsalSession[]>({
     queryKey: [sessionsUrl],
   });
+
+  // Apply filters function
+  const applyFilters = () => {
+    setAppliedAgeFilter(currentAgeFilter);
+    setAppliedLocationFilter(currentLocationFilter);
+    setAppliedGenderFilter(currentGenderFilter);
+  };
 
   // Get players for authenticated parents
   const { data: players = [] } = useQuery<Player[]>({
@@ -49,10 +61,10 @@ export default function Sessions() {
       if (!isEligibleForAnyPlayer) return false;
     }
     
-    // Apply manual filters (using new array schema)
-    if (ageFilter !== "all" && !session.ageGroups?.includes(ageFilter)) return false;
-    if (locationFilter !== "all" && session.location !== locationFilter) return false;
-    if (genderFilter !== "all" && !session.genders?.includes(genderFilter)) return false;
+    // Apply manual filters (using applied filter values)
+    if (appliedAgeFilter !== "all" && !session.ageGroups?.includes(appliedAgeFilter)) return false;
+    if (appliedLocationFilter !== "all" && session.location !== appliedLocationFilter) return false;
+    if (appliedGenderFilter !== "all" && !session.genders?.includes(appliedGenderFilter)) return false;
     return true;
   });
 
@@ -86,18 +98,8 @@ export default function Sessions() {
                 <h1 className="text-2xl font-bold text-white mb-2 sm:text-3xl">Training Sessions</h1>
                 <p className="text-zinc-400 text-sm sm:text-base">Find the perfect session for your young athlete</p>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
-                {isAuthenticated && (
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="cart-mode"
-                      checked={cartMode}
-                      onCheckedChange={setCartMode}
-                    />
-                    <Label htmlFor="cart-mode" className="text-white text-sm">Multi-select mode</Label>
-                  </div>
-                )}
-                <Select value={genderFilter} onValueChange={setGenderFilter}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 sm:gap-0">
+                <Select value={currentGenderFilter} onValueChange={setCurrentGenderFilter}>
                   <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
                     <SelectValue placeholder="All Genders" />
                   </SelectTrigger>
@@ -111,7 +113,7 @@ export default function Sessions() {
                   </SelectContent>
                 </Select>
                 
-                <Select value={ageFilter} onValueChange={setAgeFilter}>
+                <Select value={currentAgeFilter} onValueChange={setCurrentAgeFilter}>
                   <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-32">
                     <SelectValue placeholder="All Ages" />
                   </SelectTrigger>
@@ -122,7 +124,8 @@ export default function Sessions() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                
+                <Select value={currentLocationFilter} onValueChange={setCurrentLocationFilter}>
                   <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 sm:w-48">
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
@@ -133,6 +136,13 @@ export default function Sessions() {
                     ))}
                   </SelectContent>
                 </Select>
+                
+                <Button 
+                  onClick={applyFilters}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                >
+                  Update
+                </Button>
               </div>
             </div>
           </div>
@@ -142,9 +152,12 @@ export default function Sessions() {
               <p className="text-gray-500 text-lg">No sessions found matching your criteria.</p>
               <Button 
                 onClick={() => {
-                  setAgeFilter("all");
-                  setLocationFilter("all");
-                  setGenderFilter("all");
+                  setCurrentAgeFilter("all");
+                  setCurrentLocationFilter("all");
+                  setCurrentGenderFilter("all");
+                  setAppliedAgeFilter("all");
+                  setAppliedLocationFilter("all");
+                  setAppliedGenderFilter("all");
                 }}
                 className="mt-4"
               >
@@ -157,7 +170,7 @@ export default function Sessions() {
                 <SessionCard 
                   key={session.id} 
                   session={session} 
-                  showAddToCart={cartMode}
+                  showAddToCart={false}
                   onAddToCart={(session) => {
                     addToCart(session);
                     toast({
@@ -179,9 +192,9 @@ export default function Sessions() {
               <p className="text-zinc-400 text-sm sm:text-base">View all scheduled training sessions at a glance</p>
             </div>
             <SessionCalendar 
-              ageGroupFilter={ageFilter === "all" ? undefined : ageFilter}
-              genderFilter={genderFilter === "all" ? undefined : genderFilter}
-              locationFilter={locationFilter === "all" ? undefined : locationFilter}
+              ageGroupFilter={appliedAgeFilter === "all" ? undefined : appliedAgeFilter}
+              genderFilter={appliedGenderFilter === "all" ? undefined : appliedGenderFilter}
+              locationFilter={appliedLocationFilter === "all" ? undefined : appliedLocationFilter}
               showBookingButtons={true}
               onSessionClick={(session) => {
                 window.location.href = `/sessions/${session.id}`;
