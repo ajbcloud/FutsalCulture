@@ -19,17 +19,17 @@ export function BusinessBranding({
   // Define size classes based on variant
   const sizeClasses = {
     small: {
-      container: 'h-8',
+      container: 'min-h-8',
       text: 'text-lg',
       logo: 'max-h-8'
     },
     default: {
-      container: 'h-10',
+      container: 'min-h-10',
       text: 'text-xl',
       logo: 'max-h-10'
     },
     large: {
-      container: 'h-16',
+      container: 'min-h-16',
       text: 'text-3xl',
       logo: 'max-h-16'
     }
@@ -37,8 +37,28 @@ export function BusinessBranding({
 
   const sizes = sizeClasses[variant];
 
+  // Calculate responsive font size based on business name length
+  const getResponsiveFontSize = (name: string, baseSize: string) => {
+    const length = name.length;
+    
+    if (length <= 8) {
+      return baseSize; // Use base size for short names
+    } else if (length <= 15) {
+      return baseSize === 'text-3xl' ? 'text-2xl' : 
+             baseSize === 'text-xl' ? 'text-lg' : 'text-base';
+    } else if (length <= 25) {
+      return baseSize === 'text-3xl' ? 'text-xl' : 
+             baseSize === 'text-xl' ? 'text-base' : 'text-sm';
+    } else {
+      return baseSize === 'text-3xl' ? 'text-lg' : 
+             baseSize === 'text-xl' ? 'text-sm' : 'text-xs';
+    }
+  };
+
+  const responsiveFontSize = getResponsiveFontSize(businessName, sizes.text);
+
   return (
-    <div className={`flex items-center justify-center ${sizes.container} ${className}`}>
+    <div className={`flex items-center justify-center ${sizes.container} ${className} w-full max-w-full`}>
       {businessLogo ? (
         <img 
           src={businessLogo} 
@@ -46,7 +66,8 @@ export function BusinessBranding({
           className={`${sizes.logo} w-auto object-contain ${logoClassName}`}
         />
       ) : (
-        <span className={`${sizes.text} font-bold ${textClassName} break-words text-center leading-tight`}>
+        <span className={`${responsiveFontSize} font-bold ${textClassName} break-words text-center leading-tight max-w-full px-2 hyphens-auto`}
+              style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
           {businessName}
         </span>
       )}
