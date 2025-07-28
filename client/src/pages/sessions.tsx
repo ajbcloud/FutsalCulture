@@ -57,12 +57,24 @@ export default function Sessions() {
       setAppliedLocationFilter(locationParam);
     }
     
-    // For multiple players, store the multi-select values
+    // For multiple players, store the multi-select values and show in dropdowns
     if (agesParam) {
-      setMultiPlayerAges(agesParam.split(','));
+      const ages = agesParam.split(',');
+      setMultiPlayerAges(ages);
+      // If single age, show in dropdown; if multiple, show "All Ages" but apply multi-filter
+      if (ages.length === 1) {
+        setCurrentAgeFilter(ages[0]);
+        setAppliedAgeFilter(ages[0]);
+      }
     }
     if (gendersParam) {
-      setMultiPlayerGenders(gendersParam.split(','));
+      const genders = gendersParam.split(',');
+      setMultiPlayerGenders(genders);
+      // If single gender, show in dropdown; if multiple, show "All Genders" but apply multi-filter
+      if (genders.length === 1) {
+        setCurrentGenderFilter(genders[0]);
+        setAppliedGenderFilter(genders[0]);
+      }
     }
   }, []);
 
