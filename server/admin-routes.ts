@@ -636,7 +636,8 @@ export function setupAdminRoutes(app: any) {
           icon: '💬',
           message: `Help request: ${request.subject}`,
           timestamp: request.createdAt,
-          timeAgo: getTimeAgo(request.createdAt)
+          timeAgo: getTimeAgo(request.createdAt),
+          navigationUrl: '/admin/help-requests'
         });
       });
 
