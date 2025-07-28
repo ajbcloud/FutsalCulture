@@ -180,18 +180,6 @@ export default function AdminPendingRegistrations() {
         </Badge>
       </div>
 
-      {/* Top Pagination */}
-      {registrations.length > 0 && (
-        <Pagination
-          totalItems={registrations.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
-        />
-      )}
-
       {registrations.length === 0 ? (
         <div className="bg-zinc-900 rounded-lg p-8 text-center">
           <Users className="w-12 h-12 text-zinc-600 mx-auto mb-4" />

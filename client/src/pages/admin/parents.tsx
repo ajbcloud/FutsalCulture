@@ -372,18 +372,6 @@ export default function AdminParents() {
           </div>
         </div>
 
-        {/* Top Pagination */}
-        {filteredParents.length > 0 && (
-          <Pagination
-            totalItems={filteredParents.length}
-            itemsPerPage={itemsPerPage}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
-          />
-        )}
-
         {/* Parents Table */}
         <div className="bg-zinc-900 rounded-lg overflow-hidden">
           <Table>

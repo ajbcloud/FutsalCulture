@@ -449,18 +449,6 @@ export default function AdminPayments() {
         </div>
       )}
 
-      {/* Top Pagination */}
-      {filteredPayments.length > 0 && (
-        <Pagination
-          totalItems={filteredPayments.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
-        />
-      )}
-
       {/* Single Payments Table */}
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>

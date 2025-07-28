@@ -275,18 +275,6 @@ export default function AdminHelpRequests() {
           )}
         </div>
 
-        {/* Top Pagination */}
-        {filteredRequests.length > 0 && (
-          <Pagination
-            totalItems={filteredRequests.length}
-            itemsPerPage={itemsPerPage}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
-          />
-        )}
-
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>

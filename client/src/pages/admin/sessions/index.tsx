@@ -408,18 +408,6 @@ export default function AdminSessions() {
         )}
       </div>
 
-      {/* Top Pagination */}
-      {filteredSessions.length > 0 && (
-        <Pagination
-          totalItems={filteredSessions.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
-        />
-      )}
-
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
