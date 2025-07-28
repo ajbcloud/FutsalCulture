@@ -417,6 +417,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
+      // Get user's tenant information
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Assign default tenant if user doesn't have one (for existing users)
+      let tenantId = user.tenantId;
+      if (!tenantId) {
+        // Get the first available tenant or create a default one
+        const { db } = await import("./db");
+        const { tenants } = await import("@shared/schema");
+        
+        const existingTenants = await db.select().from(tenants).limit(1);
+        if (existingTenants.length > 0) {
+          tenantId = existingTenants[0].id;
+          // Update user with tenant assignment
+          await storage.updateUser(userId, { tenantId });
+        } else {
+          return res.status(400).json({ message: "No tenant available for player creation" });
+        }
+      }
+      
       // Check if auto-approve is enabled
       const { db } = await import("./db");
       const { systemSettings } = await import("@shared/schema");
@@ -431,6 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertPlayerSchema.parse({
         ...req.body,
+        tenantId,
         parentId: userId,
         isApproved: autoApprove,
         registrationStatus: autoApprove ? 'approved' : 'pending',

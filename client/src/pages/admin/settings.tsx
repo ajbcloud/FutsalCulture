@@ -270,7 +270,8 @@ export default function AdminSettings() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update settings');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update settings');
       }
 
       if (window.location && settings.timezone) {

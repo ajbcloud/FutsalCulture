@@ -73,7 +73,13 @@ export default function Home() {
               variant="outline" 
               size="lg"
               onClick={() => {
-                document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' });
+                const calendarSection = document.getElementById('calendar');
+                if (calendarSection) {
+                  calendarSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  // If calendar not found on current page, navigate to calendar page
+                  window.location.href = '/calendar';
+                }
               }}
             >
               View Schedule

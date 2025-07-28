@@ -444,7 +444,7 @@ export function setupAdminRoutes(app: any) {
 
       console.log('Recent activity query:', { startTime, endTime, now });
 
-      const activities = [];
+      const activities: any[] = [];
 
       // Get recent payments with player and parent details for search functionality
       const recentPaymentsWithParents = await db
@@ -475,8 +475,8 @@ export function setupAdminRoutes(app: any) {
           type: 'payment',
           icon: '🎉',
           message: `Payment received: $${(payment.amountCents / 100).toFixed(2)} from ${payment.parentFirstName} ${payment.parentLastName} for ${payment.playerFirstName} ${payment.playerLastName}`,
-          timestamp: payment.paidAt,
-          timeAgo: getTimeAgo(payment.paidAt),
+          timestamp: payment.paidAt!,
+          timeAgo: getTimeAgo(payment.paidAt!),
           // Navigation metadata - use parent name for search since payments are filtered by parent
           navigationUrl: '/admin/payments',
           searchTerm: `${payment.parentFirstName} ${payment.parentLastName}`,
@@ -516,8 +516,8 @@ export function setupAdminRoutes(app: any) {
           type: 'refund',
           icon: '💸',
           message: `Refund issued: $${(refund.amountCents / 100).toFixed(2)} to ${refund.parentFirstName} ${refund.parentLastName} for ${refund.playerFirstName} ${refund.playerLastName}`,
-          timestamp: refund.refundedAt,
-          timeAgo: getTimeAgo(refund.refundedAt),
+          timestamp: refund.refundedAt!,
+          timeAgo: getTimeAgo(refund.refundedAt!),
           reasonSnippet,
           fullReason: refund.refundReason,
           // Navigation metadata
@@ -541,8 +541,8 @@ export function setupAdminRoutes(app: any) {
           type: 'registration',
           icon: '👤',
           message: `New player registered: ${player.firstName} ${player.lastName}`,
-          timestamp: player.createdAt,
-          timeAgo: getTimeAgo(player.createdAt),
+          timestamp: player.createdAt!,
+          timeAgo: getTimeAgo(player.createdAt!),
           // Navigation metadata
           navigationUrl: '/admin/players',
           searchTerm: `${player.firstName} ${player.lastName}`,
@@ -564,8 +564,8 @@ export function setupAdminRoutes(app: any) {
           type: 'approval',
           icon: '✅',
           message: `Player registration approved: ${player.firstName} ${player.lastName}`,
-          timestamp: player.approvedAt,
-          timeAgo: getTimeAgo(player.approvedAt),
+          timestamp: player.approvedAt!,
+          timeAgo: getTimeAgo(player.approvedAt!),
           // Navigation metadata
           navigationUrl: '/admin/players',
           searchTerm: `${player.firstName} ${player.lastName}`,
@@ -587,8 +587,8 @@ export function setupAdminRoutes(app: any) {
           type: 'registration',
           icon: '👨‍👩‍👧‍👦',
           message: `New parent registered: ${user.firstName} ${user.lastName}`,
-          timestamp: user.createdAt,
-          timeAgo: getTimeAgo(user.createdAt),
+          timestamp: user.createdAt!,
+          timeAgo: getTimeAgo(user.createdAt!),
           // Navigation metadata  
           navigationUrl: '/admin/parents',
           searchTerm: `${user.firstName} ${user.lastName}`,
@@ -612,8 +612,8 @@ export function setupAdminRoutes(app: any) {
           type: 'approval',
           icon: '✅',
           message: `Parent registration approved: ${user.firstName} ${user.lastName}`,
-          timestamp: user.approvedAt,
-          timeAgo: getTimeAgo(user.approvedAt),
+          timestamp: user.approvedAt!,
+          timeAgo: getTimeAgo(user.approvedAt!),
           // Navigation metadata  
           navigationUrl: '/admin/parents',
           searchTerm: `${user.firstName} ${user.lastName}`,
@@ -635,8 +635,8 @@ export function setupAdminRoutes(app: any) {
           type: 'help',
           icon: '💬',
           message: `Help request: ${request.subject}`,
-          timestamp: request.createdAt,
-          timeAgo: getTimeAgo(request.createdAt),
+          timestamp: request.createdAt!,
+          timeAgo: getTimeAgo(request.createdAt!),
           navigationUrl: '/admin/help-requests'
         });
       });
@@ -975,6 +975,7 @@ export function setupAdminRoutes(app: any) {
       
       // Create a payment record with current timestamp 
       await storage.createPayment({
+        tenantId: signup.player?.tenantId || 'default-tenant',
         signupId: id,
         amountCents: signup.session?.priceCents || 1000, // Default $10
         paidAt: new Date()
@@ -1125,9 +1126,15 @@ export function setupAdminRoutes(app: any) {
           )
         );
 
-      // Apply location filter
+      // Apply location filter by adding to where clause
       if (location && location !== '') {
-        sessionQuery = sessionQuery.where(eq(futsalSessions.location, location as string));
+        sessionQuery = sessionQuery.where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd),
+            eq(futsalSessions.location, location as string)
+          )
+        );
       }
 
       const applicableSessions = await sessionQuery;
