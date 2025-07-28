@@ -25,25 +25,32 @@ export default function Navbar() {
               />
             </Link>
             <div className="hidden md:block ml-10">
-              <div className="flex space-x-8">
-                {!isAuthenticated && (
-                  <Link href="/sessions" className="text-foreground font-medium hover:text-primary">
-                    Sessions
-                  </Link>
-                )}
-                {isAuthenticated && (
+              <div className="flex border-b border-border">
+                {isAuthenticated ? (
                   <>
-                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-                      Dashboard
+                    <Link href="/" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                      Home
                     </Link>
-                    <Link href="/calendar" className="text-muted-foreground hover:text-foreground">
+                    <Link href="/calendar" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Calendar
+                    </Link>
+                    <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                      Help
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                      Home
+                    </Link>
+                    <Link href="/sessions" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                      Sessions
+                    </Link>
+                    <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                      Help
                     </Link>
                   </>
                 )}
-                <Link href="/help" className="text-muted-foreground hover:text-foreground">
-                  Help
-                </Link>
               </div>
             </div>
           </div>
@@ -110,20 +117,18 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-muted">
+              <Link href="/" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
+                Home
+              </Link>
               {!isAuthenticated && (
                 <Link href="/sessions" className="block px-3 py-2 text-foreground font-medium hover:text-primary">
                   Sessions
                 </Link>
               )}
               {isAuthenticated && (
-                <>
-                  <Link href="/dashboard" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
-                    Dashboard
-                  </Link>
-                  <Link href="/calendar" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
-                    Calendar
-                  </Link>
-                </>
+                <Link href="/calendar" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
+                  Calendar
+                </Link>
               )}
               <Link href="/help" className="block px-3 py-2 text-muted-foreground hover:text-foreground">
                 Help

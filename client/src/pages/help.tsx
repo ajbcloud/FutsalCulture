@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -61,6 +61,16 @@ export default function Help() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [captchaAnswer, setCaptchaAnswer] = useState("");
+  
+  // Fetch admin settings for contact information
+  const { data: settings } = useQuery({
+    queryKey: ["/api/admin/settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/settings");
+      if (!response.ok) throw new Error("Failed to fetch settings");
+      return response.json();
+    },
+  });
   
   // Generate random math captcha
   const generateCaptcha = () => {
@@ -397,7 +407,7 @@ export default function Help() {
                   <Mail className="w-5 h-5 text-blue-400" />
                   <div>
                     <p className="text-white font-medium">Email</p>
-                    <p className="text-zinc-400">support@futsalculture.com</p>
+                    <p className="text-zinc-400">{settings?.supportEmail || "support@futsalculture.com"}</p>
                   </div>
                 </div>
                 
@@ -405,7 +415,7 @@ export default function Help() {
                   <Phone className="w-5 h-5 text-green-400" />
                   <div>
                     <p className="text-white font-medium">Phone</p>
-                    <p className="text-zinc-400">(555) 123-GOAL</p>
+                    <p className="text-zinc-400">{settings?.supportPhone || "(555) 123-GOAL"}</p>
                   </div>
                 </div>
                 
@@ -413,7 +423,7 @@ export default function Help() {
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <div>
                     <p className="text-white font-medium">Support Hours</p>
-                    <p className="text-zinc-400">Monday - Friday</p>
+                    <p className="text-zinc-400">{settings?.supportHours || "Monday - Friday"}</p>
                   </div>
                 </div>
                 
@@ -421,7 +431,7 @@ export default function Help() {
                   <MapPin className="w-5 h-5 text-red-400" />
                   <div>
                     <p className="text-white font-medium">Location</p>
-                    <p className="text-zinc-400">South Florida</p>
+                    <p className="text-zinc-400">{settings?.supportLocation || "South Florida"}</p>
                   </div>
                 </div>
               </CardContent>

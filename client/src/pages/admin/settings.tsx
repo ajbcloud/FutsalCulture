@@ -19,6 +19,9 @@ interface SystemSettings {
   businessLogo?: string;
   contactEmail: string;
   supportEmail: string;
+  supportPhone: string;
+  supportHours: string;
+  supportLocation: string;
   timezone: string;
   emailNotifications: boolean;
   smsNotifications: boolean;
@@ -125,6 +128,9 @@ export default function AdminSettings() {
     businessName: '',
     contactEmail: '',
     supportEmail: '',
+    supportPhone: '',
+    supportHours: '',
+    supportLocation: '',
     timezone: 'America/New_York',
     emailNotifications: true,
     smsNotifications: false,
@@ -402,10 +408,42 @@ export default function AdminSettings() {
                 <Label htmlFor="supportEmail" className="text-zinc-300">Support Email</Label>
                 <Input
                   id="supportEmail"
+                  type="email"
                   value={settings.supportEmail}
                   onChange={(e) => setSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
                   className="bg-zinc-800 border-zinc-700 text-white"
                   placeholder="Email address for help request notifications"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supportPhone" className="text-zinc-300">Support Phone</Label>
+                <Input
+                  id="supportPhone"
+                  type="tel"
+                  value={settings.supportPhone}
+                  onChange={(e) => setSettings(prev => ({ ...prev, supportPhone: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Phone number for support inquiries"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supportHours" className="text-zinc-300">Support Hours</Label>
+                <Input
+                  id="supportHours"
+                  value={settings.supportHours}
+                  onChange={(e) => setSettings(prev => ({ ...prev, supportHours: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="e.g., Monday - Friday, 9:00 AM - 5:00 PM"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supportLocation" className="text-zinc-300">Support Location</Label>
+                <Input
+                  id="supportLocation"
+                  value={settings.supportLocation}
+                  onChange={(e) => setSettings(prev => ({ ...prev, supportLocation: e.target.value }))}
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  placeholder="Business location or region"
                 />
               </div>
               <div>

@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Home } from "lucide-react";
-import { Link } from "wouter";
+
 import { FutsalSession, Player } from "@shared/schema";
 import { isSessionEligibleForPlayer } from "@shared/utils";
 
@@ -75,15 +74,7 @@ export default function Sessions() {
           <div className="mb-8">
             <div className="flex justify-between items-start">
               <div>
-                <div className="flex items-center gap-4 mb-2">
-                  <Link href="/">
-                    <Button variant="outline" size="sm" className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-white">
-                      <Home className="w-4 h-4" />
-                      Home
-                    </Button>
-                  </Link>
-                  <h1 className="text-3xl font-bold text-white">Training Sessions</h1>
-                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">Training Sessions</h1>
                 <p className="text-zinc-400">Find the perfect session for your young athlete</p>
               </div>
               <div className="flex items-center space-x-4">
