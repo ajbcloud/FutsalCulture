@@ -101,9 +101,10 @@ export default function AdminPayments() {
       toast({ title: "Payment confirmed successfully" });
       loadPayments(); // Refresh data
       
-      // Refresh recent activity on dashboard
+      // Refresh all dashboard-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
     } catch (error) {
       console.error('Error confirming payment:', error);
       toast({ title: "Error confirming payment", variant: "destructive" });

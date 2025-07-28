@@ -91,14 +91,16 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/dashboard-metrics"],
     staleTime: 0, // Always refetch for dashboard metrics
     refetchOnMount: true,
+    refetchOnWindowFocus: true, // Refresh when window gains focus
   });
 
   // Fetch recent activity
   const { data: activities, isLoading: activitiesLoading, refetch: refetchActivity } = useQuery<ActivityItem[]>({
     queryKey: ["/api/admin/recent-activity"],
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchInterval: 5000, // Auto-refresh every 5 seconds for faster updates
     staleTime: 0, // Always consider data stale to ensure fresh fetches
     refetchOnMount: true,
+    refetchOnWindowFocus: true, // Refresh when window gains focus
   });
 
   // Legacy stats for backwards compatibility

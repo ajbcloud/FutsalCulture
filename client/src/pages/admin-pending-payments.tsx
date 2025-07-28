@@ -64,8 +64,12 @@ export default function AdminPendingPayments() {
       return apiRequest("PATCH", `/api/admin/confirm-payment/${signupId}`, {});
     },
     onSuccess: () => {
+      // Invalidate all relevant queries to update dashboard
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/recent-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: "Payment Confirmed",
         description: "Payment has been marked as confirmed",
