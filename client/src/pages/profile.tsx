@@ -131,43 +131,49 @@ export default function Profile() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="bg-zinc-900 border-zinc-700">
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div className="flex items-center space-x-3">
                 <div className="bg-blue-600 p-2 rounded-lg">
                   <User className="w-6 h-6" />
                 </div>
-                <div>
-                  <CardTitle className="text-white text-2xl">Profile Information</CardTitle>
-                  <p className="text-zinc-400">Manage your account details and preferences</p>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-white text-xl sm:text-2xl">Profile Information</CardTitle>
+                  <p className="text-zinc-400 text-sm">Manage your account details and preferences</p>
                 </div>
               </div>
               
               {isEditing ? (
-                <div className="flex gap-2">
+                <div className="flex gap-2 self-start sm:self-center">
                   <Button 
                     onClick={handleSave}
                     disabled={updateProfileMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 text-sm px-3 py-2 h-9"
+                    size="sm"
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                    <Save className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">{updateProfileMutation.isPending ? "Saving..." : "Save Changes"}</span>
+                    <span className="sm:hidden">Save</span>
                   </Button>
                   <Button 
                     onClick={handleCancel}
                     variant="outline"
-                    className="border-zinc-600 text-zinc-400 hover:text-white"
+                    className="border-zinc-600 text-zinc-400 hover:text-white text-sm px-3 py-2 h-9"
+                    size="sm"
                   >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
+                    <X className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Cancel</span>
+                    <span className="sm:hidden">Cancel</span>
                   </Button>
                 </div>
               ) : (
                 <Button 
                   onClick={() => setIsEditing(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-2 h-9 self-start sm:self-center"
+                  size="sm"
                 >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Profile
+                  <Edit className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Edit Profile</span>
+                  <span className="sm:hidden">Edit</span>
                 </Button>
               )}
             </div>
