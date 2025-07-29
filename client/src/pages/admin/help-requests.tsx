@@ -37,6 +37,8 @@ export default function AdminHelpRequests() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [submittedFilter, setSubmittedFilter] = useState('');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,7 +103,7 @@ export default function AdminHelpRequests() {
       filtered = filtered.filter(req => req.source === sourceFilter);
     }
 
-    // Filter by submitted date (today, this week, this month)
+    // Filter by submitted date (today, this week, this month, or custom range)
     if (submittedFilter) {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -117,6 +119,15 @@ export default function AdminHelpRequests() {
             return createdAt >= thisWeek;
           case 'month':
             return createdAt >= thisMonth;
+          case 'custom':
+            let inRange = true;
+            if (customStartDate) {
+              inRange = inRange && createdAt >= new Date(customStartDate);
+            }
+            if (customEndDate) {
+              inRange = inRange && createdAt <= new Date(customEndDate + 'T23:59:59');
+            }
+            return inRange;
           default:
             return true;
         }
@@ -125,7 +136,7 @@ export default function AdminHelpRequests() {
 
     setFilteredRequests(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [helpRequests, userFilter, sourceFilter, statusFilter, submittedFilter]);
+  }, [helpRequests, userFilter, sourceFilter, statusFilter, submittedFilter, customStartDate, customEndDate]);
 
   // Apply pagination whenever filtered requests or pagination settings change
   useEffect(() => {
@@ -284,16 +295,48 @@ export default function AdminHelpRequests() {
               <Label className="text-zinc-300 text-sm">Filter by Submitted</Label>
               <select
                 value={submittedFilter}
-                onChange={(e) => setSubmittedFilter(e.target.value)}
+                onChange={(e) => {
+                  setSubmittedFilter(e.target.value);
+                  if (e.target.value !== 'custom') {
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }
+                }}
                 className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
               >
                 <option value="">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
+                <option value="custom">Custom Date Range</option>
               </select>
             </div>
           </div>
+          
+          {/* Custom Date Range Inputs - Only show when "Custom Date Range" is selected */}
+          {submittedFilter === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label className="text-zinc-300 text-sm">Start Date</Label>
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-zinc-300 text-sm">End Date</Label>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                />
+              </div>
+            </div>
+          )}
+          
           {(userFilter || sourceFilter || statusFilter || submittedFilter) && (
             <div className="mt-3 flex justify-between items-center">
               <p className="text-sm text-zinc-400">
@@ -307,6 +350,8 @@ export default function AdminHelpRequests() {
                   setSourceFilter('');
                   setStatusFilter('');
                   setSubmittedFilter('');
+                  setCustomStartDate('');
+                  setCustomEndDate('');
                 }}
                 className="text-zinc-300 border-zinc-600 hover:bg-zinc-800"
               >
