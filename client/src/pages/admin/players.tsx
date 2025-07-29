@@ -536,7 +536,7 @@ export default function AdminPlayers() {
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="csvFile" className="text-zinc-300">
+              <Label htmlFor="csvFile" className="text-muted-foreground">
                 Select CSV File
               </Label>
               <Input
@@ -545,11 +545,11 @@ export default function AdminPlayers() {
                 accept=".csv"
                 onChange={handleFileUpload}
                 disabled={importing}
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-input border-border text-foreground"
               />
             </div>
             
-            <div className="text-sm text-zinc-400">
+            <div className="text-sm text-muted-foreground">
               <p>CSV should include headers: firstName, lastName, birthYear, gender, parentEmail, parentPhone, canAccessPortal, canBookAndPay</p>
               <Button 
                 variant="link" 
@@ -561,7 +561,7 @@ export default function AdminPlayers() {
             </div>
 
             {importing && (
-              <div className="flex items-center space-x-2 text-zinc-300">
+              <div className="flex items-center space-x-2 text-muted-foreground">
                 <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
                 <span>Importing players...</span>
               </div>
@@ -629,45 +629,45 @@ export default function AdminPlayers() {
             </div>
 
             <div>
-              <Label htmlFor="soccerClub" className="text-zinc-300">Soccer Club</Label>
+              <Label htmlFor="soccerClub" className="text-muted-foreground">Soccer Club</Label>
               <Input
                 id="soccerClub"
                 value={editForm.soccerClub}
                 onChange={(e) => setEditForm(prev => ({ ...prev, soccerClub: e.target.value }))}
                 placeholder="Enter soccer club name"
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-input border-border text-foreground"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="player@example.com"
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
               <div>
-                <Label htmlFor="phoneNumber" className="text-zinc-300">Phone Number</Label>
+                <Label htmlFor="phoneNumber" className="text-muted-foreground">Phone Number</Label>
                 <Input
                   id="phoneNumber"
                   value={editForm.phoneNumber}
                   onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
                   placeholder="555-123-4567"
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-card rounded-lg">
                 <div>
-                  <Label className="text-zinc-300">Portal Access</Label>
-                  <p className="text-sm text-zinc-400">Allow player to access their own portal (age 13+)</p>
+                  <Label className="text-muted-foreground">Portal Access</Label>
+                  <p className="text-sm text-muted-foreground">Allow player to access their own portal (age 13+)</p>
                 </div>
                 <Switch
                   checked={editForm.canAccessPortal}
@@ -676,10 +676,10 @@ export default function AdminPlayers() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-card rounded-lg">
                 <div>
-                  <Label className="text-zinc-300">Booking & Payment</Label>
-                  <p className="text-sm text-zinc-400">Allow player to book sessions and make payments</p>
+                  <Label className="text-muted-foreground">Booking & Payment</Label>
+                  <p className="text-sm text-muted-foreground">Allow player to book sessions and make payments</p>
                 </div>
                 <Switch
                   checked={editForm.canBookAndPay}
@@ -693,7 +693,7 @@ export default function AdminPlayers() {
                 variant="outline" 
                 onClick={() => setShowEditModal(false)}
                 disabled={importing}
-                className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>

@@ -157,7 +157,7 @@ export default function SessionCalendar({
           return (
             <div
               key={dateKey}
-              className={`min-h-[70px] sm:min-h-[120px] border border-zinc-800 rounded transition-colors flex flex-col ${
+              className={`min-h-[70px] sm:min-h-[120px] border border-border rounded transition-colors flex flex-col ${
                 isToday ? 'bg-blue-900/20 border-blue-500' : 
                 isPast ? 'bg-card/50' : 'bg-card'
               }`}

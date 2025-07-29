@@ -391,7 +391,7 @@ export default function AdminParents() {
                 const isExpanded = expandedParentIds.has(parent.id);
                 return (
                   <React.Fragment key={parent.id}>
-                    <TableRow className="border-zinc-800">
+                    <TableRow className="border-border">
                       <TableCell className="text-foreground">
                         {parent.firstName} {parent.lastName}
                       </TableCell>
@@ -411,7 +411,7 @@ export default function AdminParents() {
                             }
                             setExpandedParentIds(nextExpanded);
                           }}
-                          className="flex items-center gap-1 p-1 hover:bg-zinc-700 rounded"
+                          className="flex items-center gap-1 p-1 hover:bg-muted rounded"
                         >
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-green-400" />
@@ -447,19 +447,19 @@ export default function AdminParents() {
                     </TableRow>
                     
                     {isExpanded && (
-                      <TableRow className="bg-zinc-900">
+                      <TableRow className="bg-muted/20">
                         <TableCell colSpan={7} className="px-8 py-2">
-                          <div className="text-sm text-zinc-400">
+                          <div className="text-sm text-muted-foreground">
                             {loadingPlayers.has(parent.id) ? (
                               <div className="space-y-1">
-                                <p className="font-medium text-zinc-300">Players:</p>
-                                <p className="text-zinc-500">Loading player details...</p>
+                                <p className="font-medium text-foreground">Players:</p>
+                                <p className="text-muted-foreground">Loading player details...</p>
                               </div>
                             ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
                               <div className="space-y-2">
-                                <p className="font-medium text-zinc-300">Players:</p>
+                                <p className="font-medium text-foreground">Players:</p>
                                 {parentPlayers[parent.id].map((player: any) => (
-                                  <div key={player.id} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
+                                  <div key={player.id} className="flex justify-between items-center bg-card p-2 rounded">
                                     <div>
                                       <Link 
                                         href={`/admin/players?playerId=${player.id}`}
@@ -467,22 +467,22 @@ export default function AdminParents() {
                                       >
                                         {player.firstName} {player.lastName}
                                       </Link>
-                                      <span className="text-zinc-400 ml-2">
+                                      <span className="text-muted-foreground ml-2">
                                         ({player.ageGroup}, {player.gender})
-                                        {player.soccerClub && <span className="text-zinc-500"> • {player.soccerClub}</span>}
+                                        {player.soccerClub && <span className="text-muted-foreground"> • {player.soccerClub}</span>}
                                       </span>
                                       {player.canAccessPortal && (
                                         <Badge className="ml-2 bg-green-900 text-green-300 text-xs">Portal Access</Badge>
                                       )}
                                     </div>
-                                    <div className="text-right text-xs text-zinc-400">
+                                    <div className="text-right text-xs text-muted-foreground">
                                       {player.signupCount || 0} bookings
                                     </div>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-zinc-500">No players registered</p>
+                              <p className="text-muted-foreground">No players registered</p>
                             )}
                           </div>
                         </TableCell>
@@ -505,20 +505,20 @@ export default function AdminParents() {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {paginatedParents.length === 0 ? (
-            <div className="text-center text-zinc-400 py-8 bg-zinc-900 rounded-lg">
+            <div className="text-center text-muted-foreground py-8 bg-card rounded-lg">
               {filteredParents.length === 0 ? 'No parents found' : 'No parents on this page'}
             </div>
           ) : (
             paginatedParents.map((parent: any) => {
               const isExpanded = expandedParentIds.has(parent.id);
               return (
-                <div key={parent.id} className="bg-zinc-800 rounded-lg p-4">
+                <div key={parent.id} className="bg-card rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-white text-lg truncate">
                         {parent.firstName} {parent.lastName}
                       </h3>
-                      <p className="text-zinc-400 text-sm truncate">{parent.email}</p>
+                      <p className="text-muted-foreground text-sm truncate">{parent.email}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {getRoleDisplay(parent)}
@@ -528,13 +528,13 @@ export default function AdminParents() {
                   <div className="space-y-2 mb-4">
                     {parent.phone && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400">Phone:</span>
-                        <span className="text-zinc-300">{parent.phone}</span>
+                        <span className="text-muted-foreground">Phone:</span>
+                        <span className="text-foreground">{parent.phone}</span>
                       </div>
                     )}
                     
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Players:</span>
+                      <span className="text-muted-foreground">Players:</span>
                       <button
                         onClick={() => {
                           const nextExpanded = new Set(expandedParentIds);
@@ -546,12 +546,12 @@ export default function AdminParents() {
                           }
                           setExpandedParentIds(nextExpanded);
                         }}
-                        className="flex items-center gap-1 text-zinc-300 hover:text-blue-400"
+                        className="flex items-center gap-1 text-muted-foreground hover:text-blue-400"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-3 h-3 text-green-400" />
                         ) : (
-                          <ChevronRight className="w-3 h-3 text-zinc-400" />
+                          <ChevronRight className="w-3 h-3 text-muted-foreground" />
                         )}
                         <Users className="w-3 h-3" />
                         {parent.playersCount || 0}
@@ -559,15 +559,15 @@ export default function AdminParents() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Last Login:</span>
-                      <span className="text-zinc-300">
+                      <span className="text-muted-foreground">Last Login:</span>
+                      <span className="text-foreground">
                         {parent.lastLogin ? new Date(parent.lastLogin).toLocaleDateString() : 'Never'}
                       </span>
                     </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="border-t border-zinc-700 pt-3 mb-3">
+                    <div className="border-t border-border pt-3 mb-3">
                       {loadingPlayers.has(parent.id) ? (
                         <p className="text-zinc-500 text-sm">Loading player details...</p>
                       ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
