@@ -258,39 +258,46 @@ export default function AdminSessions() {
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Sessions Management</h1>
-        <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">Sessions Management</h1>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           {selectedSessions.size > 0 && (
             <Button 
               variant="outline"
               onClick={() => setShowMassUpdateModal(true)}
-              className="border-orange-600 text-orange-300 hover:bg-orange-900"
+              className="border-orange-600 text-orange-300 hover:bg-orange-900 text-sm px-3 py-2 h-9"
+              size="sm"
             >
-              <Settings className="w-4 h-4 mr-2" />
-              Mass Update ({selectedSessions.size})
+              <Settings className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Mass Update ({selectedSessions.size})</span>
+              <span className="sm:hidden">Update ({selectedSessions.size})</span>
             </Button>
           )}
           <Button 
             variant="outline" 
             onClick={() => window.open('/api/admin/template/sessions', '_blank')}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            size="sm"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Download Template
+            <Download className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Download Template</span>
+            <span className="sm:hidden">Template</span>
           </Button>
           <Button 
             variant="outline"
             onClick={() => setShowImportModal(true)}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            size="sm"
           >
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+            <Upload className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Import CSV</span>
+            <span className="sm:hidden">Import</span>
           </Button>
           <Link href="/admin/sessions/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              New Session
+            <Button className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-2 h-9" size="sm">
+              <Plus className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">New Session</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </Link>
         </div>
@@ -298,7 +305,7 @@ export default function AdminSessions() {
 
       {/* Filter Controls */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 md:gap-4">
           <div>
             <Label className="text-zinc-300">Search</Label>
             <Input
@@ -408,7 +415,8 @@ export default function AdminSessions() {
         )}
       </div>
 
-      <div className="bg-zinc-900 rounded-lg overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
@@ -563,6 +571,150 @@ export default function AdminSessions() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {paginatedSessions.map((session: any) => (
+          <div key={session.id} className="bg-zinc-900 rounded-lg p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <Checkbox
+                  checked={selectedSessions.has(session.id)}
+                  onCheckedChange={(checked) => handleSelectSession(session.id, checked as boolean)}
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-medium text-sm truncate">
+                    {format(new Date(session.startTime), 'MMM d, h:mm a')}
+                  </h3>
+                  <p className="text-zinc-400 text-xs">{session.location}</p>
+                </div>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs shrink-0 ${
+                session.status === 'open' ? 'bg-green-900 text-green-300' :
+                session.status === 'full' ? 'bg-red-900 text-red-300' :
+                'bg-yellow-900 text-yellow-300'
+              }`}>
+                {session.status}
+              </span>
+            </div>
+            
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400">Age Groups:</span>
+                <span className="text-zinc-300">
+                  {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroup || 'N/A'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400">Gender:</span>
+                <span className="text-zinc-300">
+                  {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400">Capacity:</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-zinc-300">{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
+                  <div className="w-16 bg-zinc-700 rounded-full h-1.5">
+                    <div 
+                      className="bg-blue-600 h-1.5 rounded-full transition-all"
+                      style={{ 
+                        width: `${Math.min(((session.signupCount || session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                className="text-xs px-3 py-1 h-7"
+              >
+                {expandedSession === session.id ? 'Hide Details' : 'View Details'}
+              </Button>
+              <div className="flex space-x-2">
+                <Link href={`/admin/sessions/${session.id}`}>
+                  <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-7">
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDelete(session.id)}
+                  className="text-red-400 hover:text-red-300 text-xs px-2 py-1 h-7"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Mobile Accordion Content */}
+            {expandedSession === session.id && (
+              <div className="mt-4 pt-4 border-t border-zinc-800">
+                <div className="mb-3">
+                  <h4 className="text-sm font-medium text-white mb-2">
+                    Players: {session.signupCount || session.signupsCount || 0} / {session.capacity}
+                  </h4>
+                  
+                  {/* KPI Bar */}
+                  <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${Math.min(((session.signupCount || session.signupsCount || 0) / session.capacity) * 100, 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Player List */}
+                {session.playersSigned && session.playersSigned.length > 0 ? (
+                  <div className="max-h-48 overflow-y-auto">
+                    <div className="space-y-2">
+                      {session.playersSigned.map((player: any) => (
+                        <div key={player.playerId} className="flex justify-between items-center p-2 bg-zinc-800 rounded">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-white font-medium text-sm block truncate">
+                              {player.firstName} {player.lastName}
+                            </span>
+                            <div className="text-zinc-300 text-xs">
+                              Age {new Date().getFullYear() - player.birthYear} • {player.gender}
+                            </div>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs shrink-0 ${
+                            player.paid 
+                              ? 'bg-green-900 text-green-300' 
+                              : 'bg-yellow-900 text-yellow-300'
+                          }`}>
+                            {player.paid ? 'Paid' : 'Pending'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-zinc-400 py-4 text-sm">
+                    No players signed up yet
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        
+        {paginatedSessions.length === 0 && (
+          <div className="bg-zinc-900 rounded-lg p-8 text-center">
+            <p className="text-zinc-400">
+              {filteredSessions.length === 0 ? 'No sessions found' : 'No sessions on this page'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Bottom Pagination */}
