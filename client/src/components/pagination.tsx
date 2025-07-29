@@ -90,7 +90,7 @@ export function Pagination({
                     onClick={() => onPageChange(pageNum)}
                     className={`min-w-[36px] h-9 px-2 ${
                       currentPage === pageNum
-                        ? "bg-blue-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card border-border text-foreground hover:bg-muted"
                     }`}
                   >
@@ -171,7 +171,7 @@ export function Pagination({
                     onClick={() => onPageChange(pageNum)}
                     className={
                       currentPage === pageNum
-                        ? "bg-blue-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card border-border text-foreground hover:bg-muted"
                     }
                   >

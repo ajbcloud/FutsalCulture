@@ -104,28 +104,28 @@ export default function AdminSessionDetail() {
             Back to Sessions
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           {isNew ? 'Create New Session' : 'Edit Session'}
         </h1>
       </div>
 
-      <div className="bg-zinc-900 p-6 rounded-lg">
+      <div className="bg-card p-6 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="title" className="text-zinc-300">Title</Label>
+            <Label htmlFor="title" className="text-muted-foreground">Title</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
               placeholder="Session title"
             />
           </div>
 
           <div>
-            <Label htmlFor="location" className="text-zinc-300">Location</Label>
+            <Label htmlFor="location" className="text-muted-foreground">Location</Label>
             <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
@@ -137,32 +137,32 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label htmlFor="startTime" className="text-zinc-300">Start Time</Label>
+            <Label htmlFor="startTime" className="text-muted-foreground">Start Time</Label>
             <Input
               id="startTime"
               type="datetime-local"
               value={formData.startTime}
               onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
 
           <div>
-            <Label htmlFor="endTime" className="text-zinc-300">End Time</Label>
+            <Label htmlFor="endTime" className="text-muted-foreground">End Time</Label>
             <Input
               id="endTime"
               type="datetime-local"
               value={formData.endTime}
               onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
 
           <div>
-            <Label className="text-zinc-300">Age Groups (Multi-Select)</Label>
+            <Label className="text-muted-foreground">Age Groups (Multi-Select)</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {AGE_GROUPS.map(age => (
-                <label key={age} className="flex items-center space-x-2 text-zinc-300">
+                <label key={age} className="flex items-center space-x-2 text-foreground">
                   <input
                     type="checkbox"
                     checked={formData.ageGroups.includes(age)}
@@ -180,17 +180,17 @@ export default function AdminSessionDetail() {
               ))}
             </div>
             {formData.ageGroups.length > 0 && (
-              <p className="text-xs text-zinc-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Selected: {formData.ageGroups.join(', ')}
               </p>
             )}
           </div>
 
           <div>
-            <Label className="text-zinc-300">Genders (Multi-Select)</Label>
+            <Label className="text-muted-foreground">Genders (Multi-Select)</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {['boys', 'girls'].map(gender => (
-                <label key={gender} className="flex items-center space-x-2 text-zinc-300">
+                <label key={gender} className="flex items-center space-x-2 text-foreground">
                   <input
                     type="checkbox"
                     checked={formData.genders.includes(gender)}
@@ -208,20 +208,20 @@ export default function AdminSessionDetail() {
               ))}
             </div>
             {formData.genders.length > 0 && (
-              <p className="text-xs text-zinc-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Selected: {formData.genders.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="capacity" className="text-zinc-300">Capacity</Label>
+            <Label htmlFor="capacity" className="text-muted-foreground">Capacity</Label>
             <Input
               id="capacity"
               type="number"
               value={formData.capacity}
               onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
               min="1"
               max="20"
             />
@@ -229,17 +229,17 @@ export default function AdminSessionDetail() {
         </div>
 
         {/* Booking Time Controls */}
-        <div className="border-t border-zinc-700 pt-6 mt-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Booking Time Settings</h3>
-          <div className="bg-zinc-800/50 rounded-lg p-4 mb-4">
-            <p className="text-sm text-zinc-400 mb-2">
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Booking Time Settings</h3>
+          <div className="bg-muted/50 rounded-lg p-4 mb-4">
+            <p className="text-sm text-muted-foreground mb-2">
               By default, sessions open for booking at 8:00 AM on the day of the session. 
               You can customize this time between 6:00 AM and 9:00 PM.
             </p>
           </div>
           
           <div>
-            <Label className="text-zinc-300">Booking Opens At</Label>
+            <Label className="text-muted-foreground">Booking Opens At</Label>
             <div className="grid grid-cols-3 gap-3 mt-2">
               <div>
                 <Select 
@@ -259,14 +259,14 @@ export default function AdminSessionDetail() {
                     }
                   }}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue placeholder="Hour" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectContent className="bg-card border-border">
                     {Array.from({ length: 12 }, (_, i) => {
                       const hour = i + 1;
                       return (
-                        <SelectItem key={hour} value={hour.toString()} className="text-white hover:bg-zinc-700">
+                        <SelectItem key={hour} value={hour.toString()} className="text-foreground hover:bg-muted">
                           {hour}
                         </SelectItem>
                       );
@@ -280,14 +280,14 @@ export default function AdminSessionDetail() {
                   value={formData.bookingOpenMinute.toString()} 
                   onValueChange={(value) => setFormData({...formData, bookingOpenMinute: parseInt(value)})}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue placeholder="Min" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="0" className="text-white hover:bg-zinc-700">00</SelectItem>
-                    <SelectItem value="15" className="text-white hover:bg-zinc-700">15</SelectItem>
-                    <SelectItem value="30" className="text-white hover:bg-zinc-700">30</SelectItem>
-                    <SelectItem value="45" className="text-white hover:bg-zinc-700">45</SelectItem>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="0" className="text-foreground hover:bg-muted">00</SelectItem>
+                    <SelectItem value="15" className="text-foreground hover:bg-muted">15</SelectItem>
+                    <SelectItem value="30" className="text-foreground hover:bg-muted">30</SelectItem>
+                    <SelectItem value="45" className="text-foreground hover:bg-muted">45</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,21 +306,21 @@ export default function AdminSessionDetail() {
                     }
                   }}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="AM" className="text-white hover:bg-zinc-700">AM</SelectItem>
-                    <SelectItem value="PM" className="text-white hover:bg-zinc-700">PM</SelectItem>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="AM" className="text-foreground hover:bg-muted">AM</SelectItem>
+                    <SelectItem value="PM" className="text-foreground hover:bg-muted">PM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-zinc-500 mt-1">Available times: 6:00 AM - 9:00 PM (Default: 8:00 AM)</p>
+            <p className="text-xs text-muted-foreground mt-1">Available times: 6:00 AM - 9:00 PM (Default: 8:00 AM)</p>
           </div>
 
-          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
-            <p className="text-sm text-blue-300">
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500 rounded-lg">
+            <p className="text-sm text-blue-600 dark:text-blue-400">
               <strong>Preview:</strong> This session will open for booking at{' '}
               <span className="font-semibold">
 {format12Hour(formData.bookingOpenHour, formData.bookingOpenMinute)}
@@ -334,7 +334,7 @@ export default function AdminSessionDetail() {
           <Link href="/admin/sessions">
             <Button variant="outline">Cancel</Button>
           </Link>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90">
             {saving ? 'Saving...' : (isNew ? 'Create Session' : 'Update Session')}
           </Button>
         </div>

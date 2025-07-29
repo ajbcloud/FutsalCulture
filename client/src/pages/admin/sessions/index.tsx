@@ -526,15 +526,15 @@ export default function AdminSessions() {
                         <div className="max-h-60 overflow-y-auto">
                           <div className="space-y-2">
                             {session.playersSigned.map((player: any) => (
-                              <div key={player.playerId} className="flex justify-between items-center p-3 bg-zinc-700 rounded-lg">
+                              <div key={player.playerId} className="flex justify-between items-center p-3 bg-muted rounded-lg">
                                 <div className="flex-1">
-                                  <span className="text-white font-medium">
+                                  <span className="text-foreground font-medium">
                                     {player.firstName} {player.lastName}
                                   </span>
-                                  <div className="text-zinc-300 text-sm">
+                                  <div className="text-muted-foreground text-sm">
                                     Age {new Date().getFullYear() - player.birthYear} • {player.gender}
                                     {player.soccerClub && (
-                                      <span className="ml-2 text-zinc-400">• {player.soccerClub}</span>
+                                      <span className="ml-2 text-muted-foreground">• {player.soccerClub}</span>
                                     )}
                                   </div>
                                 </div>
@@ -552,7 +552,7 @@ export default function AdminSessions() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center text-zinc-400 py-8">
+                        <div className="text-center text-muted-foreground py-8">
                           No players signed up yet
                         </div>
                       )}
@@ -563,8 +563,8 @@ export default function AdminSessions() {
               </React.Fragment>
             ))}
             {paginatedSessions.length === 0 && (
-              <TableRow className="border-zinc-800">
-                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
+              <TableRow className="border-border">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   {filteredSessions.length === 0 ? 'No sessions found' : 'No sessions on this page'}
                 </TableCell>
               </TableRow>
@@ -678,12 +678,12 @@ export default function AdminSessions() {
                   <div className="max-h-48 overflow-y-auto">
                     <div className="space-y-2">
                       {session.playersSigned.map((player: any) => (
-                        <div key={player.playerId} className="flex justify-between items-center p-2 bg-zinc-800 rounded">
+                        <div key={player.playerId} className="flex justify-between items-center p-2 bg-muted rounded">
                           <div className="flex-1 min-w-0">
-                            <span className="text-white font-medium text-sm block truncate">
+                            <span className="text-foreground font-medium text-sm block truncate">
                               {player.firstName} {player.lastName}
                             </span>
-                            <div className="text-zinc-300 text-xs">
+                            <div className="text-muted-foreground text-xs">
                               Age {new Date().getFullYear() - player.birthYear} • {player.gender}
                             </div>
                           </div>
@@ -699,7 +699,7 @@ export default function AdminSessions() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center text-zinc-400 py-4 text-sm">
+                  <div className="text-center text-muted-foreground py-4 text-sm">
                     No players signed up yet
                   </div>
                 )}
@@ -709,8 +709,8 @@ export default function AdminSessions() {
         ))}
         
         {paginatedSessions.length === 0 && (
-          <div className="bg-zinc-900 rounded-lg p-8 text-center">
-            <p className="text-zinc-400">
+          <div className="bg-card rounded-lg p-8 text-center">
+            <p className="text-muted-foreground">
               {filteredSessions.length === 0 ? 'No sessions found' : 'No sessions on this page'}
             </p>
           </div>
