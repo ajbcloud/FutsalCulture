@@ -473,8 +473,87 @@ export class DatabaseStorage implements IStorage {
     return setting?.value || null;
   }
 
-  async getHelpRequests(): Promise<HelpRequest[]> {
-    return await db.select().from(helpRequests).orderBy(desc(helpRequests.createdAt));
+  async getHelpRequests(tenantId?: string): Promise<any[]> {
+    let query = db.select({
+      id: helpRequests.id,
+      tenantId: helpRequests.tenantId,
+      status: helpRequests.status,
+      firstName: helpRequests.firstName,
+      lastName: helpRequests.lastName,
+      phone: helpRequests.phone,
+      email: helpRequests.email,
+      subject: helpRequests.subject,
+      category: helpRequests.category,
+      priority: helpRequests.priority,
+      message: helpRequests.message,
+      resolved: helpRequests.resolved,
+      resolvedBy: helpRequests.resolvedBy,
+      resolutionNote: helpRequests.resolutionNote,
+      resolvedAt: helpRequests.resolvedAt,
+      replyHistory: helpRequests.replyHistory,
+      createdAt: helpRequests.createdAt,
+    })
+    .from(helpRequests);
+
+    if (tenantId) {
+      query = query.where(eq(helpRequests.tenantId, tenantId));
+    }
+
+    const requests = await query.orderBy(desc(helpRequests.createdAt));
+
+    // For each request, check if email matches a parent or player
+    const requestsWithUserLinks = await Promise.all(
+      requests.map(async (request) => {
+        let linkedUser = null;
+        let userType = null;
+
+        // First check if email matches a parent (user)
+        const parentMatch = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+        })
+        .from(users)
+        .where(and(
+          eq(users.email, request.email),
+          tenantId ? eq(users.tenantId, tenantId) : sql`true`
+        ))
+        .limit(1);
+
+        if (parentMatch.length > 0) {
+          linkedUser = parentMatch[0];
+          userType = 'parent';
+        } else {
+          // Check if email matches a player
+          const playerMatch = await db.select({
+            id: players.id,
+            firstName: players.firstName,
+            lastName: players.lastName,
+            email: players.email,
+          })
+          .from(players)
+          .where(and(
+            eq(players.email, request.email),
+            tenantId ? eq(players.tenantId, tenantId) : sql`true`
+          ))
+          .limit(1);
+
+          if (playerMatch.length > 0) {
+            linkedUser = playerMatch[0];
+            userType = 'player';
+          }
+        }
+
+        return {
+          ...request,
+          linkedUser,
+          userType,
+        };
+      })
+    );
+
+    return requestsWithUserLinks;
   }
 
   async resolveHelpRequest(id: string, adminId: string, resolutionNote: string): Promise<HelpRequest | null> {

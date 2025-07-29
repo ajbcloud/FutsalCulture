@@ -12,13 +12,14 @@ import {
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle, Reply } from 'lucide-react';
+import { MessageSquare, CheckCircle, Reply, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
 import { Pagination } from '@/components/pagination';
+import { useLocation } from 'wouter';
 
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
@@ -42,6 +43,23 @@ export default function AdminHelpRequests() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  // Handle clicking on linked users
+  const handleUserClick = (request: any) => {
+    if (request.linkedUser && request.userType) {
+      const userId = request.linkedUser.id;
+      const userName = `${request.linkedUser.firstName} ${request.linkedUser.lastName}`;
+      
+      if (request.userType === 'parent') {
+        // Navigate to parents page with filter parameter
+        setLocation(`/admin/parents?filter=${encodeURIComponent(userName)}`);
+      } else if (request.userType === 'player') {
+        // Navigate to players page with search parameter
+        setLocation(`/admin/players?search=${encodeURIComponent(userName)}`);
+      }
+    }
+  };
 
   useEffect(() => {
     adminHelpRequests.list().then(data => {
@@ -292,7 +310,25 @@ export default function AdminHelpRequests() {
               <TableRow key={request.id} className="border-zinc-800">
                 <TableCell className="text-zinc-300">
                   <div>
-                    <div className="font-medium text-white">{request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}</div>
+                    <div className="font-medium text-white flex items-center gap-2">
+                      {request.linkedUser ? (
+                        <button
+                          onClick={() => handleUserClick(request)}
+                          className="text-blue-400 hover:text-blue-300 underline decoration-dotted flex items-center gap-1 transition-colors"
+                          title={`Go to ${request.userType} details`}
+                        >
+                          {request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <span>{request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}</span>
+                      )}
+                      {request.linkedUser && (
+                        <Badge variant="outline" className="text-xs bg-blue-900/30 border-blue-600 text-blue-400">
+                          {request.userType}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-sm text-zinc-400">{request.email}</div>
                     {request.phone && <div className="text-sm text-zinc-400">{request.phone}</div>}
                   </div>

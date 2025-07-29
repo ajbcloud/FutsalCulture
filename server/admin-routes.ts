@@ -1277,7 +1277,8 @@ export function setupAdminRoutes(app: any) {
   // Admin Help Requests
   app.get('/api/admin/help-requests', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const helpRequests = await storage.getHelpRequests();
+      const tenantId = (req as any).currentUser?.tenantId;
+      const helpRequests = await storage.getHelpRequests(tenantId);
       res.json(helpRequests);
     } catch (error) {
       console.error("Error fetching help requests:", error);
