@@ -39,7 +39,7 @@ export default function AccessCodes() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [formData, setFormData] = useState<AccessCodeFormData>({
     hasAccessCode: false,
     accessCode: ''
@@ -295,9 +295,14 @@ export default function AccessCodes() {
             {totalPages > 1 && (
               <div className="mt-6">
                 <Pagination
+                  totalItems={sessions.length}
+                  itemsPerPage={itemsPerPage}
                   currentPage={currentPage}
-                  totalPages={totalPages}
                   onPageChange={setCurrentPage}
+                  onItemsPerPageChange={(newItemsPerPage) => {
+                    setItemsPerPage(newItemsPerPage);
+                    setCurrentPage(1);
+                  }}
                 />
               </div>
             )}
