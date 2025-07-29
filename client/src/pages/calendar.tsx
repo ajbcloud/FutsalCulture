@@ -128,14 +128,49 @@ export default function Calendar() {
       <div className="min-h-screen bg-[#18181b] text-white">
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
           <div className="mb-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start sm:gap-0">
-              <div className="text-center sm:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Session Calendar</h1>
-                <p className="text-zinc-400 text-lg">View all upcoming futsal training sessions</p>
-              </div>
+            {/* Title Section */}
+            <div className="text-center sm:text-left mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Session Calendar</h1>
+              <p className="text-zinc-400 text-lg">View all upcoming futsal training sessions</p>
+            </div>
+            
+            {/* Filter Controls - Desktop: inline, Mobile: below title */}
+            <div className="hidden sm:flex sm:justify-end sm:items-center sm:space-x-3">
+              <MultiSelectFilter
+                title="Age Groups"
+                options={sortedAgeGroups}
+                selectedValues={selectedAges}
+                onSelectionChange={setSelectedAges}
+                placeholder="All Ages"
+              />
               
-              {/* Filter Controls */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 sm:gap-0">
+              <MultiSelectFilter
+                title="Genders"
+                options={sortedGenders}
+                selectedValues={selectedGenders}
+                onSelectionChange={setSelectedGenders}
+                placeholder="All Genders"
+              />
+              
+              <MultiSelectFilter
+                title="Locations"
+                options={sortedLocations}
+                selectedValues={selectedLocations}
+                onSelectionChange={setSelectedLocations}
+                placeholder="All Locations"
+              />
+              
+              <Button 
+                onClick={applyFilters}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+              >
+                Apply Filters
+              </Button>
+            </div>
+            
+            {/* Mobile Filter Controls - Below title */}
+            <div className="sm:hidden flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <MultiSelectFilter
                   title="Age Groups"
                   options={sortedAgeGroups}
@@ -151,7 +186,9 @@ export default function Calendar() {
                   onSelectionChange={setSelectedGenders}
                   placeholder="All Genders"
                 />
-                
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
                 <MultiSelectFilter
                   title="Locations"
                   options={sortedLocations}
