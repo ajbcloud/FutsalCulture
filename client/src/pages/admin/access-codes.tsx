@@ -162,8 +162,8 @@ export default function AccessCodes() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-500/20 rounded-lg">
-                  <Unlock className="w-5 h-5 text-green-500" />
+                <div className="p-2 bg-green-500/10 dark:bg-green-500/20 rounded-lg">
+                  <Unlock className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">Open Sessions</p>
@@ -178,8 +178,8 @@ export default function AccessCodes() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Calendar className="w-5 h-5 text-purple-500" />
+                <div className="p-2 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">Total Sessions</p>
@@ -255,12 +255,12 @@ export default function AccessCodes() {
                     </TableCell>
                     <TableCell>
                       {session.hasAccessCode ? (
-                        <Badge className="bg-red-500/20 text-red-500">
+                        <Badge className="bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                           <Lock className="w-3 h-3 mr-1" />
                           Protected
                         </Badge>
                       ) : (
-                        <Badge className="bg-green-500/20 text-green-500">
+                        <Badge className="bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
                           <Unlock className="w-3 h-3 mr-1" />
                           Open
                         </Badge>
