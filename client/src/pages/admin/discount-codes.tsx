@@ -32,6 +32,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import AdminLayout from "@/components/admin-layout";
+import { Pagination } from "@/components/pagination";
 import { format } from "date-fns";
 import { Plus, Trash2, Edit, Copy } from "lucide-react";
 import type { DiscountCode } from "@shared/schema";
@@ -40,6 +41,8 @@ export default function DiscountCodes() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     code: "",
     description: "",
@@ -159,6 +162,10 @@ export default function DiscountCodes() {
     navigator.clipboard.writeText(code);
     toast({ title: "Code copied to clipboard" });
   };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(discountCodes.length / itemsPerPage);
+  const paginatedCodes = discountCodes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (isLoading) {
     return (
@@ -323,7 +330,7 @@ export default function DiscountCodes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {discountCodes.map((code) => (
+                {paginatedCodes.map((code) => (
                   <TableRow key={code.id}>
                     <TableCell className="font-mono font-bold">{code.code}</TableCell>
                     <TableCell className="capitalize">{code.discountType}</TableCell>
@@ -515,12 +522,12 @@ export default function DiscountCodes() {
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
-            {discountCodes.length === 0 ? (
+            {paginatedCodes.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
-                No discount codes created yet
+                {discountCodes.length === 0 ? 'No discount codes created yet' : 'No codes on this page'}
               </div>
             ) : (
-              discountCodes.map((code) => (
+              paginatedCodes.map((code) => (
                 <div key={code.id} className="bg-card rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
@@ -540,8 +547,8 @@ export default function DiscountCodes() {
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Value:</span>
-                      <span className="text-zinc-300 font-medium">
+                      <span className="text-muted-foreground">Value:</span>
+                      <span className="text-foreground font-medium">
                         {code.discountType === "full"
                           ? "100%"
                           : code.discountType === "percentage"
@@ -550,12 +557,12 @@ export default function DiscountCodes() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Uses:</span>
-                      <span className="text-zinc-300">{code.currentUses} / {code.maxUses || "∞"}</span>
+                      <span className="text-muted-foreground">Uses:</span>
+                      <span className="text-foreground">{code.currentUses} / {code.maxUses || "∞"}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Valid:</span>
-                      <div className="text-zinc-300 text-right">
+                      <span className="text-muted-foreground">Valid:</span>
+                      <div className="text-foreground text-right">
                         {code.validFrom && (
                           <div>From: {format(new Date(code.validFrom), "MMM d")}</div>
                         )}
@@ -567,7 +574,7 @@ export default function DiscountCodes() {
                     </div>
                     {code.description && (
                       <div className="mt-2">
-                        <p className="text-zinc-300 text-xs">{code.description}</p>
+                        <p className="text-muted-foreground text-xs">{code.description}</p>
                       </div>
                     )}
                   </div>
@@ -728,6 +735,17 @@ export default function DiscountCodes() {
               ))
             )}
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
       </div>

@@ -492,8 +492,8 @@ export default function AdminParents() {
                 );
               })}
               {paginatedParents.length === 0 && (
-                <TableRow className="border-zinc-800">
-                  <TableCell colSpan={7} className="text-center text-zinc-400 py-8">
+                <TableRow className="border-border">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     {filteredParents.length === 0 ? 'No parents found' : 'No parents on this page'}
                   </TableCell>
                 </TableRow>
@@ -569,12 +569,12 @@ export default function AdminParents() {
                   {isExpanded && (
                     <div className="border-t border-border pt-3 mb-3">
                       {loadingPlayers.has(parent.id) ? (
-                        <p className="text-zinc-500 text-sm">Loading player details...</p>
+                        <p className="text-muted-foreground text-sm">Loading player details...</p>
                       ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
                         <div className="space-y-2">
-                          <p className="font-medium text-zinc-300 text-sm">Players:</p>
+                          <p className="font-medium text-foreground text-sm">Players:</p>
                           {parentPlayers[parent.id].map((player: any) => (
-                            <div key={player.id} className="bg-zinc-900 p-2 rounded text-sm">
+                            <div key={player.id} className="bg-muted/20 p-2 rounded text-sm">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0">
                                   <Link 
@@ -583,7 +583,7 @@ export default function AdminParents() {
                                   >
                                     {player.firstName} {player.lastName}
                                   </Link>
-                                  <p className="text-zinc-400 text-xs">
+                                  <p className="text-muted-foreground text-xs">
                                     {player.ageGroup} • {player.gender}
                                     {player.soccerClub && <span> • {player.soccerClub}</span>}
                                   </p>
@@ -591,7 +591,7 @@ export default function AdminParents() {
                                     <Badge className="mt-1 bg-green-900 text-green-300 text-xs">Portal</Badge>
                                   )}
                                 </div>
-                                <div className="text-right text-xs text-zinc-400 shrink-0 ml-2">
+                                <div className="text-right text-xs text-muted-foreground shrink-0 ml-2">
                                   {player.signupCount || 0} bookings
                                 </div>
                               </div>
@@ -599,7 +599,7 @@ export default function AdminParents() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-zinc-500 text-sm">No players registered</p>
+                        <p className="text-muted-foreground text-sm">No players registered</p>
                       )}
                     </div>
                   )}
@@ -641,14 +641,14 @@ export default function AdminParents() {
             currentPage={currentPage}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handleItemsPerPageChange}
-            className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+            className="bg-card p-4 rounded-lg border border-border"
           />
         )}
       </div>
 
       {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-white">Edit Parent Account</DialogTitle>
           </DialogHeader>
@@ -656,64 +656,64 @@ export default function AdminParents() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className="text-zinc-300">First Name</Label>
+                <Label htmlFor="firstName" className="text-muted-foreground">First Name</Label>
                 <Input
                   id="firstName"
                   value={editForm.firstName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
               <div>
-                <Label htmlFor="lastName" className="text-zinc-300">Last Name</Label>
+                <Label htmlFor="lastName" className="text-muted-foreground">Last Name</Label>
                 <Input
                   id="lastName"
                   value={editForm.lastName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-zinc-300">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-input border-border text-foreground"
               />
             </div>
 
             <div>
-              <Label htmlFor="phone" className="text-zinc-300">Phone</Label>
+              <Label htmlFor="phone" className="text-muted-foreground">Phone</Label>
               <Input
                 id="phone"
                 value={editForm.phone}
                 onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-input border-border text-foreground"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-zinc-300">Permissions</Label>
+              <Label className="text-muted-foreground">Permissions</Label>
               <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2 text-zinc-300">
+                <label className="flex items-center space-x-2 text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={editForm.isAdmin}
                     onChange={(e) => setEditForm(prev => ({ ...prev, isAdmin: e.target.checked }))}
-                    className="rounded border-zinc-700"
+                    className="rounded border-border"
                   />
                   <span>Admin Access</span>
                 </label>
-                <label className="flex items-center space-x-2 text-zinc-300">
+                <label className="flex items-center space-x-2 text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={editForm.isAssistant}
                     onChange={(e) => setEditForm(prev => ({ ...prev, isAssistant: e.target.checked }))}
-                    className="rounded border-zinc-700"
+                    className="rounded border-border"
                   />
                   <span>Assistant Access</span>
                 </label>

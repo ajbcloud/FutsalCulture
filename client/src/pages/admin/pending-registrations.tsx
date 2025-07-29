@@ -310,7 +310,7 @@ export default function AdminPendingRegistrations() {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          className="bg-card p-4 rounded-lg border border-border"
         />
       )}
     </AdminLayout>
