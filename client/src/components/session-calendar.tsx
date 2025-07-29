@@ -224,16 +224,35 @@ export default function SessionCalendar({
                   return (
                     <div 
                       key={session.id} 
-                      className={`min-h-[24px] sm:min-h-[28px] p-1 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 transition-all rounded text-white flex-1 ${statusColor}`}
+                      className={`min-h-[32px] sm:min-h-[28px] p-1.5 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 active:border-zinc-400 transition-all rounded text-white flex-1 ${statusColor} touch-manipulation`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         if (onSessionClick) {
                           onSessionClick(session);
                         }
                       }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (onSessionClick) {
+                          onSessionClick(session);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (onSessionClick) {
+                            onSessionClick(session);
+                          }
+                        }
+                      }}
                     >
                       {/* Mobile Format - Compact */}
-                      <div className="sm:hidden">
+                      <div className="sm:hidden pointer-events-none">
                         <div className="text-[10px] font-medium truncate mb-0.5">
                           {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
@@ -246,7 +265,7 @@ export default function SessionCalendar({
                       </div>
 
                       {/* Desktop Format - Full Details */}
-                      <div className="hidden sm:block">
+                      <div className="hidden sm:block pointer-events-none">
                         <div className="text-xs text-white font-medium truncate mb-1">
                           {session.title}
                         </div>
@@ -261,13 +280,13 @@ export default function SessionCalendar({
                         <div className="flex items-center justify-between">
                           <Badge 
                             variant="secondary" 
-                            className="text-xs px-1 py-0"
+                            className="text-xs px-1 py-0 pointer-events-none"
                           >
                             {session.ageGroups?.join(', ') || 'N/A'}
                           </Badge>
                           <Badge 
                             variant={statusText === 'open' ? 'default' : 'secondary'}
-                            className="text-xs px-1 py-0 capitalize"
+                            className="text-xs px-1 py-0 capitalize pointer-events-none"
                           >
                             {statusText}
                           </Badge>
