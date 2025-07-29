@@ -157,24 +157,34 @@ export default function SessionCalendar({
           return (
             <div
               key={dateKey}
-              className={`min-h-[80px] sm:min-h-[120px] p-1 sm:p-2 border border-zinc-800 rounded cursor-pointer transition-colors ${
-                isToday ? 'bg-blue-900/20 border-blue-500 hover:bg-blue-900/30' : 
-                isPast ? 'bg-zinc-900/50 hover:bg-zinc-900/70' : 'bg-zinc-900 hover:bg-zinc-800'
+              className={`min-h-[80px] sm:min-h-[120px] border border-zinc-800 rounded transition-colors flex flex-col ${
+                isToday ? 'bg-blue-900/20 border-blue-500' : 
+                isPast ? 'bg-zinc-900/50' : 'bg-zinc-900'
               }`}
-              onClick={() => {
-                setSelectedDate(day);
-                setIsDialogOpen(true);
-              }}
             >
-              <div className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${
-                isToday ? 'text-blue-400' : 
-                isPast ? 'text-zinc-500' : 'text-white'
-              }`}>
-                {format(day, 'd')}
+              {/* Day Header - Clickable to open dialog */}
+              <div 
+                className={`p-1 sm:p-2 pb-0 cursor-pointer hover:bg-zinc-800/50 rounded-t ${
+                  isToday ? 'hover:bg-blue-900/30' : 
+                  isPast ? 'hover:bg-zinc-900/70' : 'hover:bg-zinc-800'
+                }`}
+                onClick={() => {
+                  setSelectedDate(day);
+                  setIsDialogOpen(true);
+                }}
+              >
+                <div className={`text-xs sm:text-sm font-medium ${
+                  isToday ? 'text-blue-400' : 
+                  isPast ? 'text-zinc-500' : 'text-white'
+                }`}>
+                  {format(day, 'd')}
+                </div>
               </div>
 
-              {/* Sessions for this day - Mobile Optimized */}
-              <div className="space-y-0.5 sm:space-y-1">
+              {/* Sessions Container */}
+              <div className="p-1 sm:p-2 pt-0 flex-1 flex flex-col">
+                {/* Sessions for this day - Mobile Optimized with Larger Touch Areas */}
+                <div className="space-y-0.5 sm:space-y-1 flex-1">
                 {daySessions.slice(0, 2).map(session => {
                   const sessionDate = new Date(session.startTime);
                   const today = new Date();
@@ -214,7 +224,7 @@ export default function SessionCalendar({
                   return (
                     <div 
                       key={session.id} 
-                      className={`p-0.5 sm:p-1 cursor-pointer border-none transition-colors rounded text-white ${statusColor}`}
+                      className={`min-h-[24px] sm:min-h-[28px] p-1 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 transition-all rounded text-white flex-1 ${statusColor}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (onSessionClick) {
@@ -225,7 +235,7 @@ export default function SessionCalendar({
                       {/* Mobile Format - Compact */}
                       <div className="sm:hidden">
                         <div className="text-[10px] font-medium truncate mb-0.5">
-                          {format12Hour(format(new Date(session.startTime), 'HH:mm'))}
+                          {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
                         <div className="text-[9px] text-zinc-300 truncate mb-0.5">
                           {session.ageGroups?.slice(0, 2).join(', ') || 'N/A'}
@@ -242,7 +252,7 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
                           <Clock className="w-3 h-3" />
-                          {format12Hour(format(new Date(session.startTime), 'HH:mm'))}
+                          {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
                           <MapPin className="w-3 h-3" />
@@ -272,6 +282,7 @@ export default function SessionCalendar({
                     +{daySessions.length - 2} more
                   </div>
                 )}
+                </div>
               </div>
             </div>
           );
