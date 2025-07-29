@@ -144,7 +144,7 @@ export default function SessionCalendar({
 
         {/* Empty cells for alignment */}
         {emptyDays.map((_, index) => (
-          <div key={`empty-${index}`} className="min-h-[80px] sm:min-h-[120px]" />
+          <div key={`empty-${index}`} className="min-h-[70px] sm:min-h-[120px]" />
         ))}
         
         {/* Calendar Days */}
@@ -157,7 +157,7 @@ export default function SessionCalendar({
           return (
             <div
               key={dateKey}
-              className={`min-h-[80px] sm:min-h-[120px] border border-zinc-800 rounded transition-colors flex flex-col ${
+              className={`min-h-[70px] sm:min-h-[120px] border border-zinc-800 rounded transition-colors flex flex-col ${
                 isToday ? 'bg-blue-900/20 border-blue-500' : 
                 isPast ? 'bg-zinc-900/50' : 'bg-zinc-900'
               }`}
@@ -182,9 +182,9 @@ export default function SessionCalendar({
               </div>
 
               {/* Sessions Container */}
-              <div className="p-1 sm:p-2 pt-0 flex-1 flex flex-col">
+              <div className="p-1 sm:p-2 pt-0 flex-1 flex flex-col overflow-hidden">
                 {/* Sessions for this day - Mobile Optimized with Larger Touch Areas */}
-                <div className="space-y-0.5 sm:space-y-1 flex-1">
+                <div className="space-y-0.5 sm:space-y-1 flex-1 overflow-hidden">
                 {daySessions.slice(0, 2).map(session => {
                   const sessionDate = new Date(session.startTime);
                   const today = new Date();
@@ -224,7 +224,7 @@ export default function SessionCalendar({
                   return (
                     <div 
                       key={session.id} 
-                      className={`min-h-[32px] sm:min-h-[28px] p-1.5 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 active:border-zinc-400 transition-all rounded text-white flex-1 ${statusColor} touch-manipulation`}
+                      className={`min-h-[22px] sm:min-h-[28px] p-0.5 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 active:border-zinc-400 transition-all rounded text-white ${statusColor} touch-manipulation flex-shrink-0`}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -253,14 +253,11 @@ export default function SessionCalendar({
                     >
                       {/* Mobile Format - Compact */}
                       <div className="sm:hidden pointer-events-none">
-                        <div className="text-[10px] font-medium truncate mb-0.5">
+                        <div className="text-[9px] font-medium truncate leading-tight">
                           {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
-                        <div className="text-[9px] text-zinc-300 truncate mb-0.5">
-                          {session.ageGroups?.slice(0, 2).join(', ') || 'N/A'}
-                        </div>
-                        <div className="text-[8px] text-zinc-400 capitalize truncate">
-                          {statusText}
+                        <div className="text-[8px] text-zinc-300 truncate leading-tight">
+                          {session.ageGroups?.slice(0, 1).join(', ') || 'N/A'} {statusText}
                         </div>
                       </div>
 
@@ -297,7 +294,7 @@ export default function SessionCalendar({
                 })}
                 
                 {daySessions.length > 2 && (
-                  <div className="text-[9px] sm:text-xs text-zinc-400 text-center">
+                  <div className="text-[8px] sm:text-xs text-zinc-400 text-center py-0.5 flex-shrink-0">
                     +{daySessions.length - 2} more
                   </div>
                 )}
