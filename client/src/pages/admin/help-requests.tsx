@@ -34,9 +34,9 @@ export default function AdminHelpRequests() {
   
   // Filter states
   const [userFilter, setUserFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
+  const [submittedFilter, setSubmittedFilter] = useState('');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,21 +96,36 @@ export default function AdminHelpRequests() {
       });
     }
 
-    // Filter by date range
-    if (startDateFilter) {
-      filtered = filtered.filter(req => 
-        new Date(req.createdAt) >= new Date(startDateFilter)
-      );
+    // Filter by source
+    if (sourceFilter) {
+      filtered = filtered.filter(req => req.source === sourceFilter);
     }
-    if (endDateFilter) {
-      filtered = filtered.filter(req => 
-        new Date(req.createdAt) <= new Date(endDateFilter + 'T23:59:59')
-      );
+
+    // Filter by submitted date (today, this week, this month)
+    if (submittedFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      filtered = filtered.filter(req => {
+        const createdAt = new Date(req.createdAt);
+        switch (submittedFilter) {
+          case 'today':
+            return createdAt >= today;
+          case 'week':
+            return createdAt >= thisWeek;
+          case 'month':
+            return createdAt >= thisMonth;
+          default:
+            return true;
+        }
+      });
     }
 
     setFilteredRequests(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [helpRequests, userFilter, statusFilter, startDateFilter, endDateFilter]);
+  }, [helpRequests, userFilter, sourceFilter, statusFilter, submittedFilter]);
 
   // Apply pagination whenever filtered requests or pagination settings change
   useEffect(() => {
@@ -253,25 +268,33 @@ export default function AdminHelpRequests() {
               </select>
             </div>
             <div>
-              <Label className="text-zinc-300 text-sm">Start Date</Label>
-              <Input
-                type="date"
-                value={startDateFilter}
-                onChange={(e) => setStartDateFilter(e.target.value)}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
-              />
+              <Label className="text-zinc-300 text-sm">Filter by Source</Label>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+              >
+                <option value="">All Sources</option>
+                <option value="main_page">Main Page</option>
+                <option value="parent_portal">Parent Portal</option>
+                <option value="player_portal">Player Portal</option>
+              </select>
             </div>
             <div>
-              <Label className="text-zinc-300 text-sm">End Date</Label>
-              <Input
-                type="date"
-                value={endDateFilter}
-                onChange={(e) => setEndDateFilter(e.target.value)}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
-              />
+              <Label className="text-zinc-300 text-sm">Filter by Submitted</Label>
+              <select
+                value={submittedFilter}
+                onChange={(e) => setSubmittedFilter(e.target.value)}
+                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+              >
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
             </div>
           </div>
-          {(userFilter || statusFilter || startDateFilter || endDateFilter) && (
+          {(userFilter || sourceFilter || statusFilter || submittedFilter) && (
             <div className="mt-3 flex justify-between items-center">
               <p className="text-sm text-zinc-400">
                 Showing {filteredRequests.length} of {helpRequests.length} help requests
@@ -281,9 +304,9 @@ export default function AdminHelpRequests() {
                 size="sm"
                 onClick={() => {
                   setUserFilter('');
+                  setSourceFilter('');
                   setStatusFilter('');
-                  setStartDateFilter('');
-                  setEndDateFilter('');
+                  setSubmittedFilter('');
                 }}
                 className="text-zinc-300 border-zinc-600 hover:bg-zinc-800"
               >
