@@ -42,22 +42,22 @@ export default function MultiSelectFilter({
           variant="outline"
           role="combobox"
           aria-expanded={isOpen}
-          className="w-full justify-between bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800"
+          className="w-full justify-between bg-card border-border text-foreground hover:bg-muted"
         >
           <span className="truncate">{getDisplayText()}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-zinc-900 border-zinc-700">
+      <PopoverContent className="w-full p-0 bg-card border-border">
         <div className="p-2">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-white">{title}</span>
+            <span className="text-sm font-medium text-foreground">{title}</span>
             {selectedValues.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onSelectionChange([])}
-                className="h-6 px-2 text-xs text-zinc-400 hover:text-white"
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 Clear
               </Button>
@@ -67,7 +67,7 @@ export default function MultiSelectFilter({
             {options.map((option) => (
               <div
                 key={option}
-                className="flex items-center space-x-2 p-2 rounded hover:bg-zinc-800 cursor-pointer"
+                className="flex items-center space-x-2 p-2 rounded hover:bg-muted cursor-pointer"
                 onClick={() => handleToggle(option)}
               >
                 <Checkbox

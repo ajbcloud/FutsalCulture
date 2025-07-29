@@ -42,22 +42,22 @@ export function KPICard({
 
   return (
     <TooltipProvider>
-      <Card className={cn("bg-zinc-900 border-zinc-700", className)}>
+      <Card className={cn("bg-card border-border", className)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-zinc-300">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
           <div className="flex items-center space-x-2">
             {Icon && <Icon className={cn("h-4 w-4", iconColor)} />}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info 
-                  className="h-4 w-4 text-zinc-400 hover:text-blue-400 cursor-help transition-colors"
+                  className="h-4 w-4 text-muted-foreground hover:text-blue-400 cursor-help transition-colors"
                   tabIndex={0}
                   aria-label={tooltip}
                 />
               </TooltipTrigger>
               <TooltipContent 
                 side="top" 
-                className="max-w-xs bg-zinc-800 border-zinc-600 text-zinc-100"
+                className="max-w-xs bg-card border-border text-foreground"
               >
                 <p>{tooltip}</p>
               </TooltipContent>
@@ -65,9 +65,9 @@ export function KPICard({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-white">{value}</div>
+          <div className="text-2xl font-bold text-foreground">{value}</div>
           <div className="flex items-center justify-between mt-1">
-            {subtitle && <p className="text-xs text-zinc-400">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
             {showGrowth && growth !== undefined && formatGrowth(growth)}
           </div>
         </CardContent>

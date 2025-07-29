@@ -50,12 +50,12 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   const isFull = session.status === "full" || fillPercentage >= 100;
 
   return (
-    <Card className={`bg-zinc-900 border border-zinc-700 hover:shadow-md transition-shadow ${isFull ? 'opacity-75' : ''}`}>
+    <Card className={`bg-card border border-border hover:shadow-md transition-shadow ${isFull ? 'opacity-75' : ''}`}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-white">{session.title}</h3>
-            <p className="text-zinc-400">
+            <h3 className="text-xl font-semibold text-foreground">{session.title}</h3>
+            <p className="text-muted-foreground">
               {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {session.location}
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
         </div>
         
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-zinc-400">
+          <div className="flex items-center text-muted-foreground">
             <Clock className="w-4 h-4 mr-2" />
             <span>
               {new Date(session.startTime).toLocaleTimeString([], { 
@@ -75,22 +75,22 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
               })}
             </span>
           </div>
-          <div className="flex items-center text-zinc-400">
+          <div className="flex items-center text-muted-foreground">
             <MapPin className="w-4 h-4 mr-2" />
             <span>{session.ageGroups?.join(', ') || 'All Ages'} • {session.genders?.join(', ') || 'All Genders'}</span>
           </div>
-          <div className="flex items-center text-zinc-400">
+          <div className="flex items-center text-muted-foreground">
             <DollarSign className="w-4 h-4 mr-2" />
             <span>${(session.priceCents / 100).toFixed(2)}</span>
           </div>
         </div>
 
         <div className="mb-4">
-          <div className="flex justify-between text-sm text-zinc-400 mb-2">
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span>Capacity</span>
             <span>{signupsCount} of {session.capacity} spots filled</span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div 
               className={`h-2 rounded-full ${getProgressBarColor()}`}
               style={{ width: `${Math.min(fillPercentage, 100)}%` }}
@@ -103,7 +103,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
             <Button 
               variant="outline" 
               onClick={() => onAddToCart(session)}
-              className="flex-1 border-zinc-600 text-zinc-400 hover:text-white"
+              className="flex-1 border-border text-muted-foreground hover:text-foreground"
             >
               <ShoppingCart className="w-4 h-4 mr-1" />
               Add to Cart

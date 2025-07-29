@@ -329,7 +329,7 @@ export default function SessionCalendar({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-card border-border max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
+            <DialogTitle className="text-foreground flex items-center gap-2">
               <Calendar className="w-5 h-5" />
               {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
             </DialogTitle>
@@ -367,7 +367,7 @@ export default function SessionCalendar({
                   >
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-white text-lg">{session.title}</CardTitle>
+                        <CardTitle className="text-foreground text-lg">{session.title}</CardTitle>
                         <Badge 
                           variant={session.status === 'open' ? 'default' : 'secondary'}
                           className="capitalize"
@@ -403,7 +403,7 @@ export default function SessionCalendar({
                         </div>
                       </div>
                       
-                      <div className="text-sm text-zinc-400">
+                      <div className="text-sm text-muted-foreground">
                         Price: ${(session.priceCents / 100).toFixed(2)}
                       </div>
                       

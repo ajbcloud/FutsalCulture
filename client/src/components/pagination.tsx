@@ -34,22 +34,22 @@ export function Pagination({
       <div className="md:hidden space-y-4">
         {/* Results info and items per page */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-muted-foreground">
             Showing {startItem}-{endItem} of {totalItems} results
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-zinc-400">Show:</span>
+            <span className="text-sm text-muted-foreground">Show:</span>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => onItemsPerPageChange(parseInt(value))}
             >
-              <SelectTrigger className="w-16 bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="w-16 bg-card border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700">
-                <SelectItem value="20" className="text-white hover:bg-zinc-700">20</SelectItem>
-                <SelectItem value="50" className="text-white hover:bg-zinc-700">50</SelectItem>
-                <SelectItem value="100" className="text-white hover:bg-zinc-700">100</SelectItem>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="20" className="text-foreground hover:bg-muted">20</SelectItem>
+                <SelectItem value="50" className="text-foreground hover:bg-muted">50</SelectItem>
+                <SelectItem value="100" className="text-foreground hover:bg-muted">100</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -63,7 +63,7 @@ export function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 disabled:opacity-50 px-2 h-9"
+              className="bg-card border-border text-foreground hover:bg-muted disabled:opacity-50 px-2 h-9"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -91,7 +91,7 @@ export function Pagination({
                     className={`min-w-[36px] h-9 px-2 ${
                       currentPage === pageNum
                         ? "bg-blue-600 text-white"
-                        : "bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
+                        : "bg-card border-border text-foreground hover:bg-muted"
                     }`}
                   >
                     {pageNum}
@@ -105,7 +105,7 @@ export function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 disabled:opacity-50 px-2 h-9"
+              className="bg-card border-border text-foreground hover:bg-muted disabled:opacity-50 px-2 h-9"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -116,22 +116,22 @@ export function Pagination({
       {/* Desktop Layout */}
       <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-muted-foreground">
             Showing {startItem}-{endItem} of {totalItems} results
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-zinc-400">Show:</span>
+            <span className="text-sm text-muted-foreground">Show:</span>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => onItemsPerPageChange(parseInt(value))}
             >
-              <SelectTrigger className="w-20 bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="w-20 bg-card border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700">
-                <SelectItem value="20" className="text-white hover:bg-zinc-700">20</SelectItem>
-                <SelectItem value="50" className="text-white hover:bg-zinc-700">50</SelectItem>
-                <SelectItem value="100" className="text-white hover:bg-zinc-700">100</SelectItem>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="20" className="text-foreground hover:bg-muted">20</SelectItem>
+                <SelectItem value="50" className="text-foreground hover:bg-muted">50</SelectItem>
+                <SelectItem value="100" className="text-foreground hover:bg-muted">100</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -144,7 +144,7 @@ export function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 disabled:opacity-50"
+              className="bg-card border-border text-foreground hover:bg-muted disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               Previous
@@ -172,7 +172,7 @@ export function Pagination({
                     className={
                       currentPage === pageNum
                         ? "bg-blue-600 text-white"
-                        : "bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700"
+                        : "bg-card border-border text-foreground hover:bg-muted"
                     }
                   >
                     {pageNum}
@@ -186,7 +186,7 @@ export function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 disabled:opacity-50"
+              className="bg-card border-border text-foreground hover:bg-muted disabled:opacity-50"
             >
               Next
               <ChevronRight className="w-4 h-4 ml-1" />

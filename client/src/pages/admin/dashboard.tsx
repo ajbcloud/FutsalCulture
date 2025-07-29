@@ -425,21 +425,21 @@ export default function AdminDashboard() {
                     activities.map((activity) => (
                       <div 
                         key={`${activity.type}-${activity.id}`} 
-                        className={`flex items-center space-x-3 p-3 bg-zinc-800 rounded-lg transition-colors ${
-                          activity.navigationUrl ? 'hover:bg-zinc-700 cursor-pointer' : ''
+                        className={`flex items-center space-x-3 p-3 bg-card rounded-lg transition-colors ${
+                          activity.navigationUrl ? 'hover:bg-muted/50 cursor-pointer' : ''
                         }`}
                         onClick={() => activity.navigationUrl && handleActivityClick(activity)}
                       >
                         <div className="text-2xl">{activity.icon}</div>
                         <div className="flex-1">
-                          <p className="text-white text-sm">{activity.message}</p>
+                          <p className="text-foreground text-sm">{activity.message}</p>
                           <div className="flex items-center gap-2">
-                            <p className="text-zinc-400 text-xs">{activity.timeAgo}</p>
+                            <p className="text-muted-foreground text-xs">{activity.timeAgo}</p>
                             {activity.type === 'refund' && activity.reasonSnippet && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
-                                    <span className="text-xs text-zinc-500 bg-zinc-700 px-2 py-1 rounded">
+                                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                                       {activity.reasonSnippet}
                                     </span>
                                   </TooltipTrigger>
@@ -455,14 +455,14 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         {activity.navigationUrl && (
-                          <ChevronRight className="w-4 h-4 text-zinc-400" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <AlertCircle className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-                      <p className="text-zinc-400">No recent activity</p>
+                      <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground">No recent activity</p>
                     </div>
                   )}
                 </div>
