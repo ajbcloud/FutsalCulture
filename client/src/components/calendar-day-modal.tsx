@@ -29,7 +29,7 @@ export default function CalendarDayModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-700 max-w-lg">
+      <DialogContent className="bg-card border-border max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white text-xl">
             {format(selectedDate, 'EEEE, MMMM d, yyyy')}
@@ -39,12 +39,12 @@ export default function CalendarDayModal({
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {sessionsOnDate.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-zinc-400 italic">No sessions scheduled for this date.</p>
+              <p className="text-muted-foreground italic">No sessions scheduled for this date.</p>
             </div>
           ) : (
             sessionsOnDate.map(session => (
               <Link key={session.id} href={`/sessions/${session.id}`}>
-                <Card className="bg-zinc-800 border-zinc-700 hover:bg-zinc-750 transition-colors cursor-pointer">
+                <Card className="bg-muted border-border hover:bg-muted/80 transition-colors cursor-pointer">
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {/* Session Title and Status */}
@@ -60,19 +60,19 @@ export default function CalendarDayModal({
 
                       {/* Session Details */}
                       <div className="grid grid-cols-1 gap-2 text-sm">
-                        <div className="flex items-center gap-2 text-zinc-300">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           <span>
                             {format(new Date(session.startTime), 'h:mm a')} - {format(new Date(session.endTime), 'h:mm a')}
                           </span>
                         </div>
                         
-                        <div className="flex items-center gap-2 text-zinc-300">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <MapPin className="w-4 h-4" />
                           <span>{session.location}</span>
                         </div>
                         
-                        <div className="flex items-center gap-2 text-zinc-300">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Users className="w-4 h-4" />
                           <span>
                             {session.signupsCount || 0}/{session.capacity} spots filled
@@ -82,10 +82,10 @@ export default function CalendarDayModal({
 
                       {/* Age Group and Gender */}
                       <div className="flex gap-2">
-                        <Badge variant="secondary" className="bg-zinc-700 text-zinc-300">
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           {session.ageGroup}
                         </Badge>
-                        <Badge variant="secondary" className="bg-zinc-700 text-zinc-300">
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           {session.gender}
                         </Badge>
                       </div>

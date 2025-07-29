@@ -284,7 +284,7 @@ export default function AdminDashboard() {
               value={(metrics?.pendingPayments || 0).toString()}
               tooltip="Unpaid reservations older than 1 hour that require attention."
               icon={CreditCard}
-              iconColor={(metrics?.pendingPayments || 0) > 0 ? "text-yellow-500" : "text-zinc-500"}
+              iconColor={(metrics?.pendingPayments || 0) > 0 ? "text-yellow-500" : "text-muted-foreground"}
               subtitle="Needs Attention"
               className={(metrics?.pendingPayments || 0) > 0 ? "border-yellow-500/50" : ""}
             />
@@ -359,16 +359,16 @@ export default function AdminDashboard() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-zinc-400 text-center py-8">No pending tasks</p>
+                    <p className="text-muted-foreground text-center py-8">No pending tasks</p>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-zinc-900 border-zinc-700">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Quick Actions</CardTitle>
+                <CardTitle className="text-foreground">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
@@ -402,13 +402,13 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activity */}
-          <Card className="bg-zinc-900 border-zinc-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-white">Recent Activity</CardTitle>
+              <CardTitle className="text-foreground">Recent Activity</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-zinc-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => refetchActivity()}
               >
                 <RefreshCw className="w-4 h-4" />
