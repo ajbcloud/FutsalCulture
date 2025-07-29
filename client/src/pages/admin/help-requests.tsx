@@ -251,26 +251,26 @@ export default function AdminHelpRequests() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-white">Help Requests</h1>
+        <h1 className="text-2xl font-bold text-foreground">Help Requests</h1>
         
         {/* Filter Controls */}
-        <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
+        <div className="bg-card p-4 rounded-lg border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <Label className="text-zinc-300 text-sm">Filter by User</Label>
+              <Label className="text-muted-foreground text-sm">Filter by User</Label>
               <Input
                 placeholder="Search name or email..."
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                className="bg-input border-border text-foreground mt-1"
               />
             </div>
             <div>
-              <Label className="text-zinc-300 text-sm">Filter by Status</Label>
+              <Label className="text-muted-foreground text-sm">Filter by Status</Label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+                className="w-full mt-1 bg-input border border-border rounded-md px-3 py-2 text-foreground text-sm"
               >
                 <option value="">All Status</option>
                 <option value="open">Open</option>
@@ -279,11 +279,11 @@ export default function AdminHelpRequests() {
               </select>
             </div>
             <div>
-              <Label className="text-zinc-300 text-sm">Filter by Source</Label>
+              <Label className="text-muted-foreground text-sm">Filter by Source</Label>
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+                className="w-full mt-1 bg-input border border-border rounded-md px-3 py-2 text-foreground text-sm"
               >
                 <option value="">All Sources</option>
                 <option value="main_page">Main Page</option>
@@ -292,7 +292,7 @@ export default function AdminHelpRequests() {
               </select>
             </div>
             <div>
-              <Label className="text-zinc-300 text-sm">Filter by Submitted</Label>
+              <Label className="text-muted-foreground text-sm">Filter by Submitted</Label>
               <select
                 value={submittedFilter}
                 onChange={(e) => {
@@ -302,7 +302,7 @@ export default function AdminHelpRequests() {
                     setCustomEndDate('');
                   }
                 }}
-                className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-white text-sm"
+                className="w-full mt-1 bg-input border border-border rounded-md px-3 py-2 text-foreground text-sm"
               >
                 <option value="">All Time</option>
                 <option value="today">Today</option>
@@ -317,21 +317,21 @@ export default function AdminHelpRequests() {
           {submittedFilter === 'custom' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
-                <Label className="text-zinc-300 text-sm">Start Date</Label>
+                <Label className="text-muted-foreground text-sm">Start Date</Label>
                 <Input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                  className="bg-input border-border text-foreground mt-1"
                 />
               </div>
               <div>
-                <Label className="text-zinc-300 text-sm">End Date</Label>
+                <Label className="text-muted-foreground text-sm">End Date</Label>
                 <Input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                  className="bg-input border-border text-foreground mt-1"
                 />
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function AdminHelpRequests() {
           
           {(userFilter || sourceFilter || statusFilter || submittedFilter) && (
             <div className="mt-3 flex justify-between items-center">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-muted-foreground">
                 Showing {filteredRequests.length} of {helpRequests.length} help requests
               </p>
               <Button
@@ -353,7 +353,7 @@ export default function AdminHelpRequests() {
                   setCustomStartDate('');
                   setCustomEndDate('');
                 }}
-                className="text-zinc-300 border-zinc-600 hover:bg-zinc-800"
+                className="text-muted-foreground border-border hover:bg-accent"
               >
                 Clear Filters
               </Button>
@@ -361,29 +361,29 @@ export default function AdminHelpRequests() {
           )}
         </div>
 
-      <div className="bg-zinc-900 rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-800">
-              <TableHead className="text-zinc-300">User</TableHead>
-              <TableHead className="text-zinc-300">Message Preview</TableHead>
-              <TableHead className="text-zinc-300">Source</TableHead>
-              <TableHead className="text-zinc-300">Status</TableHead>
-              <TableHead className="text-zinc-300">Submitted</TableHead>
-              <TableHead className="text-zinc-300">Resolution</TableHead>
-              <TableHead className="text-zinc-300">Actions</TableHead>
+            <TableRow className="border-border">
+              <TableHead className="text-muted-foreground">User</TableHead>
+              <TableHead className="text-muted-foreground">Message Preview</TableHead>
+              <TableHead className="text-muted-foreground">Source</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Submitted</TableHead>
+              <TableHead className="text-muted-foreground">Resolution</TableHead>
+              <TableHead className="text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedRequests.map((request: any) => (
-              <TableRow key={request.id} className="border-zinc-800">
-                <TableCell className="text-zinc-300">
+              <TableRow key={request.id} className="border-border">
+                <TableCell className="text-muted-foreground">
                   <div>
-                    <div className="font-medium text-white flex items-center gap-2">
+                    <div className="font-medium text-foreground flex items-center gap-2">
                       {request.linkedUser ? (
                         <button
                           onClick={() => handleUserClick(request)}
-                          className="text-blue-400 hover:text-blue-300 underline decoration-dotted flex items-center gap-1 transition-colors"
+                          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline decoration-dotted flex items-center gap-1 transition-colors"
                           title={`Go to ${request.userType} details`}
                         >
                           {request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}
@@ -393,30 +393,30 @@ export default function AdminHelpRequests() {
                         <span>{request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}</span>
                       )}
                       {request.linkedUser && (
-                        <Badge variant="outline" className="text-xs bg-blue-900/30 border-blue-600 text-blue-400">
+                        <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-600 text-blue-600 dark:text-blue-400">
                           {request.userType}
                         </Badge>
                       )}
                     </div>
-                    <div className="text-sm text-zinc-400">{request.email}</div>
-                    {request.phone && <div className="text-sm text-zinc-400">{request.phone}</div>}
+                    <div className="text-sm text-muted-foreground">{request.email}</div>
+                    {request.phone && <div className="text-sm text-muted-foreground">{request.phone}</div>}
                   </div>
                 </TableCell>
-                <TableCell className="text-white font-medium">
+                <TableCell className="text-foreground font-medium">
                   <div className="space-y-1">
                     <div className="font-semibold">{request.subject}</div>
-                    <div className="text-sm text-zinc-400">
+                    <div className="text-sm text-muted-foreground">
                       {request.message?.substring(0, 50) + (request.message?.length > 50 ? '...' : '')}
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   <Badge 
                     variant="outline" 
                     className={
-                      request.source === 'parent_portal' ? 'bg-blue-900/30 border-blue-600 text-blue-400' :
-                      request.source === 'player_portal' ? 'bg-purple-900/30 border-purple-600 text-purple-400' :
-                      'bg-zinc-700/30 border-zinc-600 text-zinc-400'
+                      request.source === 'parent_portal' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-600 text-blue-600 dark:text-blue-400' :
+                      request.source === 'player_portal' ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-600 text-purple-600 dark:text-purple-400' :
+                      'bg-muted border-border text-muted-foreground'
                     }
                   >
                     {request.source === 'parent_portal' ? 'Parent Portal' :
@@ -432,45 +432,45 @@ export default function AdminHelpRequests() {
                       'secondary'
                     }
                     className={
-                      request.status === 'resolved' || request.resolved ? 'bg-green-900 text-green-300' : 
-                      request.status === 'replied' ? 'bg-yellow-900 text-yellow-300' : 
-                      'bg-zinc-700 text-zinc-400'
+                      request.status === 'resolved' || request.resolved ? 'bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300' : 
+                      request.status === 'replied' ? 'bg-yellow-50 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300' : 
+                      'bg-muted text-muted-foreground'
                     }
                   >
                     {request.status || (request.resolved ? 'resolved' : 'open')}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   <div className="space-y-2">
                     {(request.status === 'resolved' || request.resolved) && request.resolvedAt ? (
                       <div>
-                        <div className="text-sm text-green-400">
+                        <div className="text-sm text-green-600 dark:text-green-400">
                           Resolved {format(new Date(request.resolvedAt), 'MMM d, yyyy h:mm a')}
                         </div>
                         {request.resolutionNote && (
-                          <div className="text-xs text-zinc-400 mt-1 max-w-xs truncate">
+                          <div className="text-xs text-muted-foreground mt-1 max-w-xs truncate">
                             {request.resolutionNote}
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span className="text-zinc-500">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
                     
                     {/* Reply History */}
                     {request.replyHistory && request.replyHistory.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-zinc-700">
-                        <p className="text-xs text-blue-400 mb-2">
+                      <div className="mt-2 pt-2 border-t border-border">
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
                           {request.replyHistory.length} {request.replyHistory.length === 1 ? 'reply' : 'replies'} sent:
                         </p>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {request.replyHistory.map((reply: any, index: number) => (
-                            <div key={index} className="bg-zinc-800 p-2 rounded text-xs border-l-2 border-blue-500">
-                              <p className="text-zinc-200 mb-1">{reply.message}</p>
-                              <p className="text-zinc-500 text-xs">
+                            <div key={index} className="bg-accent p-2 rounded text-xs border-l-2 border-blue-500">
+                              <p className="text-foreground mb-1">{reply.message}</p>
+                              <p className="text-muted-foreground text-xs">
                                 {format(new Date(reply.repliedAt), 'MMM d, h:mm a')}
                               </p>
                             </div>
@@ -504,7 +504,7 @@ export default function AdminHelpRequests() {
             ))}
             {paginatedRequests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   {helpRequests.length === 0 ? 'No help requests found' : 'No help requests match the current filters'}
                 </TableCell>
               </TableRow>
@@ -521,45 +521,45 @@ export default function AdminHelpRequests() {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          className="bg-card p-4 rounded-lg border border-border"
         />
       )}
 
       {/* Reply Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+        <DialogContent className="bg-card border-border max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Reply to Help Request</DialogTitle>
+            <DialogTitle className="text-foreground">Reply to Help Request</DialogTitle>
           </DialogHeader>
           
           {selectedRequest && (
             <div className="space-y-4">
-              <div className="bg-zinc-800 p-4 rounded-lg">
-                <p className="text-sm text-zinc-400 mb-2">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
                   From: {selectedRequest.firstName} {selectedRequest.lastName} ({selectedRequest.email}) | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
                 </p>
                 {selectedRequest.phone && (
-                  <p className="text-sm text-zinc-400 mb-2">Phone: {selectedRequest.phone}</p>
+                  <p className="text-sm text-muted-foreground mb-2">Phone: {selectedRequest.phone}</p>
                 )}
                 <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Subject:</span> {selectedRequest.subject}
                   </p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Category:</span> {selectedRequest.category} | <span className="font-medium">Priority:</span> {selectedRequest.priority}
                   </p>
-                  <p className="text-zinc-300">{selectedRequest.message}</p>
+                  <p className="text-foreground">{selectedRequest.message}</p>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="replyMessage" className="text-zinc-300">Your Reply</Label>
+                <Label htmlFor="replyMessage" className="text-foreground">Your Reply</Label>
                 <Textarea
                   id="replyMessage"
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
                   placeholder="Type your reply here..."
-                  className="bg-zinc-800 border-zinc-700 text-white min-h-32"
+                  className="bg-input border-border text-foreground min-h-32"
                   disabled={sending}
                 />
               </div>
@@ -595,38 +595,38 @@ export default function AdminHelpRequests() {
 
       {/* Resolution Dialog */}
       <Dialog open={!!resolvingRequest} onOpenChange={() => setResolvingRequest(null)}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Resolve Help Request</DialogTitle>
+            <DialogTitle className="text-foreground">Resolve Help Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-zinc-300">Request from {resolvingRequest?.firstName} {resolvingRequest?.lastName}</Label>
-              <div className="p-3 bg-zinc-800 rounded-lg border border-zinc-700 mt-1">
+              <Label className="text-foreground">Request from {resolvingRequest?.firstName} {resolvingRequest?.lastName}</Label>
+              <div className="p-3 bg-muted rounded-lg border border-border mt-1">
                 <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Subject:</span> {resolvingRequest?.subject}
                   </p>
-                  <p className="text-white whitespace-pre-wrap">{resolvingRequest?.message}</p>
+                  <p className="text-foreground whitespace-pre-wrap">{resolvingRequest?.message}</p>
                 </div>
               </div>
             </div>
             <div>
-              <Label htmlFor="resolutionNote" className="text-zinc-300">Resolution Details * (minimum 10 characters)</Label>
+              <Label htmlFor="resolutionNote" className="text-foreground">Resolution Details * (minimum 10 characters)</Label>
               <Textarea
                 id="resolutionNote"
                 value={resolutionNote}
                 onChange={(e) => setResolutionNote(e.target.value)}
-                className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                className="bg-input border-border text-foreground mt-1"
                 rows={4}
                 placeholder="Describe how you resolved this issue and what actions were taken..."
                 required
               />
               <div className="flex justify-between items-center mt-1">
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {resolutionNote.trim().length}/10 characters minimum
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   This note will be logged for future reference and quality assurance.
                 </p>
               </div>
