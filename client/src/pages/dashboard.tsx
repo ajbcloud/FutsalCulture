@@ -263,7 +263,7 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold mb-4 sm:text-3xl md:text-4xl">
               Welcome Back{user?.firstName ? `, ${user.firstName}` : ''}!
             </h1>
-            <p className="text-base text-futsal-100 sm:text-lg md:text-xl">
+            <p className="text-base text-foreground sm:text-lg md:text-xl">
               Ready to book today's training sessions?
             </p>
           </div>
