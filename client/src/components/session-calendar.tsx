@@ -257,7 +257,7 @@ export default function SessionCalendar({
                           {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
                         <div className="text-[8px] text-zinc-300 truncate leading-tight">
-                          {session.ageGroups?.slice(0, 1).join(', ') || 'N/A'} {statusText}
+                          {session.ageGroups?.slice(0, 1).join(', ') || 'N/A'}
                         </div>
                       </div>
 
