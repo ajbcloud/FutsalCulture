@@ -17,7 +17,7 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
-import { Upload, Download } from 'lucide-react';
+import { Upload, Download, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -248,31 +248,35 @@ export default function AdminPlayers() {
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Player Management</h1>
-        <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">Player Management</h1>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <Button 
             variant="outline" 
             onClick={() => window.open('/api/admin/template/players', '_blank')}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            size="sm"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Download Template
+            <Download className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Download Template</span>
+            <span className="sm:hidden">Template</span>
           </Button>
           <Button 
             variant="outline"
             onClick={() => setShowImportModal(true)}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            size="sm"
           >
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
+            <Upload className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Import CSV</span>
+            <span className="sm:hidden">Import</span>
           </Button>
         </div>
       </div>
 
       {/* Filter Controls */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           <div>
             <Label className="text-zinc-300">Search</Label>
             <Input
@@ -338,7 +342,8 @@ export default function AdminPlayers() {
         </div>
       </div>
 
-      <div className="bg-zinc-900 rounded-lg overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
@@ -411,13 +416,103 @@ export default function AdminPlayers() {
             ))}
             {paginatedPlayers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={9} className="text-center text-zinc-400 py-8">
                   {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {paginatedPlayers.length === 0 ? (
+          <div className="text-center text-zinc-400 py-8 bg-zinc-900 rounded-lg">
+            {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
+          </div>
+        ) : (
+          paginatedPlayers.map((player: any) => (
+            <div key={player.id} className="bg-zinc-800 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => handleEditPlayer(player)}
+                    className="text-blue-400 hover:text-blue-300 cursor-pointer underline bg-transparent border-none p-0 font-inherit text-left"
+                  >
+                    <h3 className="font-bold text-white text-lg truncate">
+                      {player.firstName} {player.lastName}
+                    </h3>
+                  </button>
+                  <p className="text-zinc-400 text-sm">
+                    {new Date().getFullYear() - player.birthYear} years • {player.gender}
+                  </p>
+                </div>
+                <Badge 
+                  variant={player.canAccessPortal ? "default" : "secondary"}
+                  className={`shrink-0 text-xs ${player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-zinc-700 text-zinc-400"}`}
+                >
+                  {player.canAccessPortal ? 'Portal' : 'No Portal'}
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                {player.soccerClub && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Club:</span>
+                    <span className="text-zinc-300">{player.soccerClub}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400">Sessions:</span>
+                  <span className="text-zinc-300">{player.signupsCount || 0}</span>
+                </div>
+
+                {player.parentName && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Parent:</span>
+                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
+                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
+                        {player.parentName}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+
+                {player.parent2Name && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Parent 2:</span>
+                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
+                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
+                        {player.parent2Name}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-zinc-400">Last Activity:</span>
+                  <span className="text-zinc-300">
+                    {player.lastActivity ? format(new Date(player.lastActivity), 'MMM d') : 'Never'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleEditPlayer(player)}
+                  className="text-xs px-3 py-1 h-7"
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Bottom Pagination */}

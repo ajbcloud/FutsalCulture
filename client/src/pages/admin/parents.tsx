@@ -268,15 +268,15 @@ export default function AdminParents() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Parents Management</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Parents Management</h1>
           <div className="text-sm text-zinc-400">
             Total: {parents.length} accounts
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-zinc-300">Total Parents</CardTitle>
@@ -322,7 +322,7 @@ export default function AdminParents() {
 
         {/* Filter Controls */}
         <div className="bg-zinc-900 rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <div>
               <Label className="text-zinc-300">Search</Label>
               <Input
@@ -372,8 +372,8 @@ export default function AdminParents() {
           </div>
         </div>
 
-        {/* Parents Table */}
-        <div className="bg-zinc-900 rounded-lg overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="border-zinc-800">
@@ -500,6 +500,137 @@ export default function AdminParents() {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {paginatedParents.length === 0 ? (
+            <div className="text-center text-zinc-400 py-8 bg-zinc-900 rounded-lg">
+              {filteredParents.length === 0 ? 'No parents found' : 'No parents on this page'}
+            </div>
+          ) : (
+            paginatedParents.map((parent: any) => {
+              const isExpanded = expandedParentIds.has(parent.id);
+              return (
+                <div key={parent.id} className="bg-zinc-800 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white text-lg truncate">
+                        {parent.firstName} {parent.lastName}
+                      </h3>
+                      <p className="text-zinc-400 text-sm truncate">{parent.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {getRoleDisplay(parent)}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    {parent.phone && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400">Phone:</span>
+                        <span className="text-zinc-300">{parent.phone}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Players:</span>
+                      <button
+                        onClick={() => {
+                          const nextExpanded = new Set(expandedParentIds);
+                          if (isExpanded) {
+                            nextExpanded.delete(parent.id);
+                          } else {
+                            nextExpanded.add(parent.id);
+                            loadPlayersForParent(parent.id);
+                          }
+                          setExpandedParentIds(nextExpanded);
+                        }}
+                        className="flex items-center gap-1 text-zinc-300 hover:text-blue-400"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-3 h-3 text-green-400" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 text-zinc-400" />
+                        )}
+                        <Users className="w-3 h-3" />
+                        {parent.playersCount || 0}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Last Login:</span>
+                      <span className="text-zinc-300">
+                        {parent.lastLogin ? new Date(parent.lastLogin).toLocaleDateString() : 'Never'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t border-zinc-700 pt-3 mb-3">
+                      {loadingPlayers.has(parent.id) ? (
+                        <p className="text-zinc-500 text-sm">Loading player details...</p>
+                      ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="font-medium text-zinc-300 text-sm">Players:</p>
+                          {parentPlayers[parent.id].map((player: any) => (
+                            <div key={player.id} className="bg-zinc-900 p-2 rounded text-sm">
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                  <Link 
+                                    href={`/admin/players?playerId=${player.id}`}
+                                    className="text-white font-medium hover:text-blue-400 cursor-pointer underline block truncate"
+                                  >
+                                    {player.firstName} {player.lastName}
+                                  </Link>
+                                  <p className="text-zinc-400 text-xs">
+                                    {player.ageGroup} • {player.gender}
+                                    {player.soccerClub && <span> • {player.soccerClub}</span>}
+                                  </p>
+                                  {player.canAccessPortal && (
+                                    <Badge className="mt-1 bg-green-900 text-green-300 text-xs">Portal</Badge>
+                                  )}
+                                </div>
+                                <div className="text-right text-xs text-zinc-400 shrink-0 ml-2">
+                                  {player.signupCount || 0} bookings
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-zinc-500 text-sm">No players registered</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center">
+                    <div></div>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEdit(parent)}
+                        className="text-xs px-3 py-1 h-7"
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDelete(parent.id)}
+                        className="text-red-400 hover:text-red-300 text-xs px-3 py-1 h-7"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Bottom Pagination */}

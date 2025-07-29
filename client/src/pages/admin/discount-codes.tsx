@@ -171,13 +171,14 @@ export default function DiscountCodes() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Discount Codes</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-xl sm:text-3xl font-bold text-white">Discount Codes</h1>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} size="sm" className="self-start sm:self-auto">
               <Plus className="w-4 h-4 mr-2" />
-              Create Discount Code
+              <span className="hidden sm:inline">Create Discount Code</span>
+              <span className="sm:hidden">Create Code</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
@@ -307,47 +308,227 @@ export default function DiscountCodes() {
           <CardTitle>Active Discount Codes</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Uses</TableHead>
-                <TableHead>Valid Period</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {discountCodes.map((code) => (
-                <TableRow key={code.id}>
-                  <TableCell className="font-mono font-bold">{code.code}</TableCell>
-                  <TableCell className="capitalize">{code.discountType}</TableCell>
-                  <TableCell>
-                    {code.discountType === "full"
-                      ? "100%"
-                      : code.discountType === "percentage"
-                      ? `${code.discountValue}%`
-                      : `$${(code.discountValue || 0) / 100}`}
-                  </TableCell>
-                  <TableCell>
-                    {code.currentUses} / {code.maxUses || "∞"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {code.validFrom && (
-                        <div>From: {format(new Date(code.validFrom), "MMM d, yyyy")}</div>
-                      )}
-                      {code.validUntil && (
-                        <div>Until: {format(new Date(code.validUntil), "MMM d, yyyy")}</div>
-                      )}
-                      {!code.validFrom && !code.validUntil && <div>Always valid</div>}
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Uses</TableHead>
+                  <TableHead>Valid Period</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {discountCodes.map((code) => (
+                  <TableRow key={code.id}>
+                    <TableCell className="font-mono font-bold">{code.code}</TableCell>
+                    <TableCell className="capitalize">{code.discountType}</TableCell>
+                    <TableCell>
+                      {code.discountType === "full"
+                        ? "100%"
+                        : code.discountType === "percentage"
+                        ? `${code.discountValue}%`
+                        : `$${(code.discountValue || 0) / 100}`}
+                    </TableCell>
+                    <TableCell>
+                      {code.currentUses} / {code.maxUses || "∞"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {code.validFrom && (
+                          <div>From: {format(new Date(code.validFrom), "MMM d, yyyy")}</div>
+                        )}
+                        {code.validUntil && (
+                          <div>Until: {format(new Date(code.validUntil), "MMM d, yyyy")}</div>
+                        )}
+                        {!code.validFrom && !code.validUntil && <div>Always valid</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          code.isActive
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {code.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(code.code)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(code)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Edit Discount Code</DialogTitle>
+                              <DialogDescription>
+                                Update the discount code settings
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="edit-code">Discount Code</Label>
+                                  <Input
+                                    id="edit-code"
+                                    value={formData.code}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-discountType">Discount Type</Label>
+                                  <Select
+                                    value={formData.discountType}
+                                    onValueChange={(value) => setFormData({ ...formData, discountType: value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="full">Full (100% Off)</SelectItem>
+                                      <SelectItem value="percentage">Percentage</SelectItem>
+                                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              {formData.discountType !== "full" && (
+                                <div>
+                                  <Label htmlFor="edit-discountValue">
+                                    {formData.discountType === "percentage" ? "Percentage Off" : "Amount Off ($)"}
+                                  </Label>
+                                  <Input
+                                    id="edit-discountValue"
+                                    type="number"
+                                    value={formData.discountValue}
+                                    onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
+                                    min="0"
+                                    max={formData.discountType === "percentage" ? "100" : undefined}
+                                  />
+                                </div>
+                              )}
+
+                              <div>
+                                <Label htmlFor="edit-description">Description</Label>
+                                <Textarea
+                                  id="edit-description"
+                                  value={formData.description}
+                                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="edit-maxUses">Max Uses</Label>
+                                  <Input
+                                    id="edit-maxUses"
+                                    type="number"
+                                    value={formData.maxUses || ""}
+                                    onChange={(e) => setFormData({ ...formData, maxUses: e.target.value ? Number(e.target.value) : null })}
+                                    min="1"
+                                  />
+                                </div>
+                                <div className="flex items-end">
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id="edit-isActive"
+                                      checked={formData.isActive}
+                                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                    />
+                                    <Label htmlFor="edit-isActive">Active</Label>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="edit-validFrom">Valid From</Label>
+                                  <Input
+                                    id="edit-validFrom"
+                                    type="datetime-local"
+                                    value={formData.validFrom}
+                                    onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-validUntil">Valid Until</Label>
+                                  <Input
+                                    id="edit-validUntil"
+                                    type="datetime-local"
+                                    value={formData.validUntil}
+                                    onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end space-x-2">
+                                <Button type="button" variant="outline" onClick={() => setEditingCode(null)}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={updateMutation.isPending}>
+                                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                                </Button>
+                              </div>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this discount code?")) {
+                              deleteMutation.mutate(code.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {discountCodes.length === 0 ? (
+              <div className="text-center text-zinc-400 py-8">
+                No discount codes created yet
+              </div>
+            ) : (
+              discountCodes.map((code) => (
+                <div key={code.id} className="bg-zinc-800 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-mono font-bold text-white text-lg truncate">{code.code}</h3>
+                      <p className="text-zinc-400 text-sm capitalize">{code.discountType} discount</p>
                     </div>
-                  </TableCell>
-                  <TableCell>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs ${
+                      className={`px-2 py-1 rounded-full text-xs shrink-0 ${
                         code.isActive
                           ? "bg-green-500/20 text-green-400"
                           : "bg-red-500/20 text-red-400"
@@ -355,24 +536,62 @@ export default function DiscountCodes() {
                     >
                       {code.isActive ? "Active" : "Inactive"}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => copyToClipboard(code.code)}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Value:</span>
+                      <span className="text-zinc-300 font-medium">
+                        {code.discountType === "full"
+                          ? "100%"
+                          : code.discountType === "percentage"
+                          ? `${code.discountValue}%`
+                          : `$${(code.discountValue || 0) / 100}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Uses:</span>
+                      <span className="text-zinc-300">{code.currentUses} / {code.maxUses || "∞"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-400">Valid:</span>
+                      <div className="text-zinc-300 text-right">
+                        {code.validFrom && (
+                          <div>From: {format(new Date(code.validFrom), "MMM d")}</div>
+                        )}
+                        {code.validUntil && (
+                          <div>Until: {format(new Date(code.validUntil), "MMM d")}</div>
+                        )}
+                        {!code.validFrom && !code.validUntil && <div>Always</div>}
+                      </div>
+                    </div>
+                    {code.description && (
+                      <div className="mt-2">
+                        <p className="text-zinc-300 text-xs">{code.description}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(code.code)}
+                      className="text-xs px-3 py-1 h-7"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy
+                    </Button>
+                    <div className="flex space-x-2">
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleEdit(code)}
+                            className="text-xs px-2 py-1 h-7"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3 h-3" />
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl">
@@ -383,7 +602,7 @@ export default function DiscountCodes() {
                             </DialogDescription>
                           </DialogHeader>
                           <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="edit-code">Discount Code</Label>
                                 <Input
@@ -436,7 +655,7 @@ export default function DiscountCodes() {
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="edit-maxUses">Max Uses</Label>
                                 <Input
@@ -459,7 +678,7 @@ export default function DiscountCodes() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="edit-validFrom">Valid From</Label>
                                 <Input
@@ -480,11 +699,11 @@ export default function DiscountCodes() {
                               </div>
                             </div>
 
-                            <div className="flex justify-end space-x-2">
-                              <Button type="button" variant="outline" onClick={() => setEditingCode(null)}>
+                            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                              <Button type="button" variant="outline" onClick={() => setEditingCode(null)} className="w-full sm:w-auto">
                                 Cancel
                               </Button>
-                              <Button type="submit" disabled={updateMutation.isPending}>
+                              <Button type="submit" disabled={updateMutation.isPending} className="w-full sm:w-auto">
                                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
                               </Button>
                             </div>
@@ -499,15 +718,16 @@ export default function DiscountCodes() {
                             deleteMutation.mutate(code.id);
                           }
                         }}
+                        className="text-red-400 hover:text-red-300 text-xs px-2 py-1 h-7"
                       >
-                        <Trash2 className="w-4 h-4 text-red-400" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
       </div>
