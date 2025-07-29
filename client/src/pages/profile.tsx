@@ -102,10 +102,10 @@ export default function Profile() {
 
   if (isLoading || prefsLoading) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       </div>
     );
@@ -113,11 +113,11 @@ export default function Profile() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
         <div className="flex items-center justify-center py-16">
-          <Card className="bg-zinc-900 border-zinc-700 p-8 text-center">
-            <p className="text-zinc-400">Please log in to view your profile.</p>
+          <Card className="bg-card border-border p-8 text-center">
+            <p className="text-muted-foreground">Please log in to view your profile.</p>
           </Card>
         </div>
       </div>
@@ -125,11 +125,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="bg-zinc-900 border-zinc-700">
+        <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div className="flex items-center space-x-3">
@@ -137,8 +137,8 @@ export default function Profile() {
                   <User className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-white text-xl sm:text-2xl">Profile Information</CardTitle>
-                  <p className="text-zinc-400 text-sm">Manage your account details and preferences</p>
+                  <CardTitle className="text-foreground text-xl sm:text-2xl">Profile Information</CardTitle>
+                  <p className="text-muted-foreground text-sm">Manage your account details and preferences</p>
                 </div>
               </div>
               
@@ -157,7 +157,7 @@ export default function Profile() {
                   <Button 
                     onClick={handleCancel}
                     variant="outline"
-                    className="border-zinc-600 text-zinc-400 hover:text-white text-sm px-3 py-2 h-9"
+                    className="border-border text-muted-foreground hover:text-foreground text-sm px-3 py-2 h-9"
                     size="sm"
                   >
                     <X className="w-4 h-4 mr-1" />
@@ -182,7 +182,7 @@ export default function Profile() {
           <CardContent className="space-y-8">
             {/* Profile Fields */}
             <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-white flex items-center">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
                 <User className="w-5 h-5 mr-2" />
                 Personal Information
               </h3>
@@ -195,7 +195,7 @@ export default function Profile() {
                   { key: "phone", label: "Phone Number", type: "tel" },
                 ].map((field) => (
                   <div key={field.key} className="space-y-2">
-                    <Label className="text-sm font-medium text-zinc-300">
+                    <Label className="text-sm font-medium text-muted-foreground">
                       {field.label}
                     </Label>
                     {isEditing ? (
@@ -206,13 +206,13 @@ export default function Profile() {
                           ...formData, 
                           [field.key]: e.target.value 
                         })}
-                        className="bg-zinc-800 border-zinc-600 text-white focus:border-blue-500"
+                        className="bg-input border-border text-foreground focus:border-primary"
                         placeholder={`Enter your ${field.label.toLowerCase()}`}
                       />
                     ) : (
-                      <div className="w-full bg-zinc-800 border border-zinc-600 rounded-md px-3 py-2 text-zinc-300 min-h-[40px] flex items-center">
+                      <div className="w-full bg-input border border-border rounded-md px-3 py-2 text-foreground min-h-[40px] flex items-center">
                         {formData[field.key as keyof typeof formData] as string || (
-                          <span className="text-zinc-500 italic">Not provided</span>
+                          <span className="text-muted-foreground italic">Not provided</span>
                         )}
                       </div>
                     )}
@@ -223,7 +223,7 @@ export default function Profile() {
 
             {/* Notification Preferences */}
             <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-white flex items-center">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
                 <Settings className="w-5 h-5 mr-2" />
                 Notification Preferences
               </h3>
@@ -249,17 +249,17 @@ export default function Profile() {
                   const isToggleDisabled = !isEditing || isContactMissing;
                   
                   return (
-                    <div key={pref.key} className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                    <div key={pref.key} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
                       <div className="flex-1">
-                        <h4 className={`font-medium ${isContactMissing ? 'text-zinc-500' : 'text-white'}`}>
+                        <h4 className={`font-medium ${isContactMissing ? 'text-muted-foreground' : 'text-foreground'}`}>
                           {pref.title}
                           {isContactMissing && (
-                            <span className="text-xs text-zinc-600 ml-2">
+                            <span className="text-xs text-muted-foreground ml-2">
                               (Requires {pref.key === 'emailReminder' ? 'email address' : 'phone number'})
                             </span>
                           )}
                         </h4>
-                        <p className="text-sm text-zinc-400 mt-1">{pref.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{pref.description}</p>
                       </div>
                       <Switch
                         checked={!isContactMissing && (formData[pref.key as keyof typeof formData] as boolean)}

@@ -209,7 +209,7 @@ export default function Dashboard() {
   // Early return after all hooks
   if (isLoading || playersLoading || signupsLoading || prefsLoading || sessionsLoading) {
     return (
-      <div className="min-h-screen bg-[#18181b] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -253,11 +253,11 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#18181b]">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
       {/* Welcome Section - Mobile First */}
-      <section className="from-futsal-600 to-brand-600 text-white bg-[#18181b]">
+      <section className="from-futsal-600 to-brand-600 text-foreground bg-background">
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4 sm:text-3xl md:text-4xl">
@@ -271,7 +271,7 @@ export default function Dashboard() {
       </section>
 
       {/* Quick Actions - Mobile First */}
-      <section className="py-6 bg-[#18181b] sm:py-8">
+      <section className="py-6 bg-background sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -281,9 +281,9 @@ export default function Dashboard() {
                   Add Player
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-zinc-900 border-zinc-700">
+              <DialogContent className="bg-card border-border">
                 <DialogHeader>
-                  <DialogTitle className="text-white">Add New Player</DialogTitle>
+                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
                 </DialogHeader>
                 <PlayerForm onSuccess={() => {
                   setIsAddDialogOpen(false);
@@ -307,12 +307,12 @@ export default function Dashboard() {
       </section>
 
       {/* Today's Sessions - Mobile First */}
-      <section className="py-6 bg-[#18181b] sm:py-8">
+      <section className="py-6 bg-background sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
             <div>
-              <h2 className="text-2xl font-bold bg-[#ffffff00] text-[#ffffff] sm:text-3xl">Today's Sessions</h2>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base sm:mt-2">Available for booking at 8:00 AM</p>
+              <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Today's Sessions</h2>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base sm:mt-2">Available for booking at 8:00 AM</p>
             </div>
           </div>
 
@@ -320,14 +320,14 @@ export default function Dashboard() {
             <div className="text-center py-12">
               {players.length === 0 ? (
                 <>
-                  <p className="text-gray-500 text-lg">Add a player to see available sessions</p>
+                  <p className="text-muted-foreground text-lg">Add a player to see available sessions</p>
                   <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="mt-4 bg-green-600 hover:bg-green-700">Add Your First Player</Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-zinc-900 border-zinc-700">
+                    <DialogContent className="bg-card border-border">
                       <DialogHeader>
-                        <DialogTitle className="text-white">Add New Player</DialogTitle>
+                        <DialogTitle className="text-foreground">Add New Player</DialogTitle>
                       </DialogHeader>
                       <PlayerForm onSuccess={() => {
                         setIsAddDialogOpen(false);
@@ -338,7 +338,7 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  <p className="text-gray-500 text-lg">No eligible sessions scheduled for today.</p>
+                  <p className="text-muted-foreground text-lg">No eligible sessions scheduled for today.</p>
                   <Button 
                     className="mt-4"
                     onClick={() => {
@@ -393,23 +393,23 @@ export default function Dashboard() {
       </section>
 
       {/* Player Management Section - Mobile First */}
-      <section className="py-6 bg-[#18181b] sm:py-8">
+      <section className="py-6 bg-background sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-white mb-6 sm:text-3xl sm:mb-8">Your Players</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-6 sm:text-3xl sm:mb-8">Your Players</h2>
 
         {/* Player Management Cards */}
         <div className="space-y-6 sm:space-y-8">
           {players.length === 0 ? (
-            <Card className="bg-zinc-900 border border-zinc-700">
+            <Card className="bg-card border border-border">
               <CardContent className="text-center py-8">
-                <p className="text-zinc-400 mb-4">No players added yet.</p>
+                <p className="text-muted-foreground mb-4">No players added yet.</p>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-blue-600 hover:bg-blue-700">Add Your First Player</Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-zinc-900 border-zinc-700">
+                  <DialogContent className="bg-card border-border">
                     <DialogHeader>
-                      <DialogTitle className="text-white">Add New Player</DialogTitle>
+                      <DialogTitle className="text-foreground">Add New Player</DialogTitle>
                     </DialogHeader>
                     <PlayerForm onSuccess={() => {
                       setIsAddDialogOpen(false);
@@ -429,14 +429,14 @@ export default function Dashboard() {
               );
               
               return (
-                <Card key={player.id} className="bg-zinc-900 border border-zinc-700">
+                <Card key={player.id} className="bg-card border border-border">
                   <CardHeader>
                     <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
                       <div>
-                        <CardTitle className="text-white text-lg sm:text-xl">
+                        <CardTitle className="text-foreground text-lg sm:text-xl">
                           {player.firstName} {player.lastName}
                         </CardTitle>
-                        <p className="text-zinc-400 text-sm sm:text-base">
+                        <p className="text-muted-foreground text-sm sm:text-base">
                           {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old • {player.gender}
                         </p>
                       </div>
@@ -454,9 +454,9 @@ export default function Dashboard() {
                               <Edit className="w-4 h-4" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="bg-zinc-900 border-zinc-700">
+                          <DialogContent className="bg-card border-border">
                             <DialogHeader>
-                              <DialogTitle className="text-white">Edit Player</DialogTitle>
+                              <DialogTitle className="text-foreground">Edit Player</DialogTitle>
                             </DialogHeader>
                             <PlayerForm 
                               player={editingPlayer} 
@@ -481,18 +481,18 @@ export default function Dashboard() {
                   <CardContent>
                     {/* Upcoming Reservations Section */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold text-white mb-4">Upcoming Reservations</h4>
+                      <h4 className="text-lg font-semibold text-foreground mb-4">Upcoming Reservations</h4>
                       {playerUpcomingReservations.length > 0 ? (
                         <div className="space-y-3">
                           {playerUpcomingReservations.map(reservation => (
-                            <div key={reservation.id} className="bg-zinc-800 border border-zinc-600 rounded p-3">
+                            <div key={reservation.id} className="bg-muted border border-border rounded p-3">
                               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
                                 <div className="flex-1">
-                                  <p className="font-medium text-white">{reservation.session.title}</p>
-                                  <p className="text-sm text-zinc-400">
+                                  <p className="font-medium text-foreground">{reservation.session.title}</p>
+                                  <p className="text-sm text-muted-foreground">
                                     {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
                                   </p>
-                                  <p className="text-sm text-zinc-400">{reservation.session.location}</p>
+                                  <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
                                 </div>
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3">
                                   <span className={`px-2 py-1 rounded text-sm font-medium text-center sm:text-left ${
@@ -523,7 +523,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-zinc-400 italic">No upcoming reservations.</p>
+                        <p className="text-muted-foreground italic">No upcoming reservations.</p>
                       )}
                     </div>
                     

@@ -125,13 +125,13 @@ export default function Calendar() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-[#18181b] text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
           <div className="mb-8">
             {/* Title Section */}
             <div className="text-center sm:text-left mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Session Calendar</h1>
-              <p className="text-zinc-400 text-lg">View all upcoming futsal training sessions</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Session Calendar</h1>
+              <p className="text-muted-foreground text-lg">View all upcoming futsal training sessions</p>
             </div>
             
             {/* Filter Controls - Desktop: inline, Mobile: below title */}
@@ -162,7 +162,7 @@ export default function Calendar() {
               
               <Button 
                 onClick={applyFilters}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2"
               >
                 Apply Filters
               </Button>
@@ -199,7 +199,7 @@ export default function Calendar() {
                 
                 <Button 
                   onClick={applyFilters}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2"
                 >
                   Apply Filters
                 </Button>
