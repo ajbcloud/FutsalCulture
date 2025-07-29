@@ -13,6 +13,7 @@ import { useToast } from '../../hooks/use-toast';
 import { apiRequest } from '../../lib/queryClient';
 import { Key, Lock, Unlock, Calendar, MapPin, Users, Clock, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import { Pagination } from '../../components/pagination';
 
 interface Session {
   id: string;
@@ -37,6 +38,8 @@ interface AccessCodeFormData {
 export default function AccessCodes() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState<AccessCodeFormData>({
     hasAccessCode: false,
     accessCode: ''
@@ -110,11 +113,17 @@ export default function AccessCodes() {
     setFormData(prev => ({ ...prev, accessCode: code }));
   };
 
+  // Calculate pagination
+  const totalPages = Math.ceil(sessions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSessions = sessions.slice(startIndex, endIndex);
+
   if (isLoading) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-zinc-400">Loading access codes...</div>
+          <div className="text-muted-foreground">Loading access codes...</div>
         </div>
       </AdminLayout>
     );
@@ -125,8 +134,8 @@ export default function AccessCodes() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-white">Session Access Codes</h1>
-            <p className="text-zinc-400 mt-1">
+            <h1 className="text-2xl font-bold text-foreground">Session Access Codes</h1>
+            <p className="text-muted-foreground mt-1">
               Manage access codes for restricted session booking
             </p>
           </div>
@@ -134,15 +143,15 @@ export default function AccessCodes() {
 
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-900 rounded-lg">
-                  <Key className="w-5 h-5 text-blue-400" />
+                <div className="p-2 bg-primary/20 rounded-lg">
+                  <Key className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-zinc-400 text-sm">Protected Sessions</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-muted-foreground text-sm">Protected Sessions</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {sessions.filter((s: Session) => s.hasAccessCode).length}
                   </p>
                 </div>
@@ -150,15 +159,15 @@ export default function AccessCodes() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-900 rounded-lg">
-                  <Unlock className="w-5 h-5 text-green-400" />
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <Unlock className="w-5 h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-400 text-sm">Open Sessions</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-muted-foreground text-sm">Open Sessions</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {sessions.filter((s: Session) => !s.hasAccessCode).length}
                   </p>
                 </div>
@@ -166,15 +175,15 @@ export default function AccessCodes() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-900 rounded-lg">
-                  <Calendar className="w-5 h-5 text-purple-400" />
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-400 text-sm">Total Sessions</p>
-                  <p className="text-2xl font-bold text-white">{sessions.length}</p>
+                  <p className="text-muted-foreground text-sm">Total Sessions</p>
+                  <p className="text-2xl font-bold text-foreground">{sessions.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -182,9 +191,9 @@ export default function AccessCodes() {
         </div>
 
         {/* Sessions Table */}
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-foreground flex items-center">
               <Lock className="w-5 h-5 mr-2" />
               Session Access Control
             </CardTitle>
@@ -192,59 +201,66 @@ export default function AccessCodes() {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-zinc-300">Session</TableHead>
-                  <TableHead className="text-zinc-300">Date & Time</TableHead>
-                  <TableHead className="text-zinc-300">Location</TableHead>
-                  <TableHead className="text-zinc-300">Participants</TableHead>
-                  <TableHead className="text-zinc-300">Access Status</TableHead>
-                  <TableHead className="text-zinc-300">Access Code</TableHead>
-                  <TableHead className="text-zinc-300">Actions</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-muted-foreground">Session</TableHead>
+                  <TableHead className="text-muted-foreground">Date & Time</TableHead>
+                  <TableHead className="text-muted-foreground">Location</TableHead>
+                  <TableHead className="text-muted-foreground">Participants</TableHead>
+                  <TableHead className="text-muted-foreground">Access Status</TableHead>
+                  <TableHead className="text-muted-foreground">Access Code</TableHead>
+                  <TableHead className="text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.map((session: Session) => (
-                  <TableRow key={session.id} className="border-zinc-800">
+                {paginatedSessions.length === 0 ? (
+                  <TableRow className="border-border">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      {sessions.length === 0 ? 'No sessions found' : 'No sessions on this page'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedSessions.map((session: Session) => (
+                  <TableRow key={session.id} className="border-border">
                     <TableCell>
                       <div>
-                        <div className="text-white font-medium">{session.title}</div>
-                        <div className="text-zinc-400 text-sm">
+                        <div className="text-foreground font-medium">{session.title}</div>
+                        <div className="text-muted-foreground text-sm">
                           {session.ageGroups.join(', ')} • {session.genders.join(', ')}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-zinc-300">
+                      <div className="text-foreground">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-1" />
                           {format(new Date(session.startTime), 'MMM dd, yyyy')}
                         </div>
-                        <div className="flex items-center text-sm text-zinc-400">
+                        <div className="flex items-center text-sm text-muted-foreground">
                           <Clock className="w-4 h-4 mr-1" />
                           {format(new Date(session.startTime), 'h:mm a')} - {format(new Date(session.endTime), 'h:mm a')}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center text-zinc-300">
+                      <div className="flex items-center text-foreground">
                         <MapPin className="w-4 h-4 mr-1" />
                         {session.location}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center text-zinc-300">
+                      <div className="flex items-center text-foreground">
                         <Users className="w-4 h-4 mr-1" />
                         {session.signupCount || 0}/{session.capacity}
                       </div>
                     </TableCell>
                     <TableCell>
                       {session.hasAccessCode ? (
-                        <Badge className="bg-red-900 text-red-300">
+                        <Badge className="bg-red-500/20 text-red-500">
                           <Lock className="w-3 h-3 mr-1" />
                           Protected
                         </Badge>
                       ) : (
-                        <Badge className="bg-green-900 text-green-300">
+                        <Badge className="bg-green-500/20 text-green-500">
                           <Unlock className="w-3 h-3 mr-1" />
                           Open
                         </Badge>
@@ -252,11 +268,11 @@ export default function AccessCodes() {
                     </TableCell>
                     <TableCell>
                       {session.hasAccessCode ? (
-                        <code className="bg-zinc-800 px-2 py-1 rounded text-zinc-300 font-mono">
+                        <code className="bg-muted px-2 py-1 rounded text-foreground font-mono">
                           {session.accessCode}
                         </code>
                       ) : (
-                        <span className="text-zinc-500">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -264,21 +280,33 @@ export default function AccessCodes() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleEdit(session)}
-                        className="text-blue-400 hover:text-blue-300"
+                        className="text-primary hover:text-primary/80"
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Edit Dialog */}
         <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}>
-          <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <Key className="w-5 h-5 mr-2" />
@@ -287,9 +315,9 @@ export default function AccessCodes() {
             </DialogHeader>
             <div className="space-y-4">
               {editingSession && (
-                <div className="bg-zinc-800 p-3 rounded-lg">
-                  <p className="text-zinc-300 font-medium">{editingSession.title}</p>
-                  <p className="text-zinc-400 text-sm">
+                <div className="bg-muted p-3 rounded-lg">
+                  <p className="text-foreground font-medium">{editingSession.title}</p>
+                  <p className="text-muted-foreground text-sm">
                     {format(new Date(editingSession.startTime), 'MMM dd, yyyy h:mm a')} • {editingSession.location}
                   </p>
                 </div>
@@ -300,18 +328,18 @@ export default function AccessCodes() {
                   checked={formData.hasAccessCode}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, hasAccessCode: checked }))}
                 />
-                <Label className="text-zinc-300">Require access code for booking</Label>
+                <Label className="text-foreground">Require access code for booking</Label>
               </div>
 
               {formData.hasAccessCode && (
                 <div className="space-y-3">
-                  <Label htmlFor="accessCode" className="text-zinc-300">Access Code</Label>
+                  <Label htmlFor="accessCode" className="text-foreground">Access Code</Label>
                   <div className="flex space-x-2">
                     <Input
                       id="accessCode"
                       value={formData.accessCode}
                       onChange={(e) => setFormData(prev => ({ ...prev, accessCode: e.target.value.toUpperCase() }))}
-                      className="bg-zinc-800 border-zinc-700 text-white font-mono"
+                      className="font-mono"
                       placeholder="Enter access code"
                       maxLength={8}
                     />
@@ -319,12 +347,11 @@ export default function AccessCodes() {
                       type="button"
                       variant="outline"
                       onClick={generateRandomCode}
-                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                     >
                       Generate
                     </Button>
                   </div>
-                  <p className="text-zinc-400 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     Parents will need this code to book spots in this session
                   </p>
                 </div>
@@ -334,14 +361,12 @@ export default function AccessCodes() {
                 <Button
                   variant="outline"
                   onClick={() => setEditingSession(null)}
-                  className="border-zinc-700 text-zinc-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={updateAccessCodeMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   {updateAccessCodeMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
