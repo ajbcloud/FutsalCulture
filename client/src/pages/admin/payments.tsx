@@ -450,59 +450,59 @@ export default function AdminPayments() {
       )}
 
       {/* Single Payments Table */}
-      <div className="bg-zinc-900 rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-800">
-              <TableHead className="text-zinc-300 w-12">
+            <TableRow className="border-border">
+              <TableHead className="text-muted-foreground w-12">
                 {pendingPayments.length > 0 && (
                   <input
                     type="checkbox"
                     checked={pendingPayments.length > 0 && selectedPayments.size === pendingPayments.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-border bg-input text-blue-600 focus:ring-blue-500"
                   />
                 )}
               </TableHead>
-              <TableHead className="text-zinc-300">Player</TableHead>
-              <TableHead className="text-zinc-300">Parent</TableHead>
-              <TableHead className="text-zinc-300">Session</TableHead>
-              <TableHead className="text-zinc-300">Status</TableHead>
-              <TableHead className="text-zinc-300">Reserved At</TableHead>
-              <TableHead className="text-zinc-300">Amount</TableHead>
-              <TableHead className="text-zinc-300">Notes/Actions</TableHead>
-              <TableHead className="text-zinc-300">Actions</TableHead>
+              <TableHead className="text-muted-foreground">Player</TableHead>
+              <TableHead className="text-muted-foreground">Parent</TableHead>
+              <TableHead className="text-muted-foreground">Session</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Reserved At</TableHead>
+              <TableHead className="text-muted-foreground">Amount</TableHead>
+              <TableHead className="text-muted-foreground">Notes/Actions</TableHead>
+              <TableHead className="text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedPayments.map((payment: any) => (
-              <TableRow key={payment.id} className="border-zinc-800">
+              <TableRow key={payment.id} className="border-border">
                 <TableCell className="w-12">
                   {payment.status === 'pending' && (
                     <input
                       type="checkbox"
                       checked={selectedPayments.has(payment.id)}
                       onChange={() => togglePaymentSelection(payment.id)}
-                      className="rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-border bg-input text-blue-600 focus:ring-blue-500"
                     />
                   )}
                 </TableCell>
                 <TableCell className="text-white">
                   {payment.player?.firstName} {payment.player?.lastName}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {payment.parent?.firstName ? `${payment.parent.firstName} ${payment.parent.lastName}` : 'Unknown Parent'}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {payment.session?.title || 'Unknown Session'}
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(payment.status)}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {format(new Date(payment.createdAt), 'MMM d, yyyy h:mm a')}
                 </TableCell>
-                <TableCell className="text-zinc-300">$10.00</TableCell>
+                <TableCell className="text-muted-foreground">$10.00</TableCell>
                 <TableCell className="max-w-xs">
                   {payment.status === 'refunded' ? (
                     <TooltipProvider>
@@ -561,7 +561,7 @@ export default function AdminPayments() {
                       </Tooltip>
                     </TooltipProvider>
                   ) : (
-                    <span className="text-zinc-500 text-sm">-</span>
+                    <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -571,7 +571,7 @@ export default function AdminPayments() {
             ))}
             {paginatedPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   {filteredPayments.length === 0 ? 'No payments found' : 'No payments on this page'}
                 </TableCell>
               </TableRow>
@@ -588,7 +588,7 @@ export default function AdminPayments() {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          className="bg-card p-4 rounded-lg border border-border"
         />
       )}
     </AdminLayout>

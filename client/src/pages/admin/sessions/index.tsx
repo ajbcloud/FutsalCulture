@@ -347,9 +347,9 @@ export default function AdminSessions() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Status</Label>
+            <Label className="text-muted-foreground">Status</Label>
             <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -363,32 +363,32 @@ export default function AdminSessions() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Location</Label>
+            <Label className="text-muted-foreground">Location</Label>
             <Input
               placeholder="Filter by location..."
               value={filters.location}
               onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
 
           <div>
-            <Label className="text-zinc-300">From Date</Label>
+            <Label className="text-muted-foreground">From Date</Label>
             <Input
               type="date"
               value={filters.dateFrom}
               onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
 
           <div>
-            <Label className="text-zinc-300">To Date</Label>
+            <Label className="text-muted-foreground">To Date</Label>
             <Input
               type="date"
               value={filters.dateTo}
               onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
         </div>
@@ -407,7 +407,7 @@ export default function AdminSessions() {
                 dateFrom: '',
                 dateTo: ''
               })}
-              className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Clear All Filters
             </Button>
@@ -951,7 +951,7 @@ export default function AdminSessions() {
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectTrigger className="bg-input border-border text-foreground">
                       <SelectValue placeholder="Hour" />
                     </SelectTrigger>
                     <SelectContent>
@@ -974,7 +974,7 @@ export default function AdminSessions() {
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectTrigger className="bg-input border-border text-foreground">
                       <SelectValue placeholder="Min" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1006,7 +1006,7 @@ export default function AdminSessions() {
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectTrigger className="bg-input border-border text-foreground">
                       <SelectValue placeholder="AM/PM" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1019,11 +1019,11 @@ export default function AdminSessions() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button 
                 variant="outline" 
                 onClick={() => setShowMassUpdateModal(false)}
-                className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
