@@ -137,7 +137,7 @@ export default function AdminPendingPayments() {
         </div>
 
         {pendingPayments.length === 0 ? (
-          <Card className="bg-zinc-900 border-zinc-700">
+          <Card className="bg-card border-border">
             <CardContent className="text-center py-12">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">All Caught Up!</h3>
@@ -147,7 +147,7 @@ export default function AdminPendingPayments() {
         ) : (
           <div className="space-y-4">
             {pendingPayments.map((payment) => (
-              <Card key={payment.id} className={`bg-zinc-900 border-zinc-700 ${isExpired(payment.createdAt) ? 'border-red-500/50' : ''}`}>
+              <Card key={payment.id} className={`bg-card border-border ${isExpired(payment.createdAt) ? 'border-red-500/50' : ''}`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -217,7 +217,7 @@ export default function AdminPendingPayments() {
                       variant="outline"
                       onClick={() => sendReminderMutation.mutate(payment.id)}
                       disabled={sendReminderMutation.isPending}
-                      className="border-zinc-600"
+                      className="border-border"
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Send Reminder

@@ -301,7 +301,7 @@ export default function AdminSettings() {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-zinc-400">Loading settings...</div>
+          <div className="text-muted-foreground">Loading settings...</div>
         </div>
       </AdminLayout>
     );
@@ -310,34 +310,34 @@ export default function AdminSettings() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Settings</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Settings</h1>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         {/* Mobile Tab Navigation - Vertical Stack */}
         <div className="md:hidden">
-          <TabsList className="flex flex-col w-full bg-zinc-800 border-zinc-700 h-auto p-1">
+          <TabsList className="flex flex-col w-full bg-muted border-border h-auto p-1">
             <TabsTrigger 
               value="general" 
-              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
               General & Registration
             </TabsTrigger>
             <TabsTrigger 
               value="sessions" 
-              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
               Sessions & Schedule
             </TabsTrigger>
             <TabsTrigger 
               value="billing" 
-              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
               Service Billing
             </TabsTrigger>
             <TabsTrigger 
               value="integrations" 
-              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
               Integrations
             </TabsTrigger>
@@ -346,44 +346,44 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-4 bg-zinc-800 border-zinc-700">
-            <TabsTrigger value="general" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+          <TabsList className="grid w-full grid-cols-4 bg-muted border-border">
+            <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
-            <TabsTrigger value="sessions" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            <TabsTrigger value="sessions" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Sessions & Schedule
             </TabsTrigger>
-            <TabsTrigger value="billing" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            <TabsTrigger value="billing" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Service Billing
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Integrations
             </TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="general" className="space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Settings className="w-5 h-5 mr-2" />
                 General Settings
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="businessName" className="text-zinc-300">Business Name</Label>
+                <Label htmlFor="businessName" className="text-foreground">Business Name</Label>
                 <Input
                   id="businessName"
                   value={settings.businessName}
                   onChange={(e) => setSettings(prev => ({ ...prev, businessName: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="Your business or organization name"
                 />
               </div>
               <div>
-                <Label className="text-zinc-300">Business Logo</Label>
-                <p className="text-sm text-zinc-400 mb-2">
+                <Label className="text-foreground">Business Logo</Label>
+                <p className="text-sm text-muted-foreground mb-2">
                   Upload a logo to replace the business name text. Maximum size: 2MB. Recommended dimensions: 200x60px.
                 </p>
                 <div className="space-y-4">
@@ -392,7 +392,7 @@ export default function AdminSettings() {
                       <img 
                         src={settings.businessLogo} 
                         alt="Business Logo" 
-                        className="max-h-16 max-w-48 object-contain bg-zinc-800 rounded p-2"
+                        className="max-h-16 max-w-48 object-contain bg-muted rounded p-2"
                       />
                       <Button
                         size="sm"
@@ -416,7 +416,7 @@ export default function AdminSettings() {
                       type="button"
                       variant="outline"
                       onClick={() => document.getElementById('logoUpload')?.click()}
-                      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                      className="bg-secondary border-border hover:bg-secondary/80"
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Logo
@@ -431,70 +431,70 @@ export default function AdminSettings() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="contactEmail" className="text-zinc-300">Contact Email</Label>
+                <Label htmlFor="contactEmail" className="text-foreground">Contact Email</Label>
                 <Input
                   id="contactEmail"
                   type="email"
                   value={settings.contactEmail}
                   onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="Primary contact email address"
                 />
               </div>
               <div>
-                <Label htmlFor="supportEmail" className="text-zinc-300">Support Email</Label>
+                <Label htmlFor="supportEmail" className="text-foreground">Support Email</Label>
                 <Input
                   id="supportEmail"
                   type="email"
                   value={settings.supportEmail}
                   onChange={(e) => setSettings(prev => ({ ...prev, supportEmail: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="Email address for help request notifications"
                 />
               </div>
               <div>
-                <Label htmlFor="supportPhone" className="text-zinc-300">Support Phone</Label>
+                <Label htmlFor="supportPhone" className="text-foreground">Support Phone</Label>
                 <Input
                   id="supportPhone"
                   type="tel"
                   value={settings.supportPhone}
                   onChange={(e) => setSettings(prev => ({ ...prev, supportPhone: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="Phone number for support inquiries"
                 />
               </div>
               <div>
-                <Label htmlFor="supportHours" className="text-zinc-300">Support Hours</Label>
+                <Label htmlFor="supportHours" className="text-foreground">Support Hours</Label>
                 <Input
                   id="supportHours"
                   value={settings.supportHours}
                   onChange={(e) => setSettings(prev => ({ ...prev, supportHours: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="e.g., Monday - Friday, 9:00 AM - 5:00 PM"
                 />
               </div>
               <div>
-                <Label htmlFor="supportLocation" className="text-zinc-300">Support Location</Label>
+                <Label htmlFor="supportLocation" className="text-foreground">Support Location</Label>
                 <Input
                   id="supportLocation"
                   value={settings.supportLocation}
                   onChange={(e) => setSettings(prev => ({ ...prev, supportLocation: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                   placeholder="Business location or region"
                 />
               </div>
               <div>
-                <Label htmlFor="timezone" className="text-zinc-300">Timezone</Label>
+                <Label htmlFor="timezone" className="text-foreground">Timezone</Label>
                 <Select
                   value={settings.timezone}
                   onValueChange={(value) => setSettings(prev => ({ ...prev, timezone: value }))}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700 max-h-60">
+                  <SelectContent className="bg-popover border-border max-h-60">
                     {getTimezones().map((tz) => (
-                      <SelectItem key={tz} value={tz} className="text-white hover:bg-zinc-700">
+                      <SelectItem key={tz} value={tz} className="text-foreground hover:bg-accent">
                         {tz.replace(/_/g, ' ')}
                       </SelectItem>
                     ))}
@@ -504,9 +504,9 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Users className="w-5 h-5 mr-2" />
                 Registration Settings
               </CardTitle>
@@ -514,8 +514,8 @@ export default function AdminSettings() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-zinc-300">Auto-approve new registrations</Label>
-                  <p className="text-sm text-zinc-400">
+                  <Label className="text-foreground">Auto-approve new registrations</Label>
+                  <p className="text-sm text-muted-foreground">
                     When enabled, new parent and player sign-ups are automatically approved
                   </p>
                 </div>
@@ -529,9 +529,9 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Bell className="w-5 h-5 mr-2" />
                 Notification Settings
               </CardTitle>
@@ -539,8 +539,8 @@ export default function AdminSettings() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-zinc-300">Email Notifications</Label>
-                  <p className="text-sm text-zinc-400">
+                  <Label className="text-foreground">Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
                     Receive email notifications for important events
                   </p>
                 </div>
@@ -553,8 +553,8 @@ export default function AdminSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-zinc-300">SMS Notifications</Label>
-                  <p className="text-sm text-zinc-400">
+                  <Label className="text-foreground">SMS Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
                     Receive SMS notifications for urgent events
                   </p>
                 </div>
@@ -577,16 +577,16 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Shield className="w-5 h-5 mr-2" />
                 Session Settings
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="capacityWarning" className="text-zinc-300">Session Capacity Warning</Label>
+                <Label htmlFor="capacityWarning" className="text-foreground">Session Capacity Warning</Label>
                 <Input
                   id="capacityWarning"
                   type="number"
@@ -594,11 +594,11 @@ export default function AdminSettings() {
                   max="10"
                   value={settings.sessionCapacityWarning}
                   onChange={(e) => setSettings(prev => ({ ...prev, sessionCapacityWarning: parseInt(e.target.value) || 3 }))}
-                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                  className="bg-input border-border text-foreground mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="paymentReminder" className="text-zinc-300">Payment Reminder Minutes</Label>
+                <Label htmlFor="paymentReminder" className="text-foreground">Payment Reminder Minutes</Label>
                 <Input
                   id="paymentReminder"
                   type="number"
@@ -606,78 +606,78 @@ export default function AdminSettings() {
                   max="1440"
                   value={settings.paymentReminderMinutes}
                   onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderMinutes: parseInt(e.target.value) || 60 }))}
-                  className="bg-zinc-800 border-zinc-700 text-white mt-1"
+                  className="bg-input border-border text-foreground mt-1"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Clock className="w-5 h-5 mr-2" />
                 Business Schedule & Fiscal Year
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="weekdayStart" className="text-zinc-300">Business Week Start</Label>
+                <Label htmlFor="weekdayStart" className="text-foreground">Business Week Start</Label>
                 <Select
                   value={settings.weekdayStart}
                   onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayStart: value }))}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="monday" className="text-white hover:bg-zinc-700">Monday</SelectItem>
-                    <SelectItem value="tuesday" className="text-white hover:bg-zinc-700">Tuesday</SelectItem>
-                    <SelectItem value="wednesday" className="text-white hover:bg-zinc-700">Wednesday</SelectItem>
-                    <SelectItem value="thursday" className="text-white hover:bg-zinc-700">Thursday</SelectItem>
-                    <SelectItem value="friday" className="text-white hover:bg-zinc-700">Friday</SelectItem>
-                    <SelectItem value="saturday" className="text-white hover:bg-zinc-700">Saturday</SelectItem>
-                    <SelectItem value="sunday" className="text-white hover:bg-zinc-700">Sunday</SelectItem>
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="monday" className="text-foreground hover:bg-accent">Monday</SelectItem>
+                    <SelectItem value="tuesday" className="text-foreground hover:bg-accent">Tuesday</SelectItem>
+                    <SelectItem value="wednesday" className="text-foreground hover:bg-accent">Wednesday</SelectItem>
+                    <SelectItem value="thursday" className="text-foreground hover:bg-accent">Thursday</SelectItem>
+                    <SelectItem value="friday" className="text-foreground hover:bg-accent">Friday</SelectItem>
+                    <SelectItem value="saturday" className="text-foreground hover:bg-accent">Saturday</SelectItem>
+                    <SelectItem value="sunday" className="text-foreground hover:bg-accent">Sunday</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="fiscalYearType" className="text-zinc-300">Fiscal Year Type</Label>
+                <Label htmlFor="fiscalYearType" className="text-foreground">Fiscal Year Type</Label>
                 <Select
                   value={settings.fiscalYearType}
                   onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearType: value }))}
                 >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="calendar" className="text-white hover:bg-zinc-700">Calendar Year (Jan-Dec)</SelectItem>
-                    <SelectItem value="fiscal" className="text-white hover:bg-zinc-700">Custom Fiscal Year</SelectItem>
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="calendar" className="text-foreground hover:bg-accent">Calendar Year (Jan-Dec)</SelectItem>
+                    <SelectItem value="fiscal" className="text-foreground hover:bg-accent">Custom Fiscal Year</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {settings.fiscalYearType === 'fiscal' && (
                 <div>
-                  <Label htmlFor="fiscalYearStartMonth" className="text-zinc-300">Fiscal Year Start Month</Label>
+                  <Label htmlFor="fiscalYearStartMonth" className="text-foreground">Fiscal Year Start Month</Label>
                   <Select
                     value={settings.fiscalYearStartMonth.toString()}
                     onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearStartMonth: parseInt(value) }))}
                   >
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white mt-1">
+                    <SelectTrigger className="bg-input border-border text-foreground mt-1">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700">
-                      <SelectItem value="1" className="text-white hover:bg-zinc-700">January</SelectItem>
-                      <SelectItem value="2" className="text-white hover:bg-zinc-700">February</SelectItem>
-                      <SelectItem value="3" className="text-white hover:bg-zinc-700">March</SelectItem>
-                      <SelectItem value="4" className="text-white hover:bg-zinc-700">April</SelectItem>
-                      <SelectItem value="5" className="text-white hover:bg-zinc-700">May</SelectItem>
-                      <SelectItem value="6" className="text-white hover:bg-zinc-700">June</SelectItem>
-                      <SelectItem value="7" className="text-white hover:bg-zinc-700">July</SelectItem>
-                      <SelectItem value="8" className="text-white hover:bg-zinc-700">August</SelectItem>
-                      <SelectItem value="9" className="text-white hover:bg-zinc-700">September</SelectItem>
-                      <SelectItem value="10" className="text-white hover:bg-zinc-700">October</SelectItem>
-                      <SelectItem value="11" className="text-white hover:bg-zinc-700">November</SelectItem>
-                      <SelectItem value="12" className="text-white hover:bg-zinc-700">December</SelectItem>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="1" className="text-foreground hover:bg-accent">January</SelectItem>
+                      <SelectItem value="2" className="text-foreground hover:bg-accent">February</SelectItem>
+                      <SelectItem value="3" className="text-foreground hover:bg-accent">March</SelectItem>
+                      <SelectItem value="4" className="text-foreground hover:bg-accent">April</SelectItem>
+                      <SelectItem value="5" className="text-foreground hover:bg-accent">May</SelectItem>
+                      <SelectItem value="6" className="text-foreground hover:bg-accent">June</SelectItem>
+                      <SelectItem value="7" className="text-foreground hover:bg-accent">July</SelectItem>
+                      <SelectItem value="8" className="text-foreground hover:bg-accent">August</SelectItem>
+                      <SelectItem value="9" className="text-foreground hover:bg-accent">September</SelectItem>
+                      <SelectItem value="10" className="text-foreground hover:bg-accent">October</SelectItem>
+                      <SelectItem value="11" className="text-foreground hover:bg-accent">November</SelectItem>
+                      <SelectItem value="12" className="text-foreground hover:bg-accent">December</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -695,31 +695,31 @@ export default function AdminSettings() {
 
         <TabsContent value="billing" className="space-y-6">
           {/* Stripe Payment Processing Card */}
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <CreditCard className="w-5 h-5 mr-2" />
                 Service Payment
               </CardTitle>
-              <p className="text-zinc-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Pay for your {businessName} platform subscription and services
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
               {loadingSubscription ? (
                 <div className="flex justify-center items-center py-8">
-                  <div className="text-zinc-400">Loading subscription info...</div>
+                  <div className="text-muted-foreground">Loading subscription info...</div>
                 </div>
               ) : subscriptionInfo ? (
                 <>
                   {subscriptionInfo.subscription.status === 'active' && subscriptionInfo.subscription.plan ? (
                     <>
                       {/* Current Plan Display */}
-                      <div className="bg-zinc-800 p-4 rounded-lg border border-zinc-700">
+                      <div className="bg-muted p-4 rounded-lg border border-border">
                         <div className="flex justify-between items-center mb-3">
                           <div>
-                            <h3 className="text-white font-medium">Current Plan</h3>
-                            <p className="text-zinc-400 text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
+                            <h3 className="text-foreground font-medium">Current Plan</h3>
+                            <p className="text-muted-foreground text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
                           </div>
                           <Badge className="bg-green-900 text-green-300">
                             Active
@@ -727,14 +727,14 @@ export default function AdminSettings() {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-zinc-400">Monthly Fee:</span>
-                            <span className="text-white ml-2 font-medium">
+                            <span className="text-muted-foreground">Monthly Fee:</span>
+                            <span className="text-foreground ml-2 font-medium">
                               ${(subscriptionInfo.subscription.plan.amount / 100).toFixed(2)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-zinc-400">Next Billing:</span>
-                            <span className="text-white ml-2">
+                            <span className="text-muted-foreground">Next Billing:</span>
+                            <span className="text-foreground ml-2">
                               {subscriptionInfo.subscription.current_period_end ? 
                                 new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString() 
                                 : 'N/A'
@@ -742,12 +742,12 @@ export default function AdminSettings() {
                             </span>
                           </div>
                           <div>
-                            <span className="text-zinc-400">Customer:</span>
-                            <span className="text-white ml-2">{subscriptionInfo.subscription.customer.email}</span>
+                            <span className="text-muted-foreground">Customer:</span>
+                            <span className="text-foreground ml-2">{subscriptionInfo.subscription.customer.email}</span>
                           </div>
                           <div>
-                            <span className="text-zinc-400">Interval:</span>
-                            <span className="text-white ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
+                            <span className="text-muted-foreground">Interval:</span>
+                            <span className="text-foreground ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
                           </div>
                         </div>
                       </div>
@@ -756,11 +756,11 @@ export default function AdminSettings() {
                       {subscriptionInfo.invoices.length > 0 && (
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-white font-medium">Recent Invoices</h4>
+                            <h4 className="text-foreground font-medium">Recent Invoices</h4>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
+                              className="text-blue-400 hover:text-blue-300 hover:bg-accent"
                               onClick={openBillingPortal}
                             >
                               View All
@@ -768,15 +768,15 @@ export default function AdminSettings() {
                           </div>
                           <div className="space-y-2">
                             {subscriptionInfo.invoices.map((invoice) => (
-                              <div key={invoice.id} className="bg-zinc-800 p-3 rounded border border-zinc-700 flex justify-between items-center">
+                              <div key={invoice.id} className="bg-muted p-3 rounded border border-border flex justify-between items-center">
                                 <div>
-                                  <p className="text-white text-sm">
+                                  <p className="text-foreground text-sm">
                                     {new Date(invoice.created * 1000).toLocaleDateString()}
                                   </p>
-                                  <p className="text-zinc-400 text-xs">Monthly Subscription</p>
+                                  <p className="text-muted-foreground text-xs">Monthly Subscription</p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-white text-sm font-medium">
+                                  <p className="text-foreground text-sm font-medium">
                                     ${(invoice.amount_paid / 100).toFixed(2)}
                                   </p>
                                   <Badge className="bg-green-900 text-green-300 text-xs capitalize">
@@ -802,9 +802,9 @@ export default function AdminSettings() {
                   ) : (
                     /* No active subscription */
                     <div className="text-center py-8">
-                      <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 mb-4">
-                        <h3 className="text-white font-medium mb-2">No Active Subscription</h3>
-                        <p className="text-zinc-400 text-sm mb-4">
+                      <div className="bg-muted p-6 rounded-lg border border-border mb-4">
+                        <h3 className="text-foreground font-medium mb-2">No Active Subscription</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
                           You don't have an active subscription. Set up billing to access all platform features.
                         </p>
                         <Badge className="bg-yellow-900 text-yellow-300">
@@ -821,7 +821,7 @@ export default function AdminSettings() {
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-zinc-400 mb-4">Unable to load subscription information</p>
+                  <p className="text-muted-foreground mb-4">Unable to load subscription information</p>
                   <Button 
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={fetchSubscriptionInfo}
@@ -835,21 +835,21 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Zap className="w-5 h-5 mr-2" />
                 Third-party Integrations
               </CardTitle>
-              <p className="text-zinc-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Manage external service integrations for email, SMS, payments, and accounting
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-zinc-300">Integration Management</Label>
-                  <p className="text-sm text-zinc-400">
+                  <Label className="text-foreground">Integration Management</Label>
+                  <p className="text-sm text-muted-foreground">
                     Configure Stripe, SendGrid, Mailchimp, QuickBooks, and other service integrations
                   </p>
                   <div className="flex gap-2 mt-2">
@@ -859,14 +859,14 @@ export default function AdminSettings() {
                         className={`px-2 py-1 rounded text-xs ${
                           integration.enabled 
                             ? 'bg-green-900 text-green-300' 
-                            : 'bg-zinc-700 text-zinc-400'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {integration.provider}
                       </div>
                     ))}
                     {integrations.length > 3 && (
-                      <div className="px-2 py-1 rounded text-xs bg-zinc-700 text-zinc-400">
+                      <div className="px-2 py-1 rounded text-xs bg-muted text-muted-foreground">
                         +{integrations.length - 3} more
                       </div>
                     )}

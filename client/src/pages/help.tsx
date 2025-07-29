@@ -176,28 +176,28 @@ export default function Help() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Get Help</h1>
-          <p className="text-zinc-400 text-lg">
+          <p className="text-muted-foreground text-lg">
             Need assistance with PlayHQ or your sports organization management? We're here to help!
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Contact Form */}
-          <Card className="bg-zinc-900 border border-zinc-700">
+          <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle className="text-white text-xl">Send us a message</CardTitle>
+              <CardTitle className="text-foreground text-xl">Send us a message</CardTitle>
             </CardHeader>
             <CardContent>
               {isSubmitted ? (
                 <div className="text-center py-8">
                   <div className="bg-green-600/20 border border-green-600 rounded-lg p-6 mb-4">
                     <h3 className="text-green-400 font-semibold mb-2">Message Sent!</h3>
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       Thank you for contacting us. We'll respond within 24 hours.
                     </p>
                   </div>
@@ -221,12 +221,12 @@ export default function Help() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">First Name <span className="text-red-400">*</span></FormLabel>
+                            <FormLabel className="text-foreground">First Name <span className="text-red-400">*</span></FormLabel>
                             <FormControl>
                               <Input 
                                 placeholder="First name" 
                                 {...field} 
-                                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                                className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                                 required
                               />
                             </FormControl>
@@ -240,12 +240,12 @@ export default function Help() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Last Name <span className="text-red-400">*</span></FormLabel>
+                            <FormLabel className="text-foreground">Last Name <span className="text-red-400">*</span></FormLabel>
                             <FormControl>
                               <Input 
                                 placeholder="Last name" 
                                 {...field} 
-                                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                                className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                                 required
                               />
                             </FormControl>
@@ -260,13 +260,13 @@ export default function Help() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Email <span className="text-red-400">*</span></FormLabel>
+                          <FormLabel className="text-foreground">Email <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               type="email" 
                               placeholder="your.email@example.com" 
                               {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                               required
                             />
                           </FormControl>
@@ -280,13 +280,13 @@ export default function Help() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Phone</FormLabel>
+                          <FormLabel className="text-foreground">Phone</FormLabel>
                           <FormControl>
                             <Input 
                               type="tel" 
                               placeholder="(555) 123-4567" 
                               {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                             />
                           </FormControl>
                           <FormMessage />
@@ -299,12 +299,12 @@ export default function Help() {
                       name="subject"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Subject <span className="text-red-400">*</span></FormLabel>
+                          <FormLabel className="text-foreground">Subject <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Brief description of your request" 
                               {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                               required
                             />
                           </FormControl>
@@ -319,14 +319,14 @@ export default function Help() {
                         name="category"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Category <span className="text-red-400">*</span></FormLabel>
+                            <FormLabel className="text-foreground">Category <span className="text-red-400">*</span></FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
+                                <SelectTrigger className="bg-input border-border text-foreground">
                                   <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-zinc-800 border-zinc-600">
+                              <SelectContent className="bg-popover border-border">
                                 <SelectItem value="general">General</SelectItem>
                                 <SelectItem value="booking">Booking</SelectItem>
                                 <SelectItem value="payment">Payment</SelectItem>
@@ -344,14 +344,14 @@ export default function Help() {
                         name="priority"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Priority <span className="text-red-400">*</span></FormLabel>
+                            <FormLabel className="text-foreground">Priority <span className="text-red-400">*</span></FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger className="bg-zinc-800 border-zinc-600 text-white">
+                                <SelectTrigger className="bg-input border-border text-foreground">
                                   <SelectValue placeholder="Select priority" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-zinc-800 border-zinc-600">
+                              <SelectContent className="bg-popover border-border">
                                 <SelectItem value="low">Low</SelectItem>
                                 <SelectItem value="medium">Medium</SelectItem>
                                 <SelectItem value="high">High</SelectItem>
@@ -369,13 +369,13 @@ export default function Help() {
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Message <span className="text-red-400">*</span></FormLabel>
+                          <FormLabel className="text-foreground">Message <span className="text-red-400">*</span></FormLabel>
                           <FormControl>
                             <Textarea 
                               placeholder="Please describe your issue or question in detail (minimum 20 characters)" 
                               rows={5}
                               {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                               required
                             />
                           </FormControl>
@@ -389,7 +389,7 @@ export default function Help() {
                       name="captcha"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">
+                          <FormLabel className="text-foreground">
                             Security Check: {captchaQuestion} <span className="text-red-400">*</span>
                           </FormLabel>
                           <FormControl>
@@ -397,7 +397,7 @@ export default function Help() {
                               type="text" 
                               placeholder="Enter your answer (numbers only)" 
                               {...field} 
-                              className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-400"
+                              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                               required
                             />
                           </FormControl>
@@ -421,73 +421,73 @@ export default function Help() {
 
           {/* Contact Information */}
           <div className="space-y-6">
-            <Card className="bg-zinc-900 border border-zinc-700">
+            <Card className="bg-card border border-border">
               <CardHeader>
-                <CardTitle className="text-white text-xl">Contact Information</CardTitle>
+                <CardTitle className="text-foreground text-xl">Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-blue-400" />
                   <div>
-                    <p className="text-white font-medium">Email</p>
-                    <p className="text-zinc-400">support@playhq.app</p>
+                    <p className="text-foreground font-medium">Email</p>
+                    <p className="text-muted-foreground">support@playhq.app</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <Phone className="w-5 h-5 text-green-400" />
                   <div>
-                    <p className="text-white font-medium">Phone</p>
-                    <p className="text-zinc-400">(833) PLAY-HQS</p>
+                    <p className="text-foreground font-medium">Phone</p>
+                    <p className="text-muted-foreground">(833) PLAY-HQS</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <Clock className="w-5 h-5 text-yellow-400" />
                   <div>
-                    <p className="text-white font-medium">Support Hours</p>
-                    <p className="text-zinc-400">Monday - Friday, 9:00 AM - 6:00 PM EST</p>
+                    <p className="text-foreground font-medium">Support Hours</p>
+                    <p className="text-muted-foreground">Monday - Friday, 9:00 AM - 6:00 PM EST</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-red-400" />
                   <div>
-                    <p className="text-white font-medium">Headquarters</p>
-                    <p className="text-zinc-400">Miami, Florida</p>
+                    <p className="text-foreground font-medium">Headquarters</p>
+                    <p className="text-muted-foreground">Miami, Florida</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-zinc-900 border border-zinc-700">
+            <Card className="bg-card border border-border">
               <CardHeader>
-                <CardTitle className="text-white text-xl">Frequently Asked Questions</CardTitle>
+                <CardTitle className="text-foreground text-xl">Frequently Asked Questions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="text-white font-medium mb-2">What is PlayHQ?</h4>
-                  <p className="text-zinc-400 text-sm">PlayHQ is a comprehensive sports management platform that helps organizations manage sessions, players, payments, and communications all in one place.</p>
+                  <h4 className="text-foreground font-medium mb-2">What is PlayHQ?</h4>
+                  <p className="text-muted-foreground text-sm">PlayHQ is a comprehensive sports management platform that helps organizations manage sessions, players, payments, and communications all in one place.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">How do I access my organization's portal?</h4>
-                  <p className="text-zinc-400 text-sm">Each organization on PlayHQ has its own custom portal. Your organization admin will provide you with the specific access link.</p>
+                  <h4 className="text-foreground font-medium mb-2">How do I access my organization's portal?</h4>
+                  <p className="text-muted-foreground text-sm">Each organization on PlayHQ has its own custom portal. Your organization admin will provide you with the specific access link.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">Can I manage multiple organizations?</h4>
-                  <p className="text-zinc-400 text-sm">Yes! PlayHQ supports multi-tenant management, allowing you to oversee multiple sports organizations from a single platform.</p>
+                  <h4 className="text-foreground font-medium mb-2">Can I manage multiple organizations?</h4>
+                  <p className="text-muted-foreground text-sm">Yes! PlayHQ supports multi-tenant management, allowing you to oversee multiple sports organizations from a single platform.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">What payment methods are supported?</h4>
-                  <p className="text-zinc-400 text-sm">PlayHQ integrates with Stripe to support all major credit cards, digital wallets, and secure payment processing.</p>
+                  <h4 className="text-foreground font-medium mb-2">What payment methods are supported?</h4>
+                  <p className="text-muted-foreground text-sm">PlayHQ integrates with Stripe to support all major credit cards, digital wallets, and secure payment processing.</p>
                 </div>
                 
                 <div>
-                  <h4 className="text-white font-medium mb-2">Is my data secure?</h4>
-                  <p className="text-zinc-400 text-sm">Absolutely. PlayHQ uses enterprise-grade security with SSL encryption, secure authentication, and regular security audits to protect your data.</p>
+                  <h4 className="text-foreground font-medium mb-2">Is my data secure?</h4>
+                  <p className="text-muted-foreground text-sm">Absolutely. PlayHQ uses enterprise-grade security with SSL encryption, secure authentication, and regular security audits to protect your data.</p>
                 </div>
               </CardContent>
             </Card>
