@@ -235,8 +235,8 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-zinc-400 mt-2">
+            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
               Welcome to the {businessName} management portal
             </p>
           </div>
@@ -323,9 +323,9 @@ export default function AdminDashboard() {
           {/* Alerts and Tasks */}
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Pending Tasks */}
-            <Card className="bg-zinc-900 border-zinc-700">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white flex items-center">
+                <CardTitle className="text-foreground flex items-center">
                   <AlertCircle className="w-5 h-5 mr-2" />
                   Pending Tasks
                 </CardTitle>
@@ -336,14 +336,14 @@ export default function AdminDashboard() {
                     stats.pendingTasks.map((task) => (
                       <div 
                         key={task.id} 
-                        className={`flex items-center justify-between p-3 bg-zinc-800 rounded-lg transition-colors ${
-                          task.action ? 'hover:bg-zinc-700 cursor-pointer' : ''
+                        className={`flex items-center justify-between p-3 bg-muted rounded-lg transition-colors ${
+                          task.action ? 'hover:bg-muted/80 cursor-pointer' : ''
                         }`}
                         onClick={() => task.action && handleTaskClick(task)}
                       >
                         <div className="flex-1">
-                          <p className="text-white text-sm">{task.message}</p>
-                          <p className="text-zinc-400 text-xs mt-1">{task.type}</p>
+                          <p className="text-foreground text-sm">{task.message}</p>
+                          <p className="text-muted-foreground text-xs mt-1">{task.type}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge 
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
                             {task.priority}
                           </Badge>
                           {task.action && (
-                            <ChevronRight className="w-4 h-4 text-zinc-400" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           )}
                         </div>
                       </div>

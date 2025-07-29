@@ -342,25 +342,25 @@ export default function AdminPayments() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-white mb-6">Payments & Refunds</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Payments & Refunds</h1>
 
       {/* Filter Controls */}
-      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+      <div className="bg-card rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <Label className="text-zinc-300">Search</Label>
+            <Label className="text-muted-foreground">Search</Label>
             <Input
               placeholder="Search players or parents..."
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
 
           <div>
-            <Label className="text-zinc-300">Status</Label>
+            <Label className="text-muted-foreground">Status</Label>
             <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -373,9 +373,9 @@ export default function AdminPayments() {
           </div>
           
           <div>
-            <Label className="text-zinc-300">Age Group</Label>
+            <Label className="text-muted-foreground">Age Group</Label>
             <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Ages" />
               </SelectTrigger>
               <SelectContent>
@@ -388,9 +388,9 @@ export default function AdminPayments() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Gender</Label>
+            <Label className="text-muted-foreground">Gender</Label>
             <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Genders" />
               </SelectTrigger>
               <SelectContent>

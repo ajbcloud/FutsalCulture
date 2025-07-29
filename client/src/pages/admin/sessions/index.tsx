@@ -259,7 +259,7 @@ export default function AdminSessions() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white">Sessions Management</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Sessions Management</h1>
         <div className="flex flex-wrap gap-2 sm:gap-3">
           {selectedSessions.size > 0 && (
             <Button 
@@ -276,7 +276,7 @@ export default function AdminSessions() {
           <Button 
             variant="outline" 
             onClick={() => window.open('/api/admin/template/sessions', '_blank')}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
             size="sm"
           >
             <Download className="w-4 h-4 mr-1" />
@@ -286,7 +286,7 @@ export default function AdminSessions() {
           <Button 
             variant="outline"
             onClick={() => setShowImportModal(true)}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
             size="sm"
           >
             <Upload className="w-4 h-4 mr-1" />
@@ -304,22 +304,22 @@ export default function AdminSessions() {
       </div>
 
       {/* Filter Controls */}
-      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+      <div className="bg-card rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 md:gap-4">
           <div>
-            <Label className="text-zinc-300">Search</Label>
+            <Label className="text-muted-foreground">Search</Label>
             <Input
               placeholder="Search sessions..."
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
           
           <div>
-            <Label className="text-zinc-300">Age Group</Label>
+            <Label className="text-muted-foreground">Age Group</Label>
             <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Ages" />
               </SelectTrigger>
               <SelectContent>
@@ -332,9 +332,9 @@ export default function AdminSessions() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Gender</Label>
+            <Label className="text-muted-foreground">Gender</Label>
             <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Genders" />
               </SelectTrigger>
               <SelectContent>
@@ -416,30 +416,30 @@ export default function AdminSessions() {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
+      <div className="hidden md:block bg-card rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-800">
-              <TableHead className="text-zinc-300 w-12">
+            <TableRow className="border-border">
+              <TableHead className="text-muted-foreground w-12">
                 <Checkbox
                   checked={paginatedSessions.length > 0 && paginatedSessions.every((s: any) => selectedSessions.has(s.id))}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="text-zinc-300">Date & Time</TableHead>
-              <TableHead className="text-zinc-300">Age Group</TableHead>
-              <TableHead className="text-zinc-300">Gender</TableHead>
-              <TableHead className="text-zinc-300">Location</TableHead>
-              <TableHead className="text-zinc-300">Capacity</TableHead>
-              <TableHead className="text-zinc-300">Status</TableHead>
-              <TableHead className="text-zinc-300">Actions</TableHead>
+              <TableHead className="text-muted-foreground">Date & Time</TableHead>
+              <TableHead className="text-muted-foreground">Age Group</TableHead>
+              <TableHead className="text-muted-foreground">Gender</TableHead>
+              <TableHead className="text-muted-foreground">Location</TableHead>
+              <TableHead className="text-muted-foreground">Capacity</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedSessions.map((session: any, index: number) => (
               <React.Fragment key={session.id}>
                 <TableRow 
-                  className="border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+                  className="border-border cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
                 >
                   <TableCell>
@@ -449,20 +449,20 @@ export default function AdminSessions() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
-                  <TableCell className="text-white">
+                  <TableCell className="text-foreground">
                   {format(new Date(session.startTime), 'MMM d, yyyy h:mm a')}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroup || 'N/A'}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </TableCell>
-                <TableCell className="text-zinc-300">{session.location}</TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">{session.location}</TableCell>
+                <TableCell className="text-muted-foreground">
                   <div className="flex items-center space-x-2">
                     <span>{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
-                    <div className="w-12 bg-zinc-700 rounded-full h-2">
+                    <div className="w-12 bg-muted rounded-full h-2">
                       <div 
                         className="bg-blue-600 h-2 rounded-full transition-all"
                         style={{ 
@@ -502,16 +502,16 @@ export default function AdminSessions() {
               
               {/* Accordion Content */}
               {expandedSession === session.id && (
-                <TableRow className="border-zinc-800">
+                <TableRow className="border-border">
                   <TableCell colSpan={8} className="p-0">
-                    <div className="bg-zinc-800 p-6 rounded-lg mx-4 my-2">
+                    <div className="bg-muted p-6 rounded-lg mx-4 my-2">
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-white mb-2">
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
                           Players signed up: {session.signupCount || session.signupsCount || 0} / {session.capacity}
                         </h3>
                         
                         {/* KPI Bar */}
-                        <div className="w-full bg-zinc-700 rounded-full h-3 mb-4">
+                        <div className="w-full bg-muted rounded-full h-3 mb-4">
                           <div 
                             className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                             style={{ 
@@ -576,7 +576,7 @@ export default function AdminSessions() {
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {paginatedSessions.map((session: any) => (
-          <div key={session.id} className="bg-zinc-900 rounded-lg p-4">
+          <div key={session.id} className="bg-card rounded-lg p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <Checkbox
@@ -584,10 +584,10 @@ export default function AdminSessions() {
                   onCheckedChange={(checked) => handleSelectSession(session.id, checked as boolean)}
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-medium text-sm truncate">
+                  <h3 className="text-foreground font-medium text-sm truncate">
                     {format(new Date(session.startTime), 'MMM d, h:mm a')}
                   </h3>
-                  <p className="text-zinc-400 text-xs">{session.location}</p>
+                  <p className="text-muted-foreground text-xs">{session.location}</p>
                 </div>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs shrink-0 ${
@@ -601,22 +601,22 @@ export default function AdminSessions() {
             
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-400">Age Groups:</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground">Age Groups:</span>
+                <span className="text-foreground">
                   {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroup || 'N/A'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-400">Gender:</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground">Gender:</span>
+                <span className="text-foreground">
                   {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-zinc-400">Capacity:</span>
+                <span className="text-muted-foreground">Capacity:</span>
                 <div className="flex items-center space-x-2">
-                  <span className="text-zinc-300">{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
-                  <div className="w-16 bg-zinc-700 rounded-full h-1.5">
+                  <span className="text-foreground">{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
+                  <div className="w-16 bg-muted rounded-full h-1.5">
                     <div 
                       className="bg-blue-600 h-1.5 rounded-full transition-all"
                       style={{ 
@@ -656,14 +656,14 @@ export default function AdminSessions() {
             
             {/* Mobile Accordion Content */}
             {expandedSession === session.id && (
-              <div className="mt-4 pt-4 border-t border-zinc-800">
+              <div className="mt-4 pt-4 border-t border-border">
                 <div className="mb-3">
-                  <h4 className="text-sm font-medium text-white mb-2">
+                  <h4 className="text-sm font-medium text-foreground mb-2">
                     Players: {session.signupCount || session.signupsCount || 0} / {session.capacity}
                   </h4>
                   
                   {/* KPI Bar */}
-                  <div className="w-full bg-zinc-700 rounded-full h-2 mb-3">
+                  <div className="w-full bg-muted rounded-full h-2 mb-3">
                     <div 
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ 

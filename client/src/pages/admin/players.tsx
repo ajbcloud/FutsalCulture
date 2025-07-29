@@ -249,12 +249,12 @@ export default function AdminPlayers() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white">Player Management</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Player Management</h1>
         <div className="flex flex-wrap gap-2 sm:gap-3">
           <Button 
             variant="outline" 
             onClick={() => window.open('/api/admin/template/players', '_blank')}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
             size="sm"
           >
             <Download className="w-4 h-4 mr-1" />
@@ -264,7 +264,7 @@ export default function AdminPlayers() {
           <Button 
             variant="outline"
             onClick={() => setShowImportModal(true)}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 text-sm px-3 py-2 h-9"
+            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
             size="sm"
           >
             <Upload className="w-4 h-4 mr-1" />
@@ -275,10 +275,10 @@ export default function AdminPlayers() {
       </div>
 
       {/* Filter Controls */}
-      <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+      <div className="bg-card rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           <div>
-            <Label className="text-zinc-300">Search</Label>
+            <Label className="text-muted-foreground">Search</Label>
             <Input
               placeholder="Search players..."
               value={filters.search}

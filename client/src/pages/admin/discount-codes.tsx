@@ -172,7 +172,7 @@ export default function DiscountCodes() {
     <AdminLayout>
       <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h1 className="text-xl sm:text-3xl font-bold text-white">Discount Codes</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-foreground">Discount Codes</h1>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} size="sm" className="self-start sm:self-auto">
@@ -516,16 +516,16 @@ export default function DiscountCodes() {
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
             {discountCodes.length === 0 ? (
-              <div className="text-center text-zinc-400 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 No discount codes created yet
               </div>
             ) : (
               discountCodes.map((code) => (
-                <div key={code.id} className="bg-zinc-800 rounded-lg p-4">
+                <div key={code.id} className="bg-card rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-mono font-bold text-white text-lg truncate">{code.code}</h3>
-                      <p className="text-zinc-400 text-sm capitalize">{code.discountType} discount</p>
+                      <h3 className="font-mono font-bold text-foreground text-lg truncate">{code.code}</h3>
+                      <p className="text-muted-foreground text-sm capitalize">{code.discountType} discount</p>
                     </div>
                     <span
                       className={`px-2 py-1 rounded-full text-xs shrink-0 ${
