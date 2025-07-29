@@ -309,25 +309,58 @@ export default function AdminSettings() {
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Admin Settings</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Settings</h1>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-zinc-800 border-zinc-700">
-          <TabsTrigger value="general" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
-            General & Registration
-          </TabsTrigger>
-          <TabsTrigger value="sessions" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
-            Sessions & Schedule
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
-            Service Billing
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
-            Integrations
-          </TabsTrigger>
-        </TabsList>
+        {/* Mobile Tab Navigation - Vertical Stack */}
+        <div className="md:hidden">
+          <TabsList className="flex flex-col w-full bg-zinc-800 border-zinc-700 h-auto p-1">
+            <TabsTrigger 
+              value="general" 
+              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+            >
+              General & Registration
+            </TabsTrigger>
+            <TabsTrigger 
+              value="sessions" 
+              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+            >
+              Sessions & Schedule
+            </TabsTrigger>
+            <TabsTrigger 
+              value="billing" 
+              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+            >
+              Service Billing
+            </TabsTrigger>
+            <TabsTrigger 
+              value="integrations" 
+              className="w-full justify-start data-[state=active]:bg-zinc-900 data-[state=active]:text-white text-sm py-3"
+            >
+              Integrations
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Desktop Tab Navigation - Horizontal Grid */}
+        <div className="hidden md:block">
+          <TabsList className="grid w-full grid-cols-4 bg-zinc-800 border-zinc-700">
+            <TabsTrigger value="general" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+              General & Registration
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+              Sessions & Schedule
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+              Service Billing
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="data-[state=active]:bg-zinc-900 data-[state=active]:text-white">
+              Integrations
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="general" className="space-y-6">
           <Card className="bg-zinc-900 border-zinc-800">
