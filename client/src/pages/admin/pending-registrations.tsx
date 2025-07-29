@@ -165,7 +165,7 @@ export default function AdminPendingRegistrations() {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-zinc-400">Loading pending registrations...</div>
+          <div className="text-muted-foreground">Loading pending registrations...</div>
         </div>
       </AdminLayout>
     );
@@ -174,30 +174,30 @@ export default function AdminPendingRegistrations() {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Pending Registrations</h1>
+        <h1 className="text-2xl font-bold text-foreground">Pending Registrations</h1>
         <Badge variant="secondary" className="bg-yellow-900/30 text-yellow-400 border-yellow-600">
           {registrations.length} Pending
         </Badge>
       </div>
 
       {registrations.length === 0 ? (
-        <div className="bg-zinc-900 rounded-lg p-8 text-center">
-          <Users className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No Pending Registrations</h3>
-          <p className="text-zinc-400">All registrations are up to date!</p>
+        <div className="bg-card rounded-lg p-8 text-center">
+          <Users className="w-12 h-12 text-muted-foreground/60 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No Pending Registrations</h3>
+          <p className="text-muted-foreground">All registrations are up to date!</p>
         </div>
       ) : (
-        <div className="bg-zinc-900 rounded-lg border border-zinc-700">
+        <div className="bg-card rounded-lg border border-border">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-700 hover:bg-zinc-800/50">
-                <TableHead className="text-zinc-300">Type</TableHead>
-                <TableHead className="text-zinc-300">Name</TableHead>
-                <TableHead className="text-zinc-300">Email</TableHead>
-                <TableHead className="text-zinc-300">Phone</TableHead>
-                <TableHead className="text-zinc-300">Registered</TableHead>
-                <TableHead className="text-zinc-300">Status</TableHead>
-                <TableHead className="text-zinc-300">Actions</TableHead>
+              <TableRow className="border-border hover:bg-muted/50">
+                <TableHead className="text-muted-foreground">Type</TableHead>
+                <TableHead className="text-muted-foreground">Name</TableHead>
+                <TableHead className="text-muted-foreground">Email</TableHead>
+                <TableHead className="text-muted-foreground">Phone</TableHead>
+                <TableHead className="text-muted-foreground">Registered</TableHead>
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -210,15 +210,15 @@ export default function AdminPendingRegistrations() {
                       ) : (
                         <Users className="w-4 h-4 text-green-400" />
                       )}
-                      <span className="capitalize text-zinc-300">{registration.type}</span>
+                      <span className="capitalize text-muted-foreground">{registration.type}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-muted-foreground">
                     {registration.firstName} {registration.lastName}
                   </TableCell>
-                  <TableCell className="text-zinc-300">{registration.email}</TableCell>
-                  <TableCell className="text-zinc-300">{registration.phone || '-'}</TableCell>
-                  <TableCell className="text-zinc-300">
+                  <TableCell className="text-muted-foreground">{registration.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{registration.phone || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {format(new Date(registration.createdAt), 'MMM d, yyyy HH:mm')}
                   </TableCell>
                   <TableCell>

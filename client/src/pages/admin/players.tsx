@@ -288,9 +288,9 @@ export default function AdminPlayers() {
           </div>
           
           <div>
-            <Label className="text-zinc-300">Age Group</Label>
+            <Label className="text-muted-foreground">Age Group</Label>
             <Select value={filters.ageGroup} onValueChange={(value) => setFilters(prev => ({ ...prev, ageGroup: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Ages" />
               </SelectTrigger>
               <SelectContent>
@@ -303,9 +303,9 @@ export default function AdminPlayers() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Gender</Label>
+            <Label className="text-muted-foreground">Gender</Label>
             <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Genders" />
               </SelectTrigger>
               <SelectContent>
@@ -317,9 +317,9 @@ export default function AdminPlayers() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Portal Access</Label>
+            <Label className="text-muted-foreground">Portal Access</Label>
             <Select value={filters.portalAccess} onValueChange={(value) => setFilters(prev => ({ ...prev, portalAccess: value }))}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+              <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="All Players" />
               </SelectTrigger>
               <SelectContent>
@@ -331,37 +331,37 @@ export default function AdminPlayers() {
           </div>
 
           <div>
-            <Label className="text-zinc-300">Soccer Club</Label>
+            <Label className="text-muted-foreground">Soccer Club</Label>
             <Input
               placeholder="Filter by club..."
               value={filters.soccerClub}
               onChange={(e) => setFilters(prev => ({ ...prev, soccerClub: e.target.value }))}
-              className="bg-zinc-800 border-zinc-700 text-white"
+              className="bg-input border-border text-foreground"
             />
           </div>
         </div>
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
+      <div className="hidden md:block bg-card rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-800">
-              <TableHead className="text-zinc-300">Player Name</TableHead>
-              <TableHead className="text-zinc-300">Age</TableHead>
-              <TableHead className="text-zinc-300">Gender</TableHead>
-              <TableHead className="text-zinc-300">Soccer Club</TableHead>
-              <TableHead className="text-zinc-300">Parent 1</TableHead>
-              <TableHead className="text-zinc-300">Parent 2</TableHead>
-              <TableHead className="text-zinc-300">Portal Access</TableHead>
-              <TableHead className="text-zinc-300">Sessions</TableHead>
-              <TableHead className="text-zinc-300">Last Activity</TableHead>
+            <TableRow className="border-border">
+              <TableHead className="text-muted-foreground">Player Name</TableHead>
+              <TableHead className="text-muted-foreground">Age</TableHead>
+              <TableHead className="text-muted-foreground">Gender</TableHead>
+              <TableHead className="text-muted-foreground">Soccer Club</TableHead>
+              <TableHead className="text-muted-foreground">Parent 1</TableHead>
+              <TableHead className="text-muted-foreground">Parent 2</TableHead>
+              <TableHead className="text-muted-foreground">Portal Access</TableHead>
+              <TableHead className="text-muted-foreground">Sessions</TableHead>
+              <TableHead className="text-muted-foreground">Last Activity</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedPlayers.map((player: any) => (
-              <TableRow key={player.id} className="border-zinc-800">
-                <TableCell className="text-white">
+              <TableRow key={player.id} className="border-border">
+                <TableCell className="text-foreground">
                   <button
                     onClick={() => handleEditPlayer(player)}
                     className="text-blue-400 hover:text-blue-300 cursor-pointer underline bg-transparent border-none p-0 font-inherit"
@@ -369,14 +369,14 @@ export default function AdminPlayers() {
                     {player.firstName} {player.lastName}
                   </button>
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {new Date().getFullYear() - player.birthYear}
                 </TableCell>
-                <TableCell className="text-zinc-300">{player.gender}</TableCell>
-                <TableCell className="text-zinc-300">
-                  {player.soccerClub || <span className="text-zinc-500 italic">No club</span>}
+                <TableCell className="text-muted-foreground">{player.gender}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {player.soccerClub || <span className="text-muted-foreground/60 italic">No club</span>}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {player.parentName ? (
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
@@ -384,10 +384,10 @@ export default function AdminPlayers() {
                       </span>
                     </Link>
                   ) : (
-                    <span className="text-zinc-500">—</span>
+                    <span className="text-muted-foreground/60">—</span>
                   )}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {player.parent2Name ? (
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
@@ -395,28 +395,28 @@ export default function AdminPlayers() {
                       </span>
                     </Link>
                   ) : (
-                    <span className="text-zinc-500">—</span>
+                    <span className="text-muted-foreground/60">—</span>
                   )}
                 </TableCell>
                 <TableCell>
                   <Badge 
                     variant={player.canAccessPortal ? "default" : "secondary"}
-                    className={player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-zinc-700 text-zinc-400"}
+                    className={player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-muted text-muted-foreground"}
                   >
                     {player.canAccessPortal ? 'Enabled' : 'Disabled'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {player.signupsCount || 0}
                 </TableCell>
-                <TableCell className="text-zinc-300">
+                <TableCell className="text-muted-foreground">
                   {player.lastActivity ? format(new Date(player.lastActivity), 'MMM d, yyyy') : 'Never'}
                 </TableCell>
               </TableRow>
             ))}
             {paginatedPlayers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-zinc-400 py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
                 </TableCell>
               </TableRow>
@@ -428,12 +428,12 @@ export default function AdminPlayers() {
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
         {paginatedPlayers.length === 0 ? (
-          <div className="text-center text-zinc-400 py-8 bg-zinc-900 rounded-lg">
+          <div className="text-center text-muted-foreground py-8 bg-card rounded-lg">
             {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
           </div>
         ) : (
           paginatedPlayers.map((player: any) => (
-            <div key={player.id} className="bg-zinc-800 rounded-lg p-4">
+            <div key={player.id} className="bg-card rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <button
@@ -444,13 +444,13 @@ export default function AdminPlayers() {
                       {player.firstName} {player.lastName}
                     </h3>
                   </button>
-                  <p className="text-zinc-400 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     {new Date().getFullYear() - player.birthYear} years • {player.gender}
                   </p>
                 </div>
                 <Badge 
                   variant={player.canAccessPortal ? "default" : "secondary"}
-                  className={`shrink-0 text-xs ${player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-zinc-700 text-zinc-400"}`}
+                  className={`shrink-0 text-xs ${player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-muted text-muted-foreground"}`}
                 >
                   {player.canAccessPortal ? 'Portal' : 'No Portal'}
                 </Badge>
@@ -459,19 +459,19 @@ export default function AdminPlayers() {
               <div className="space-y-2">
                 {player.soccerClub && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">Club:</span>
-                    <span className="text-zinc-300">{player.soccerClub}</span>
+                    <span className="text-muted-foreground">Club:</span>
+                    <span className="text-foreground">{player.soccerClub}</span>
                   </div>
                 )}
                 
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-400">Sessions:</span>
-                  <span className="text-zinc-300">{player.signupsCount || 0}</span>
+                  <span className="text-muted-foreground">Sessions:</span>
+                  <span className="text-foreground">{player.signupsCount || 0}</span>
                 </div>
 
                 {player.parentName && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">Parent:</span>
+                    <span className="text-muted-foreground">Parent:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parentName}
@@ -482,7 +482,7 @@ export default function AdminPlayers() {
 
                 {player.parent2Name && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">Parent 2:</span>
+                    <span className="text-muted-foreground">Parent 2:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parent2Name}
@@ -492,8 +492,8 @@ export default function AdminPlayers() {
                 )}
 
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-400">Last Activity:</span>
-                  <span className="text-zinc-300">
+                  <span className="text-muted-foreground">Last Activity:</span>
+                  <span className="text-foreground">
                     {player.lastActivity ? format(new Date(player.lastActivity), 'MMM d') : 'Never'}
                   </span>
                 </div>
@@ -523,13 +523,13 @@ export default function AdminPlayers() {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           onItemsPerPageChange={handleItemsPerPageChange}
-          className="bg-zinc-900 p-4 rounded-lg border border-zinc-800"
+          className="bg-card p-4 rounded-lg border border-border"
         />
       )}
 
       {/* Import Modal */}
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-white">Import Players from CSV</DialogTitle>
           </DialogHeader>
@@ -572,7 +572,7 @@ export default function AdminPlayers() {
 
       {/* Edit Player Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+        <DialogContent className="bg-card border-border max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">
               Edit Player: {editingPlayer?.firstName} {editingPlayer?.lastName}
@@ -582,28 +582,28 @@ export default function AdminPlayers() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className="text-zinc-300">First Name</Label>
+                <Label htmlFor="firstName" className="text-muted-foreground">First Name</Label>
                 <Input
                   id="firstName"
                   value={editForm.firstName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
               <div>
-                <Label htmlFor="lastName" className="text-zinc-300">Last Name</Label>
+                <Label htmlFor="lastName" className="text-muted-foreground">Last Name</Label>
                 <Input
                   id="lastName"
                   value={editForm.lastName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="birthYear" className="text-zinc-300">Birth Year</Label>
+                <Label htmlFor="birthYear" className="text-muted-foreground">Birth Year</Label>
                 <Input
                   id="birthYear"
                   type="number"
@@ -611,13 +611,13 @@ export default function AdminPlayers() {
                   max="2018"
                   value={editForm.birthYear}
                   onChange={(e) => setEditForm(prev => ({ ...prev, birthYear: parseInt(e.target.value) || new Date().getFullYear() }))}
-                  className="bg-zinc-800 border-zinc-700 text-white"
+                  className="bg-input border-border text-foreground"
                 />
               </div>
               <div>
-                <Label htmlFor="gender" className="text-zinc-300">Gender</Label>
+                <Label htmlFor="gender" className="text-muted-foreground">Gender</Label>
                 <Select value={editForm.gender} onValueChange={(value: 'boys' | 'girls') => setEditForm(prev => ({ ...prev, gender: value }))}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

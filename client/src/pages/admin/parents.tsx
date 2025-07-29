@@ -252,7 +252,7 @@ export default function AdminParents() {
   const getRoleDisplay = (parent: any) => {
     if (parent.isAdmin) return <Badge className="bg-red-900 text-red-300">Admin</Badge>;
     if (parent.isAssistant) return <Badge className="bg-blue-900 text-blue-300">Assistant</Badge>;
-    return <Badge variant="secondary" className="bg-zinc-700 text-zinc-300">Parent</Badge>;
+    return <Badge variant="secondary" className="bg-muted text-muted-foreground">Parent</Badge>;
   };
 
   if (loading) {
@@ -269,26 +269,26 @@ export default function AdminParents() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Parents Management</h1>
-          <div className="text-sm text-zinc-400">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Parents Management</h1>
+          <div className="text-sm text-muted-foreground">
             Total: {parents.length} accounts
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-300">Total Parents</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Total Parents</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{parents.length}</div>
+              <div className="text-2xl font-bold text-foreground">{parents.length}</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-300">Active Parents</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Active Parents</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-400">
@@ -297,9 +297,9 @@ export default function AdminParents() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-300">Admins</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Admins</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-400">
@@ -308,9 +308,9 @@ export default function AdminParents() {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-card border-border">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-300">Total Players</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Total Players</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-400">
@@ -321,10 +321,10 @@ export default function AdminParents() {
         </div>
 
         {/* Filter Controls */}
-        <div className="bg-zinc-900 rounded-lg p-4">
+        <div className="bg-card rounded-lg p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             <div>
-              <Label className="text-zinc-300">Search</Label>
+              <Label className="text-muted-foreground">Search</Label>
               <Input
                 placeholder="Search parents..."
                 value={filters.search}
@@ -337,14 +337,14 @@ export default function AdminParents() {
                     window.history.replaceState({}, '', '/admin/parents');
                   }
                 }}
-                className="bg-zinc-800 border-zinc-700 text-white"
+                className="bg-input border-border text-foreground"
               />
             </div>
             
             <div>
-              <Label className="text-zinc-300">Status</Label>
+              <Label className="text-muted-foreground">Status</Label>
               <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectTrigger className="bg-input border-border text-foreground">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,9 +356,9 @@ export default function AdminParents() {
             </div>
 
             <div>
-              <Label className="text-zinc-300">Role</Label>
+              <Label className="text-muted-foreground">Role</Label>
               <Select value={filters.role} onValueChange={(value) => setFilters(prev => ({ ...prev, role: value }))}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                <SelectTrigger className="bg-input border-border text-foreground">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
@@ -373,17 +373,17 @@ export default function AdminParents() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block bg-zinc-900 rounded-lg overflow-hidden">
+        <div className="hidden md:block bg-card rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-800">
-                <TableHead className="text-zinc-300">Name</TableHead>
-                <TableHead className="text-zinc-300">Email</TableHead>
-                <TableHead className="text-zinc-300">Phone</TableHead>
-                <TableHead className="text-zinc-300">Role</TableHead>
-                <TableHead className="text-zinc-300">Players</TableHead>
-                <TableHead className="text-zinc-300">Last Activity</TableHead>
-                <TableHead className="text-zinc-300">Actions</TableHead>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground">Name</TableHead>
+                <TableHead className="text-muted-foreground">Email</TableHead>
+                <TableHead className="text-muted-foreground">Phone</TableHead>
+                <TableHead className="text-muted-foreground">Role</TableHead>
+                <TableHead className="text-muted-foreground">Players</TableHead>
+                <TableHead className="text-muted-foreground">Last Activity</TableHead>
+                <TableHead className="text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -392,13 +392,13 @@ export default function AdminParents() {
                 return (
                   <React.Fragment key={parent.id}>
                     <TableRow className="border-zinc-800">
-                      <TableCell className="text-white">
+                      <TableCell className="text-foreground">
                         {parent.firstName} {parent.lastName}
                       </TableCell>
-                      <TableCell className="text-zinc-300">{parent.email}</TableCell>
-                      <TableCell className="text-zinc-300">{parent.phone || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{parent.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{parent.phone || '-'}</TableCell>
                       <TableCell>{getRoleDisplay(parent)}</TableCell>
-                      <TableCell className="text-zinc-300">
+                      <TableCell className="text-muted-foreground">
                         <button
                           onClick={() => {
                             const nextExpanded = new Set(expandedParentIds);
@@ -416,13 +416,13 @@ export default function AdminParents() {
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-green-400" />
                           ) : (
-                            <ChevronRight className="w-4 h-4 text-zinc-400" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           )}
                           <Users className="w-4 h-4" />
                           {parent.playersCount || 0}
                         </button>
                       </TableCell>
-                      <TableCell className="text-zinc-300">
+                      <TableCell className="text-muted-foreground">
                         {parent.lastLogin ? new Date(parent.lastLogin).toLocaleDateString() : 'Never'}
                       </TableCell>
                       <TableCell>

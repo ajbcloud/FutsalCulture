@@ -109,7 +109,7 @@ export default function SessionCalendar({
     <div className="w-full">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-2xl font-bold text-foreground">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
         <div className="flex items-center space-x-2">
@@ -117,7 +117,7 @@ export default function SessionCalendar({
             variant="outline"
             size="sm"
             onClick={handlePrevMonth}
-            className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800"
+            className="bg-muted border-border text-foreground hover:bg-muted/80"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -125,7 +125,7 @@ export default function SessionCalendar({
             variant="outline"
             size="sm"
             onClick={handleNextMonth}
-            className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800"
+            className="bg-muted border-border text-foreground hover:bg-muted/80"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -136,7 +136,7 @@ export default function SessionCalendar({
       <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {/* Day Headers - Responsive */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-zinc-400">
+          <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground">
             <span className="hidden sm:inline">{day}</span>
             <span className="sm:hidden">{day.charAt(0)}</span>
           </div>
@@ -159,14 +159,14 @@ export default function SessionCalendar({
               key={dateKey}
               className={`min-h-[70px] sm:min-h-[120px] border border-zinc-800 rounded transition-colors flex flex-col ${
                 isToday ? 'bg-blue-900/20 border-blue-500' : 
-                isPast ? 'bg-zinc-900/50' : 'bg-zinc-900'
+                isPast ? 'bg-card/50' : 'bg-card'
               }`}
             >
               {/* Day Header - Clickable to open dialog */}
               <div 
-                className={`p-1 sm:p-2 pb-0 cursor-pointer hover:bg-zinc-800/50 rounded-t ${
+                className={`p-1 sm:p-2 pb-0 cursor-pointer hover:bg-muted/50 rounded-t ${
                   isToday ? 'hover:bg-blue-900/30' : 
-                  isPast ? 'hover:bg-zinc-900/70' : 'hover:bg-zinc-800'
+                  isPast ? 'hover:bg-muted/70' : 'hover:bg-muted'
                 }`}
                 onClick={() => {
                   setSelectedDate(day);
@@ -175,7 +175,7 @@ export default function SessionCalendar({
               >
                 <div className={`text-xs sm:text-sm font-medium ${
                   isToday ? 'text-blue-400' : 
-                  isPast ? 'text-zinc-500' : 'text-white'
+                  isPast ? 'text-muted-foreground/60' : 'text-foreground'
                 }`}>
                   {format(day, 'd')}
                 </div>
@@ -205,7 +205,7 @@ export default function SessionCalendar({
                   
                   // Override status based on real-time conditions
                   if (sessionStarted) {
-                    statusColor = 'bg-zinc-700/20';
+                    statusColor = 'bg-muted/20';
                     statusText = 'closed';
                   } else if (isSessionToday && session.status === 'full') {
                     statusColor = 'bg-red-700/20';
@@ -224,7 +224,7 @@ export default function SessionCalendar({
                   return (
                     <div 
                       key={session.id} 
-                      className={`min-h-[22px] sm:min-h-[28px] p-0.5 sm:p-1 cursor-pointer border border-transparent hover:border-zinc-600 active:border-zinc-400 transition-all rounded text-white ${statusColor} touch-manipulation flex-shrink-0`}
+                      className={`min-h-[22px] sm:min-h-[28px] p-0.5 sm:p-1 cursor-pointer border border-transparent hover:border-border active:border-border/80 transition-all rounded text-foreground ${statusColor} touch-manipulation flex-shrink-0`}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -256,21 +256,21 @@ export default function SessionCalendar({
                         <div className="text-[9px] font-medium truncate leading-tight">
                           {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
-                        <div className="text-[8px] text-zinc-300 truncate leading-tight">
+                        <div className="text-[8px] text-muted-foreground truncate leading-tight">
                           {session.ageGroups?.slice(0, 1).join(', ') || 'N/A'}
                         </div>
                       </div>
 
                       {/* Desktop Format - Full Details */}
                       <div className="hidden sm:block pointer-events-none">
-                        <div className="text-xs text-white font-medium truncate mb-1">
+                        <div className="text-xs text-foreground font-medium truncate mb-1">
                           {session.title}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <Clock className="w-3 h-3" />
                           {format12Hour(new Date(session.startTime).getHours(), new Date(session.startTime).getMinutes())}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-zinc-300 mb-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <MapPin className="w-3 h-3" />
                           <span className="truncate">{session.location}</span>
                         </div>
@@ -294,7 +294,7 @@ export default function SessionCalendar({
                 })}
                 
                 {daySessions.length > 2 && (
-                  <div className="text-[8px] sm:text-xs text-zinc-400 text-center py-0.5 flex-shrink-0">
+                  <div className="text-[8px] sm:text-xs text-muted-foreground text-center py-0.5 flex-shrink-0">
                     +{daySessions.length - 2} more
                   </div>
                 )}
@@ -309,25 +309,25 @@ export default function SessionCalendar({
       <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 sm:gap-4 mt-6 text-xs sm:text-sm">
         <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-green-700/20 border border-green-700 rounded"></div>
-          <span className="text-zinc-300">Open</span>
+          <span className="text-muted-foreground">Open</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-yellow-700/20 border border-yellow-700 rounded"></div>
-          <span className="text-zinc-300">Upcoming</span>
+          <span className="text-muted-foreground">Upcoming</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="w-3 h-3 bg-red-700/20 border border-red-700 rounded"></div>
-          <span className="text-zinc-300">Full</span>
+          <span className="text-muted-foreground">Full</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className="w-3 h-3 bg-zinc-700/20 border border-zinc-700 rounded"></div>
-          <span className="text-zinc-300">Closed</span>
+          <div className="w-3 h-3 bg-muted/20 border border-border rounded"></div>
+          <span className="text-muted-foreground">Closed</span>
         </div>
       </div>
 
       {/* Day Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Calendar className="w-5 h-5" />
@@ -344,7 +344,7 @@ export default function SessionCalendar({
                 if (daySessions.length === 0) {
                   return (
                     <div className="text-center py-8">
-                      <p className="text-zinc-400">No sessions scheduled for this day.</p>
+                      <p className="text-muted-foreground">No sessions scheduled for this day.</p>
                     </div>
                   );
                 }
@@ -355,7 +355,7 @@ export default function SessionCalendar({
                     className={`border-none cursor-pointer transition-colors ${
                       session.status === 'open' ? 'bg-green-700/20 hover:bg-green-700/30' :
                       session.status === 'full' ? 'bg-red-700/20 hover:bg-red-700/30' :
-                      session.status === 'closed' ? 'bg-zinc-700/20 hover:bg-zinc-700/30' :
+                      session.status === 'closed' ? 'bg-muted/20 hover:bg-muted/30' :
                       'bg-blue-700/20 hover:bg-blue-700/30'
                     }`}
                     onClick={() => {
@@ -377,7 +377,7 @@ export default function SessionCalendar({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center gap-4 text-zinc-300">
+                      <div className="flex items-center gap-4 text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />
                           <span>{format(new Date(session.startTime), 'h:mm a')} - {format(new Date(session.endTime), 'h:mm a')}</span>
@@ -390,14 +390,14 @@ export default function SessionCalendar({
                       
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2">
-                          <Badge variant="outline" className="text-zinc-300 border-zinc-600">
+                          <Badge variant="outline" className="text-muted-foreground border-border">
                             {session.ageGroups?.join(', ') || 'N/A'}
                           </Badge>
-                          <Badge variant="outline" className="text-zinc-300 border-zinc-600 capitalize">
+                          <Badge variant="outline" className="text-muted-foreground border-border capitalize">
                             {session.genders?.join(', ') || 'N/A'}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2 text-zinc-400">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Users className="w-4 h-4" />
                           <span>{session.capacity} spots</span>
                         </div>
