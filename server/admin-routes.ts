@@ -1586,8 +1586,12 @@ export function setupAdminRoutes(app: any) {
   // Admin Settings
   app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // Get system settings from database
-      const settings = await db.select().from(systemSettings);
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      // Get system settings from database for this tenant
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.tenantId, tenantId));
       
       const settingsMap = settings.reduce((acc, setting) => {
         let value: any = setting.value;
@@ -1642,11 +1646,13 @@ export function setupAdminRoutes(app: any) {
     try {
       const updates = req.body;
       const adminUserId = (req as any).currentUser?.id;
+      const tenantId = (req as any).currentUser?.tenantId;
 
       console.log('Settings update request:', { 
         keyCount: Object.keys(updates).length,
         keys: Object.keys(updates),
         adminUserId,
+        tenantId,
         logoSize: updates.businessLogo ? updates.businessLogo.length : 'N/A'
       });
 
@@ -1657,13 +1663,14 @@ export function setupAdminRoutes(app: any) {
           
           await db.insert(systemSettings)
             .values({
+              tenantId,
               key,
               value: String(value),
               updatedBy: adminUserId,
               updatedAt: new Date(),
             })
             .onConflictDoUpdate({
-              target: systemSettings.key,
+              target: [systemSettings.tenantId, systemSettings.key],
               set: {
                 value: String(value),
                 updatedBy: adminUserId,
@@ -1672,18 +1679,18 @@ export function setupAdminRoutes(app: any) {
             });
             
           console.log(`Successfully updated setting: ${key}`);
-        } catch (settingError) {
+        } catch (settingError: any) {
           console.error(`Error updating setting ${key}:`, settingError);
-          throw new Error(`Failed to update setting ${key}: ${settingError.message}`);
+          throw new Error(`Failed to update setting ${key}: ${settingError?.message || 'Unknown error'}`);
         }
       }
 
       res.json({ message: "Settings updated successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating settings:", error);
       res.status(500).json({ 
         message: "Failed to update settings", 
-        error: error.message || "Unknown error"
+        error: error?.message || "Unknown error"
       });
     }
   });

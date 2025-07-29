@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -222,6 +223,7 @@ export const systemSettings = pgTable("system_settings", {
   updatedBy: varchar("updated_by"), // admin user id
 }, (table) => [
   index("system_settings_tenant_id_idx").on(table.tenantId),
+  uniqueIndex("system_settings_tenant_key_unique_idx").on(table.tenantId, table.key),
 ]);
 
 // Integrations table for third-party service configuration
