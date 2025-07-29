@@ -175,7 +175,7 @@ export default function AdminPendingRegistrations() {
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-foreground">Pending Registrations</h1>
-        <Badge variant="secondary" className="bg-yellow-900/30 text-yellow-400 border-yellow-600">
+        <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/50">
           {registrations.length} Pending
         </Badge>
       </div>
@@ -222,7 +222,7 @@ export default function AdminPendingRegistrations() {
                     {format(new Date(registration.createdAt), 'MMM d, yyyy HH:mm')}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="bg-yellow-900/30 text-yellow-400 border-yellow-600">
+                    <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/50">
                       {registration.registrationStatus}
                     </Badge>
                   </TableCell>
