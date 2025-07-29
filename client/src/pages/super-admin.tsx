@@ -112,10 +112,11 @@ export default function SuperAdminPage() {
 
       <div className="flex">
         {/* Sidebar - Mobile First */}
-        <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out md:translate-x-0 ${
+        <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out md:translate-x-0 flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          {/* Fixed header */}
+          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
             <div className="flex flex-col items-center space-y-3 flex-1 w-full max-w-full">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
@@ -131,28 +132,34 @@ export default function SuperAdminPage() {
             </Button>
           </div>
 
-          <nav className="mt-6">
-            <div className="px-3">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <div className={`flex items-center px-3 py-2 mb-1 rounded-lg transition-colors ${
-                      item.current 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}>
-                      <Icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
+          {/* Scrollable navigation area */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <nav className="py-6">
+              <div className="px-3 space-y-1">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <div 
+                        className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                          item.current 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                        }`}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        {item.name}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
 
-          {/* User info at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+          {/* Fixed user info at bottom */}
+          <div className="p-4 border-t border-border bg-card flex-shrink-0">
             <div className="flex items-center justify-between">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
