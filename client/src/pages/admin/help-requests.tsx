@@ -299,6 +299,7 @@ export default function AdminHelpRequests() {
             <TableRow className="border-zinc-800">
               <TableHead className="text-zinc-300">User</TableHead>
               <TableHead className="text-zinc-300">Message Preview</TableHead>
+              <TableHead className="text-zinc-300">Source</TableHead>
               <TableHead className="text-zinc-300">Status</TableHead>
               <TableHead className="text-zinc-300">Submitted</TableHead>
               <TableHead className="text-zinc-300">Resolution</TableHead>
@@ -340,6 +341,20 @@ export default function AdminHelpRequests() {
                       {request.message?.substring(0, 50) + (request.message?.length > 50 ? '...' : '')}
                     </div>
                   </div>
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  <Badge 
+                    variant="outline" 
+                    className={
+                      request.source === 'parent_portal' ? 'bg-blue-900/30 border-blue-600 text-blue-400' :
+                      request.source === 'player_portal' ? 'bg-purple-900/30 border-purple-600 text-purple-400' :
+                      'bg-zinc-700/30 border-zinc-600 text-zinc-400'
+                    }
+                  >
+                    {request.source === 'parent_portal' ? 'Parent Portal' :
+                     request.source === 'player_portal' ? 'Player Portal' :
+                     'Main Page'}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge 

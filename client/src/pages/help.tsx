@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBusinessName } from "@/contexts/BusinessContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Phone, Clock, MapPin } from "lucide-react";
 
 const helpSchema = z.object({
@@ -57,6 +58,7 @@ type HelpForm = z.infer<typeof helpSchema>;
 
 export default function Help() {
   const businessName = useBusinessName();
+  const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
@@ -112,7 +114,7 @@ export default function Help() {
   });
 
   const submitHelpMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; subject: string; category: string; priority: string; message: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; subject: string; category: string; priority: string; message: string; source?: string }) => {
       const response = await apiRequest("POST", "/api/help", data);
       return response.json();
     },
@@ -134,7 +136,7 @@ export default function Help() {
     },
   });
 
-  const onSubmit = (data: HelpForm) => {
+  const onSubmit = async (data: HelpForm) => {
     // Verify captcha before submitting
     if (data.captcha !== captchaAnswer) {
       toast({
@@ -147,9 +149,30 @@ export default function Help() {
       return;
     }
     
-    // Remove captcha for submission
+    // Determine source based on authentication status and user type
+    let source = "main_page"; // default for non-authenticated users
+    if (user) {
+      try {
+        // Check if the current user is a player
+        const playersResponse = await fetch("/api/players");
+        if (playersResponse.ok) {
+          const players = await playersResponse.json();
+          const isPlayer = players.some((player: any) => player.userId === user.id);
+          source = isPlayer ? "player_portal" : "parent_portal";
+        } else {
+          // Fallback to parent portal if we can't determine
+          source = "parent_portal";
+        }
+      } catch (error) {
+        console.error("Error determining user type:", error);
+        // Fallback to parent portal if error occurs
+        source = "parent_portal";
+      }
+    }
+    
+    // Remove captcha for submission and add source
     const { captcha, ...submitData } = data;
-    submitHelpMutation.mutate(submitData);
+    submitHelpMutation.mutate({ ...submitData, source });
   };
 
   return (

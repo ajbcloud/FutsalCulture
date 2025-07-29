@@ -185,6 +185,7 @@ export const helpRequests = pgTable("help_requests", {
   category: varchar("category").notNull(),
   priority: varchar("priority").notNull().default("medium"),
   message: text("message").notNull(),
+  source: varchar("source").notNull().default("main_page"), // 'main_page', 'parent_portal', 'player_portal'
   resolved: boolean("resolved").default(false),
   resolvedBy: varchar("resolved_by"), // admin user ID who resolved the issue
   resolutionNote: text("resolution_note"), // detailed explanation of resolution
@@ -450,6 +451,7 @@ export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
     .min(1, "Category is required"),
   priority: z.string()
     .min(1, "Priority is required"),
+  source: z.enum(["main_page", "parent_portal", "player_portal"]).default("main_page"),
   message: z.string()
     .min(20, "Message must be at least 20 characters")
     .max(1000, "Message must be less than 1000 characters")

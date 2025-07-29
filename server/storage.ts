@@ -486,6 +486,7 @@ export class DatabaseStorage implements IStorage {
       category: helpRequests.category,
       priority: helpRequests.priority,
       message: helpRequests.message,
+      source: helpRequests.source,
       resolved: helpRequests.resolved,
       resolvedBy: helpRequests.resolvedBy,
       resolutionNote: helpRequests.resolutionNote,
