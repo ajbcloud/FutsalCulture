@@ -75,11 +75,21 @@ export default function AdminSessionDetail() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Convert datetime strings to Date objects for the backend
+      const sessionData = {
+        ...formData,
+        startTime: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
+        endTime: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
+        // Ensure access code is properly formatted - null when disabled or empty
+        hasAccessCode: Boolean(formData.hasAccessCode),
+        accessCode: formData.hasAccessCode && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
+      };
+
       if (isNew) {
-        await adminSessions.create(formData);
+        await adminSessions.create(sessionData);
         toast({ title: "Session created successfully" });
       } else {
-        await adminSessions.update(params?.id, formData);
+        await adminSessions.update(params?.id, sessionData);
         toast({ title: "Session updated successfully" });
       }
       window.location.href = '/admin/sessions';
