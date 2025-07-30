@@ -201,6 +201,91 @@ export default function AdminSessionDetail() {
             />
           </div>
 
+          {/* Recurring Session Options - Only show for new sessions */}
+          {isNew && (
+            <>
+              <div className="md:col-span-2">
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={formData.isRecurring}
+                    onCheckedChange={(checked) => setFormData({...formData, isRecurring: checked})}
+                  />
+                  <Label className="text-foreground flex items-center">
+                    {formData.isRecurring ? (
+                      <><Repeat className="w-4 h-4 mr-2" />Create recurring sessions</>
+                    ) : (
+                      <><Calendar className="w-4 h-4 mr-2" />Single session only</>
+                    )}
+                  </Label>
+                </div>
+              </div>
+
+              {formData.isRecurring && (
+                <>
+                  <div>
+                    <Label className="text-muted-foreground">Recurring Pattern</Label>
+                    <Select 
+                      value={formData.recurringType} 
+                      onValueChange={(value: 'weekly' | 'biweekly' | 'monthly') => 
+                        setFormData({...formData, recurringType: value})
+                      }
+                    >
+                      <SelectTrigger className="bg-input border-border text-foreground">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly (every 7 days)</SelectItem>
+                        <SelectItem value="biweekly">Bi-weekly (every 14 days)</SelectItem>
+                        <SelectItem value="monthly">Monthly (same date each month)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-muted-foreground">Number of Sessions</Label>
+                    <Input
+                      type="number"
+                      value={formData.recurringCount}
+                      onChange={(e) => setFormData({...formData, recurringCount: parseInt(e.target.value) || 1})}
+                      className="bg-input border-border text-foreground"
+                      min="2"
+                      max="52"
+                      placeholder="8"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="recurringEndDate" className="text-muted-foreground">
+                      End Date (Optional)
+                    </Label>
+                    <Input
+                      id="recurringEndDate"
+                      type="date"
+                      value={formData.recurringEndDate}
+                      onChange={(e) => setFormData({...formData, recurringEndDate: e.target.value})}
+                      className="bg-input border-border text-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Sessions will not be created beyond this date (overrides session count)
+                    </p>
+                  </div>
+                  
+                  <div className="md:col-span-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Preview:</strong> This will create{' '}
+                      <span className="font-semibold">{formData.recurringCount} sessions</span>{' '}
+                      {formData.recurringType === 'weekly' ? 'every week' : 
+                       formData.recurringType === 'biweekly' ? 'every 2 weeks' : 'monthly'}
+                      {formData.recurringEndDate && (
+                        <> until {new Date(formData.recurringEndDate).toLocaleDateString()}</>
+                      )}
+                    </p>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           <div>
             <Label className="text-muted-foreground">Age Groups (Multi-Select)</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -445,105 +530,7 @@ export default function AdminSessionDetail() {
           </div>
         </div>
 
-        {/* Recurring Session Section - Only show for new sessions */}
-        {isNew && (
-          <div className="border-t border-border pt-6 mt-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-              <Repeat className="w-5 h-5 mr-2" />
-              Recurring Session Options
-            </h3>
-            <div className="bg-muted/50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Create multiple sessions at once with recurring schedule. Perfect for weekly training programs or regular sessions.
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Switch
-                  checked={formData.isRecurring}
-                  onCheckedChange={(checked) => setFormData({...formData, isRecurring: checked})}
-                />
-                <Label className="text-foreground flex items-center">
-                  {formData.isRecurring ? (
-                    <><Repeat className="w-4 h-4 mr-2" />Create recurring sessions</>
-                  ) : (
-                    <><Calendar className="w-4 h-4 mr-2" />Single session only</>
-                  )}
-                </Label>
-              </div>
 
-              {formData.isRecurring && (
-                <div className="space-y-4 pl-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Recurring Pattern</Label>
-                      <Select 
-                        value={formData.recurringType} 
-                        onValueChange={(value: 'weekly' | 'biweekly' | 'monthly') => 
-                          setFormData({...formData, recurringType: value})
-                        }
-                      >
-                        <SelectTrigger className="bg-input border-border text-foreground">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly (every 7 days)</SelectItem>
-                          <SelectItem value="biweekly">Bi-weekly (every 14 days)</SelectItem>
-                          <SelectItem value="monthly">Monthly (same date each month)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-muted-foreground">Number of Sessions</Label>
-                      <Input
-                        type="number"
-                        value={formData.recurringCount}
-                        onChange={(e) => setFormData({...formData, recurringCount: parseInt(e.target.value) || 1})}
-                        className="bg-input border-border text-foreground"
-                        min="2"
-                        max="52"
-                        placeholder="8"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        How many sessions to create (including the first one)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="recurringEndDate" className="text-muted-foreground">
-                      End Date (Optional)
-                    </Label>
-                    <Input
-                      id="recurringEndDate"
-                      type="date"
-                      value={formData.recurringEndDate}
-                      onChange={(e) => setFormData({...formData, recurringEndDate: e.target.value})}
-                      className="bg-input border-border text-foreground mt-1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Sessions will not be created beyond this date (overrides session count)
-                    </p>
-                  </div>
-                  
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      <strong>Preview:</strong> This will create{' '}
-                      <span className="font-semibold">{formData.recurringCount} sessions</span>{' '}
-                      {formData.recurringType === 'weekly' ? 'every week' : 
-                       formData.recurringType === 'biweekly' ? 'every 2 weeks' : 'monthly'}
-                      {formData.recurringEndDate && (
-                        <> until {new Date(formData.recurringEndDate).toLocaleDateString()}</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         <div className="flex justify-end mt-6 space-x-4">
           <Link href="/admin/sessions">
