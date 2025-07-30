@@ -155,12 +155,12 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
 
   if (!isEligible) {
     return (
-      <div className="mt-3 p-3 bg-zinc-800 border border-zinc-700 rounded-lg">
+      <div className="mt-3 p-3 bg-muted border border-border rounded-lg">
         <div className="flex items-center space-x-2">
-          <Badge variant="secondary" className="text-zinc-400">
+          <Badge variant="secondary" className="text-muted-foreground">
             Age {playerAge}
           </Badge>
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-muted-foreground">
             Player portal access available at age 13+
           </span>
         </div>
@@ -169,7 +169,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
   }
 
   return (
-    <div className="mt-3 p-4 bg-zinc-800 border border-zinc-700 rounded-lg space-y-4">
+    <div className="mt-3 p-4 bg-muted border border-border rounded-lg space-y-4">
       <div className="flex items-center space-x-2 mb-3">
         <Badge className="bg-green-600">
           Age {playerAge} - Portal Eligible
@@ -184,7 +184,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
 
       {/* Portal Access Toggle */}
       <div className="flex justify-between items-center">
-        <Label htmlFor={`portal-${player.id}`} className="text-white text-sm">
+        <Label htmlFor={`portal-${player.id}`} className="text-foreground text-sm">
           Allow player to access portal
         </Label>
         <Switch
@@ -199,7 +199,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
 
       {/* Booking & Payment Toggle */}
       <div className="flex justify-between items-center">
-        <Label htmlFor={`booking-${player.id}`} className="text-white text-sm">
+        <Label htmlFor={`booking-${player.id}`} className="text-foreground text-sm">
           Allow player to book and pay for sessions
         </Label>
         <Switch
@@ -213,11 +213,11 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
       </div>
 
       {/* Invite Section */}
-      <div className="pt-2 border-t border-zinc-600">
-        <div className="text-sm text-zinc-400 mb-2">Send account invite:</div>
+      <div className="pt-2 border-t border-border">
+        <div className="text-sm text-muted-foreground mb-2">Send account invite:</div>
         
         {player.invitedAt && (
-          <div className="text-xs text-zinc-500 mb-2">
+          <div className="text-xs text-muted-foreground mb-2">
             Last invited {new Date(player.invitedAt).toLocaleDateString()} via {player.inviteSentVia}
           </div>
         )}
@@ -229,7 +229,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
             size="sm"
             onClick={handleEmailInvite}
             disabled={sendEmailInviteMutation.isPending}
-            className="border-zinc-600 text-zinc-400 hover:text-white"
+            className="border-border text-muted-foreground hover:text-foreground"
           >
             <Mail className="w-4 h-4 mr-1" />
             {player.email ? "Send Email" : "Email"}
@@ -237,9 +237,9 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
           
           {/* Email Dialog */}
           <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-            <DialogContent className="bg-zinc-900 border-zinc-700">
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="text-white">Send Email Invite</DialogTitle>
+                <DialogTitle className="text-foreground">Send Email Invite</DialogTitle>
               </DialogHeader>
               <Form {...emailForm}>
                 <form onSubmit={emailForm.handleSubmit((data) => sendEmailInviteMutation.mutate(data))} className="space-y-4">
@@ -248,13 +248,13 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white">Email Address</FormLabel>
+                        <FormLabel className="text-foreground">Email Address</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             type="email"
                             placeholder="player@example.com"
-                            className="bg-zinc-800 border-zinc-600 text-white"
+                            className="bg-input border-border text-foreground"
                           />
                         </FormControl>
                         <FormMessage />
@@ -273,7 +273,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
                       type="button"
                       variant="outline"
                       onClick={() => setIsEmailDialogOpen(false)}
-                      className="border-zinc-600 text-zinc-400 hover:text-white"
+                      className="border-border text-muted-foreground"
                     >
                       Cancel
                     </Button>
@@ -289,7 +289,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
             size="sm"
             onClick={handleSMSInvite}
             disabled={sendSMSInviteMutation.isPending}
-            className="border-zinc-600 text-zinc-400 hover:text-white"
+            className="border-border text-muted-foreground hover:text-foreground"
           >
             <MessageSquare className="w-4 h-4 mr-1" />
             {player.phoneNumber ? "Send SMS" : "SMS"}
@@ -297,9 +297,9 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
 
           {/* SMS Dialog */}
           <Dialog open={isSMSDialogOpen} onOpenChange={setIsSMSDialogOpen}>
-            <DialogContent className="bg-zinc-900 border-zinc-700">
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="text-white">Send SMS Invite</DialogTitle>
+                <DialogTitle className="text-foreground">Send SMS Invite</DialogTitle>
               </DialogHeader>
               <Form {...smsForm}>
                 <form onSubmit={smsForm.handleSubmit((data) => sendSMSInviteMutation.mutate(data))} className="space-y-4">
@@ -308,13 +308,13 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
                     name="phoneNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white">Phone Number</FormLabel>
+                        <FormLabel className="text-foreground">Phone Number</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             type="tel"
                             placeholder="+1 (555) 123-4567"
-                            className="bg-zinc-800 border-zinc-600 text-white"
+                            className="bg-input border-border text-foreground"
                           />
                         </FormControl>
                         <FormMessage />
@@ -333,7 +333,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
                       type="button"
                       variant="outline"
                       onClick={() => setIsSMSDialogOpen(false)}
-                      className="border-zinc-600 text-zinc-400 hover:text-white"
+                      className="border-border text-muted-foreground"
                     >
                       Cancel
                     </Button>
@@ -344,7 +344,7 @@ export default function PlayerPortalControls({ player }: PlayerPortalControlsPro
           </Dialog>
         </div>
         
-        <div className="text-xs text-amber-400 mt-2">
+        <div className="text-xs text-muted-foreground mt-2">
           {player.email || player.phoneNumber 
             ? "Click to send invite instantly, or edit player profile to update contact info" 
             : "Click Email or SMS to enter contact details and send invites"}
