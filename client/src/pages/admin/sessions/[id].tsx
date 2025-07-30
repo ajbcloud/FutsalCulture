@@ -80,9 +80,39 @@ export default function AdminSessionDetail() {
     }
   }, [params?.id, isNew]);
 
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!formData.title?.trim()) errors.push("Title is required");
+    if (!formData.location?.trim()) errors.push("Location is required");
+    if (!formData.startTime) errors.push("Start Time is required");
+    if (!formData.endTime) errors.push("End Time is required");
+    if (formData.ageGroups.length === 0) errors.push("At least one Age Group is required");
+    if (formData.genders.length === 0) errors.push("At least one Gender is required");
+    if (!formData.capacity || formData.capacity < 1) errors.push("Capacity must be at least 1");
+    
+    // Validate start time is before end time
+    if (formData.startTime && formData.endTime && new Date(formData.startTime) >= new Date(formData.endTime)) {
+      errors.push("Start Time must be before End Time");
+    }
+    
+    return errors;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Validate required fields
+      const validationErrors = validateForm();
+      if (validationErrors.length > 0) {
+        toast({ 
+          title: "Please fix the following errors:", 
+          description: validationErrors.join(", "),
+          variant: "destructive" 
+        });
+        setSaving(false);
+        return;
+      }
       // Prepare session data with proper type conversions
       const sessionData: any = {
         title: formData.title,
@@ -155,18 +185,19 @@ export default function AdminSessionDetail() {
       <div className="bg-card p-6 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="title" className="text-muted-foreground">Title</Label>
+            <Label htmlFor="title" className="text-muted-foreground">Title *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               className="bg-input border-border text-foreground"
               placeholder="Session title"
+              required
             />
           </div>
 
           <div>
-            <Label htmlFor="location" className="text-muted-foreground">Location</Label>
+            <Label htmlFor="location" className="text-muted-foreground">Location *</Label>
             <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
               <SelectTrigger className="bg-input border-border text-foreground">
                 <SelectValue placeholder="Select location" />
@@ -180,24 +211,26 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label htmlFor="startTime" className="text-muted-foreground">Start Time</Label>
+            <Label htmlFor="startTime" className="text-muted-foreground">Start Time *</Label>
             <Input
               id="startTime"
               type="datetime-local"
               value={formData.startTime}
               onChange={(e) => setFormData({...formData, startTime: e.target.value})}
               className="bg-input border-border text-foreground"
+              required
             />
           </div>
 
           <div>
-            <Label htmlFor="endTime" className="text-muted-foreground">End Time</Label>
+            <Label htmlFor="endTime" className="text-muted-foreground">End Time *</Label>
             <Input
               id="endTime"
               type="datetime-local"
               value={formData.endTime}
               onChange={(e) => setFormData({...formData, endTime: e.target.value})}
               className="bg-input border-border text-foreground"
+              required
             />
           </div>
 
@@ -287,7 +320,7 @@ export default function AdminSessionDetail() {
           )}
 
           <div>
-            <Label className="text-muted-foreground">Age Groups (Multi-Select)</Label>
+            <Label className="text-muted-foreground">Age Groups (Multi-Select) *</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {AGE_GROUPS.map(age => (
                 <label key={age} className="flex items-center space-x-2 text-foreground">
@@ -315,7 +348,7 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label className="text-muted-foreground">Genders (Multi-Select)</Label>
+            <Label className="text-muted-foreground">Genders (Multi-Select) *</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {['boys', 'girls'].map(gender => (
                 <label key={gender} className="flex items-center space-x-2 text-foreground">
@@ -343,7 +376,7 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label htmlFor="capacity" className="text-muted-foreground">Capacity</Label>
+            <Label htmlFor="capacity" className="text-muted-foreground">Capacity *</Label>
             <Input
               id="capacity"
               type="number"
@@ -352,6 +385,7 @@ export default function AdminSessionDetail() {
               className="bg-input border-border text-foreground"
               min="1"
               max="20"
+              required
             />
           </div>
         </div>
