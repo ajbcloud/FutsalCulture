@@ -158,14 +158,14 @@ export default function SessionCalendar({
             <div
               key={dateKey}
               className={`min-h-[70px] sm:min-h-[120px] border border-border rounded transition-colors flex flex-col ${
-                isToday ? 'bg-blue-900/20 border-blue-500' : 
+                isToday ? 'bg-primary/10 border-primary' : 
                 isPast ? 'bg-card/50' : 'bg-card'
               }`}
             >
               {/* Day Header - Clickable to open dialog */}
               <div 
                 className={`p-1 sm:p-2 pb-0 cursor-pointer hover:bg-muted/50 rounded-t ${
-                  isToday ? 'hover:bg-blue-900/30' : 
+                  isToday ? 'hover:bg-primary/20' : 
                   isPast ? 'hover:bg-muted/70' : 'hover:bg-muted'
                 }`}
                 onClick={() => {
@@ -174,7 +174,7 @@ export default function SessionCalendar({
                 }}
               >
                 <div className={`text-xs sm:text-sm font-medium ${
-                  isToday ? 'text-blue-400' : 
+                  isToday ? 'text-primary' : 
                   isPast ? 'text-muted-foreground/60' : 'text-foreground'
                 }`}>
                   {format(day, 'd')}
@@ -200,7 +200,7 @@ export default function SessionCalendar({
                   
                   const bookingOpen = isSessionToday && today >= bookingOpenTime;
                   
-                  let statusColor = 'bg-blue-700/20';
+                  let statusColor = 'bg-primary/20';
                   let statusText = session.status;
                   
                   // Override status based on real-time conditions
@@ -208,16 +208,16 @@ export default function SessionCalendar({
                     statusColor = 'bg-muted/20';
                     statusText = 'closed';
                   } else if (isSessionToday && session.status === 'full') {
-                    statusColor = 'bg-red-700/20';
+                    statusColor = 'bg-destructive/20';
                     statusText = 'full';
                   } else if (isSessionToday && bookingOpen && session.status !== 'full') {
-                    statusColor = 'bg-green-700/20 hover:bg-green-700/30';
+                    statusColor = 'bg-green-600/20 hover:bg-green-600/30';
                     statusText = 'open';
                   } else if (isSessionToday && !bookingOpen) {
-                    statusColor = 'bg-yellow-700/20';
+                    statusColor = 'bg-yellow-600/20';
                     statusText = 'upcoming';
                   } else if (isSessionFuture) {
-                    statusColor = 'bg-yellow-700/20';
+                    statusColor = 'bg-yellow-600/20';
                     statusText = 'upcoming';
                   }
                   
@@ -308,15 +308,15 @@ export default function SessionCalendar({
       {/* Legend - Mobile Responsive */}
       <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 sm:gap-4 mt-6 text-xs sm:text-sm">
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className="w-3 h-3 bg-green-700/20 border border-green-700 rounded"></div>
+          <div className="w-3 h-3 bg-green-600/20 border border-green-600 rounded"></div>
           <span className="text-muted-foreground">Open</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className="w-3 h-3 bg-yellow-700/20 border border-yellow-700 rounded"></div>
+          <div className="w-3 h-3 bg-yellow-600/20 border border-yellow-600 rounded"></div>
           <span className="text-muted-foreground">Upcoming</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className="w-3 h-3 bg-red-700/20 border border-red-700 rounded"></div>
+          <div className="w-3 h-3 bg-destructive/20 border border-destructive rounded"></div>
           <span className="text-muted-foreground">Full</span>
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2">
@@ -353,10 +353,10 @@ export default function SessionCalendar({
                   <Card 
                     key={session.id} 
                     className={`border-none cursor-pointer transition-colors ${
-                      session.status === 'open' ? 'bg-green-700/20 hover:bg-green-700/30' :
-                      session.status === 'full' ? 'bg-red-700/20 hover:bg-red-700/30' :
+                      session.status === 'open' ? 'bg-green-600/20 hover:bg-green-600/30' :
+                      session.status === 'full' ? 'bg-destructive/20 hover:bg-destructive/30' :
                       session.status === 'closed' ? 'bg-muted/20 hover:bg-muted/30' :
-                      'bg-blue-700/20 hover:bg-blue-700/30'
+                      'bg-primary/20 hover:bg-primary/30'
                     }`}
                     onClick={() => {
                       if (onSessionClick) {

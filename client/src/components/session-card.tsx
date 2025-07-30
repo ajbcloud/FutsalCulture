@@ -27,15 +27,15 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
       return <Badge variant="destructive">Full</Badge>;
     }
     if (fillPercentage >= 80) {
-      return <Badge className="bg-yellow-500">Filling Fast</Badge>;
+      return <Badge className="bg-yellow-600 text-yellow-950">Filling Fast</Badge>;
     }
-    return <Badge className="bg-green-500">Open</Badge>;
+    return <Badge className="bg-green-600 text-green-950">Open</Badge>;
   };
 
   const getProgressBarColor = () => {
-    if (fillPercentage >= 100) return "bg-red-500";
-    if (fillPercentage >= 80) return "bg-yellow-500";
-    return "bg-green-500";
+    if (fillPercentage >= 100) return "bg-destructive";
+    if (fillPercentage >= 80) return "bg-yellow-600";
+    return "bg-green-600";
   };
 
   const isBookingOpen = () => {

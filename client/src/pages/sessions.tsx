@@ -172,14 +172,14 @@ export default function Sessions() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
       <section className="py-8 sm:py-16">
@@ -187,8 +187,8 @@ export default function Sessions() {
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start sm:gap-0">
               <div>
-                <h1 className="text-2xl font-bold text-white mb-2 sm:text-3xl">Training Sessions</h1>
-                <p className="text-zinc-400 text-sm sm:text-base">Find the perfect session for your young athlete</p>
+                <h1 className="text-2xl font-bold text-foreground mb-2 sm:text-3xl">Training Sessions</h1>
+                <p className="text-muted-foreground text-sm sm:text-base">Find the perfect session for your young athlete</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-3 sm:gap-0">
                 <MultiSelectFilter
@@ -217,7 +217,7 @@ export default function Sessions() {
                 
                 <Button 
                   onClick={applyFilters}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2"
                 >
                   Apply Filters
                 </Button>
@@ -226,15 +226,15 @@ export default function Sessions() {
           </div>
 
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-zinc-900">
-              <TabsTrigger value="list" className="data-[state=active]:bg-zinc-700">List View</TabsTrigger>
-              <TabsTrigger value="calendar" className="data-[state=active]:bg-zinc-700">Calendar View</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-muted">
+              <TabsTrigger value="list" className="data-[state=active]:bg-background">List View</TabsTrigger>
+              <TabsTrigger value="calendar" className="data-[state=active]:bg-background">Calendar View</TabsTrigger>
             </TabsList>
             
             <TabsContent value="list" className="mt-6">
               {filteredSessions.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">No sessions found matching your criteria.</p>
+                  <p className="text-muted-foreground text-lg">No sessions found matching your criteria.</p>
                   <Button 
                     onClick={() => {
                       setSelectedAges([]);
