@@ -190,7 +190,7 @@ export default function SuperAdminAnalytics() {
         {/* Filters */}
         <Card>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Tenant Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tenants</label>
@@ -200,13 +200,13 @@ export default function SuperAdminAnalytics() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={tenantDropdownOpen}
-                      className="w-full justify-between text-left font-normal"
+                      className="w-full justify-between text-left font-normal h-10"
                     >
                       <span className="truncate">{getTenantDisplayText()}</span>
                       <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                     <div className="p-2">
                       <div className="relative">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -267,11 +267,13 @@ export default function SuperAdminAnalytics() {
                 <div className="flex space-x-2">
                   <Input
                     type="date"
+                    className="h-10"
                     value={dateRange?.from?.toISOString().split('T')[0] || ''}
                     onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
                   />
                   <Input
                     type="date"
+                    className="h-10"
                     value={dateRange?.to?.toISOString().split('T')[0] || ''}
                     onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
                   />
@@ -282,7 +284,7 @@ export default function SuperAdminAnalytics() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Age Group</label>
                 <Select value={ageGroupFilter} onValueChange={setAgeGroupFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -301,7 +303,7 @@ export default function SuperAdminAnalytics() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Gender</label>
                 <Select value={genderFilter} onValueChange={setGenderFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
