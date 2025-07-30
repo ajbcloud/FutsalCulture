@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   DollarSign, 
   Users, 
@@ -15,7 +16,10 @@ import {
   TrendingDown, 
   Info,
   Download,
-  Filter
+  Filter,
+  ChevronDown,
+  Check,
+  Search
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { addDays, subDays, format } from "date-fns";
@@ -66,6 +70,8 @@ export default function SuperAdminAnalytics() {
   });
   const [ageGroupFilter, setAgeGroupFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [tenantSearchTerm, setTenantSearchTerm] = useState<string>("");
+  const [tenantDropdownOpen, setTenantDropdownOpen] = useState<boolean>(false);
 
   const { data: tenants = [] } = useQuery({
     queryKey: ['/api/super-admin/tenants'],
@@ -110,6 +116,24 @@ export default function SuperAdminAnalytics() {
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setAgeGroupFilter("all");
     setGenderFilter("all");
+    setTenantSearchTerm("");
+  };
+
+  // Filter tenants based on search term
+  const filteredTenants = tenants.filter((tenant: Tenant) =>
+    tenant.name.toLowerCase().includes(tenantSearchTerm.toLowerCase())
+  );
+
+  // Get display text for tenant dropdown
+  const getTenantDisplayText = () => {
+    if (selectedTenants.length === 0) {
+      return "All Tenants";
+    } else if (selectedTenants.length === 1) {
+      const tenant = tenants.find((t: Tenant) => t.id === selectedTenants[0]);
+      return tenant?.name || "1 tenant selected";
+    } else {
+      return `${selectedTenants.length} tenants selected`;
+    }
   };
 
   if (isLoading) {
@@ -170,19 +194,71 @@ export default function SuperAdminAnalytics() {
               {/* Tenant Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tenants</label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {tenants.map((tenant: Tenant) => (
-                    <label key={tenant.id} className="flex items-center space-x-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedTenants.includes(tenant.id)}
-                        onChange={() => handleTenantToggle(tenant.id)}
-                        className="rounded"
-                      />
-                      <span>{tenant.name}</span>
-                    </label>
-                  ))}
-                </div>
+                <Popover open={tenantDropdownOpen} onOpenChange={setTenantDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={tenantDropdownOpen}
+                      className="w-full justify-between text-left font-normal"
+                    >
+                      <span className="truncate">{getTenantDisplayText()}</span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <div className="p-2">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search tenants..."
+                          className="pl-8"
+                          value={tenantSearchTerm}
+                          onChange={(e) => setTenantSearchTerm(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredTenants.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground text-center">
+                          No tenants found
+                        </div>
+                      ) : (
+                        <div className="p-1">
+                          {filteredTenants.map((tenant: Tenant) => (
+                            <div
+                              key={tenant.id}
+                              className="flex items-center space-x-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => handleTenantToggle(tenant.id)}
+                            >
+                              <div className="flex h-4 w-4 items-center justify-center border rounded">
+                                {selectedTenants.includes(tenant.id) && (
+                                  <Check className="h-3 w-3" />
+                                )}
+                              </div>
+                              <span className="flex-1">{tenant.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedTenants.length > 0 && (
+                      <div className="border-t p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedTenants([]);
+                            setTenantSearchTerm("");
+                          }}
+                        >
+                          Clear Selection
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Date Range */}
