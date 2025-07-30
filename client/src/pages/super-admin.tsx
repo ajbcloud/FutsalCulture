@@ -25,7 +25,6 @@ import {
   Moon, 
   LogOut, 
   User, 
-  Shield, 
   UserCheck,
   BarChart3,
   Calendar,
@@ -36,6 +35,7 @@ import {
   Menu,
   X
 } from "lucide-react";
+import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
 export default function SuperAdminPage() {
   const { user } = useAuth();
@@ -118,9 +118,11 @@ export default function SuperAdminPage() {
           {/* Fixed header */}
           <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
             <div className="flex flex-col items-center space-y-3 flex-1 w-full max-w-full">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src={playHQLogo} 
+                alt="PlayHQ Logo" 
+                className="w-16 h-16 object-contain"
+              />
               <h1 className="text-xl font-bold text-foreground text-center w-full">Platform Super Admin</h1>
             </div>
             <Button
