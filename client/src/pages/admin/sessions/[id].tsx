@@ -244,11 +244,7 @@ export default function AdminSessionDetail() {
                     onCheckedChange={(checked) => setFormData({...formData, isRecurring: checked})}
                   />
                   <Label className="text-foreground flex items-center">
-                    {formData.isRecurring ? (
-                      <><Repeat className="w-4 h-4 mr-2" />Create recurring sessions</>
-                    ) : (
-                      <><Calendar className="w-4 h-4 mr-2" />Single session only</>
-                    )}
+                    Make Recurring Session
                   </Label>
                 </div>
               </div>
