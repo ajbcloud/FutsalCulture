@@ -116,14 +116,14 @@ export default function SuperAdminPage() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
           {/* Fixed header */}
-          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-            <div className="flex flex-col items-center space-y-3 flex-1 w-full max-w-full">
+          <div className="flex items-center justify-between p-3 md:p-4 border-b border-border flex-shrink-0">
+            <div className="flex flex-col items-center space-y-2 flex-1 w-full max-w-full">
               <img 
                 src={playHQLogo} 
                 alt="PlayHQ Logo" 
-                className="w-16 h-16 object-contain"
+                className="w-10 h-7 md:w-12 md:h-8 object-contain"
               />
-              <h1 className="text-xl font-bold text-foreground text-center w-full">Platform Super Admin</h1>
+              <h1 className="text-base md:text-lg font-bold text-foreground text-center w-full leading-tight">Platform Super Admin</h1>
             </div>
             <Button
               variant="ghost"
