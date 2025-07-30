@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Unlock } from 'lucide-react';
 import { Link } from 'wouter';
+import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 
@@ -36,6 +37,8 @@ export default function AdminSessionDetail() {
     capacity: 12,
     bookingOpenHour: 8,
     bookingOpenMinute: 0,
+    hasAccessCode: false,
+    accessCode: '',
   });
 
   useEffect(() => {
@@ -58,6 +61,8 @@ export default function AdminSessionDetail() {
           capacity: data.capacity || 12,
           bookingOpenHour: data.bookingOpenHour ?? 8,
           bookingOpenMinute: data.bookingOpenMinute ?? 0,
+          hasAccessCode: data.hasAccessCode || false,
+          accessCode: data.accessCode || '',
         });
         setLoading(false);
       }).catch(err => {
@@ -327,6 +332,78 @@ export default function AdminSessionDetail() {
               </span>
               {' '}on the day of the session.
             </p>
+          </div>
+        </div>
+
+        {/* Access Code Section */}
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+            <Key className="w-5 h-5 mr-2" />
+            Access Code Settings
+          </h3>
+          <div className="bg-muted/50 rounded-lg p-4 mb-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              Enable access code protection to require parents to enter a code before booking this session.
+              This is useful for private sessions or controlling access to specific sessions.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Switch
+                checked={formData.hasAccessCode}
+                onCheckedChange={(checked) => setFormData({...formData, hasAccessCode: checked})}
+              />
+              <Label className="text-foreground flex items-center">
+                {formData.hasAccessCode ? (
+                  <><Lock className="w-4 h-4 mr-2" />Require access code for booking</>
+                ) : (
+                  <><Unlock className="w-4 h-4 mr-2" />Session is open for booking</>
+                )}
+              </Label>
+            </div>
+
+            {formData.hasAccessCode && (
+              <div className="space-y-3 pl-6">
+                <div>
+                  <Label htmlFor="accessCode" className="text-muted-foreground">Access Code</Label>
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      id="accessCode"
+                      value={formData.accessCode}
+                      onChange={(e) => setFormData({...formData, accessCode: e.target.value.toUpperCase()})}
+                      className="bg-input border-border text-foreground font-mono"
+                      placeholder="Enter access code"
+                      maxLength={8}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                        setFormData({...formData, accessCode: code});
+                      }}
+                    >
+                      Generate
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Parents will need this code to book spots in this session
+                  </p>
+                </div>
+                
+                {formData.accessCode && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <strong>Access Code:</strong>{' '}
+                      <code className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded font-mono">
+                        {formData.accessCode}
+                      </code>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
