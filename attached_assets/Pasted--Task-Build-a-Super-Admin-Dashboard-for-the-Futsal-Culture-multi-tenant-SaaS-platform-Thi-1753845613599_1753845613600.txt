@@ -1,0 +1,58 @@
+**Task:** Build a **Super Admin Dashboard** for the *Futsal Culture* multi-tenant SaaS platform. This interface will be used by the platform owner to manage all tenant (club) accounts, users, and system configurations. Focus on real data integration (fetching from the database) and a clean, logical UI/UX for quick navigation.
+
+**Key Requirements:**
+
+- **Dashboard Page:** Create a dashboard showing high-level metrics across all tenants:
+  - Total number of tenants, total users, active users, total matches or events, etc.
+  - Charts for usage trends (e.g., user sign-ups or matches over time) and a section for recent alerts.
+  - Ensure these figures update dynamically by querying the database (e.g., count of users table for total users, etc.).
+  - Include alerts/notifications panel for system health (e.g., show if any errors or important events like failed payments).
+
+- **Tenants Management:** Implement a section to list and manage all tenant organizations:
+  - **Tenant List View:** Table of tenants with columns: Name, Plan, Status (active/suspended), #Users, Last Active, etc. Provide search and filter functionality.
+  - Each row has actions: “Impersonate Login” (logs into that tenant’s admin portal), “Disable/Enable Tenant”, and “Edit Tenant”.
+  - **Tenant Detail View:** When selecting a tenant, show their details and sub-sections:
+    - Overview tab with tenant profile info and stats (usage metrics specific to this tenant).
+    - Users tab listing users of that tenant (with ability to reset password or disable individual user accounts).
+    - Settings tab to adjust that tenant’s settings (plan, feature toggles specific to this tenant).
+  - These views must pull real data (e.g., list tenants from `tenants` table, list tenant’s users from `users` table filtering by tenant_id, etc.). Actions like disable should update the database (e.g., set a `disabled` flag and propagate to related data).
+
+- **User Management:** Provide a global user management capability:
+  - A searchable list of all users across all tenants (with tenant affiliation in each entry). This might be a simple search bar that finds users by email or name.
+  - Ability to view a user’s profile (which tenant they belong to, their role, last login, etc.) and perform actions like disable account.
+  - Ensure queries fetch across tenants (e.g., do not scope by tenant in the super admin context).
+
+- **Advanced Settings:** Create pages for global configuration:
+  - **Plans & Billing:** Form or interface to modify subscription plans (name, price, limits) and a list of current subscriptions. (Actual billing integration can be links or simplified since Stripe manages details, but allow adjusting a tenant’s plan in the DB).
+  - **Feature Toggles:** UI to enable/disable features globally or per plan. For example, checkboxes or toggles for modules (e.g., “Enable Tournament Module for: [X] All tenants / [ ] Only Premium plan”).
+  - **Content Management:** A simple text editor for terms and conditions, privacy policy, etc., which updates the corresponding entries in the database or content storage (so tenants’ interfaces show the updated text).
+  - **Integrations:** Fields to update API keys or settings for third-party services (e.g., email service API key, analytics tracking ID). Store these in a settings table and use them in the application config.
+
+- **Analytics & Reports:** Implement an analytics page with charts and tables:
+  - Use a chart library to display data like user signups over time (aggregated across all tenants) and tenant growth.
+  - Provide a table or list of key metrics (e.g., top 5 tenants by activity, number of matches played this month, etc.).
+  - Include an export functionality (button to download CSV) for certain datasets (e.g., full tenant list or user list).
+  - These should use real data queries, possibly with aggregation SQL (for example, counting matches group by month, or using a view that summarizes usage).
+
+- **System Health & Maintenance:** Include a section for system monitoring:
+  - Show status of core services (can be static indicators or based on a heartbeat table).
+  - Display recent error logs (query from an `errors` or `logs` table; or integrate with an existing logging system).
+  - Show backup status (last backup timestamp from a `backups` table or log).
+  - Provide maintenance actions like “Run Backup Now” or “Clear Cache” (if applicable). These can call backend endpoints to perform these tasks and report success/failure.
+
+- **UX and Navigation:**
+  - Use a sidebar navigation with clear sections: **Dashboard**, **Tenants**, **Users**, **Analytics**, **Settings**, **System**.
+  - Ensure it’s responsive and clean – use consistent styling (possibly match the existing Futsal Culture admin theme).
+  - Include a top bar with a global search (for tenants/users) and a user menu (for super admin’s own profile/logout).
+  - Add confirmation modals for dangerous actions (e.g., disabling a tenant or deleting data).
+  - Keep the design minimalistic but informative, emphasizing important data points (e.g., use badges or color highlights for statuses and alerts).
+
+- **Data Integration:** Use actual database queries or API calls for all data:
+  - (For example, if using Node.js with an ORM, write queries to fetch counts and lists as described; if using Python Flask/Django, use ORM queries accordingly.)
+  - Avoid using dummy data. Instead, connect to the development database where possible to test the UI with real-like data.
+  - Implement pagination or lazy loading for large tables (e.g., if there are thousands of users, load in pages).
+  - Optimize any heavy queries (use indexes or precomputed fields for things like “last active” or counts per tenant).
+
+**Tech Notes:** Use frameworks/components suitable for admin dashboards (e.g., React with antd or Material-UI for ready-made tables, modals, etc., or a Python Flask with Jinja templates if not using a SPA). The emphasis is on functionality and data accuracy. Ensure proper authentication checks for super admin access on all endpoints.
+
+**Goal:** The finished Super Admin Panel should let the owner oversee everything at a glance, drill into specifics as needed, and manage the platform’s operations without directly editing the database or code. It should reflect real-time data and incorporate all advanced features present in individual tenant admin pages, but for the platform as a whole.

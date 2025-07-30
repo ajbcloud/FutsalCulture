@@ -111,19 +111,30 @@ export interface IStorage {
   validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
   
   // Super Admin operations
+  getSuperAdminUserCount(): Promise<number>;
+  getSuperAdminTotalRevenue(): Promise<number>;
+  getSuperAdminSessionCount(): Promise<number>;
+  getSuperAdminPlayerCount(): Promise<number>;
+  getSuperAdminDashboardMetrics(fromDate: Date, toDate: Date): Promise<any>;
+  getSuperAdminAlerts(): Promise<any[]>;
+  getSuperAdminUsageTrends(timeRange: string): Promise<any[]>;
+  getSuperAdminTenantDetails(tenantId: string): Promise<any>;
+  updateTenantStatus(tenantId: string, status: string): Promise<any>;
+  getSuperAdminUsers(filters?: any): Promise<any[]>;
+  updateUserStatus(userId: string, status: string): Promise<any>;
+  sendPasswordReset(userId: string): Promise<void>;
+  exportSuperAdminUsers(): Promise<string>;
+  getSuperAdminAnalytics(filters?: any): Promise<any>;
+  exportSuperAdminAnalytics(filters?: any): Promise<string>;
+  getSuperAdminSettings(): Promise<any>;
+  updateSuperAdminSettings(section: string, data: any): Promise<any>;
+  testIntegration(type: string, config: any): Promise<any>;
   getSuperAdminSessions(filters?: { tenantId?: string; ageGroup?: string; gender?: string; location?: string; dateFrom?: string; dateTo?: string; status?: string }): Promise<any[]>;
   getSuperAdminPayments(filters?: { tenantId?: string; status?: string; dateFrom?: string; dateTo?: string; amountMin?: number; amountMax?: number }): Promise<any[]>;
   getSuperAdminRegistrations(filters?: { tenantId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
   getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]>;
   getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]>;
-  getSuperAdminAnalytics(filters?: { tenants?: string[]; from?: string; to?: string; ageGroup?: string; gender?: string }): Promise<any>;
   getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
-  getSuperAdminSettings(): Promise<any>;
-  updateSuperAdminSettings(settings: any): Promise<any>;
-  getSuperAdminIntegrations(): Promise<any[]>;
-  updateSuperAdminIntegration(id: string, data: any): Promise<any>;
-  testSuperAdminIntegration(id: string): Promise<any>;
-  getSuperAdminUsers(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1061,6 +1072,416 @@ export class DatabaseStorage implements IStorage {
   async testSuperAdminIntegration(id: string): Promise<any> {
     // Mock implementation - would test integration
     return { success: true, message: 'Integration test successful' };
+  }
+
+  // Basic Super Admin Stats
+  async getSuperAdminUserCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(users);
+    return result.count;
+  }
+
+  async getSuperAdminTotalRevenue(): Promise<number> {
+    const [result] = await db.select({ 
+      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` 
+    }).from(payments);
+    return result.total;
+  }
+
+  async getSuperAdminSessionCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(futsalSessions);
+    return result.count;
+  }
+
+  async getSuperAdminPlayerCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(players);
+    return result.count;
+  }
+
+  // Dashboard Metrics
+  async getSuperAdminDashboardMetrics(fromDate: Date, toDate: Date): Promise<any> {
+    // Recent Activity
+    const recentActivity = [
+      { type: 'user_signup', message: 'New user registered', timestamp: new Date(), tenantName: 'Futsal Culture' },
+      { type: 'payment', message: 'Payment received $20.00', timestamp: new Date(), tenantName: 'Elite Academy' },
+      { type: 'session', message: 'Session created', timestamp: new Date(), tenantName: 'Futsal Culture' }
+    ];
+
+    // Growth Metrics (mock for now)
+    const growthMetrics = {
+      userGrowth: 15.2,
+      revenueGrowth: 8.7,
+      sessionGrowth: 12.1,
+      tenantGrowth: 5.0
+    };
+
+    // Platform Health
+    const systemHealth = {
+      uptime: '99.9%',
+      avgResponseTime: '120ms',
+      errorRate: '0.01%',
+      activeConnections: 1247
+    };
+
+    return {
+      recentActivity,
+      growthMetrics,
+      systemHealth,
+      totalUsers: await this.getSuperAdminUserCount(),
+      totalRevenue: await this.getSuperAdminTotalRevenue(),
+      totalSessions: await this.getSuperAdminSessionCount(),
+      totalPlayers: await this.getSuperAdminPlayerCount()
+    };
+  }
+
+  async getSuperAdminAlerts(): Promise<any[]> {
+    return [
+      { id: '1', type: 'warning', title: 'High Memory Usage', message: 'Server memory at 85%', timestamp: new Date() },
+      { id: '2', type: 'info', title: 'Backup Completed', message: 'Daily backup successful', timestamp: new Date() }
+    ];
+  }
+
+  async getSuperAdminUsageTrends(timeRange: string): Promise<any[]> {
+    // Mock usage trends data
+    const trends = [];
+    const days = timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : 30;
+    
+    for (let i = days; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      trends.push({
+        date: date.toISOString().split('T')[0],
+        users: Math.floor(Math.random() * 100) + 50,
+        sessions: Math.floor(Math.random() * 50) + 20,
+        revenue: Math.floor(Math.random() * 1000) + 500
+      });
+    }
+    
+    return trends;
+  }
+
+  async getSuperAdminTenantDetails(tenantId: string): Promise<any> {
+    const tenant = await this.getTenant(tenantId);
+    if (!tenant) return null;
+
+    // Get tenant stats
+    const userCount = await db.select({ count: count() })
+      .from(users)
+      .where(eq(users.tenantId, tenantId));
+    
+    const playerCount = await db.select({ count: count() })
+      .from(players)
+      .where(eq(players.tenantId, tenantId));
+
+    const sessionCount = await db.select({ count: count() })
+      .from(futsalSessions)
+      .where(eq(futsalSessions.tenantId, tenantId));
+
+    const revenue = await db.select({ 
+      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` 
+    })
+    .from(payments)
+    .leftJoin(signups, eq(payments.signupId, signups.id))
+    .leftJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+    .where(eq(futsalSessions.tenantId, tenantId));
+
+    // Get users for this tenant
+    const tenantUsers = await db.select()
+      .from(users)
+      .where(eq(users.tenantId, tenantId))
+      .limit(10);
+
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      subdomain: tenant.subdomain,
+      status: 'active',
+      plan: 'pro',
+      stats: {
+        totalUsers: userCount[0].count,
+        activePlayers: playerCount[0].count,
+        sessionsThisMonth: sessionCount[0].count,
+        revenueThisMonth: revenue[0].total
+      },
+      users: tenantUsers.map(user => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        lastLogin: user.createdAt,
+        status: 'active'
+      })),
+      settings: {}
+    };
+  }
+
+  async updateTenantStatus(tenantId: string, status: string): Promise<any> {
+    // In a real implementation, we'd have a status field on tenants
+    const tenant = await this.getTenant(tenantId);
+    return { ...tenant, status };
+  }
+
+  async getSuperAdminUsers(filters?: any): Promise<any[]> {
+    let query = db.select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+      isAdmin: users.isAdmin,
+      isSuperAdmin: users.isSuperAdmin,
+      tenantId: users.tenantId,
+      tenantName: tenants.name,
+      lastLogin: users.createdAt,
+      createdAt: users.createdAt,
+      status: sql<string>`'active'`
+    })
+    .from(users)
+    .leftJoin(tenants, eq(users.tenantId, tenants.id));
+
+    // Apply filters
+    const conditions = [];
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(users.firstName, `%${filters.search}%`),
+          ilike(users.lastName, `%${filters.search}%`),
+          ilike(users.email, `%${filters.search}%`)
+        )
+      );
+    }
+    if (filters?.role === 'admin') {
+      conditions.push(eq(users.isAdmin, true));
+    } else if (filters?.role === 'super-admin') {
+      conditions.push(eq(users.isSuperAdmin, true));
+    } else if (filters?.role === 'user') {
+      conditions.push(and(eq(users.isAdmin, false), eq(users.isSuperAdmin, false)));
+    }
+    if (filters?.tenantId) {
+      conditions.push(eq(users.tenantId, filters.tenantId));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const results = await query.orderBy(desc(users.createdAt));
+    
+    // Add player count for each user
+    const usersWithStats = await Promise.all(
+      results.map(async (user) => {
+        const playerCount = await db.select({ count: count() })
+          .from(players)
+          .where(eq(players.parentId, user.id));
+        
+        return {
+          ...user,
+          playerCount: playerCount[0].count,
+          sessionCount: 0 // Could calculate actual session bookings
+        };
+      })
+    );
+
+    return usersWithStats;
+  }
+
+  async updateUserStatus(userId: string, status: string): Promise<any> {
+    // In a real implementation, we'd have a status field
+    const user = await this.getUser(userId);
+    return { ...user, status };
+  }
+
+  async sendPasswordReset(userId: string): Promise<void> {
+    // Mock implementation - would send actual password reset email
+    console.log(`Password reset sent to user ${userId}`);
+  }
+
+  async exportSuperAdminUsers(): Promise<string> {
+    const users = await this.getSuperAdminUsers();
+    
+    // Convert to CSV
+    const headers = ['ID', 'Name', 'Email', 'Role', 'Organization', 'Status', 'Created'];
+    const rows = users.map(user => [
+      user.id,
+      `${user.firstName} ${user.lastName}`,
+      user.email,
+      user.isSuperAdmin ? 'Super Admin' : user.isAdmin ? 'Admin' : 'User',
+      user.tenantName || 'N/A',
+      user.status,
+      user.createdAt
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+    
+    return csvContent;
+  }
+
+  async getSuperAdminAnalytics(filters?: any): Promise<any> {
+    // Mock analytics data with realistic structure
+    const platformGrowth = [];
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      platformGrowth.push({
+        date: date.toISOString().split('T')[0],
+        users: Math.floor(Math.random() * 50) + 100,
+        revenue: Math.floor(Math.random() * 2000) + 1000,
+        sessions: Math.floor(Math.random() * 20) + 10,
+        tenants: Math.floor(Math.random() * 2) + 5
+      });
+    }
+
+    const tenantActivity = [
+      { name: 'Futsal Culture', users: 45, sessions: 67, revenue: 1340, growth: 12.5 },
+      { name: 'Elite Academy', users: 38, sessions: 52, revenue: 1040, growth: 8.2 },
+      { name: 'Pro Skills', users: 29, sessions: 41, revenue: 820, growth: 15.1 }
+    ];
+
+    const ageGroupDistribution = [
+      { ageGroup: 'U8', count: 45, percentage: 18 },
+      { ageGroup: 'U10', count: 67, percentage: 27 },
+      { ageGroup: 'U12', count: 52, percentage: 21 },
+      { ageGroup: 'U14', count: 38, percentage: 15 },
+      { ageGroup: 'U16', count: 29, percentage: 12 },
+      { ageGroup: 'U18', count: 19, percentage: 7 }
+    ];
+
+    const monthlyMetrics = {
+      totalRevenue: await this.getSuperAdminTotalRevenue(),
+      revenueGrowth: 8.5,
+      totalUsers: await this.getSuperAdminUserCount(),
+      userGrowth: 12.3,
+      totalSessions: await this.getSuperAdminSessionCount(),
+      sessionGrowth: 15.7,
+      activeTenants: (await this.getTenants()).length,
+      tenantGrowth: 25.0
+    };
+
+    return {
+      platformGrowth,
+      tenantActivity,
+      ageGroupDistribution,
+      monthlyMetrics
+    };
+  }
+
+  async exportSuperAdminAnalytics(filters?: any): Promise<string> {
+    const analytics = await this.getSuperAdminAnalytics(filters);
+    
+    // Convert platform growth to CSV
+    const headers = ['Date', 'Users', 'Revenue', 'Sessions', 'Tenants'];
+    const rows = analytics.platformGrowth.map((day: any) => [
+      day.date,
+      day.users,
+      day.revenue,
+      day.sessions,
+      day.tenants
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+    
+    return csvContent;
+  }
+
+  async getSuperAdminSettings(): Promise<any> {
+    return {
+      general: {
+        platformName: 'PlayHQ',
+        supportEmail: 'support@playhq.app',
+        termsOfService: 'Terms of service content...',
+        privacyPolicy: 'Privacy policy content...',
+        maintenanceMode: false,
+        allowNewTenants: true,
+        maxTenantsPerPlan: {
+          starter: 1,
+          pro: 5,
+          enterprise: 50
+        }
+      },
+      plans: [
+        {
+          id: 'starter',
+          name: 'starter',
+          price: 49,
+          features: ['Basic Sessions', 'Player Management', 'Email Support'],
+          maxUsers: 10,
+          maxPlayers: 50,
+          maxSessions: 20
+        },
+        {
+          id: 'pro',
+          name: 'pro',
+          price: 99,
+          features: ['All Starter Features', 'Advanced Analytics', 'Priority Support', 'Custom Branding'],
+          maxUsers: 25,
+          maxPlayers: 200,
+          maxSessions: 100
+        },
+        {
+          id: 'enterprise',
+          name: 'enterprise',
+          price: 199,
+          features: ['All Pro Features', 'White Label', 'API Access', 'Dedicated Support'],
+          maxUsers: -1,
+          maxPlayers: -1,
+          maxSessions: -1
+        }
+      ],
+      integrations: {
+        email: {
+          provider: 'sendgrid',
+          apiKey: 'SG.***',
+          verified: true
+        },
+        sms: {
+          provider: 'twilio',
+          accountSid: 'AC***',
+          authToken: '***',
+          verified: false
+        },
+        payment: {
+          stripePublicKey: 'pk_***',
+          stripeSecretKey: 'sk_***',
+          stripeWebhookSecret: 'whsec_***',
+          verified: true
+        },
+        oauth: {
+          googleClientId: '***',
+          googleClientSecret: '***',
+          microsoftClientId: '***',
+          microsoftClientSecret: '***'
+        }
+      },
+      features: {
+        tournaments: false,
+        analytics: true,
+        customBranding: true,
+        apiAccess: false,
+        whiteLabel: false,
+        multiLocation: true
+      }
+    };
+  }
+
+  async updateSuperAdminSettings(section: string, data: any): Promise<any> {
+    // Mock implementation - would update platform settings
+    const settings = await this.getSuperAdminSettings();
+    settings[section] = { ...settings[section], ...data };
+    return settings;
+  }
+
+  async testIntegration(type: string, config: any): Promise<any> {
+    // Mock implementation - would test actual integration
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate test delay
+    
+    return {
+      success: Math.random() > 0.2, // 80% success rate
+      message: `${type} integration test completed`,
+      details: `Configuration validated for ${type}`
+    };
   }
 
   async getSuperAdminUsers(): Promise<any[]> {

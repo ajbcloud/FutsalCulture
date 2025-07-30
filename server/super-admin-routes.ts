@@ -116,19 +116,225 @@ export function setupSuperAdminRoutes(app: Express) {
     try {
       const tenants = await storage.getTenants();
       
-      // For now, return basic stats
-      // In the future, you could aggregate stats across all tenants
+      // Aggregate stats across all tenants
       const stats = {
         totalTenants: tenants.length,
         activeTenants: tenants.length, // All tenants are active for now
-        totalUsers: 0, // Would need to aggregate across tenants
-        totalRevenue: 0, // Would need to aggregate across tenants
+        totalUsers: await storage.getSuperAdminUserCount(),
+        totalRevenue: await storage.getSuperAdminTotalRevenue(),
+        totalSessions: await storage.getSuperAdminSessionCount(),
+        totalPlayers: await storage.getSuperAdminPlayerCount()
       };
 
       res.json(stats);
     } catch (error) {
       console.error("Error fetching platform stats:", error);
       res.status(500).json({ message: "Failed to fetch platform stats" });
+    }
+  });
+
+  // Super Admin Dashboard Metrics
+  app.get('/api/super-admin/dashboard-metrics', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { timeRange = '30d' } = req.query;
+      
+      // Calculate date boundaries
+      const now = new Date();
+      let fromDate: Date;
+      
+      switch (timeRange) {
+        case '7d':
+          fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          fromDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default: // 30d
+          fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+
+      const metrics = await storage.getSuperAdminDashboardMetrics(fromDate, now);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard metrics" });
+    }
+  });
+
+  // System Alerts
+  app.get('/api/super-admin/alerts', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const alerts = await storage.getSuperAdminAlerts();
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // Usage Trends
+  app.get('/api/super-admin/usage-trends', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { timeRange = '30d' } = req.query;
+      const trends = await storage.getSuperAdminUsageTrends(timeRange as string);
+      res.json(trends);
+    } catch (error) {
+      console.error("Error fetching usage trends:", error);
+      res.status(500).json({ message: "Failed to fetch usage trends" });
+    }
+  });
+
+  // Tenant Details
+  app.get('/api/super-admin/tenants/:id/details', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const tenantDetails = await storage.getSuperAdminTenantDetails(req.params.id);
+      if (!tenantDetails) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      res.json(tenantDetails);
+    } catch (error) {
+      console.error("Error fetching tenant details:", error);
+      res.status(500).json({ message: "Failed to fetch tenant details" });
+    }
+  });
+
+  // Update Tenant Status
+  app.patch('/api/super-admin/tenants/:id/status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const tenant = await storage.updateTenantStatus(req.params.id, status);
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error updating tenant status:", error);
+      res.status(500).json({ message: "Failed to update tenant status" });
+    }
+  });
+
+  // Global User Management
+  app.get('/api/super-admin/users', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { search, role, status, tenant } = req.query;
+      const users = await storage.getSuperAdminUsers({
+        search: search as string,
+        role: role as string,
+        status: status as string,
+        tenantId: tenant as string
+      });
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching super admin users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Update User Status
+  app.patch('/api/super-admin/users/:id/status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const user = await storage.updateUserStatus(req.params.id, status);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  // Reset User Password
+  app.post('/api/super-admin/users/:id/reset-password', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      await storage.sendPasswordReset(req.params.id);
+      res.json({ message: "Password reset email sent" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Export Users
+  app.get('/api/super-admin/users/export', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const csvData = await storage.exportSuperAdminUsers();
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=users-export.csv');
+      res.send(csvData);
+    } catch (error) {
+      console.error("Error exporting users:", error);
+      res.status(500).json({ message: "Failed to export users" });
+    }
+  });
+
+  // Analytics Data
+  app.get('/api/super-admin/analytics', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { from, to, tenant, ageGroup, gender } = req.query;
+      const analytics = await storage.getSuperAdminAnalytics({
+        from: from as string,
+        to: to as string,
+        tenantId: tenant as string,
+        ageGroup: ageGroup as string,
+        gender: gender as string
+      });
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Export Analytics
+  app.get('/api/super-admin/analytics/export', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { from, to, tenant } = req.query;
+      const csvData = await storage.exportSuperAdminAnalytics({
+        from: from as string,
+        to: to as string,
+        tenantId: tenant as string
+      });
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=analytics-export.csv');
+      res.send(csvData);
+    } catch (error) {
+      console.error("Error exporting analytics:", error);
+      res.status(500).json({ message: "Failed to export analytics" });
+    }
+  });
+
+  // Platform Settings
+  app.get('/api/super-admin/settings', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getSuperAdminSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  // Update Settings Section
+  app.put('/api/super-admin/settings/:section', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const section = req.params.section;
+      const data = req.body;
+      const settings = await storage.updateSuperAdminSettings(section, data);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Test Integration
+  app.post('/api/super-admin/integrations/test', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { type, config } = req.body;
+      const result = await storage.testIntegration(type, config);
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing integration:", error);
+      res.status(500).json({ message: "Failed to test integration" });
     }
   });
 
