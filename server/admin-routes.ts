@@ -173,6 +173,46 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
   }
 }
 
+// Helper function to create recurring sessions
+async function createRecurringSessions(baseSessionData: any, storage: any) {
+  const { recurringType, recurringCount, recurringEndDate, ...sessionTemplate } = baseSessionData;
+  const sessions = [];
+  
+  const startDate = new Date(sessionTemplate.startTime);
+  const sessionDuration = new Date(sessionTemplate.endTime).getTime() - startDate.getTime();
+  
+  for (let i = 0; i < recurringCount; i++) {
+    const sessionDate = new Date(startDate);
+    
+    // Calculate next occurrence based on type
+    if (recurringType === 'weekly') {
+      sessionDate.setDate(startDate.getDate() + (i * 7));
+    } else if (recurringType === 'biweekly') {
+      sessionDate.setDate(startDate.getDate() + (i * 14));
+    } else if (recurringType === 'monthly') {
+      sessionDate.setMonth(startDate.getMonth() + i);
+    }
+    
+    // Stop if we've exceeded the end date
+    if (recurringEndDate && sessionDate > new Date(recurringEndDate)) {
+      break;
+    }
+    
+    // Create session data for this occurrence
+    const sessionData = {
+      ...sessionTemplate,
+      startTime: sessionDate,
+      endTime: new Date(sessionDate.getTime() + sessionDuration),
+    };
+    
+    // Create the session
+    const session = await storage.createSession(sessionData);
+    sessions.push(session);
+  }
+  
+  return sessions;
+}
+
 export function setupAdminRoutes(app: any) {
   // New comprehensive dashboard metrics endpoint  
   app.get('/api/admin/dashboard-metrics', requireAdmin, async (req: Request, res: Response) => {
@@ -792,14 +832,34 @@ export function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const sessionData = {
-        ...req.body,
-        // Ensure booking time defaults are applied
-        bookingOpenHour: req.body.bookingOpenHour ?? 8,
-        bookingOpenMinute: req.body.bookingOpenMinute ?? 0,
-      };
-      const session = await storage.createSession(sessionData);
-      res.json(session);
+      const user = req.user as any;
+      const requestData = { ...req.body };
+      
+      // Add tenant ID from authenticated user
+      requestData.tenantId = user.tenantId;
+      
+      // Convert date strings to Date objects
+      if (requestData.startTime) {
+        requestData.startTime = new Date(requestData.startTime);
+      }
+      if (requestData.endTime) {
+        requestData.endTime = new Date(requestData.endTime);
+      }
+      
+      // Ensure booking time defaults are applied
+      requestData.bookingOpenHour = requestData.bookingOpenHour ?? 8;
+      requestData.bookingOpenMinute = requestData.bookingOpenMinute ?? 0;
+      
+      // Handle recurring sessions
+      if (requestData.isRecurring) {
+        const sessions = await createRecurringSessions(requestData, storage);
+        res.json({ sessions, count: sessions.length });
+      } else {
+        // Remove recurring fields for single session
+        const { isRecurring, recurringType, recurringEndDate, recurringCount, ...sessionData } = requestData;
+        const session = await storage.createSession(sessionData);
+        res.json(session);
+      }
     } catch (error) {
       console.error("Error creating session:", error);
       res.status(500).json({ message: "Failed to create session" });
