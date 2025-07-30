@@ -28,11 +28,11 @@ export default function SessionDetail() {
 
   if (!sessionData) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Session Not Found</h1>
-          <p className="text-gray-600">The session you're looking for doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Session Not Found</h1>
+          <p className="text-muted-foreground">The session you're looking for doesn't exist.</p>
         </div>
       </div>
     );
@@ -61,52 +61,52 @@ export default function SessionDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Session Details */}
-          <Card className="bg-zinc-900 border border-zinc-700">
+          <Card className="bg-card border border-border">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-2xl text-white">{session.title}</CardTitle>
-                  <p className="text-zinc-400 mt-1">{session.ageGroup}</p>
+                  <CardTitle className="text-2xl text-foreground">{session.title}</CardTitle>
+                  <p className="text-muted-foreground mt-1">{session.ageGroups?.join(', ') || 'All Ages'}</p>
                 </div>
                 {getStatusBadge()}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center text-zinc-400">
+              <div className="flex items-center text-muted-foreground">
                 <Clock className="w-5 h-5 mr-3" />
                 <span>
                   {new Date(session.startTime).toLocaleString()} - {new Date(session.endTime).toLocaleTimeString()}
                 </span>
               </div>
               
-              <div className="flex items-center text-zinc-400">
+              <div className="flex items-center text-muted-foreground">
                 <MapPin className="w-5 h-5 mr-3" />
                 <span>{session.location}</span>
               </div>
               
-              <div className="flex items-center text-zinc-400">
+              <div className="flex items-center text-muted-foreground">
                 <DollarSign className="w-5 h-5 mr-3" />
                 <span>${(session.priceCents / 100).toFixed(2)}</span>
               </div>
               
-              <div className="flex items-center text-zinc-400">
+              <div className="flex items-center text-muted-foreground">
                 <Users className="w-5 h-5 mr-3" />
                 <span>{session.signupsCount} of {session.capacity} spots filled</span>
               </div>
 
               {/* Capacity Bar */}
               <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Capacity</span>
-                  <span>{session.signupsCount}/{session.capacity}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Capacity</span>
+                  <span className="text-muted-foreground">{session.signupsCount}/{session.capacity}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div 
                     className={`h-2 rounded-full ${
                       fillPercentage >= 100 ? 'bg-red-500' : 
@@ -120,21 +120,21 @@ export default function SessionDetail() {
           </Card>
 
           {/* Reservation Form */}
-          <Card>
+          <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle>Reserve Your Spot</CardTitle>
+              <CardTitle className="text-foreground">Reserve Your Spot</CardTitle>
             </CardHeader>
             <CardContent>
               {!isAuthenticated ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-600 mb-4">Please log in to make a reservation.</p>
+                  <p className="text-muted-foreground mb-4">Please log in to make a reservation.</p>
                   <Button asChild>
                     <a href="/api/login">Login</a>
                   </Button>
                 </div>
               ) : !isBookingOpen() ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     {session.status === "full" ? "This session is full." : 
                      session.status === "closed" ? "This session is closed." :
                      "Booking opens at 8:00 AM on session day."}
