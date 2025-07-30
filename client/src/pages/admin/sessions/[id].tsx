@@ -75,15 +75,28 @@ export default function AdminSessionDetail() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Convert datetime strings to Date objects for the backend
-      const sessionData = {
-        ...formData,
-        startTime: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
-        endTime: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
-        // Ensure access code is properly formatted - null when disabled or empty
+      // Prepare session data with proper type conversions
+      const sessionData: any = {
+        title: formData.title,
+        location: formData.location,
+        ageGroups: formData.ageGroups,
+        genders: formData.genders,
+        capacity: formData.capacity,
+        bookingOpenHour: formData.bookingOpenHour,
+        bookingOpenMinute: formData.bookingOpenMinute,
         hasAccessCode: Boolean(formData.hasAccessCode),
         accessCode: formData.hasAccessCode && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
       };
+
+      // Only include datetime fields if they have values
+      if (formData.startTime) {
+        sessionData.startTime = new Date(formData.startTime);
+      }
+      if (formData.endTime) {
+        sessionData.endTime = new Date(formData.endTime);
+      }
+
+      console.log('Saving session data:', sessionData);
 
       if (isNew) {
         await adminSessions.create(sessionData);

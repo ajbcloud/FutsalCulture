@@ -21,14 +21,34 @@ const apiRequest = async (url: string, options: RequestInit = {}) => {
 const adminSessions = {
   list: () => apiRequest('/api/admin/sessions'),
   get: (id: string) => apiRequest(`/api/admin/sessions/${id}`),
-  create: (data: any) => apiRequest('/api/admin/sessions', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id: string, data: any) => apiRequest(`/api/admin/sessions/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
+  create: (data: any) => {
+    // Handle Date object serialization properly
+    const serializedData = JSON.stringify(data, (key, value) => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      return value;
+    });
+    
+    return apiRequest('/api/admin/sessions', {
+      method: 'POST',
+      body: serializedData,
+    });
+  },
+  update: (id: string, data: any) => {
+    // Handle Date object serialization properly
+    const serializedData = JSON.stringify(data, (key, value) => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      return value;
+    });
+    
+    return apiRequest(`/api/admin/sessions/${id}`, {
+      method: 'PATCH',
+      body: serializedData,
+    });
+  },
   delete: (id: string) => apiRequest(`/api/admin/sessions/${id}`, {
     method: 'DELETE',
   }),
