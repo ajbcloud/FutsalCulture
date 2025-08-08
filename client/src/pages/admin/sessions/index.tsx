@@ -174,7 +174,7 @@ export default function AdminSessions() {
       // Prepare update data - only include fields that have values
       const updateData: any = {};
       if (massUpdateData.title.trim()) updateData.title = massUpdateData.title.trim();
-      if (massUpdateData.location.trim()) updateData.location = massUpdateData.location.trim();
+      if (massUpdateData.location.trim() && massUpdateData.location !== '__no_change__') updateData.location = massUpdateData.location.trim();
       if (massUpdateData.ageGroups.length > 0) updateData.ageGroups = massUpdateData.ageGroups;
       if (massUpdateData.genders.length > 0) updateData.genders = massUpdateData.genders;
       if (massUpdateData.capacity) updateData.capacity = parseInt(massUpdateData.capacity);
@@ -832,7 +832,7 @@ export default function AdminSessions() {
                     <SelectValue placeholder="Leave empty to keep existing" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                    <SelectItem value="__no_change__" className="text-zinc-400">Leave empty to keep existing</SelectItem>
                     {availableLocationNames.map((location: string) => (
                       <SelectItem key={location} value={location} className="text-white hover:bg-zinc-700">
                         {location}

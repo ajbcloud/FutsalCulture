@@ -113,7 +113,7 @@ async function seedDemoData() {
     console.log('🏟️ Creating futsal sessions...');
     const sessionData = [];
     const startDate = new Date('2025-01-06'); // Start of a Monday
-    const locations = ['Sugar Sand Park', 'Boca Raton Community Center', 'Delray Beach Sports Complex'];
+    const locations = ['Turf City', 'Sports Hub', 'Jurong East'];
     const ageGroups = ['U8', 'U10', 'U12', 'U14', 'U16'];
     const genders = ['boys', 'girls'];
     

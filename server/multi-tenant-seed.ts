@@ -50,7 +50,7 @@ const tenantDataArray: TenantInsert[] = [
 
 const ageGroups = ["U8", "U9", "U10", "U11", "U12", "U13", "U14", "U15", "U16", "U17", "U18"];
 const genders = ["boys", "girls", "mixed"];
-const locations = ["Central Park", "Riverside Fields", "Community Sports Complex"];
+const locations = ["Turf City", "Sports Hub", "Jurong East"];
 
 const firstNames = [
   "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
