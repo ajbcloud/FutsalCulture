@@ -9,7 +9,7 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 
@@ -31,6 +31,7 @@ interface SystemSettings {
   weekdayEnd: string;
   fiscalYearType: string;
   fiscalYearStartMonth: number;
+  availableLocations: string[];
 }
 
 interface Integration {
@@ -142,13 +143,15 @@ export default function AdminSettings() {
     weekdayStart: 'monday',
     weekdayEnd: 'sunday',
     fiscalYearType: 'calendar',
-    fiscalYearStartMonth: 1
+    fiscalYearStartMonth: 1,
+    availableLocations: ['Turf City', 'Sports Hub', 'Jurong East']
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [newLocation, setNewLocation] = useState('');
 
   const { toast } = useToast();
 
@@ -178,6 +181,11 @@ export default function AdminSettings() {
       if (data.paymentReminderHours && !data.paymentReminderMinutes) {
         data.paymentReminderMinutes = data.paymentReminderHours * 60;
         delete data.paymentReminderHours;
+      }
+      
+      // Ensure availableLocations has a default value if not present
+      if (!data.availableLocations) {
+        data.availableLocations = ['Turf City', 'Sports Hub', 'Jurong East'];
       }
       
       setSettings(data);
@@ -430,6 +438,75 @@ export default function AdminSettings() {
                   </div>
                 </div>
               </div>
+              
+              <div>
+                <Label className="text-foreground flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Available Locations
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Manage the locations that appear in session creation and filtering dropdowns.
+                </p>
+                <div className="space-y-3">
+                  {settings.availableLocations?.map((location, index) => (
+                    <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                      <span className="text-foreground">{location}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newLocations = settings.availableLocations?.filter((_, i) => i !== index) || [];
+                          setSettings(prev => ({ ...prev, availableLocations: newLocations }));
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <Input
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      className="bg-input border-border text-foreground"
+                      placeholder="Enter new location name"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
+                            setSettings(prev => ({
+                              ...prev,
+                              availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
+                            }));
+                            setNewLocation('');
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
+                          setSettings(prev => ({
+                            ...prev,
+                            availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
+                          }));
+                          setNewLocation('');
+                        }
+                      }}
+                      disabled={!newLocation.trim() || settings.availableLocations?.includes(newLocation.trim())}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {newLocation.trim() && settings.availableLocations?.includes(newLocation.trim()) && (
+                    <p className="text-sm text-destructive">This location already exists</p>
+                  )}
+                </div>
+              </div>
+              
               <div>
                 <Label htmlFor="contactEmail" className="text-foreground">Contact Email</Label>
                 <Input

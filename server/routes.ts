@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema, updateUserSchema } from "@shared/schema";
+import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema, updateUserSchema, systemSettings } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
@@ -128,14 +130,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all sessions for the tenant (including past) to build comprehensive filter options
       const sessions = await storage.getSessions({ tenantId, includePast: true });
       
-      // Extract unique values for filters
+      // Extract unique values for age groups and genders from sessions
       const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(session => session.ageGroups || [])));
-      const uniqueLocations = Array.from(new Set(sessions.map(session => session.location).filter(Boolean)));
       const uniqueGenders = Array.from(new Set(sessions.flatMap(session => session.genders || [])));
+      
+      // Get configured locations from admin settings
+      let availableLocations = ['Turf City', 'Sports Hub', 'Jurong East']; // Default fallback
+      
+      if (tenantId) {
+        try {
+          const settings = await db.select()
+            .from(systemSettings)
+            .where(eq(systemSettings.tenantId, tenantId));
+          
+          const locationsSetting = settings.find(s => s.key === 'availableLocations');
+          if (locationsSetting?.value) {
+            try {
+              availableLocations = JSON.parse(locationsSetting.value);
+            } catch (e) {
+              // If parsing fails, treat as comma-separated string
+              availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
+            }
+          }
+        } catch (settingsError) {
+          console.error('Error fetching settings for locations:', settingsError);
+          // Keep default locations on error
+        }
+      }
       
       const filters = {
         ageGroups: uniqueAgeGroups.sort(),
-        locations: uniqueLocations.sort(),
+        locations: availableLocations.sort(),
         genders: uniqueGenders.sort(),
       };
       

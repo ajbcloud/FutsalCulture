@@ -18,6 +18,7 @@ import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
+import { useQuery } from '@tanstack/react-query';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -26,6 +27,14 @@ export default function AdminSessionDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const isNew = params?.id === 'new';
+  
+  // Fetch admin settings to get available locations
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings'],
+    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+  });
+  
+  const availableLocations = adminSettings?.availableLocations || ['Turf City', 'Sports Hub', 'Jurong East'];
 
   const [formData, setFormData] = useState({
     title: '',
@@ -203,9 +212,9 @@ export default function AdminSessionDetail() {
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Turf City">Turf City</SelectItem>
-                <SelectItem value="Sports Hub">Sports Hub</SelectItem>
-                <SelectItem value="Jurong East">Jurong East</SelectItem>
+                {availableLocations.map((location: string) => (
+                  <SelectItem key={location} value={location}>{location}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

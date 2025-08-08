@@ -1661,6 +1661,15 @@ export function setupAdminRoutes(app: any) {
         if (value === 'false') value = false;
         // Parse numeric values
         if (!isNaN(Number(value))) value = Number(value);
+        // Parse JSON arrays (for availableLocations)
+        if (setting.key === 'availableLocations' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            // If parsing fails, treat as string and split by comma
+            value = value.split(',').map(s => s.trim()).filter(s => s);
+          }
+        }
         
         acc[setting.key] = value;
         return acc;
@@ -1687,6 +1696,8 @@ export function setupAdminRoutes(app: any) {
         // Fiscal year settings
         fiscalYearType: "calendar", // Default to calendar year
         fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
+        // Available locations for sessions
+        availableLocations: ["Turf City", "Sports Hub", "Jurong East"],
         ...settingsMap
       };
       
@@ -1722,18 +1733,21 @@ export function setupAdminRoutes(app: any) {
         try {
           console.log(`Updating setting: ${key}, value length: ${String(value).length}`);
           
+          // Handle array values (like availableLocations) by JSON stringifying them
+          const stringValue = Array.isArray(value) ? JSON.stringify(value) : String(value);
+          
           await db.insert(systemSettings)
             .values({
               tenantId,
               key,
-              value: String(value),
+              value: stringValue,
               updatedBy: adminUserId,
               updatedAt: new Date(),
             })
             .onConflictDoUpdate({
               target: [systemSettings.tenantId, systemSettings.key],
               set: {
-                value: String(value),
+                value: stringValue,
                 updatedBy: adminUserId,
                 updatedAt: new Date(),
               },
@@ -2178,13 +2192,123 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // CSV Import Endpoints
   app.post('/api/admin/imports/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // TODO: Implement CSV parsing and session bulk import
-      // For now, return success placeholder
+      const { csvData } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).currentUser?.id;
+      
+      if (!csvData || typeof csvData !== 'string') {
+        return res.status(400).json({ message: "CSV data is required" });
+      }
+      
+      // Parse CSV data
+      const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain header and at least one data row" });
+      }
+      
+      const header = lines[0].split(',').map(h => h.trim());
+      const dataLines = lines.slice(1);
+      
+      // Validate required columns
+      const requiredColumns = ['title', 'location', 'ageGroup', 'gender', 'startTime', 'endTime', 'capacity'];
+      for (const col of requiredColumns) {
+        if (!header.includes(col)) {
+          return res.status(400).json({ message: `Missing required column: ${col}` });
+        }
+      }
+      
+      // Get current available locations from settings
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.tenantId, tenantId));
+      
+      const locationsSetting = settings.find(s => s.key === 'availableLocations');
+      let availableLocations = ['Turf City', 'Sports Hub', 'Jurong East']; // Default fallback
+      
+      if (locationsSetting?.value) {
+        try {
+          availableLocations = JSON.parse(locationsSetting.value);
+        } catch (e) {
+          // If parsing fails, treat as comma-separated string
+          availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
+        }
+      }
+      
+      const errors: string[] = [];
+      const importedSessions: any[] = [];
+      const newLocations = new Set<string>();
+      
+      // Process each row
+      for (let i = 0; i < dataLines.length; i++) {
+        const row = dataLines[i].split(',').map(cell => cell.trim());
+        const rowData: any = {};
+        
+        // Map row data to column headers
+        for (let j = 0; j < header.length; j++) {
+          if (j < row.length) {
+            rowData[header[j]] = row[j];
+          }
+        }
+        
+        try {
+          // Validate and process session data
+          const sessionData = {
+            tenantId,
+            title: rowData.title,
+            location: rowData.location,
+            ageGroups: rowData.ageGroup ? [rowData.ageGroup] : [],
+            genders: rowData.gender ? [rowData.gender] : [],
+            startTime: new Date(rowData.startTime),
+            endTime: new Date(rowData.endTime),
+            capacity: parseInt(rowData.capacity) || 12,
+            priceCents: rowData.priceCents ? parseInt(rowData.priceCents) : 1000
+          };
+          
+          // Check if location is new
+          if (sessionData.location && !availableLocations.includes(sessionData.location)) {
+            newLocations.add(sessionData.location);
+          }
+          
+          // Insert session into database
+          await db.insert(futsalSessions).values(sessionData);
+          importedSessions.push(sessionData);
+          
+        } catch (error: any) {
+          errors.push(`Row ${i + 2}: ${error.message}`);
+        }
+      }
+      
+      // Auto-add new locations to settings if any were found
+      if (newLocations.size > 0) {
+        const updatedLocations = [...availableLocations, ...Array.from(newLocations)];
+        
+        await db.insert(systemSettings)
+          .values({
+            tenantId,
+            key: 'availableLocations',
+            value: JSON.stringify(updatedLocations),
+            updatedBy: adminUserId,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [systemSettings.tenantId, systemSettings.key],
+            set: {
+              value: JSON.stringify(updatedLocations),
+              updatedBy: adminUserId,
+              updatedAt: new Date(),
+            },
+          });
+        
+        console.log(`Auto-added new locations: ${Array.from(newLocations).join(', ')}`);
+      }
+      
       res.json({ 
-        imported: 0, 
-        errors: [], 
-        message: "Session import functionality will be implemented with CSV parser" 
+        imported: importedSessions.length, 
+        errors,
+        newLocationsAdded: Array.from(newLocations),
+        message: `Successfully imported ${importedSessions.length} sessions${newLocations.size > 0 ? `. Added ${newLocations.size} new locations.` : ''}` 
       });
+      
     } catch (error) {
       console.error("Error importing sessions:", error);
       res.status(500).json({ message: "Failed to import sessions" });
