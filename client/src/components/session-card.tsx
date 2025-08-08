@@ -84,16 +84,11 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           <div>
             <h3 className="text-xl font-semibold text-foreground">{session.title}</h3>
             <p className="text-muted-foreground">
-              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {(() => {
-                const locationData = getLocationData(session.locationName || session.location);
-                return (
-                  <LocationLink 
-                    name={locationData.name}
-                    address={locationData.address}
-                    className="text-muted-foreground"
-                  />
-                );
-              })()}
+              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • <LocationLink 
+                name={getLocationData(session.locationName || session.location).name}
+                address={getLocationData(session.locationName || session.location).address}
+                className="text-muted-foreground"
+              />
             </p>
           </div>
           {getStatusBadge()}
