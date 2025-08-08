@@ -40,7 +40,17 @@ export default function AdminSessionDetail() {
     title: '',
     startTime: '',
     endTime: '',
-    location: '',
+    location: '', // Keep for backward compatibility
+    // Structured location fields
+    locationName: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'US',
+    lat: '',
+    lng: '',
     ageGroups: [] as string[],
     genders: [] as string[],
     capacity: 12,
@@ -69,6 +79,16 @@ export default function AdminSessionDetail() {
           startTime: data.startTime?.slice(0, 16) || '',
           endTime: data.endTime?.slice(0, 16) || '',
           location: data.location || '',
+          // Structured location fields
+          locationName: data.locationName || '',
+          addressLine1: data.addressLine1 || '',
+          addressLine2: data.addressLine2 || '',
+          city: data.city || '',
+          state: data.state || '',
+          postalCode: data.postalCode || '',
+          country: data.country || 'US',
+          lat: data.lat || '',
+          lng: data.lng || '',
           ageGroups: data.ageGroups || [],
           genders: data.genders || [],
           capacity: data.capacity || 12,
@@ -93,7 +113,7 @@ export default function AdminSessionDetail() {
     const errors = [];
     
     if (!formData.title?.trim()) errors.push("Title is required");
-    if (!formData.location?.trim()) errors.push("Location is required");
+    if (!formData.locationName?.trim()) errors.push("Location name is required");
     if (!formData.startTime) errors.push("Start Time is required");
     if (!formData.endTime) errors.push("End Time is required");
     if (formData.ageGroups.length === 0) errors.push("At least one Age Group is required");
@@ -125,7 +145,17 @@ export default function AdminSessionDetail() {
       // Prepare session data with proper type conversions
       const sessionData: any = {
         title: formData.title,
-        location: formData.location,
+        location: formData.locationName || formData.location, // Use locationName as primary, fallback to old location field
+        // Structured location fields
+        locationName: formData.locationName,
+        addressLine1: formData.addressLine1,
+        addressLine2: formData.addressLine2,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postalCode,
+        country: formData.country,
+        lat: formData.lat,
+        lng: formData.lng,
         ageGroups: formData.ageGroups,
         genders: formData.genders,
         capacity: formData.capacity,
@@ -206,18 +236,126 @@ export default function AdminSessionDetail() {
           </div>
 
           <div>
-            <Label htmlFor="location" className="text-muted-foreground">Location *</Label>
-            <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
-              <SelectTrigger className="bg-input border-border text-foreground">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLocations.map((location: string) => (
-                  <SelectItem key={location} value={location}>{location}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="locationName" className="text-muted-foreground">Location Name *</Label>
+            <Input
+              id="locationName"
+              value={formData.locationName}
+              onChange={(e) => setFormData({...formData, locationName: e.target.value})}
+              className="bg-input border-border text-foreground"
+              placeholder="e.g., Sugar Sand Park – Field 2"
+              required
+            />
           </div>
+        </div>
+
+        {/* Address Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Address Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="addressLine1" className="text-muted-foreground">Address Line 1</Label>
+              <Input
+                id="addressLine1"
+                value={formData.addressLine1}
+                onChange={(e) => setFormData({...formData, addressLine1: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="Street address"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="addressLine2" className="text-muted-foreground">Address Line 2</Label>
+              <Input
+                id="addressLine2"
+                value={formData.addressLine2}
+                onChange={(e) => setFormData({...formData, addressLine2: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="Apartment, suite, etc. (optional)"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="city" className="text-muted-foreground">City</Label>
+              <Input
+                id="city"
+                value={formData.city}
+                onChange={(e) => setFormData({...formData, city: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="City"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="state" className="text-muted-foreground">State</Label>
+              <Input
+                id="state"
+                value={formData.state}
+                onChange={(e) => setFormData({...formData, state: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="State"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="postalCode" className="text-muted-foreground">Postal Code</Label>
+              <Input
+                id="postalCode"
+                value={formData.postalCode}
+                onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="ZIP/Postal code"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="country" className="text-muted-foreground">Country</Label>
+              <Input
+                id="country"
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="Country"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Optional Coordinates Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Coordinates (Optional)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="lat" className="text-muted-foreground">Latitude</Label>
+              <Input
+                id="lat"
+                value={formData.lat}
+                onChange={(e) => setFormData({...formData, lat: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="e.g., 26.3721"
+                type="number"
+                step="any"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="lng" className="text-muted-foreground">Longitude</Label>
+              <Input
+                id="lng"
+                value={formData.lng}
+                onChange={(e) => setFormData({...formData, lng: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="e.g., -80.1126"
+                type="number"
+                step="any"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Session Details Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Session Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div>
             <Label htmlFor="startTime" className="text-muted-foreground">Start Time *</Label>
