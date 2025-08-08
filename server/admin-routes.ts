@@ -1717,8 +1717,12 @@ export function setupAdminRoutes(app: any) {
         // Fiscal year settings
         fiscalYearType: "calendar", // Default to calendar year
         fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
-        // Available locations for sessions
-        availableLocations: ["Turf City", "Sports Hub", "Jurong East"],
+        // Available locations for sessions - with structured location data
+        availableLocations: [
+          { name: "Turf City", addressLine1: "Turf City", city: "Singapore", country: "SG" },
+          { name: "Sports Hub", addressLine1: "Sports Hub", city: "Singapore", country: "SG" },
+          { name: "Jurong East", addressLine1: "Jurong East", city: "Singapore", country: "SG" }
+        ],
         ...settingsMap
       };
       

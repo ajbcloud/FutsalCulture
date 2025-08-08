@@ -10,9 +10,23 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2 } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+
+interface LocationData {
+  name: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  lat?: string;
+  lng?: string;
+}
 
 interface SystemSettings {
   autoApproveRegistrations: boolean;
@@ -32,7 +46,7 @@ interface SystemSettings {
   weekdayEnd: string;
   fiscalYearType: string;
   fiscalYearStartMonth: number;
-  availableLocations: string[];
+  availableLocations: (string | LocationData)[];
 }
 
 interface Integration {
@@ -145,7 +159,11 @@ export default function AdminSettings() {
     weekdayEnd: 'sunday',
     fiscalYearType: 'calendar',
     fiscalYearStartMonth: 1,
-    availableLocations: ['Turf City', 'Sports Hub', 'Jurong East']
+    availableLocations: [
+      { name: 'Turf City', addressLine1: 'Turf City', city: 'Singapore', country: 'SG' },
+      { name: 'Sports Hub', addressLine1: 'Sports Hub', city: 'Singapore', country: 'SG' },
+      { name: 'Jurong East', addressLine1: 'Jurong East', city: 'Singapore', country: 'SG' }
+    ]
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
@@ -153,6 +171,19 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [newLocation, setNewLocation] = useState('');
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<LocationData | null>(null);
+  const [locationForm, setLocationForm] = useState<LocationData>({
+    name: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'US',
+    lat: '',
+    lng: '',
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -187,8 +218,20 @@ export default function AdminSettings() {
       
       // Ensure availableLocations has a default value if not present
       if (!data.availableLocations) {
-        data.availableLocations = ['Turf City', 'Sports Hub', 'Jurong East'];
+        data.availableLocations = [
+          { name: 'Turf City', addressLine1: 'Turf City', city: 'Singapore', country: 'SG' },
+          { name: 'Sports Hub', addressLine1: 'Sports Hub', city: 'Singapore', country: 'SG' },
+          { name: 'Jurong East', addressLine1: 'Jurong East', city: 'Singapore', country: 'SG' }
+        ];
       }
+      
+      // Convert legacy string locations to objects
+      data.availableLocations = data.availableLocations.map((loc: any) => {
+        if (typeof loc === 'string') {
+          return { name: loc, addressLine1: loc, country: 'US' };
+        }
+        return loc;
+      });
       
       setSettings(data);
     } catch (error) {
@@ -235,6 +278,88 @@ export default function AdminSettings() {
     // Use the direct Stripe customer portal URL
     const portalUrl = 'https://billing.stripe.com/p/login/test_14AeVe4GC2cAeVI4Ns2Fa00';
     window.open(portalUrl, '_blank');
+  };
+
+  const openLocationDialog = (location?: LocationData) => {
+    if (location) {
+      setEditingLocation(location);
+      setLocationForm({ ...location });
+    } else {
+      setEditingLocation(null);
+      setLocationForm({
+        name: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'US',
+        lat: '',
+        lng: '',
+      });
+    }
+    setLocationDialogOpen(true);
+  };
+
+  const handleSaveLocation = () => {
+    if (!locationForm.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Location name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newLocations = [...settings.availableLocations] as LocationData[];
+    
+    if (editingLocation) {
+      // Update existing location
+      const index = newLocations.findIndex(loc => 
+        (typeof loc === 'object' ? loc.name : loc) === editingLocation.name
+      );
+      if (index !== -1) {
+        newLocations[index] = { ...locationForm };
+      }
+    } else {
+      // Add new location
+      const existingNames = newLocations.map(loc => 
+        typeof loc === 'object' ? loc.name : loc
+      );
+      if (existingNames.includes(locationForm.name.trim())) {
+        toast({
+          title: "Error",
+          description: "A location with this name already exists",
+          variant: "destructive",
+        });
+        return;
+      }
+      newLocations.push({ ...locationForm });
+    }
+
+    setSettings(prev => ({ ...prev, availableLocations: newLocations }));
+    setLocationDialogOpen(false);
+    setEditingLocation(null);
+  };
+
+  const removeLocation = (locationToRemove: string | LocationData) => {
+    const locationName = typeof locationToRemove === 'object' ? locationToRemove.name : locationToRemove;
+    const newLocations = settings.availableLocations.filter(loc => {
+      const locName = typeof loc === 'object' ? loc.name : loc;
+      return locName !== locationName;
+    });
+    setSettings(prev => ({ ...prev, availableLocations: newLocations }));
+  };
+
+  const getLocationDisplayName = (location: string | LocationData): string => {
+    if (typeof location === 'string') return location;
+    return location.name;
+  };
+
+  const getLocationAddress = (location: string | LocationData): string => {
+    if (typeof location === 'string') return '';
+    const parts = [location.addressLine1, location.city, location.state].filter(Boolean);
+    return parts.join(', ');
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -708,66 +833,197 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Manage the locations that appear in session creation and filtering dropdowns.
+                Manage the locations that appear in session creation and filtering dropdowns. Each location can include detailed address information and coordinates for mapping.
               </p>
               <div className="space-y-3">
-                {settings.availableLocations?.map((location, index) => (
-                  <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-                    <span className="text-foreground">{location}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newLocations = settings.availableLocations?.filter((_, i) => i !== index) || [];
-                        setSettings(prev => ({ ...prev, availableLocations: newLocations }));
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex space-x-2">
-                  <Input
-                    value={newLocation}
-                    onChange={(e) => setNewLocation(e.target.value)}
-                    className="bg-input border-border text-foreground"
-                    placeholder="Enter new location name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
-                          setSettings(prev => ({
-                            ...prev,
-                            availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
-                          }));
-                          setNewLocation('');
-                        }
-                      }
-                    }}
-                  />
+                {settings.availableLocations?.map((location, index) => {
+                  const displayName = getLocationDisplayName(location);
+                  const address = getLocationAddress(location);
+                  return (
+                    <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">{displayName}</div>
+                        {address && (
+                          <div className="text-sm text-muted-foreground">{address}</div>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openLocationDialog(typeof location === 'object' ? location : { name: location, country: 'US' })}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeLocation(location)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
-                        setSettings(prev => ({
-                          ...prev,
-                          availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
-                        }));
-                        setNewLocation('');
-                      }
-                    }}
-                    disabled={!newLocation.trim() || settings.availableLocations?.includes(newLocation.trim())}
+                    onClick={() => openLocationDialog()}
+                    className="w-full"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Location
                   </Button>
                 </div>
-                {newLocation.trim() && settings.availableLocations?.includes(newLocation.trim()) && (
-                  <p className="text-sm text-destructive">This location already exists</p>
-                )}
               </div>
+              
+              {/* Location Dialog */}
+              <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingLocation ? 'Edit Location' : 'Add New Location'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Provide detailed location information including address and coordinates for mapping integration.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="locationName" className="text-muted-foreground">Location Name *</Label>
+                      <Input
+                        id="locationName"
+                        value={locationForm.name}
+                        onChange={(e) => setLocationForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="bg-input border-border text-foreground"
+                        placeholder="e.g., Sugar Sand Park – Field 2"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="addressLine1" className="text-muted-foreground">Address Line 1</Label>
+                        <Input
+                          id="addressLine1"
+                          value={locationForm.addressLine1 || ''}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, addressLine1: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="Street address"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="addressLine2" className="text-muted-foreground">Address Line 2</Label>
+                        <Input
+                          id="addressLine2"
+                          value={locationForm.addressLine2 || ''}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, addressLine2: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="Apartment, suite, etc. (optional)"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="city" className="text-muted-foreground">City</Label>
+                        <Input
+                          id="city"
+                          value={locationForm.city || ''}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, city: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="City"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="state" className="text-muted-foreground">State</Label>
+                        <Input
+                          id="state"
+                          value={locationForm.state || ''}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, state: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="State"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="postalCode" className="text-muted-foreground">Postal Code</Label>
+                        <Input
+                          id="postalCode"
+                          value={locationForm.postalCode || ''}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, postalCode: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="ZIP/Postal code"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="country" className="text-muted-foreground">Country</Label>
+                        <Input
+                          id="country"
+                          value={locationForm.country || 'US'}
+                          onChange={(e) => setLocationForm(prev => ({ ...prev, country: e.target.value }))}
+                          className="bg-input border-border text-foreground"
+                          placeholder="Country"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-muted-foreground">Coordinates (Optional)</Label>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Provide precise latitude and longitude for accurate mapping
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="lat" className="text-muted-foreground">Latitude</Label>
+                          <Input
+                            id="lat"
+                            value={locationForm.lat || ''}
+                            onChange={(e) => setLocationForm(prev => ({ ...prev, lat: e.target.value }))}
+                            className="bg-input border-border text-foreground"
+                            placeholder="e.g., 26.3721"
+                            type="number"
+                            step="any"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="lng" className="text-muted-foreground">Longitude</Label>
+                          <Input
+                            id="lng"
+                            value={locationForm.lng || ''}
+                            onChange={(e) => setLocationForm(prev => ({ ...prev, lng: e.target.value }))}
+                            className="bg-input border-border text-foreground"
+                            placeholder="e.g., -80.1126"
+                            type="number"
+                            step="any"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setLocationDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveLocation}>
+                      {editingLocation ? 'Update Location' : 'Add Location'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
           

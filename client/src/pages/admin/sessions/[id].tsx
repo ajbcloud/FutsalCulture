@@ -34,7 +34,10 @@ export default function AdminSessionDetail() {
     queryFn: () => fetch('/api/admin/settings').then(res => res.json())
   });
   
-  const availableLocations = adminSettings?.availableLocations || ['Turf City', 'Sports Hub', 'Jurong East'];
+  // Convert available locations to a simple array of names for the dropdown
+  const availableLocationNames = (adminSettings?.availableLocations || []).map((loc: any) => 
+    typeof loc === 'object' ? loc.name : loc
+  );
 
   const [formData, setFormData] = useState({
     title: '',
