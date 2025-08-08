@@ -24,8 +24,6 @@ interface LocationData {
   state?: string;
   postalCode?: string;
   country?: string;
-  lat?: string;
-  lng?: string;
 }
 
 interface SystemSettings {
@@ -181,8 +179,6 @@ export default function AdminSettings() {
     state: '',
     postalCode: '',
     country: 'US',
-    lat: '',
-    lng: '',
   });
 
   const { toast } = useToast();
@@ -294,8 +290,6 @@ export default function AdminSettings() {
         state: '',
         postalCode: '',
         country: 'US',
-        lat: '',
-        lng: '',
       });
     }
     setLocationDialogOpen(true);
@@ -891,7 +885,7 @@ export default function AdminSettings() {
                       {editingLocation ? 'Edit Location' : 'Add New Location'}
                     </DialogTitle>
                     <DialogDescription>
-                      Provide detailed location information including address and coordinates for mapping integration.
+                      Provide detailed location information including address details for mapping integration.
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -976,39 +970,6 @@ export default function AdminSettings() {
                       </div>
                     </div>
                     
-                    <div>
-                      <Label className="text-muted-foreground">Coordinates (Optional)</Label>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Provide precise latitude and longitude for accurate mapping
-                      </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="lat" className="text-muted-foreground">Latitude</Label>
-                          <Input
-                            id="lat"
-                            value={locationForm.lat || ''}
-                            onChange={(e) => setLocationForm(prev => ({ ...prev, lat: e.target.value }))}
-                            className="bg-input border-border text-foreground"
-                            placeholder="e.g., 26.3721"
-                            type="number"
-                            step="any"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="lng" className="text-muted-foreground">Longitude</Label>
-                          <Input
-                            id="lng"
-                            value={locationForm.lng || ''}
-                            onChange={(e) => setLocationForm(prev => ({ ...prev, lng: e.target.value }))}
-                            className="bg-input border-border text-foreground"
-                            placeholder="e.g., -80.1126"
-                            type="number"
-                            step="any"
-                          />
-                        </div>
-                      </div>
-                    </div>
                   </div>
                   
                   <DialogFooter>

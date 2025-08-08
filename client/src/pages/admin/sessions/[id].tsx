@@ -225,29 +225,57 @@ export default function AdminSessionDetail() {
       </div>
 
       <div className="bg-card p-6 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="title" className="text-muted-foreground">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="bg-input border-border text-foreground"
-              placeholder="Session title"
-              required
-            />
-          </div>
+        {/* Session Details Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Session Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="title" className="text-muted-foreground">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="Session title"
+                required
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="locationName" className="text-muted-foreground">Location Name *</Label>
-            <Input
-              id="locationName"
-              value={formData.locationName}
-              onChange={(e) => setFormData({...formData, locationName: e.target.value})}
-              className="bg-input border-border text-foreground"
-              placeholder="e.g., Sugar Sand Park – Field 2"
-              required
-            />
+            <div>
+              <Label htmlFor="locationName" className="text-muted-foreground">Location Name *</Label>
+              <Input
+                id="locationName"
+                value={formData.locationName}
+                onChange={(e) => setFormData({...formData, locationName: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="e.g., Sugar Sand Park – Field 2"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="startTime" className="text-muted-foreground">Start Time *</Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                value={formData.startTime}
+                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                className="bg-input border-border text-foreground"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="endTime" className="text-muted-foreground">End Time *</Label>
+              <Input
+                id="endTime"
+                type="datetime-local"
+                value={formData.endTime}
+                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                className="bg-input border-border text-foreground"
+                required
+              />
+            </div>
           </div>
         </div>
 
@@ -323,66 +351,11 @@ export default function AdminSessionDetail() {
           </div>
         </div>
 
-        {/* Optional Coordinates Section */}
+
+        {/* Additional Session Configuration */}
         <div className="mt-6">
-          <h3 className="text-lg font-medium text-foreground mb-4">Coordinates (Optional)</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">Session Configuration</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="lat" className="text-muted-foreground">Latitude</Label>
-              <Input
-                id="lat"
-                value={formData.lat}
-                onChange={(e) => setFormData({...formData, lat: e.target.value})}
-                className="bg-input border-border text-foreground"
-                placeholder="e.g., 26.3721"
-                type="number"
-                step="any"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="lng" className="text-muted-foreground">Longitude</Label>
-              <Input
-                id="lng"
-                value={formData.lng}
-                onChange={(e) => setFormData({...formData, lng: e.target.value})}
-                className="bg-input border-border text-foreground"
-                placeholder="e.g., -80.1126"
-                type="number"
-                step="any"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Session Details Section */}
-        <div className="mt-6">
-          <h3 className="text-lg font-medium text-foreground mb-4">Session Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <div>
-            <Label htmlFor="startTime" className="text-muted-foreground">Start Time *</Label>
-            <Input
-              id="startTime"
-              type="datetime-local"
-              value={formData.startTime}
-              onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-              className="bg-input border-border text-foreground"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="endTime" className="text-muted-foreground">End Time *</Label>
-            <Input
-              id="endTime"
-              type="datetime-local"
-              value={formData.endTime}
-              onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-              className="bg-input border-border text-foreground"
-              required
-            />
-          </div>
 
           {/* Recurring Session Options - Only show for new sessions */}
           {isNew && (
