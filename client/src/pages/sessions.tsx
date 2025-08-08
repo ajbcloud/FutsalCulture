@@ -166,7 +166,12 @@ export default function Sessions() {
   });
 
   // Sort the filter options for better UX
-  const sortedAgeGroups = filterOptions.ageGroups.sort();
+  const sortedAgeGroups = filterOptions.ageGroups.sort((a, b) => {
+    // Extract numeric value from age group (e.g., "U8" -> 8)
+    const aNum = parseInt(a.substring(1));
+    const bNum = parseInt(b.substring(1));
+    return aNum - bNum;
+  });
   const sortedLocations = filterOptions.locations.sort(); 
   const sortedGenders = filterOptions.genders.sort();
 
