@@ -1,0 +1,215 @@
+Upgrade location handling so that anywhere a location appears, it renders as a clickable link to Google Maps. On mobile, this should hand off to the user’s default maps app. Use a single reusable component and retrofit all screens and notifications.
+
+1) Data Model & Migration (non‑breaking)
+Keep existing location string, but add structured fields to support better display and future features:
+
+location_name (TEXT, required) — human name shown to users, e.g., “Sugar Sand Park – Field 2”
+
+address_line1 (TEXT, optional)
+
+address_line2 (TEXT, optional)
+
+city (TEXT, optional)
+
+state (TEXT, optional)
+
+postal_code (TEXT, optional)
+
+country (TEXT, default “US”)
+
+lat (NUMERIC(9,6), optional)
+
+lng (NUMERIC(9,6), optional)
+
+gmaps_place_id (TEXT, optional)
+
+Create a Drizzle migration to add these columns to futsal_sessions (and any locations table if you have one). Do not drop the old location column; keep it for compatibility and backfill.
+
+Backfill rule:
+
+If structured fields are null, set location_name = location.
+
+Don’t attempt geocoding in the migration; we’ll add optional geocoding later.
+
+2) Reusable Link Component
+Create a single component and use it everywhere:
+
+components/LocationLink.tsx
+
+tsx
+Copy
+Edit
+import React from "react";
+
+type Props = {
+  name: string;              // e.g., "Sugar Sand Park – Field 2"
+  address?: string;          // optional full address string
+  lat?: number | null;
+  lng?: number | null;
+  className?: string;
+  ariaLabel?: string;
+};
+
+function buildMapsUrl({ name, address, lat, lng }: { name: string; address?: string; lat?: number | null; lng?: number | null; }) {
+  // Priority: lat/lng → address → name
+  if (lat != null && lng != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+  }
+  const q = address && address.trim().length > 0 ? address : name;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+export default function LocationLink({ name, address, lat, lng, className = "", ariaLabel }: Props) {
+  const href = buildMapsUrl({ name, address, lat, lng });
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`underline underline-offset-2 hover:opacity-90 ${className}`}
+      aria-label={ariaLabel || `Open ${name} in Maps`}
+    >
+      {name}
+    </a>
+  );
+}
+Why Google Maps URL?
+https://www.google.com/maps/search/?api=1&query=... works across desktop and mobile; on phones, users with Apple Maps or Google Maps will be prompted to open their default maps app.
+
+3) Server DTOs & Selects
+When returning sessions from API, include the new fields:
+
+location_name as locationName
+
+city/state/postal_code → compose a full address string server‑side (or let the client compose).
+
+lat/lng if available.
+
+This avoids extra client joins and keeps rendering simple.
+
+Example (server/admin‑routes.ts):
+
+ts
+Copy
+Edit
+.select({
+  id: futsalSessions.id,
+  // ...
+  locationName: futsalSessions.locationName,
+  addressLine1: futsalSessions.addressLine1,
+  city: futsalSessions.city,
+  state: futsalSessions.state,
+  postalCode: futsalSessions.postalCode,
+  lat: futsalSessions.lat,
+  lng: futsalSessions.lng,
+})
+4) Retrofit Everywhere (replace plain text with <LocationLink />)
+Update all places that show a location string:
+
+Parent/Player:
+
+Sessions list/cards
+
+Session detail page
+
+Calendar day modal
+
+Booking/checkout confirmation
+
+Dashboard “Today’s Session” / “Upcoming Reservations”
+
+Admin & Super‑Admin:
+
+Sessions table + accordion
+
+Payments (session location column)
+
+Analytics drill‑downs (where a session row is shown)
+
+Help Requests detail (if location appears)
+
+Emails & SMS:
+
+Booking confirmation, reminders, and updates should include the maps link.
+
+Usage:
+
+tsx
+Copy
+Edit
+<LocationLink
+  name={session.locationName || session.location}
+  address={[session.addressLine1, session.city, session.state, session.postalCode].filter(Boolean).join(", ")}
+  lat={session.lat}
+  lng={session.lng}
+/>
+5) Admin Forms & CSV Import
+Session Create/Edit UI:
+
+Keep simple: require location_name (text).
+
+Optional: address_line1/city/state/postal_code.
+
+Optional: lat/lng (manual paste if they have it).
+
+Show a live preview of the generated Maps link under the fields.
+
+CSV Session Import:
+
+Add optional columns: location_name,address_line1,city,state,postal_code,lat,lng
+
+Backward compatible: when only location present, set location_name = location.
+
+Validation:
+
+At least one of: (lat/lng) OR (address_line1+city+state), else fall back to location_name only.
+
+6) Optional: Geocoding (deferred, behind a flag)
+Add .env keys for Google Maps Geocoding (optional).
+
+If provided, offer an “Auto‑lookup” button on the Admin session form to fetch lat/lng and normalized address from location_name or address fields. Store gmaps_place_id if returned.
+
+Geocoding should be rate‑limited and never block saves; it can run async.
+
+7) Accessibility, Security, QA
+All links: target="_blank" and rel="noopener noreferrer".
+
+aria-label on links (e.g., “Open Sugar Sand Park – Field 2 in Maps”).
+
+Snapshot tests: ensure <LocationLink /> renders correct URLs for (1) lat/lng, (2) full address, (3) name only.
+
+Manual QA:
+
+Desktop: clicking opens Google Maps in a new tab.
+
+iOS/Android: clicking prompts to open maps app (Google or Apple).
+
+Backfill script: set location_name = location where null so nothing renders blank.
+
+8) Don’t Break Existing UI
+Keep styling subtle: use underline underline-offset-2 with your current text color; do not change layout.
+
+Only replace the location text node with <LocationLink />; everything else stays the same.
+
+9) Rollout Steps
+Run the migration to add fields.
+
+Add <LocationLink /> component.
+
+Update API selects to return structured location fields.
+
+Replace location text with <LocationLink /> across all views (parent/player/admin/super‑admin, emails/SMS templates).
+
+Update session forms & CSV import to support the new fields.
+
+(Optional) Enable geocoding in .env and add the “Auto‑lookup” button.
+
+Success Criteria
+
+Every place a location appears, it’s now a hyperlink to Maps.
+
+Works on desktop and mobile (prompts maps app).
+
+Legacy data still renders (name‑only) and links correctly.
+
+No UI regressions.

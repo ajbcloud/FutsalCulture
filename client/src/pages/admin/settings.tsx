@@ -9,6 +9,7 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
@@ -154,6 +155,7 @@ export default function AdminSettings() {
   const [newLocation, setNewLocation] = useState('');
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Check for payment success parameter
@@ -284,6 +286,9 @@ export default function AdminSettings() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update settings');
       }
+
+      // Invalidate settings cache to refresh other components
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings'] });
 
       if (window.location && settings.timezone) {
         window.location.reload();
