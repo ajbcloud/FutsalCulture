@@ -146,7 +146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const locationsSetting = settings.find(s => s.key === 'availableLocations');
           if (locationsSetting?.value) {
             try {
-              availableLocations = JSON.parse(locationsSetting.value);
+              const parsedLocations = JSON.parse(locationsSetting.value);
+              // Extract just the names from location objects
+              availableLocations = parsedLocations.map((loc: any) => 
+                typeof loc === 'object' ? loc.name : loc
+              ).filter((name: string) => name);
             } catch (e) {
               // If parsing fails, treat as comma-separated string
               availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
