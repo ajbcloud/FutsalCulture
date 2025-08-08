@@ -72,6 +72,7 @@ function Router() {
                 <Route path="/admin" component={AdminDashboard} />
                 <Route path="/admin/dashboard" component={AdminDashboard} />
                 <Route path="/admin/sessions" component={AdminSessions} />
+                <Route path="/admin/sessions/new" component={AdminSessionDetail} />
                 <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
                 <Route path="/admin/payments" component={AdminPayments} />
                 <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
