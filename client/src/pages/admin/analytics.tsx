@@ -40,25 +40,12 @@ interface DashboardMetrics {
   ytdGrowth: number;
 }
 
-interface BusinessInsights {
-  peakHours: string;
-  popularAgeGroups: string;
-  revenueGrowth: string;
-  utilizationRate: string;
-  totalSessions: number;
-  totalPlayers: number;
-  thisMonthRevenue: number;
-  lastMonthRevenue: number;
-}
 
 export default function AdminAnalytics() {
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/admin/dashboard-metrics"],
   });
 
-  const { data: insights, isLoading: insightsLoading } = useQuery<BusinessInsights>({
-    queryKey: ["/api/admin/business-insights"],
-  });
 
   // Chart data with real database calculations
   const { data: chartData } = useQuery({
@@ -216,40 +203,6 @@ export default function AdminAnalytics() {
             </CardContent>
           </Card>
 
-          {/* Dynamic Business Insights */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Business Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {insightsLoading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <h3 className="text-foreground font-medium mb-2">Peak Hours</h3>
-                    <p className="text-muted-foreground">
-                      {insights?.peakHours || "Most bookings occur between 6-8 PM"}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-foreground font-medium mb-2">Popular Age Groups</h3>
-                    <p className="text-muted-foreground">
-                      {insights?.popularAgeGroups || "U12 and U14 have highest enrollment"}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-foreground font-medium mb-2">Revenue Growth</h3>
-                    <p className="text-muted-foreground">
-                      {insights?.revenueGrowth || "15% increase month-over-month"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Data Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
