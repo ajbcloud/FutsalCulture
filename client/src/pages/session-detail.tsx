@@ -19,6 +19,12 @@ export default function SessionDetail() {
     enabled: !!id,
   });
 
+  // Fetch admin settings to get location address data
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings'],
+    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -41,6 +47,27 @@ export default function SessionDetail() {
 
   const session = sessionData;
   const fillPercentage = (session.signupsCount / session.capacity) * 100;
+
+  // Find matching location from admin settings to get address data
+  const getLocationData = (locationName: string) => {
+    if (!adminSettings?.availableLocations) return { name: locationName };
+    
+    const matchedLocation = adminSettings.availableLocations.find((loc: any) => {
+      const locName = typeof loc === 'object' ? loc.name : loc;
+      return locName === locationName;
+    });
+    
+    if (matchedLocation && typeof matchedLocation === 'object') {
+      return {
+        name: matchedLocation.name,
+        address: [matchedLocation.addressLine1, matchedLocation.addressLine2, matchedLocation.city, matchedLocation.state, matchedLocation.postalCode]
+          .filter(Boolean)
+          .join(', ')
+      };
+    }
+    
+    return { name: locationName };
+  };
   
   const getStatusBadge = () => {
     if (session.status === "full") {
@@ -88,15 +115,16 @@ export default function SessionDetail() {
               
               <div className="flex items-center text-muted-foreground">
                 <MapPin className="w-5 h-5 mr-3" />
-                <LocationLink 
-                  name={session.locationName || session.location}
-                  address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode]
-                    .filter(Boolean)
-                    .join(', ')}
-                  lat={session.lat}
-                  lng={session.lng}
-                  className="text-muted-foreground"
-                />
+                {(() => {
+                  const locationData = getLocationData(session.locationName || session.location);
+                  return (
+                    <LocationLink 
+                      name={locationData.name}
+                      address={locationData.address}
+                      className="text-muted-foreground"
+                    />
+                  );
+                })()}
               </div>
               
               <div className="flex items-center text-muted-foreground">
