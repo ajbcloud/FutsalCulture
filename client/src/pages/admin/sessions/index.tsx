@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AGE_GROUPS } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import LocationLink from '@/components/LocationLink';
+import { useQuery } from '@tanstack/react-query';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -59,6 +60,17 @@ export default function AdminSessions() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   
   const { toast } = useToast();
+
+  // Fetch admin settings to get available locations
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings'],
+    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+  });
+  
+  // Convert available locations to a simple array of names for the dropdown
+  const availableLocationNames = (adminSettings?.availableLocations || []).map((loc: any) => 
+    typeof loc === 'object' ? loc.name : loc
+  );
 
   useEffect(() => {
     adminSessions.list().then(data => {
@@ -812,12 +824,22 @@ export default function AdminSessions() {
 
               <div>
                 <Label className="text-zinc-300">Location</Label>
-                <Input
+                <Select 
                   value={massUpdateData.location}
-                  onChange={(e) => setMassUpdateData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Leave empty to keep existing"
-                  className="bg-zinc-800 border-zinc-700 text-white"
-                />
+                  onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, location: value }))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Leave empty to keep existing" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                    {availableLocationNames.map((location: string) => (
+                      <SelectItem key={location} value={location} className="text-white hover:bg-zinc-700">
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
