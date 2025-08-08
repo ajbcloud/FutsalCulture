@@ -20,6 +20,12 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
     queryKey: ["/api/sessions", session.id],
   });
 
+  // Fetch admin settings to get location address data
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings'],
+    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+  });
+
   const signupsCount = sessionData?.signupsCount || 0;
   const fillPercentage = (signupsCount / session.capacity) * 100;
   
@@ -50,6 +56,27 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
 
   const isFull = session.status === "full" || fillPercentage >= 100;
 
+  // Find matching location from admin settings to get address data
+  const getLocationData = (locationName: string) => {
+    if (!adminSettings?.availableLocations) return { name: locationName };
+    
+    const matchedLocation = adminSettings.availableLocations.find((loc: any) => {
+      const locName = typeof loc === 'object' ? loc.name : loc;
+      return locName === locationName;
+    });
+    
+    if (matchedLocation && typeof matchedLocation === 'object') {
+      return {
+        name: matchedLocation.name,
+        address: [matchedLocation.addressLine1, matchedLocation.addressLine2, matchedLocation.city, matchedLocation.state, matchedLocation.postalCode]
+          .filter(Boolean)
+          .join(', ')
+      };
+    }
+    
+    return { name: locationName };
+  };
+
   return (
     <Card className={`bg-card border border-border hover:shadow-md transition-shadow ${isFull ? 'opacity-75' : ''}`}>
       <CardContent className="p-6">
@@ -57,13 +84,16 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           <div>
             <h3 className="text-xl font-semibold text-foreground">{session.title}</h3>
             <p className="text-muted-foreground">
-              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • <LocationLink 
-                name={session.locationName || session.location}
-                address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
-                lat={session.lat}
-                lng={session.lng}
-                className="text-muted-foreground"
-              />
+              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {(() => {
+                const locationData = getLocationData(session.locationName || session.location);
+                return (
+                  <LocationLink 
+                    name={locationData.name}
+                    address={locationData.address}
+                    className="text-muted-foreground"
+                  />
+                );
+              })()}
             </p>
           </div>
           {getStatusBadge()}

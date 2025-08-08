@@ -42,6 +42,12 @@ export default function SessionCalendar({
     enabled: isAuthenticated,
   });
 
+  // Fetch admin settings to get location address data
+  const { data: adminSettings } = useQuery({
+    queryKey: ['/api/admin/settings'],
+    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+  });
+
   // Get all sessions
   const { data: allSessions = [] } = useQuery<FutsalSession[]>({
     queryKey: ["/api/sessions"],
@@ -102,6 +108,27 @@ export default function SessionCalendar({
   // Add empty cells for days before the first day of the month
   const firstDayOfWeek = monthStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
   const emptyDays = Array(firstDayOfWeek).fill(null);
+
+  // Find matching location from admin settings to get address data
+  const getLocationData = (locationName: string) => {
+    if (!adminSettings?.availableLocations) return { name: locationName };
+    
+    const matchedLocation = adminSettings.availableLocations.find((loc: any) => {
+      const locName = typeof loc === 'object' ? loc.name : loc;
+      return locName === locationName;
+    });
+    
+    if (matchedLocation && typeof matchedLocation === 'object') {
+      return {
+        name: matchedLocation.name,
+        address: [matchedLocation.addressLine1, matchedLocation.addressLine2, matchedLocation.city, matchedLocation.state, matchedLocation.postalCode]
+          .filter(Boolean)
+          .join(', ')
+      };
+    }
+    
+    return { name: locationName };
+  };
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -273,13 +300,16 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <MapPin className="w-3 h-3" />
-                          <LocationLink 
-                            name={session.locationName || session.location}
-                            address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
-                            lat={session.lat}
-                            lng={session.lng}
-                            className="truncate text-xs text-muted-foreground hover:text-foreground"
-                          />
+                          {(() => {
+                            const locationData = getLocationData(session.locationName || session.location);
+                            return (
+                              <LocationLink 
+                                name={locationData.name}
+                                address={locationData.address}
+                                className="truncate text-xs text-muted-foreground hover:text-foreground"
+                              />
+                            );
+                          })()}
                         </div>
                         <div className="flex items-center justify-between">
                           <Badge 
@@ -391,13 +421,16 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
-                          <LocationLink 
-                            name={session.locationName || session.location}
-                            address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
-                            lat={session.lat}
-                            lng={session.lng}
-                            className="text-muted-foreground hover:text-foreground"
-                          />
+                          {(() => {
+                            const locationData = getLocationData(session.locationName || session.location);
+                            return (
+                              <LocationLink 
+                                name={locationData.name}
+                                address={locationData.address}
+                                className="text-muted-foreground hover:text-foreground"
+                              />
+                            );
+                          })()}
                         </div>
                       </div>
                       

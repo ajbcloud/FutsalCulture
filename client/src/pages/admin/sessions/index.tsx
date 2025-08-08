@@ -72,6 +72,27 @@ export default function AdminSessions() {
     .map((loc: any) => typeof loc === 'object' ? loc.name : loc)
     .filter((name: string) => name && name.trim() !== '');
 
+  // Find matching location from admin settings to get address data
+  const getLocationData = (locationName: string) => {
+    if (!adminSettings?.availableLocations) return { name: locationName };
+    
+    const matchedLocation = adminSettings.availableLocations.find((loc: any) => {
+      const locName = typeof loc === 'object' ? loc.name : loc;
+      return locName === locationName;
+    });
+    
+    if (matchedLocation && typeof matchedLocation === 'object') {
+      return {
+        name: matchedLocation.name,
+        address: [matchedLocation.addressLine1, matchedLocation.addressLine2, matchedLocation.city, matchedLocation.state, matchedLocation.postalCode]
+          .filter(Boolean)
+          .join(', ')
+      };
+    }
+    
+    return { name: locationName };
+  };
+
   useEffect(() => {
     adminSessions.list().then(data => {
       console.log('admin sessions:', data);
@@ -472,13 +493,16 @@ export default function AdminSessions() {
                   {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  <LocationLink 
-                    name={session.locationName || session.location}
-                    address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
-                    lat={session.lat}
-                    lng={session.lng}
-                    className="text-muted-foreground hover:text-foreground"
-                  />
+                  {(() => {
+                    const locationData = getLocationData(session.locationName || session.location);
+                    return (
+                      <LocationLink 
+                        name={locationData.name}
+                        address={locationData.address}
+                        className="text-muted-foreground hover:text-foreground"
+                      />
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <div className="flex items-center space-x-2">
