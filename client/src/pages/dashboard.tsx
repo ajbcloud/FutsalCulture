@@ -270,41 +270,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Quick Actions - Mobile First */}
-      <section className="py-6 bg-background sm:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full h-12 bg-green-600 hover:bg-green-700 sm:w-auto sm:h-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Player
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                </DialogHeader>
-                <PlayerForm onSuccess={() => {
-                  setIsAddDialogOpen(false);
-                  setEditingPlayer(null);
-                }} />
-              </DialogContent>
-            </Dialog>
-
-            <Button 
-              variant="outline" 
-              className="w-full h-12 sm:w-auto sm:h-auto"
-              onClick={() => {
-                // View Full Schedule - always go without filters to show everything
-                setLocation('/sessions');
-              }}
-            >
-              View Full Schedule
-            </Button>
-          </div>
-        </div>
-      </section>
 
       {/* Today's Sessions - Mobile First */}
       <section className="py-6 bg-background sm:py-8">
@@ -314,6 +279,16 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Today's Sessions</h2>
               <p className="text-muted-foreground mt-1 text-sm sm:text-base sm:mt-2">Available for booking at 8:00 AM</p>
             </div>
+            <Button 
+              variant="outline" 
+              className="w-full sm:w-auto"
+              onClick={() => {
+                // View Full Schedule - always go without filters to show everything
+                setLocation('/sessions');
+              }}
+            >
+              View Full Schedule
+            </Button>
           </div>
 
           {todaySessions.length === 0 ? (
@@ -395,7 +370,26 @@ export default function Dashboard() {
       {/* Player Management Section - Mobile First */}
       <section className="py-6 bg-background sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-foreground mb-6 sm:text-3xl sm:mb-8">Your Players</h2>
+          <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
+            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Your Players</h2>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full bg-green-600 hover:bg-green-700 sm:w-auto">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Player
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader>
+                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
+                </DialogHeader>
+                <PlayerForm onSuccess={() => {
+                  setIsAddDialogOpen(false);
+                  setEditingPlayer(null);
+                }} />
+              </DialogContent>
+            </Dialog>
+          </div>
 
         {/* Player Management Cards */}
         <div className="space-y-6 sm:space-y-8">
