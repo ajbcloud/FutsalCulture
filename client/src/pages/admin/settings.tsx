@@ -171,6 +171,7 @@ export default function AdminSettings() {
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationData | null>(null);
+  const [logoJustUploaded, setLogoJustUploaded] = useState(false);
   const [locationForm, setLocationForm] = useState<LocationData>({
     name: '',
     addressLine1: '',
@@ -386,6 +387,11 @@ export default function AdminSettings() {
     reader.onloadend = () => {
       const base64String = reader.result as string;
       setSettings(prev => ({ ...prev, businessLogo: base64String }));
+      setLogoJustUploaded(true);
+      // Clear the upload message after 3 seconds
+      setTimeout(() => {
+        setLogoJustUploaded(false);
+      }, 3000);
     };
     reader.readAsDataURL(file);
   };
@@ -553,7 +559,7 @@ export default function AdminSettings() {
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Logo
                     </Button>
-                    {settings.businessLogo ? (
+                    {logoJustUploaded && settings.businessLogo ? (
                       <span className="text-sm text-green-500 flex items-center">
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Logo uploaded
