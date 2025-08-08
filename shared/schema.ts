@@ -117,7 +117,18 @@ export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   title: varchar("title").notNull(),
-  location: varchar("location").notNull(),
+  location: varchar("location").notNull(), // Keep for compatibility
+  // Structured location fields
+  locationName: text("location_name"), // Human-readable name
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  city: text("city"),
+  state: text("state"),
+  postalCode: text("postal_code"),
+  country: text("country").default("US"),
+  lat: text("lat"), // Using text to store decimal precision
+  lng: text("lng"), // Using text to store decimal precision
+  gmapsPlaceId: text("gmaps_place_id"),
   ageGroups: text("age_groups").array().notNull(),
   genders: text("genders").array().notNull(),
   startTime: timestamp("start_time").notNull(),

@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AGE_GROUPS } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
+import LocationLink from '@/components/LocationLink';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -458,7 +459,15 @@ export default function AdminSessions() {
                 <TableCell className="text-muted-foreground">
                   {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{session.location}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  <LocationLink 
+                    name={session.locationName || session.location}
+                    address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
+                    lat={session.lat}
+                    lng={session.lng}
+                    className="text-muted-foreground hover:text-foreground"
+                  />
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   <div className="flex items-center space-x-2">
                     <span>{session.signupCount || session.signupsCount || 0}/{session.capacity}</span>
@@ -587,7 +596,13 @@ export default function AdminSessions() {
                   <h3 className="text-foreground font-medium text-sm truncate">
                     {format(new Date(session.startTime), 'MMM d, h:mm a')}
                   </h3>
-                  <p className="text-muted-foreground text-xs">{session.location}</p>
+                  <LocationLink 
+                    name={session.locationName || session.location}
+                    address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
+                    lat={session.lat}
+                    lng={session.lng}
+                    className="text-muted-foreground text-xs hover:text-foreground"
+                  />
                 </div>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs shrink-0 ${

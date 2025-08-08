@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, DollarSign, ShoppingCart } from "lucide-react";
 import { FutsalSession } from "@shared/schema";
+import LocationLink from "@/components/LocationLink";
 
 interface SessionCardProps {
   session: FutsalSession;
@@ -56,7 +57,13 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           <div>
             <h3 className="text-xl font-semibold text-foreground">{session.title}</h3>
             <p className="text-muted-foreground">
-              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {session.location}
+              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • <LocationLink 
+                name={session.locationName || session.location}
+                address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
+                lat={session.lat}
+                lng={session.lng}
+                className="text-muted-foreground"
+              />
             </p>
           </div>
           {getStatusBadge()}

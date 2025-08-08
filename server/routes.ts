@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -118,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session filters endpoint
-  app.get("/api/session-filters", async (req: express.Request, res: express.Response) => {
+  app.get("/api/session-filters", async (req: Request, res: Response) => {
     try {
       let tenantId = null;
       
@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all sessions for the tenant (including past) to build comprehensive filter options
-      const sessions = await storage.getSessions({ tenantId, includePast: true });
+      const sessions = await storage.getSessions({ tenantId: tenantId || undefined, includePast: true });
       
       // Extract unique values for age groups and genders from sessions
       const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(session => session.ageGroups || [])));

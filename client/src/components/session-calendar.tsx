@@ -10,6 +10,7 @@ import { FutsalSession, Player } from "@shared/schema";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateAgeGroup, isSessionEligibleForPlayer } from "@shared/utils";
 import { format12Hour } from "@shared/booking-config";
+import LocationLink from "@/components/LocationLink";
 
 interface SessionCalendarProps {
   ageGroupFilter?: string;
@@ -272,7 +273,13 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <MapPin className="w-3 h-3" />
-                          <span className="truncate">{session.location}</span>
+                          <LocationLink 
+                            name={session.locationName || session.location}
+                            address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
+                            lat={session.lat}
+                            lng={session.lng}
+                            className="truncate text-xs text-muted-foreground hover:text-foreground"
+                          />
                         </div>
                         <div className="flex items-center justify-between">
                           <Badge 
@@ -384,7 +391,13 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
-                          <span>{session.location}</span>
+                          <LocationLink 
+                            name={session.locationName || session.location}
+                            address={[session.addressLine1, session.addressLine2, session.city, session.state, session.postalCode].filter(Boolean).join(', ') || undefined}
+                            lat={session.lat}
+                            lng={session.lng}
+                            className="text-muted-foreground hover:text-foreground"
+                          />
                         </div>
                       </div>
                       

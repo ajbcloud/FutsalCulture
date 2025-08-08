@@ -298,7 +298,35 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`${filters.gender} = ANY(${futsalSessions.genders})`);
     }
     
-    const baseQuery = db.select().from(futsalSessions);
+    const baseQuery = db.select({
+      id: futsalSessions.id,
+      tenantId: futsalSessions.tenantId,
+      title: futsalSessions.title,
+      location: futsalSessions.location,
+      // Structured location fields
+      locationName: futsalSessions.locationName,
+      addressLine1: futsalSessions.addressLine1,
+      addressLine2: futsalSessions.addressLine2,
+      city: futsalSessions.city,
+      state: futsalSessions.state,
+      postalCode: futsalSessions.postalCode,
+      country: futsalSessions.country,
+      lat: futsalSessions.lat,
+      lng: futsalSessions.lng,
+      gmapsPlaceId: futsalSessions.gmapsPlaceId,
+      ageGroups: futsalSessions.ageGroups,
+      genders: futsalSessions.genders,
+      startTime: futsalSessions.startTime,
+      endTime: futsalSessions.endTime,
+      capacity: futsalSessions.capacity,
+      priceCents: futsalSessions.priceCents,
+      status: futsalSessions.status,
+      bookingOpenHour: futsalSessions.bookingOpenHour,
+      bookingOpenMinute: futsalSessions.bookingOpenMinute,
+      hasAccessCode: futsalSessions.hasAccessCode,
+      accessCode: futsalSessions.accessCode,
+      createdAt: futsalSessions.createdAt,
+    }).from(futsalSessions);
     
     if (conditions.length > 0) {
       return await baseQuery.where(and(...conditions)).orderBy(futsalSessions.startTime);
@@ -312,7 +340,35 @@ export class DatabaseStorage implements IStorage {
     if (tenantId) {
       conditions.push(eq(futsalSessions.tenantId, tenantId));
     }
-    const [session] = await db.select().from(futsalSessions).where(and(...conditions));
+    const [session] = await db.select({
+      id: futsalSessions.id,
+      tenantId: futsalSessions.tenantId,
+      title: futsalSessions.title,
+      location: futsalSessions.location,
+      // Structured location fields
+      locationName: futsalSessions.locationName,
+      addressLine1: futsalSessions.addressLine1,
+      addressLine2: futsalSessions.addressLine2,
+      city: futsalSessions.city,
+      state: futsalSessions.state,
+      postalCode: futsalSessions.postalCode,
+      country: futsalSessions.country,
+      lat: futsalSessions.lat,
+      lng: futsalSessions.lng,
+      gmapsPlaceId: futsalSessions.gmapsPlaceId,
+      ageGroups: futsalSessions.ageGroups,
+      genders: futsalSessions.genders,
+      startTime: futsalSessions.startTime,
+      endTime: futsalSessions.endTime,
+      capacity: futsalSessions.capacity,
+      priceCents: futsalSessions.priceCents,
+      status: futsalSessions.status,
+      bookingOpenHour: futsalSessions.bookingOpenHour,
+      bookingOpenMinute: futsalSessions.bookingOpenMinute,
+      hasAccessCode: futsalSessions.hasAccessCode,
+      accessCode: futsalSessions.accessCode,
+      createdAt: futsalSessions.createdAt,
+    }).from(futsalSessions).where(and(...conditions));
     return session;
   }
 
@@ -342,8 +398,35 @@ export class DatabaseStorage implements IStorage {
         createdAt: signups.createdAt,
         // Player fields
         player: players,
-        // Session fields
-        session: futsalSessions,
+        // Session fields with structured location data
+        session: {
+          id: futsalSessions.id,
+          tenantId: futsalSessions.tenantId,
+          title: futsalSessions.title,
+          location: futsalSessions.location,
+          locationName: futsalSessions.locationName,
+          addressLine1: futsalSessions.addressLine1,
+          addressLine2: futsalSessions.addressLine2,
+          city: futsalSessions.city,
+          state: futsalSessions.state,
+          postalCode: futsalSessions.postalCode,
+          country: futsalSessions.country,
+          lat: futsalSessions.lat,
+          lng: futsalSessions.lng,
+          gmapsPlaceId: futsalSessions.gmapsPlaceId,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          startTime: futsalSessions.startTime,
+          endTime: futsalSessions.endTime,
+          capacity: futsalSessions.capacity,
+          priceCents: futsalSessions.priceCents,
+          status: futsalSessions.status,
+          bookingOpenHour: futsalSessions.bookingOpenHour,
+          bookingOpenMinute: futsalSessions.bookingOpenMinute,
+          hasAccessCode: futsalSessions.hasAccessCode,
+          accessCode: futsalSessions.accessCode,
+          createdAt: futsalSessions.createdAt,
+        },
       })
       .from(signups)
       .innerJoin(players, eq(signups.playerId, players.id))
