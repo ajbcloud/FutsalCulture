@@ -493,16 +493,11 @@ export default function AdminSessions() {
                   {Array.isArray(session.genders) ? session.genders.map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') : session.gender || 'N/A'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {(() => {
-                    const locationData = getLocationData(session.locationName || session.location);
-                    return (
-                      <LocationLink 
-                        name={locationData.name}
-                        address={locationData.address}
-                        className="text-muted-foreground hover:text-foreground"
-                      />
-                    );
-                  })()}
+                  <LocationLink 
+                    name={getLocationData(session.locationName || session.location).name}
+                    address={getLocationData(session.locationName || session.location).address}
+                    className="text-muted-foreground hover:text-foreground"
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <div className="flex items-center space-x-2">

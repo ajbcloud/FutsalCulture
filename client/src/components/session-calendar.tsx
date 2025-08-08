@@ -300,16 +300,11 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <MapPin className="w-3 h-3" />
-                          {(() => {
-                            const locationData = getLocationData(session.locationName || session.location);
-                            return (
-                              <LocationLink 
-                                name={locationData.name}
-                                address={locationData.address}
-                                className="truncate text-xs text-muted-foreground hover:text-foreground"
-                              />
-                            );
-                          })()}
+                          <LocationLink 
+                            name={getLocationData(session.locationName || session.location).name}
+                            address={getLocationData(session.locationName || session.location).address}
+                            className="truncate text-xs text-muted-foreground hover:text-foreground"
+                          />
                         </div>
                         <div className="flex items-center justify-between">
                           <Badge 
@@ -421,16 +416,11 @@ export default function SessionCalendar({
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
-                          {(() => {
-                            const locationData = getLocationData(session.locationName || session.location);
-                            return (
-                              <LocationLink 
-                                name={locationData.name}
-                                address={locationData.address}
-                                className="text-muted-foreground hover:text-foreground"
-                              />
-                            );
-                          })()}
+                          <LocationLink 
+                            name={getLocationData(session.locationName || session.location).name}
+                            address={getLocationData(session.locationName || session.location).address}
+                            className="text-muted-foreground hover:text-foreground"
+                          />
                         </div>
                       </div>
                       
