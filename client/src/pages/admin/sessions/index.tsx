@@ -68,9 +68,9 @@ export default function AdminSessions() {
   });
   
   // Convert available locations to a simple array of names for the dropdown
-  const availableLocationNames = (adminSettings?.availableLocations || []).map((loc: any) => 
-    typeof loc === 'object' ? loc.name : loc
-  );
+  const availableLocationNames = (adminSettings?.availableLocations || [])
+    .map((loc: any) => typeof loc === 'object' ? loc.name : loc)
+    .filter((name: string) => name && name.trim() !== '');
 
   useEffect(() => {
     adminSessions.list().then(data => {
