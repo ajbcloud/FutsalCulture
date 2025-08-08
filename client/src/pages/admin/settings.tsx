@@ -440,74 +440,6 @@ export default function AdminSettings() {
               </div>
               
               <div>
-                <Label className="text-foreground flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Available Locations
-                </Label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Manage the locations that appear in session creation and filtering dropdowns.
-                </p>
-                <div className="space-y-3">
-                  {settings.availableLocations?.map((location, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-                      <span className="text-foreground">{location}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newLocations = settings.availableLocations?.filter((_, i) => i !== index) || [];
-                          setSettings(prev => ({ ...prev, availableLocations: newLocations }));
-                        }}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex space-x-2">
-                    <Input
-                      value={newLocation}
-                      onChange={(e) => setNewLocation(e.target.value)}
-                      className="bg-input border-border text-foreground"
-                      placeholder="Enter new location name"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
-                            setSettings(prev => ({
-                              ...prev,
-                              availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
-                            }));
-                            setNewLocation('');
-                          }
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
-                          setSettings(prev => ({
-                            ...prev,
-                            availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
-                          }));
-                          setNewLocation('');
-                        }
-                      }}
-                      disabled={!newLocation.trim() || settings.availableLocations?.includes(newLocation.trim())}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  {newLocation.trim() && settings.availableLocations?.includes(newLocation.trim()) && (
-                    <p className="text-sm text-destructive">This location already exists</p>
-                  )}
-                </div>
-              </div>
-              
-              <div>
                 <Label htmlFor="contactEmail" className="text-foreground">Contact Email</Label>
                 <Input
                   id="contactEmail"
@@ -759,6 +691,78 @@ export default function AdminSettings() {
                   </Select>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <MapPin className="w-5 h-5 mr-2" />
+                Available Locations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Manage the locations that appear in session creation and filtering dropdowns.
+              </p>
+              <div className="space-y-3">
+                {settings.availableLocations?.map((location, index) => (
+                  <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                    <span className="text-foreground">{location}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newLocations = settings.availableLocations?.filter((_, i) => i !== index) || [];
+                        setSettings(prev => ({ ...prev, availableLocations: newLocations }));
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex space-x-2">
+                  <Input
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    className="bg-input border-border text-foreground"
+                    placeholder="Enter new location name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
+                          setSettings(prev => ({
+                            ...prev,
+                            availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
+                          }));
+                          setNewLocation('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newLocation.trim() && !settings.availableLocations?.includes(newLocation.trim())) {
+                        setSettings(prev => ({
+                          ...prev,
+                          availableLocations: [...(prev.availableLocations || []), newLocation.trim()]
+                        }));
+                        setNewLocation('');
+                      }
+                    }}
+                    disabled={!newLocation.trim() || settings.availableLocations?.includes(newLocation.trim())}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                {newLocation.trim() && settings.availableLocations?.includes(newLocation.trim()) && (
+                  <p className="text-sm text-destructive">This location already exists</p>
+                )}
+              </div>
             </CardContent>
           </Card>
           
