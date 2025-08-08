@@ -869,7 +869,17 @@ export function setupAdminRoutes(app: any) {
   app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const updateData = { ...req.body };
+      
+      // Convert datetime strings to Date objects if they exist
+      if (updateData.startTime && typeof updateData.startTime === 'string') {
+        updateData.startTime = new Date(updateData.startTime);
+      }
+      if (updateData.endTime && typeof updateData.endTime === 'string') {
+        updateData.endTime = new Date(updateData.endTime);
+      }
+      
+      console.log('Updating session with data:', { id, updateData });
       const session = await storage.updateSession(id, updateData);
       res.json(session);
     } catch (error) {
@@ -2009,7 +2019,17 @@ export function setupAdminRoutes(app: any) {
   app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const updateData = { ...req.body };
+      
+      // Convert datetime strings to Date objects if they exist
+      if (updateData.startTime && typeof updateData.startTime === 'string') {
+        updateData.startTime = new Date(updateData.startTime);
+      }
+      if (updateData.endTime && typeof updateData.endTime === 'string') {
+        updateData.endTime = new Date(updateData.endTime);
+      }
+      
+      console.log('Updating session with data:', { id, updateData });
       const session = await storage.updateSession(id, updateData);
       res.json(session);
     } catch (error) {
