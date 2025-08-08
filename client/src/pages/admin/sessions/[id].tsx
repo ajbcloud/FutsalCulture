@@ -705,9 +705,8 @@ export default function AdminSessionDetail() {
               </div>
             )}
           </div>
+          </div>
         </div>
-
-
 
         <div className="flex justify-end mt-6 space-x-4">
           <Link href="/admin/sessions">
