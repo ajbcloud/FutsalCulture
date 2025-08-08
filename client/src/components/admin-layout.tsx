@@ -33,7 +33,7 @@ const adminNavItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/discount-codes", label: "Discount Codes", icon: Tag },
   { href: "/admin/access-codes", label: "Access Codes", icon: Key },
-  { href: "/admin/players", label: "Players", icon: Users },
+  { href: "/admin/players", label: "Players", icon: User },
   { href: "/admin/parents", label: "Parents", icon: Users },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },

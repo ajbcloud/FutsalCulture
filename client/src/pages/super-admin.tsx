@@ -67,7 +67,7 @@ export default function SuperAdminPage() {
     { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: location === "/super-admin/payments" },
     { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: location === "/super-admin/registrations" },
     { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: location === "/super-admin/parents" },
-    { name: "Players", href: "/super-admin/players", icon: Users, current: location === "/super-admin/players" },
+    { name: "Players", href: "/super-admin/players", icon: User, current: location === "/super-admin/players" },
     { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: location === "/super-admin/help" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
