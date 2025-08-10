@@ -24,6 +24,7 @@ export default function Profile() {
     email: "",
     phone: "",
     avatarColor: "#2563eb",
+    avatarTextColor: "", // Empty string means auto-contrast
     emailReminder: true,
     smsReminder: false,
   });
@@ -43,6 +44,7 @@ export default function Profile() {
         email: user.email || "",
         phone: user.phone || "",
         avatarColor: user.avatarColor || "#2563eb",
+        avatarTextColor: user.avatarTextColor || "",
         emailReminder: notificationPrefs.email ?? true,
         smsReminder: notificationPrefs.sms ?? false,
       });
@@ -59,6 +61,7 @@ export default function Profile() {
         email: data.email,
         phone: data.phone,
         avatarColor: data.avatarColor,
+        avatarTextColor: data.avatarTextColor || null, // Send null for auto-contrast
       });
       
       // Update notification preferences - only save if contact info is available
@@ -98,6 +101,7 @@ export default function Profile() {
         email: user.email || "",
         phone: user.phone || "",
         avatarColor: user.avatarColor || "#2563eb",
+        avatarTextColor: user.avatarTextColor || "",
         emailReminder: notificationPrefs.email ?? true, 
         smsReminder: notificationPrefs.sms ?? false,
       });
@@ -241,40 +245,86 @@ export default function Profile() {
                     alt={`${user?.firstName} ${user?.lastName}` || "User"}
                     fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
                     backgroundColor={formData.avatarColor}
+                    textColor={formData.avatarTextColor || undefined}
                     size="lg"
                   />
                 </div>
                 
                 {isEditing && (
-                  <div className="flex flex-col gap-2 flex-1">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Avatar Color
-                    </Label>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        type="color"
-                        value={formData.avatarColor}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          avatarColor: e.target.value 
-                        })}
-                        className="w-16 h-10 p-1 border rounded cursor-pointer"
-                        data-testid="input-avatar-color"
-                      />
-                      <Input
-                        type="text"
-                        value={formData.avatarColor}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          avatarColor: e.target.value 
-                        })}
-                        placeholder="#2563eb"
-                        className="flex-1 bg-input border-border text-foreground focus:border-primary"
-                        data-testid="input-avatar-hex"
-                      />
+                  <div className="flex flex-col gap-4 flex-1">
+                    {/* Background Color */}
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Background Color
+                      </Label>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="color"
+                          value={formData.avatarColor}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            avatarColor: e.target.value 
+                          })}
+                          className="w-16 h-10 p-1 border rounded cursor-pointer"
+                          data-testid="input-avatar-color"
+                        />
+                        <Input
+                          type="text"
+                          value={formData.avatarColor}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            avatarColor: e.target.value 
+                          })}
+                          placeholder="#2563eb"
+                          className="flex-1 bg-input border-border text-foreground focus:border-primary"
+                          data-testid="input-avatar-hex"
+                        />
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Choose a background color for your avatar initial
+                    
+                    {/* Text Color */}
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Text Color (optional)
+                      </Label>
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          type="color"
+                          value={formData.avatarTextColor || "#ffffff"}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            avatarTextColor: e.target.value 
+                          })}
+                          className="w-16 h-10 p-1 border rounded cursor-pointer"
+                          data-testid="input-avatar-text-color"
+                        />
+                        <Input
+                          type="text"
+                          value={formData.avatarTextColor}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            avatarTextColor: e.target.value 
+                          })}
+                          placeholder="Auto (leave empty)"
+                          className="flex-1 bg-input border-border text-foreground focus:border-primary"
+                          data-testid="input-avatar-text-hex"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFormData({ 
+                            ...formData, 
+                            avatarTextColor: "" 
+                          })}
+                          className="px-3 text-xs"
+                        >
+                          Auto
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Leave empty for automatic contrast detection
+                      </div>
                     </div>
                   </div>
                 )}

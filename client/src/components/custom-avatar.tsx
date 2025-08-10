@@ -6,6 +6,7 @@ interface CustomAvatarProps {
   alt?: string;
   fallbackText?: string;
   backgroundColor?: string;
+  textColor?: string; // Custom text color (overrides auto-contrast)
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -40,17 +41,19 @@ export function CustomAvatar({
   alt, 
   fallbackText, 
   backgroundColor = "#2563eb",
+  textColor,
   size = "md",
   className = ""
 }: CustomAvatarProps) {
-  const textColor = isLightColor(backgroundColor) ? "#000000" : "#ffffff";
+  // Use custom text color if provided, otherwise auto-calculate contrast
+  const finalTextColor = textColor || (isLightColor(backgroundColor) ? "#000000" : "#ffffff");
   
   return (
     <Avatar className={`${sizeClasses[size]} ${className}`}>
       <AvatarImage src={src} alt={alt} />
       <AvatarFallback 
         className={`${textSizes[size]} font-medium`}
-        style={{ backgroundColor, color: textColor }}
+        style={{ backgroundColor, color: finalTextColor }}
         data-testid="avatar-fallback"
       >
         {fallbackText || <User className="h-4 w-4" />}

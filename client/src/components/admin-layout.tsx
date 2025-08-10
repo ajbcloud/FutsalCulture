@@ -160,6 +160,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     alt={user?.firstName || "User"}
                     fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
                     backgroundColor={user?.avatarColor || "#10b981"}
+                    textColor={user?.avatarTextColor || undefined}
                     size="md"
                   />
                   <div className="flex-1 min-w-0 text-left">

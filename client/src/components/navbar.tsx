@@ -90,6 +90,7 @@ export default function Navbar() {
                       alt={`${user?.firstName} ${user?.lastName}` || "User"}
                       fallbackText={user?.firstName?.[0]}
                       backgroundColor={user?.avatarColor || "#2563eb"}
+                      textColor={user?.avatarTextColor || undefined}
                       size="md"
                     />
                   </Button>

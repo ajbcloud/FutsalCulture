@@ -64,6 +64,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   avatarColor: varchar("avatar_color").default("#2563eb"), // Custom avatar background color
+  avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   phone: varchar("phone"),
   isAdmin: boolean("is_admin").default(false),
   isAssistant: boolean("is_assistant").default(false),
@@ -100,6 +101,7 @@ export const players = pgTable("players", {
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   avatarColor: varchar("avatar_color").default("#10b981"), // Custom avatar background color for players
+  avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   birthYear: integer("birth_year").notNull(),
   gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
