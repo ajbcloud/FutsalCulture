@@ -449,40 +449,101 @@ export default function EliteFeatures() {
 
                 <div className="space-y-4">
                   <h3 className="font-semibold">Theme Preview</h3>
-                  <div 
-                    className="p-6 rounded-lg border space-y-4"
-                    style={{ 
-                      backgroundColor: themeSettings.background,
-                      color: themeSettings.text
-                    }}
-                  >
-                    <h4 className="font-semibold" style={{ color: themeSettings.headingColor }}>
-                      Sample Portal Content
-                    </h4>
-                    <p className="text-sm" style={{ color: themeSettings.descriptionColor }}>
-                      This is how your custom theme will look in the portal with heading and description colors.
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        className="px-4 py-2 rounded text-white text-sm"
-                        style={{ backgroundColor: themeSettings.primaryButton }}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Light Mode Preview */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
+                        <span className="text-sm font-medium">Light Mode</span>
+                      </div>
+                      <div 
+                        className="p-6 rounded-lg border space-y-4"
+                        style={{ 
+                          backgroundColor: themeSettings.background,
+                          color: themeSettings.text
+                        }}
                       >
-                        Primary Button
-                      </button>
-                      <button
-                        className="px-4 py-2 rounded text-white text-sm"
-                        style={{ backgroundColor: themeSettings.secondaryButton }}
-                      >
-                        Secondary Button
-                      </button>
+                        <h4 className="font-semibold" style={{ color: themeSettings.headingColor }}>
+                          Sample Portal Content
+                        </h4>
+                        <p className="text-sm" style={{ color: themeSettings.descriptionColor }}>
+                          This is how your custom theme will look in light mode with heading and description colors.
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            className="px-4 py-2 rounded text-white text-sm"
+                            style={{ backgroundColor: themeSettings.primaryButton }}
+                          >
+                            Primary Button
+                          </button>
+                          <button
+                            className="px-4 py-2 rounded text-white text-sm"
+                            style={{ backgroundColor: themeSettings.secondaryButton }}
+                          >
+                            Secondary Button
+                          </button>
+                        </div>
+                        <div className="mt-4">
+                          <h5 className="font-medium mb-2" style={{ color: themeSettings.headingColor }}>
+                            Section Heading
+                          </h5>
+                          <p className="text-xs" style={{ color: themeSettings.descriptionColor }}>
+                            This shows how descriptions and smaller text will appear with the custom colors.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-4">
-                      <h5 className="font-medium mb-2" style={{ color: themeSettings.headingColor }}>
-                        Section Heading
-                      </h5>
-                      <p className="text-xs" style={{ color: themeSettings.descriptionColor }}>
-                        This shows how descriptions and smaller text will appear with the custom colors.
-                      </p>
+
+                    {/* Dark Mode Preview */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-800 border-2 border-gray-600 rounded"></div>
+                        <span className="text-sm font-medium">Dark Mode</span>
+                      </div>
+                      <div 
+                        className="p-6 rounded-lg border space-y-4"
+                        style={{ 
+                          backgroundColor: '#0f172a', // Dark background
+                          color: '#f1f5f9' // Light text for dark mode
+                        }}
+                      >
+                        <h4 className="font-semibold" style={{ 
+                          color: themeSettings.headingColor === '#111827' ? '#f1f5f9' : themeSettings.headingColor 
+                        }}>
+                          Sample Portal Content
+                        </h4>
+                        <p className="text-sm" style={{ 
+                          color: themeSettings.descriptionColor === '#6b7280' ? '#94a3b8' : themeSettings.descriptionColor 
+                        }}>
+                          This is how your custom theme will look in dark mode with adjusted text colors for visibility.
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            className="px-4 py-2 rounded text-white text-sm"
+                            style={{ backgroundColor: themeSettings.primaryButton }}
+                          >
+                            Primary Button
+                          </button>
+                          <button
+                            className="px-4 py-2 rounded text-white text-sm"
+                            style={{ backgroundColor: themeSettings.secondaryButton }}
+                          >
+                            Secondary Button
+                          </button>
+                        </div>
+                        <div className="mt-4">
+                          <h5 className="font-medium mb-2" style={{ 
+                            color: themeSettings.headingColor === '#111827' ? '#f1f5f9' : themeSettings.headingColor 
+                          }}>
+                            Section Heading
+                          </h5>
+                          <p className="text-xs" style={{ 
+                            color: themeSettings.descriptionColor === '#6b7280' ? '#94a3b8' : themeSettings.descriptionColor 
+                          }}>
+                            This shows how descriptions and smaller text will appear in dark mode.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
