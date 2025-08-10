@@ -132,7 +132,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
       return <Badge variant="destructive">Full</Badge>;
     }
     if (fillPercentage >= 80) {
-      return <Badge className="bg-yellow-600 text-yellow-950">Filling Fast</Badge>;
+      return <Badge className="bg-yellow-600 text-white dark:text-yellow-950">Filling Fast</Badge>;
     }
     return <Badge className="bg-green-600 text-green-950">Open</Badge>;
   };

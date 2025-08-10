@@ -465,7 +465,7 @@ export default function SessionCalendar({
                           } else if (!isToday) {
                             return (
                               <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
-                                <p className="text-yellow-400 text-sm">
+                                <p className="text-yellow-700 dark:text-yellow-400 text-sm">
                                   Booking opens at {format12Hour(session.bookingOpenHour ?? 8, session.bookingOpenMinute ?? 0)} on {format(sessionDate, 'MMM d')}
                                 </p>
                               </div>
@@ -473,7 +473,7 @@ export default function SessionCalendar({
                           } else if (!bookingOpen) {
                             return (
                               <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-600 rounded text-center">
-                                <p className="text-yellow-400 text-sm">
+                                <p className="text-yellow-700 dark:text-yellow-400 text-sm">
                                   Booking opens at {format12Hour(session.bookingOpenHour ?? 8, session.bookingOpenMinute ?? 0)} today
                                 </p>
                               </div>

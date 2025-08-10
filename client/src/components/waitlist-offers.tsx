@@ -96,10 +96,10 @@ export default function WaitlistOffers() {
   return (
     <Card className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/20">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-amber-400">
+        <CardTitle className="flex items-center space-x-2 text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-5 h-5" />
           <span>Waitlist Offers</span>
-          <Badge variant="secondary" className="bg-amber-500/20 text-amber-300">
+          <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 dark:text-amber-300">
             {offers.length}
           </Badge>
         </CardTitle>
@@ -133,7 +133,7 @@ export default function WaitlistOffers() {
               <div className="text-right space-y-1">
                 <Badge 
                   variant="outline" 
-                  className="border-amber-500 text-amber-400 bg-amber-500/10"
+                  className="border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-500/10"
                 >
                   <Clock className="w-3 h-3 mr-1" />
                   {offer.offerExpiresAt ? getTimeRemaining(offer.offerExpiresAt.toString()) : "No limit"}
