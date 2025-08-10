@@ -22,7 +22,9 @@ import {
   Globe,
   Key,
   Users,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 interface PlatformSettings {
@@ -584,6 +586,60 @@ export default function SuperAdminSettings() {
                   <Users className="w-4 h-4 mr-2" />
                   Generate System Report
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Data Retention & Cleanup
+              </CardTitle>
+              <CardDescription>
+                Configure automatic data cleanup policies across all tenants
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="waitlistExpirationHours" className="text-foreground">
+                    Waitlist Data Cleanup (hours)
+                  </Label>
+                  <Input
+                    id="waitlistExpirationHours"
+                    type="number"
+                    min="1"
+                    max="168"
+                    defaultValue="24"
+                    className="max-w-xs"
+                    placeholder="24"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automatically clean up expired waitlist data after sessions end. This affects all tenants globally.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                        Global Setting
+                      </h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        This setting applies to all tenants platform-wide. Changes will affect data retention policies across all organizations.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-start">
+                  <Button onClick={() => {/* TODO: Implement save handler */}}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Cleanup Settings
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

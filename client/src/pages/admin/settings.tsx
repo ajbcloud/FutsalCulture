@@ -55,7 +55,7 @@ interface SystemSettings {
   waitlistNotificationSMS: boolean;
   waitlistJoinMessage: string;
   waitlistPromotionMessage: string;
-  waitlistExpirationHours: number;
+
 }
 
 interface Integration {
@@ -182,8 +182,7 @@ export default function AdminSettings() {
     waitlistNotificationEmail: true,
     waitlistNotificationSMS: false,
     waitlistJoinMessage: "You've been added to the waitlist for {session}. You're #{position} in line.",
-    waitlistPromotionMessage: "Great news! A spot opened up in {session}. You have until {expires} to complete your booking.",
-    waitlistExpirationHours: 24
+    waitlistPromotionMessage: "Great news! A spot opened up in {session}. You have until {expires} to complete your booking."
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
@@ -1107,68 +1106,7 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Waitlist Cleanup & Automation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Automated Cleanup</h4>
-                
-                <div>
-                  <Label htmlFor="waitlistExpiration" className="text-foreground">Cleanup After (hours)</Label>
-                  <Input
-                    id="waitlistExpiration"
-                    type="number"
-                    min="1"
-                    max="168"
-                    value={settings.waitlistExpirationHours}
-                    onChange={(e) => setSettings(prev => ({ ...prev, waitlistExpirationHours: parseInt(e.target.value) || 24 }))}
-                    className="bg-input border-border text-foreground mt-1"
-                    placeholder="24"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Clean up data after session</p>
-                </div>
-              </div>
 
-              <div className="border-t border-border pt-6 space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Notification Settings</h4>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-foreground">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Send email notifications for waitlist updates
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.waitlistNotificationEmail}
-                    onCheckedChange={(checked) => 
-                      setSettings(prev => ({ ...prev, waitlistNotificationEmail: checked }))
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-foreground">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Send SMS notifications for urgent waitlist updates
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.waitlistNotificationSMS}
-                    onCheckedChange={(checked) => 
-                      setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Save Button at bottom of Sessions tab */}
           <div className="flex justify-start">
