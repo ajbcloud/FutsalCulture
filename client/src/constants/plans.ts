@@ -6,6 +6,8 @@ export type FeatureKey =
   | 'payments'
   | 'emailNotifications'
   | 'smsNotifications'
+  | 'basicNotifications'
+  | 'sessionBooking'
   | 'advancedAnalytics'
   | 'revenueAnalytics'
   | 'autoPromotion'
@@ -25,11 +27,13 @@ export const PLANS = {
     features: {
       maxPlayers: 10,
       manualSessions: true,
+      sessionBooking: true,
       recurringSessions: false,
       csvImport: false,
       payments: false,
       emailNotifications: false,
       smsNotifications: false,
+      basicNotifications: true,
       advancedAnalytics: false,
       revenueAnalytics: false,
       autoPromotion: false,
@@ -49,11 +53,13 @@ export const PLANS = {
     features: {
       maxPlayers: 150,
       manualSessions: true,
+      sessionBooking: true,
       recurringSessions: true,
       csvImport: false,
       payments: true,
       emailNotifications: true,
       smsNotifications: false,
+      basicNotifications: true,
       advancedAnalytics: 'basic' as const,
       revenueAnalytics: false, // Basic analytics only, no revenue tracking
       autoPromotion: false,
@@ -73,11 +79,13 @@ export const PLANS = {
     features: {
       maxPlayers: 500,
       manualSessions: true,
+      sessionBooking: true,
       recurringSessions: true,
       csvImport: true,
       payments: true,
       emailNotifications: true,
       smsNotifications: true,
+      basicNotifications: true,
       advancedAnalytics: 'advanced' as const,
       revenueAnalytics: true, // Revenue analytics available since they can accept payments
       autoPromotion: true,
@@ -97,11 +105,13 @@ export const PLANS = {
     features: {
       maxPlayers: 'unlimited' as const,
       manualSessions: true,
+      sessionBooking: true,
       recurringSessions: true,
       csvImport: true,
       payments: true,
       emailNotifications: true,
       smsNotifications: true,
+      basicNotifications: true,
       advancedAnalytics: 'elite' as const, // Enhanced with multi-location, progression, forecasting
       revenueAnalytics: true, // Full revenue analytics available
       autoPromotion: true,

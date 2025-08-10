@@ -51,6 +51,8 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
   // Key features to highlight in comparison
   const keyFeatures = [
     'maxPlayers',
+    'sessionBooking',
+    'basicNotifications',
     'payments', 
     'emailNotifications',
     'smsNotifications',

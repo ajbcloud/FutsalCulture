@@ -69,4 +69,12 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     label: 'Advanced player development system', 
     description: 'Comprehensive skill assessments, goal tracking, training plans, and progress analytics for individual player growth' 
   },
+  basicNotifications: { 
+    label: 'Basic email & SMS notifications', 
+    description: 'Essential session reminders and booking confirmations via email and SMS' 
+  },
+  sessionBooking: { 
+    label: 'Parent & player session booking', 
+    description: 'Easy online booking system for parents and players to reserve training session spots' 
+  },
 };
