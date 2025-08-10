@@ -130,8 +130,8 @@ export default function DiscountCodes() {
       validFrom: "",
       validUntil: "",
       isActive: true,
-      lockedToPlayerId: "",
-      lockedToParentId: "",
+      lockedToPlayerId: "none",
+      lockedToParentId: "none",
     });
   };
 
@@ -145,8 +145,8 @@ export default function DiscountCodes() {
           maxUses: formData.maxUses || null,
           validFrom: formData.validFrom || null,
           validUntil: formData.validUntil || null,
-          lockedToPlayerId: formData.lockedToPlayerId || null,
-          lockedToParentId: formData.lockedToParentId || null,
+          lockedToPlayerId: formData.lockedToPlayerId === "none" ? null : formData.lockedToPlayerId,
+          lockedToParentId: formData.lockedToParentId === "none" ? null : formData.lockedToParentId,
         },
       });
     } else {
@@ -155,8 +155,8 @@ export default function DiscountCodes() {
         maxUses: formData.maxUses || null,
         validFrom: formData.validFrom || null,
         validUntil: formData.validUntil || null,
-        lockedToPlayerId: formData.lockedToPlayerId || null,
-        lockedToParentId: formData.lockedToParentId || null,
+        lockedToPlayerId: formData.lockedToPlayerId === "none" ? null : formData.lockedToPlayerId,
+        lockedToParentId: formData.lockedToParentId === "none" ? null : formData.lockedToParentId,
       });
     }
   };
@@ -172,8 +172,8 @@ export default function DiscountCodes() {
       validFrom: code.validFrom ? format(new Date(code.validFrom), "yyyy-MM-dd'T'HH:mm") : "",
       validUntil: code.validUntil ? format(new Date(code.validUntil), "yyyy-MM-dd'T'HH:mm") : "",
       isActive: code.isActive ?? true,
-      lockedToPlayerId: code.lockedToPlayerId || "",
-      lockedToParentId: code.lockedToParentId || "",
+      lockedToPlayerId: code.lockedToPlayerId || "none",
+      lockedToParentId: code.lockedToParentId || "none",
     });
   };
 
@@ -233,7 +233,7 @@ export default function DiscountCodes() {
                     onValueChange={(value) => setFormData({ ...formData, discountType: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select discount type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="full">Full (100% Off)</SelectItem>
@@ -328,14 +328,14 @@ export default function DiscountCodes() {
                         ...formData, 
                         lockedToPlayerId: value,
                         // Clear parent lock if player is selected
-                        lockedToParentId: value ? "" : formData.lockedToParentId
+                        lockedToParentId: value !== "none" ? "none" : formData.lockedToParentId
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Any player can use" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any player can use</SelectItem>
+                        <SelectItem value="none">Any player can use</SelectItem>
                         {players.map((player: any) => (
                           <SelectItem key={player.id} value={player.id}>
                             {player.firstName} {player.lastName}
@@ -352,14 +352,14 @@ export default function DiscountCodes() {
                         ...formData, 
                         lockedToParentId: value,
                         // Clear player lock if parent is selected
-                        lockedToPlayerId: value ? "" : formData.lockedToPlayerId
+                        lockedToPlayerId: value !== "none" ? "none" : formData.lockedToPlayerId
                       })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Any parent can use" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any parent can use</SelectItem>
+                        <SelectItem value="none">Any parent can use</SelectItem>
                         {parents.map((parent: any) => (
                           <SelectItem key={parent.id} value={parent.id}>
                             {parent.firstName} {parent.lastName} ({parent.email})
