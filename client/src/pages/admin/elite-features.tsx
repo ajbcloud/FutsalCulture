@@ -25,6 +25,10 @@ interface ThemeSettings {
   lightText: string;
   lightHeadingColor: string;
   lightDescriptionColor: string;
+  lightNavTitle: string;
+  lightNavText: string;
+  lightNavActiveText: string;
+  lightNavActiveBg: string;
   // Dark mode colors
   darkPrimaryButton: string;
   darkSecondaryButton: string;
@@ -32,6 +36,10 @@ interface ThemeSettings {
   darkText: string;
   darkHeadingColor: string;
   darkDescriptionColor: string;
+  darkNavTitle: string;
+  darkNavText: string;
+  darkNavActiveText: string;
+  darkNavActiveBg: string;
   // Legacy fields for backward compatibility
   primaryButton?: string;
   secondaryButton?: string;
@@ -71,13 +79,21 @@ export default function EliteFeatures() {
     lightText: '#111827',
     lightHeadingColor: '#111827',
     lightDescriptionColor: '#4b5563',
+    lightNavTitle: '#111827',
+    lightNavText: '#6b7280',
+    lightNavActiveText: '#ffffff',
+    lightNavActiveBg: '#2563eb',
     // Dark mode defaults
     darkPrimaryButton: '#2563eb',
     darkSecondaryButton: '#64748b',
     darkBackground: '#0f172a',
     darkText: '#f8fafc',
     darkHeadingColor: '#f8fafc',
-    darkDescriptionColor: '#cbd5e1'
+    darkDescriptionColor: '#cbd5e1',
+    darkNavTitle: '#f8fafc',
+    darkNavText: '#cbd5e1',
+    darkNavActiveText: '#ffffff',
+    darkNavActiveBg: '#2563eb'
   });
 
   // Feature Request State
@@ -103,6 +119,10 @@ export default function EliteFeatures() {
         lightText: theme.lightText || '#111827',
         lightHeadingColor: theme.lightHeadingColor || '#111827',
         lightDescriptionColor: theme.lightDescriptionColor || '#4b5563',
+        lightNavTitle: theme.lightNavTitle || '#111827',
+        lightNavText: theme.lightNavText || '#6b7280',
+        lightNavActiveText: theme.lightNavActiveText || '#ffffff',
+        lightNavActiveBg: theme.lightNavActiveBg || '#2563eb',
         // Dark mode colors
         darkPrimaryButton: theme.darkPrimaryButton || '#2563eb',
         darkSecondaryButton: theme.darkSecondaryButton || '#64748b',
@@ -110,6 +130,10 @@ export default function EliteFeatures() {
         darkText: theme.darkText || '#f8fafc',
         darkHeadingColor: theme.darkHeadingColor || '#f8fafc',
         darkDescriptionColor: theme.darkDescriptionColor || '#cbd5e1',
+        darkNavTitle: theme.darkNavTitle || '#f8fafc',
+        darkNavText: theme.darkNavText || '#cbd5e1',
+        darkNavActiveText: theme.darkNavActiveText || '#ffffff',
+        darkNavActiveBg: theme.darkNavActiveBg || '#2563eb',
         // Legacy fallbacks
         primaryButton: theme.primaryButton || '#2563eb',
         secondaryButton: theme.secondaryButton || '#64748b',
@@ -512,6 +536,106 @@ export default function EliteFeatures() {
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <Label htmlFor="lightNavTitle">Navigation Title Color (Admin Portal)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightNavTitle"
+                          type="color"
+                          value={themeSettings.lightNavTitle}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightNavTitle}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavTitle: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightNavText">Navigation Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightNavText"
+                          type="color"
+                          value={themeSettings.lightNavText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightNavText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavText: e.target.value
+                          }))}
+                          placeholder="#6b7280"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightNavActiveText">Active Navigation Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightNavActiveText"
+                          type="color"
+                          value={themeSettings.lightNavActiveText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavActiveText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightNavActiveText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavActiveText: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightNavActiveBg">Active Navigation Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightNavActiveBg"
+                          type="color"
+                          value={themeSettings.lightNavActiveBg}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavActiveBg: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightNavActiveBg}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightNavActiveBg: e.target.value
+                          }))}
+                          placeholder="#2563eb"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 
@@ -678,6 +802,106 @@ export default function EliteFeatures() {
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <Label htmlFor="darkNavTitle">Navigation Title Color (Admin Portal)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkNavTitle"
+                          type="color"
+                          value={themeSettings.darkNavTitle}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkNavTitle}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavTitle: e.target.value
+                          }))}
+                          placeholder="#f8fafc"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkNavText">Navigation Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkNavText"
+                          type="color"
+                          value={themeSettings.darkNavText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkNavText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavText: e.target.value
+                          }))}
+                          placeholder="#cbd5e1"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkNavActiveText">Active Navigation Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkNavActiveText"
+                          type="color"
+                          value={themeSettings.darkNavActiveText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavActiveText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkNavActiveText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavActiveText: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkNavActiveBg">Active Navigation Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkNavActiveBg"
+                          type="color"
+                          value={themeSettings.darkNavActiveBg}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavActiveBg: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkNavActiveBg}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkNavActiveBg: e.target.value
+                          }))}
+                          placeholder="#2563eb"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -744,6 +968,64 @@ export default function EliteFeatures() {
                         className=""
                       >
                         Text Color - General text content uses this color.
+                      </div>
+                      
+                      {/* Navigation Preview */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded border">
+                        <div className="text-xs text-gray-500 mb-2">Navigation Preview:</div>
+                        <div 
+                          key={`light-nav-title-${themeSettings.lightNavTitle}`}
+                          style={{ 
+                            color: `${themeSettings.lightNavTitle} !important`,
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            marginBottom: '0.5rem',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightNavTitle
+                          }}
+                        >
+                          Admin Portal
+                        </div>
+                        <div className="space-y-1">
+                          <div 
+                            key={`light-nav-text-${themeSettings.lightNavText}`}
+                            style={{ 
+                              color: `${themeSettings.lightNavText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0',
+                              transition: 'color 0.2s ease',
+                              WebkitTextFillColor: themeSettings.lightNavText
+                            }}
+                          >
+                            Dashboard
+                          </div>
+                          <div 
+                            key={`light-nav-active-${themeSettings.lightNavActiveBg}-${themeSettings.lightNavActiveText}`}
+                            style={{ 
+                              backgroundColor: `${themeSettings.lightNavActiveBg} !important`,
+                              color: `${themeSettings.lightNavActiveText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.375rem',
+                              transition: 'all 0.2s ease',
+                              WebkitTextFillColor: themeSettings.lightNavActiveText
+                            }}
+                          >
+                            Sessions (Active)
+                          </div>
+                          <div 
+                            key={`light-nav-text2-${themeSettings.lightNavText}`}
+                            style={{ 
+                              color: `${themeSettings.lightNavText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0',
+                              transition: 'color 0.2s ease',
+                              WebkitTextFillColor: themeSettings.lightNavText
+                            }}
+                          >
+                            Players
+                          </div>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
@@ -864,7 +1146,66 @@ export default function EliteFeatures() {
                       >
                         Text Color - General text content uses this color.
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      
+                      {/* Navigation Preview */}
+                      <div className="mt-4 p-3 rounded border" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                        <div className="text-xs" style={{ color: themeSettings.darkDescriptionColor, marginBottom: '0.5rem' }}>Navigation Preview:</div>
+                        <div 
+                          key={`dark-nav-title-${themeSettings.darkNavTitle}`}
+                          style={{ 
+                            color: `${themeSettings.darkNavTitle} !important`,
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            marginBottom: '0.5rem',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkNavTitle
+                          }}
+                        >
+                          Admin Portal
+                        </div>
+                        <div className="space-y-1">
+                          <div 
+                            key={`dark-nav-text-${themeSettings.darkNavText}`}
+                            style={{ 
+                              color: `${themeSettings.darkNavText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0',
+                              transition: 'color 0.2s ease',
+                              WebkitTextFillColor: themeSettings.darkNavText
+                            }}
+                          >
+                            Dashboard
+                          </div>
+                          <div 
+                            key={`dark-nav-active-${themeSettings.darkNavActiveBg}-${themeSettings.darkNavActiveText}`}
+                            style={{ 
+                              backgroundColor: `${themeSettings.darkNavActiveBg} !important`,
+                              color: `${themeSettings.darkNavActiveText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '0.375rem',
+                              transition: 'all 0.2s ease',
+                              WebkitTextFillColor: themeSettings.darkNavActiveText
+                            }}
+                          >
+                            Sessions (Active)
+                          </div>
+                          <div 
+                            key={`dark-nav-text2-${themeSettings.darkNavText}`}
+                            style={{ 
+                              color: `${themeSettings.darkNavText} !important`,
+                              fontSize: '0.875rem',
+                              padding: '0.25rem 0',
+                              transition: 'color 0.2s ease',
+                              WebkitTextFillColor: themeSettings.darkNavText
+                            }}
+                          >
+                            Players
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
                         <button
                           style={{ 
                             backgroundColor: themeSettings.darkPrimaryButton,

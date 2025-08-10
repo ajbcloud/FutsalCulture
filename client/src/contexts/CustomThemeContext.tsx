@@ -9,6 +9,10 @@ interface CustomTheme {
   lightText: string;
   lightHeadingColor: string;
   lightDescriptionColor: string;
+  lightNavTitle?: string;
+  lightNavText?: string;
+  lightNavActiveText?: string;
+  lightNavActiveBg?: string;
   // Dark mode colors
   darkPrimaryButton: string;
   darkSecondaryButton: string;
@@ -16,6 +20,10 @@ interface CustomTheme {
   darkText: string;
   darkHeadingColor: string;
   darkDescriptionColor: string;
+  darkNavTitle?: string;
+  darkNavText?: string;
+  darkNavActiveText?: string;
+  darkNavActiveBg?: string;
   // Legacy fallbacks
   primaryButton?: string;
   secondaryButton?: string;
@@ -78,6 +86,12 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-light-heading', `hsl(${hexToHsl(theme.lightHeadingColor)})`);
       root.style.setProperty('--custom-light-description', `hsl(${hexToHsl(theme.lightDescriptionColor)})`);
       
+      // Apply light mode navigation colors
+      root.style.setProperty('--custom-light-nav-title', `hsl(${hexToHsl(theme.lightNavTitle || '#111827')})`);
+      root.style.setProperty('--custom-light-nav-text', `hsl(${hexToHsl(theme.lightNavText || '#6b7280')})`);
+      root.style.setProperty('--custom-light-nav-active-text', `hsl(${hexToHsl(theme.lightNavActiveText || '#ffffff')})`);
+      root.style.setProperty('--custom-light-nav-active-bg', `hsl(${hexToHsl(theme.lightNavActiveBg || '#2563eb')})`);
+      
       // Apply dark mode custom colors as CSS variables
       root.style.setProperty('--custom-dark-primary', `hsl(${hexToHsl(theme.darkPrimaryButton)})`);
       root.style.setProperty('--custom-dark-secondary', `hsl(${hexToHsl(theme.darkSecondaryButton)})`);
@@ -86,6 +100,12 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-dark-heading', `hsl(${hexToHsl(theme.darkHeadingColor)})`);
       root.style.setProperty('--custom-dark-description', `hsl(${hexToHsl(theme.darkDescriptionColor)})`);
 
+      // Apply dark mode navigation colors
+      root.style.setProperty('--custom-dark-nav-title', `hsl(${hexToHsl(theme.darkNavTitle || '#f8fafc')})`);
+      root.style.setProperty('--custom-dark-nav-text', `hsl(${hexToHsl(theme.darkNavText || '#cbd5e1')})`);
+      root.style.setProperty('--custom-dark-nav-active-text', `hsl(${hexToHsl(theme.darkNavActiveText || '#ffffff')})`);
+      root.style.setProperty('--custom-dark-nav-active-bg', `hsl(${hexToHsl(theme.darkNavActiveBg || '#2563eb')})`);
+
       // Override system theme with custom theme in both modes
       root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);
       root.style.setProperty('--secondary', `hsl(${hexToHsl(theme.lightSecondaryButton)})`);
@@ -93,11 +113,11 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       // Also set raw colors for components that need direct hex values
       root.style.setProperty('--custom-primary-button-light', theme.lightPrimaryButton);
       root.style.setProperty('--custom-primary-button-dark', theme.darkPrimaryButton);
-      root.style.setProperty('--custom-secondary-button', theme.secondaryButton);
+      root.style.setProperty('--custom-secondary-button', theme.secondaryButton || '#64748b');
       
-      // Set heading and description colors
-      root.style.setProperty('--custom-heading-color', theme.headingColor);
-      root.style.setProperty('--custom-description-color', theme.descriptionColor);
+      // Set heading and description colors (legacy)
+      root.style.setProperty('--custom-heading-color', theme.headingColor || '#111827');
+      root.style.setProperty('--custom-description-color', theme.descriptionColor || '#6b7280');
     }
   }, [theme]);
 

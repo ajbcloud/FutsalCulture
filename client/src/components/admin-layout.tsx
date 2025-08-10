@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="w-full"
               />
             </div>
-            <h1 className="text-xl font-bold text-foreground text-center w-full">Admin Portal</h1>
+            <h1 className="text-xl font-bold text-foreground text-center w-full admin-nav-title">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"
@@ -117,13 +117,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <div 
                       className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
                         isActive 
-                          ? 'bg-primary text-primary-foreground' 
+                          ? 'bg-primary text-primary-foreground admin-nav-active' 
                           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                       }`}
                       onClick={() => setSidebarOpen(false)}
                     >
                       <Icon className="w-5 h-5 mr-3" />
-                      {item.label}
+                      <span className="admin-nav-text">{item.label}</span>
                     </div>
                   </Link>
                 );
@@ -135,13 +135,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <div 
                     className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
                       location.startsWith("/admin/elite-features")
-                        ? 'bg-primary text-primary-foreground' 
+                        ? 'bg-primary text-primary-foreground admin-nav-active' 
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     }`}
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Sparkles className="w-5 h-5 mr-3" />
-                    Elite Features
+                    <span className="admin-nav-text">Elite Features</span>
                   </div>
                 </Link>
               )}

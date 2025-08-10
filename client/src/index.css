@@ -169,6 +169,46 @@
   html[style*="--custom-description-color"] .text-muted-foreground {
     color: var(--custom-description-color) !important;
   }
+
+  /* Navigation color overrides - Light mode */
+  html[style*="--custom-light-nav-title"]:not(.dark) .admin-nav-title {
+    color: var(--custom-light-nav-title) !important;
+    -webkit-text-fill-color: var(--custom-light-nav-title) !important;
+  }
+
+  html[style*="--custom-light-nav-text"]:not(.dark) .admin-nav-text {
+    color: var(--custom-light-nav-text) !important;
+    -webkit-text-fill-color: var(--custom-light-nav-text) !important;
+  }
+
+  html[style*="--custom-light-nav-active-text"]:not(.dark) .admin-nav-active .admin-nav-text {
+    color: var(--custom-light-nav-active-text) !important;
+    -webkit-text-fill-color: var(--custom-light-nav-active-text) !important;
+  }
+
+  html[style*="--custom-light-nav-active-bg"]:not(.dark) .admin-nav-active {
+    background-color: var(--custom-light-nav-active-bg) !important;
+  }
+
+  /* Navigation color overrides - Dark mode */
+  html[style*="--custom-dark-nav-title"].dark .admin-nav-title {
+    color: var(--custom-dark-nav-title) !important;
+    -webkit-text-fill-color: var(--custom-dark-nav-title) !important;
+  }
+
+  html[style*="--custom-dark-nav-text"].dark .admin-nav-text {
+    color: var(--custom-dark-nav-text) !important;
+    -webkit-text-fill-color: var(--custom-dark-nav-text) !important;
+  }
+
+  html[style*="--custom-dark-nav-active-text"].dark .admin-nav-active .admin-nav-text {
+    color: var(--custom-dark-nav-active-text) !important;
+    -webkit-text-fill-color: var(--custom-dark-nav-active-text) !important;
+  }
+
+  html[style*="--custom-dark-nav-active-bg"].dark .admin-nav-active {
+    background-color: var(--custom-dark-nav-active-bg) !important;
+  }
 }
 
 @layer utilities {
