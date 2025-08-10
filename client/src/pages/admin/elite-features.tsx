@@ -45,33 +45,6 @@ export default function EliteFeatures() {
   const queryClient = useQueryClient();
   const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
   
-  // Redirect if user doesn't have Elite features access
-  if (!hasThemeCustomization) {
-    return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-8 w-8 text-purple-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Elite Features
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Upgrade to Elite plan to access these exclusive features
-              </p>
-            </div>
-          </div>
-          
-          <UpgradePrompt
-            feature={FEATURE_KEYS.THEME_CUSTOMIZATION}
-            requiredPlan="elite"
-            description="Access theme customization, feature request queue, and priority support with the Elite plan."
-          />
-        </div>
-      </AdminLayout>
-    );
-  }
-  
   // Theme Settings State
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
     primaryButton: '#2563eb',
@@ -112,7 +85,7 @@ export default function EliteFeatures() {
   // Theme update mutation
   const themeUpdateMutation = useMutation({
     mutationFn: (settings: ThemeSettings) => 
-      apiRequest('/api/theme', 'POST', settings),
+      apiRequest('POST', '/api/theme', settings),
     onSuccess: () => {
       toast({
         title: "Theme updated successfully",
@@ -132,7 +105,7 @@ export default function EliteFeatures() {
   // Feature request mutation
   const featureRequestMutation = useMutation({
     mutationFn: (request: { title: string; description: string }) =>
-      apiRequest('/api/feature-requests', 'POST', request),
+      apiRequest('POST', '/api/feature-requests', request),
     onSuccess: () => {
       toast({
         title: "Feature request submitted",
@@ -152,7 +125,7 @@ export default function EliteFeatures() {
 
   // Theme reset mutation
   const themeResetMutation = useMutation({
-    mutationFn: () => apiRequest('/api/theme', 'DELETE'),
+    mutationFn: () => apiRequest('DELETE', '/api/theme'),
     onSuccess: () => {
       toast({
         title: "Theme reset successfully",
@@ -165,6 +138,14 @@ export default function EliteFeatures() {
         text: '#1f2937'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
+    },
+    onError: (error: any) => {
+      console.error('Theme reset error:', error);
+      toast({
+        title: "Error resetting theme",
+        description: "Failed to reset theme settings. Please try again.",
+        variant: "destructive"
+      });
     }
   });
 
@@ -209,6 +190,32 @@ export default function EliteFeatures() {
       default: return status;
     }
   };
+
+  // Redirect if user doesn't have Elite features access
+  if (!hasThemeCustomization) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-8 w-8 text-purple-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Elite Features
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Upgrade to Elite plan to access these exclusive features
+              </p>
+            </div>
+          </div>
+          
+          <UpgradePrompt
+            feature={FEATURE_KEYS.THEME_CUSTOMIZATION}
+            description="Access theme customization, feature request queue, and priority support with the Elite plan."
+          />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
