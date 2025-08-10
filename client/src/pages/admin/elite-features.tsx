@@ -719,16 +719,30 @@ export default function EliteFeatures() {
                         This is how your custom theme will look in light mode with heading and description colors.
                         (Color: {themeSettings.lightDescriptionColor})
                       </p>
-                      <div className="flex gap-2 flex-wrap">
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
-                          className="px-4 py-2 rounded text-white text-sm"
-                          style={{ backgroundColor: themeSettings.lightPrimaryButton }}
+                          style={{ 
+                            backgroundColor: themeSettings.lightPrimaryButton,
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            border: 'none',
+                            cursor: 'default'
+                          }}
                         >
                           Primary Button
                         </button>
                         <button
-                          className="px-4 py-2 rounded text-white text-sm"
-                          style={{ backgroundColor: themeSettings.lightSecondaryButton }}
+                          style={{ 
+                            backgroundColor: themeSettings.lightSecondaryButton,
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            border: 'none',
+                            cursor: 'default'
+                          }}
                         >
                           Secondary Button
                         </button>
@@ -797,16 +811,30 @@ export default function EliteFeatures() {
                         This is how your custom theme will look in dark mode with proper text visibility.
                         (Color: {themeSettings.darkDescriptionColor})
                       </p>
-                      <div className="flex gap-2 flex-wrap">
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
-                          className="px-4 py-2 rounded text-white text-sm"
-                          style={{ backgroundColor: themeSettings.darkPrimaryButton }}
+                          style={{ 
+                            backgroundColor: themeSettings.darkPrimaryButton,
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            border: 'none',
+                            cursor: 'default'
+                          }}
                         >
                           Primary Button
                         </button>
                         <button
-                          className="px-4 py-2 rounded text-white text-sm"
-                          style={{ backgroundColor: themeSettings.darkSecondaryButton }}
+                          style={{ 
+                            backgroundColor: themeSettings.darkSecondaryButton,
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem',
+                            border: 'none',
+                            cursor: 'default'
+                          }}
                         >
                           Secondary Button
                         </button>
