@@ -1758,75 +1758,80 @@ export default function EliteFeatures() {
                       <div className="mt-4 space-y-2">
                         <div 
                           style={{ 
-                            backgroundColor: themeSettings.darkAccentColor,
-                            color: 'white',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem'
+                            color: themeSettings.darkPageTitle,
+                            fontSize: '1.5rem',
+                            fontWeight: '700',
+                            padding: '0.5rem 0'
                           }}
                         >
-                          10. Accent Color
+                          10. Page Title - main page headings
                         </div>
                         
                         <div 
                           style={{ 
-                            border: `1px solid ${themeSettings.darkBorderColor}`,
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            color: themeSettings.darkText,
-                            fontSize: '0.875rem'
+                            backgroundColor: themeSettings.darkCardBackground,
+                            padding: '0.75rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`
                           }}
                         >
-                          11. Border Color Example
+                          11. Card Background - cards, modals, and elevated surfaces
                         </div>
                         
                         <div 
                           style={{ 
-                            backgroundColor: themeSettings.darkInputBackground,
-                            border: `1px solid ${themeSettings.darkBorderColor}`,
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            color: themeSettings.darkText,
-                            fontSize: '0.875rem'
+                            color: themeSettings.darkCardTitle,
+                            backgroundColor: themeSettings.darkCardBackground,
+                            padding: '0.75rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`
                           }}
                         >
-                          12. Input Background
+                          12. Card Title - titles within cards and containers
                         </div>
                         
                         <div 
                           style={{ 
-                            backgroundColor: themeSettings.darkSuccessColor,
-                            color: 'white',
+                            color: themeSettings.darkFeatureTitle,
                             padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem'
+                            fontSize: '1rem',
+                            fontWeight: '600'
                           }}
                         >
-                          13. Success Color
+                          13. Feature Title - main feature headings
                         </div>
                         
                         <div 
                           style={{ 
-                            backgroundColor: themeSettings.darkWarningColor,
-                            color: 'white',
+                            color: themeSettings.darkFeatureDescription,
                             padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem'
+                            fontSize: '0.875rem',
+                            fontStyle: 'italic'
                           }}
                         >
-                          14. Warning Color
+                          14. Feature Description - explanatory text and feature details
                         </div>
                         
                         <div 
                           style={{ 
-                            backgroundColor: themeSettings.darkErrorColor,
-                            color: 'white',
+                            color: themeSettings.darkIconColor,
                             padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem'
+                            fontSize: '0.875rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
                           }}
                         >
-                          15. Error Color
+                          <svg style={{ color: themeSettings.darkIconColor }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          <svg style={{ color: themeSettings.darkIconColor }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                          </svg>
+                          15. Icon Color - icons and interactive elements
                         </div>
                       </div>
                     </div>
