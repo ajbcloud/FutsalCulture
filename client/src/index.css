@@ -79,12 +79,12 @@
   --ring: hsl(217, 91%, 60%);
 
   /* Theme-aware custom colors - Dark Mode override */
-  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 60%));
+  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 75%));
   --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 17%));
   --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));
-  --theme-foreground: var(--custom-dark-foreground, hsl(210, 40%, 98%));
-  --theme-heading: var(--custom-dark-heading, hsl(210, 40%, 98%));
-  --theme-description: var(--custom-dark-description, hsl(215, 20%, 85%));
+  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));
+  --theme-heading: var(--custom-dark-heading, hsl(217, 91%, 75%));
+  --theme-description: var(--custom-dark-description, hsl(210, 40%, 90%));
 }
 
 @layer base {

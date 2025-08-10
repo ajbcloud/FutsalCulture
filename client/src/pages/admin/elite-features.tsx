@@ -81,14 +81,14 @@ export default function EliteFeatures() {
     lightNavText: '#6b7280',
     lightNavActiveText: '#ffffff',
     // Dark mode defaults
-    darkPrimaryButton: '#2563eb',
+    darkPrimaryButton: '#3b82f6',
     darkSecondaryButton: '#64748b',
     darkBackground: '#0f172a',
-    darkText: '#f8fafc',
-    darkHeadingColor: '#f8fafc',
-    darkDescriptionColor: '#cbd5e1',
-    darkNavTitle: '#f8fafc',
-    darkNavText: '#cbd5e1',
+    darkText: '#ffffff',
+    darkHeadingColor: '#3b82f6',
+    darkDescriptionColor: '#e2e8f0',
+    darkNavTitle: '#ffffff',
+    darkNavText: '#e2e8f0',
     darkNavActiveText: '#ffffff'
   });
 
@@ -119,14 +119,14 @@ export default function EliteFeatures() {
         lightNavText: theme.lightNavText || '#6b7280',
         lightNavActiveText: theme.lightNavActiveText || '#ffffff',
         // Dark mode colors
-        darkPrimaryButton: theme.darkPrimaryButton || '#2563eb',
+        darkPrimaryButton: theme.darkPrimaryButton || '#3b82f6',
         darkSecondaryButton: theme.darkSecondaryButton || '#64748b',
         darkBackground: theme.darkBackground || '#0f172a',
-        darkText: theme.darkText || '#f8fafc',
-        darkHeadingColor: theme.darkHeadingColor || '#f8fafc',
-        darkDescriptionColor: theme.darkDescriptionColor || '#cbd5e1',
-        darkNavTitle: theme.darkNavTitle || '#f8fafc',
-        darkNavText: theme.darkNavText || '#cbd5e1',
+        darkText: theme.darkText || '#ffffff',
+        darkHeadingColor: theme.darkHeadingColor || '#3b82f6',
+        darkDescriptionColor: theme.darkDescriptionColor || '#e2e8f0',
+        darkNavTitle: theme.darkNavTitle || '#ffffff',
+        darkNavText: theme.darkNavText || '#e2e8f0',
         darkNavActiveText: theme.darkNavActiveText || '#ffffff',
         // Legacy fallbacks
         primaryButton: theme.primaryButton || '#2563eb',
@@ -221,14 +221,14 @@ export default function EliteFeatures() {
         lightNavTitle: '#111827',
         lightNavText: '#6b7280',
         lightNavActiveText: '#ffffff',
-        darkPrimaryButton: '#2563eb',
+        darkPrimaryButton: '#3b82f6',
         darkSecondaryButton: '#64748b',
         darkBackground: '#0f172a',
-        darkText: '#f8fafc',
-        darkHeadingColor: '#f8fafc',
-        darkDescriptionColor: '#cbd5e1',
-        darkNavTitle: '#f8fafc',
-        darkNavText: '#cbd5e1',
+        darkText: '#ffffff',
+        darkHeadingColor: '#3b82f6',
+        darkDescriptionColor: '#e2e8f0',
+        darkNavTitle: '#ffffff',
+        darkNavText: '#e2e8f0',
         darkNavActiveText: '#ffffff'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });

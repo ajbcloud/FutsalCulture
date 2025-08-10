@@ -387,14 +387,14 @@ export const themeSettings = pgTable("theme_settings", {
   lightNavActiveText: varchar("light_nav_active_text").default("#ffffff"), // Active navigation text
   
   // Dark mode colors
-  darkPrimaryButton: varchar("dark_primary_button").default("#2563eb"), // Default blue (same as light)
+  darkPrimaryButton: varchar("dark_primary_button").default("#3b82f6"), // Default blue for better contrast
   darkSecondaryButton: varchar("dark_secondary_button").default("#64748b"), // Default gray
   darkBackground: varchar("dark_background").default("#0f172a"), // Default dark background
-  darkText: varchar("dark_text").default("#f8fafc"), // Default light text
-  darkHeadingColor: varchar("dark_heading_color").default("#f8fafc"), // Default light for headings
-  darkDescriptionColor: varchar("dark_description_color").default("#cbd5e1"), // Default light gray
-  darkNavTitle: varchar("dark_nav_title").default("#f8fafc"), // Navigation title color (Admin Portal)
-  darkNavText: varchar("dark_nav_text").default("#cbd5e1"), // Navigation text color
+  darkText: varchar("dark_text").default("#ffffff"), // Default pure white text for better readability
+  darkHeadingColor: varchar("dark_heading_color").default("#3b82f6"), // Default blue for headings
+  darkDescriptionColor: varchar("dark_description_color").default("#e2e8f0"), // Default lighter gray for descriptions
+  darkNavTitle: varchar("dark_nav_title").default("#ffffff"), // Navigation title color (Admin Portal)
+  darkNavText: varchar("dark_nav_text").default("#e2e8f0"), // Navigation text color
   darkNavActiveText: varchar("dark_nav_active_text").default("#ffffff"), // Active navigation text
   
   // Legacy fields for backward compatibility (deprecated)
