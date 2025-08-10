@@ -10,6 +10,7 @@ import {
   systemSettings,
   serviceBilling,
   discountCodes,
+  waitlists,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -31,6 +32,12 @@ import {
   type ServiceBillingSelect,
   type DiscountCode,
   type InsertDiscountCode,
+  type Waitlist,
+  type InsertWaitlist,
+  type JoinWaitlist,
+  type LeaveWaitlist,
+  type PromoteWaitlist,
+  type WaitlistSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -74,6 +81,19 @@ export interface IStorage {
   deleteSignup(id: string): Promise<void>;
   checkExistingSignup(playerId: string, sessionId: string): Promise<Signup | undefined>;
   getSignupsCount(sessionId: string): Promise<number>;
+
+  // Waitlist operations
+  getWaitlistBySession(sessionId: string, tenantId?: string): Promise<Array<Waitlist & { player: Player; parent: User }>>;
+  getWaitlistByParent(parentId: string, tenantId?: string): Promise<Array<Waitlist & { session: FutsalSession; player: Player }>>;
+  getWaitlistEntry(sessionId: string, playerId: string): Promise<Waitlist | undefined>;
+  joinWaitlist(sessionId: string, playerId: string, parentId: string, tenantId: string, preferences: { notifyOnJoin?: boolean; notifyOnPositionChange?: boolean }): Promise<Waitlist>;
+  leaveWaitlist(sessionId: string, playerId: string): Promise<void>;
+  getWaitlistCount(sessionId: string): Promise<number>;
+  promoteFromWaitlist(sessionId: string, playerId?: string): Promise<Waitlist | null>;
+  expireWaitlistOffer(waitlistId: string): Promise<void>;
+  updateWaitlistSettings(sessionId: string, settings: WaitlistSettings): Promise<FutsalSession>;
+  getExpiredOffers(tenantId?: string): Promise<Waitlist[]>;
+  reorderWaitlist(sessionId: string): Promise<void>;
   
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
@@ -1582,6 +1602,234 @@ export class DatabaseStorage implements IStorage {
     .where(eq(users.isSuperAdmin, true));
 
     return superAdminUsers;
+  }
+
+  // Waitlist operations
+  async getWaitlistBySession(sessionId: string, tenantId?: string): Promise<Array<Waitlist & { player: Player; parent: User }>> {
+    const query = db
+      .select({
+        waitlist: waitlists,
+        player: players,
+        parent: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+        }
+      })
+      .from(waitlists)
+      .innerJoin(players, eq(waitlists.playerId, players.id))
+      .innerJoin(users, eq(waitlists.parentId, users.id))
+      .where(eq(waitlists.sessionId, sessionId))
+      .orderBy(waitlists.position);
+
+    if (tenantId) {
+      query.where(eq(waitlists.tenantId, tenantId));
+    }
+
+    const result = await query;
+    return result.map(r => ({ ...r.waitlist, player: r.player, parent: r.parent as User }));
+  }
+
+  async getWaitlistByParent(parentId: string, tenantId?: string): Promise<Array<Waitlist & { session: FutsalSession; player: Player }>> {
+    const query = db
+      .select({
+        waitlist: waitlists,
+        session: futsalSessions,
+        player: players,
+      })
+      .from(waitlists)
+      .innerJoin(futsalSessions, eq(waitlists.sessionId, futsalSessions.id))
+      .innerJoin(players, eq(waitlists.playerId, players.id))
+      .where(eq(waitlists.parentId, parentId))
+      .orderBy(waitlists.joinedAt);
+
+    if (tenantId) {
+      query.where(eq(waitlists.tenantId, tenantId));
+    }
+
+    const result = await query;
+    return result.map(r => ({ ...r.waitlist, session: r.session, player: r.player }));
+  }
+
+  async getWaitlistEntry(sessionId: string, playerId: string): Promise<Waitlist | undefined> {
+    const [entry] = await db
+      .select()
+      .from(waitlists)
+      .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.playerId, playerId)));
+    return entry;
+  }
+
+  async joinWaitlist(
+    sessionId: string, 
+    playerId: string, 
+    parentId: string, 
+    tenantId: string, 
+    preferences: { notifyOnJoin?: boolean; notifyOnPositionChange?: boolean }
+  ): Promise<Waitlist> {
+    return await db.transaction(async (tx) => {
+      // Get the next position
+      const [{ count }] = await tx
+        .select({ count: count() })
+        .from(waitlists)
+        .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')));
+
+      const nextPosition = (count || 0) + 1;
+
+      // Insert the waitlist entry
+      const [waitlistEntry] = await tx
+        .insert(waitlists)
+        .values({
+          tenantId,
+          sessionId,
+          playerId,
+          parentId,
+          position: nextPosition,
+          status: 'active',
+          notifyOnJoin: preferences.notifyOnJoin ?? true,
+          notifyOnPositionChange: preferences.notifyOnPositionChange ?? false,
+        })
+        .returning();
+
+      return waitlistEntry;
+    });
+  }
+
+  async leaveWaitlist(sessionId: string, playerId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Mark the entry as removed
+      const [removedEntry] = await tx
+        .update(waitlists)
+        .set({ status: 'removed' })
+        .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.playerId, playerId)))
+        .returning();
+
+      if (!removedEntry) return;
+
+      // Reorder remaining positions
+      await this.reorderWaitlist(sessionId);
+    });
+  }
+
+  async getWaitlistCount(sessionId: string): Promise<number> {
+    const [{ count }] = await db
+      .select({ count: count() })
+      .from(waitlists)
+      .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')));
+    return count || 0;
+  }
+
+  async promoteFromWaitlist(sessionId: string, playerId?: string): Promise<Waitlist | null> {
+    return await db.transaction(async (tx) => {
+      let entryToPromote: Waitlist;
+
+      if (playerId) {
+        // Promote specific player
+        const [entry] = await tx
+          .select()
+          .from(waitlists)
+          .where(
+            and(
+              eq(waitlists.sessionId, sessionId),
+              eq(waitlists.playerId, playerId),
+              eq(waitlists.status, 'active')
+            )
+          );
+        if (!entry) return null;
+        entryToPromote = entry;
+      } else {
+        // Promote next in line (lowest position)
+        const [entry] = await tx
+          .select()
+          .from(waitlists)
+          .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')))
+          .orderBy(waitlists.position)
+          .limit(1);
+        if (!entry) return null;
+        entryToPromote = entry;
+      }
+
+      // Get session to determine payment window
+      const [session] = await tx
+        .select()
+        .from(futsalSessions)
+        .where(eq(futsalSessions.id, sessionId));
+
+      if (!session) return null;
+
+      const paymentWindowMinutes = session.paymentWindowMinutes || 60;
+      const offerExpiresAt = new Date(Date.now() + paymentWindowMinutes * 60 * 1000);
+
+      // Update entry to offered status
+      const [promotedEntry] = await tx
+        .update(waitlists)
+        .set({
+          status: 'offered',
+          offerExpiresAt,
+        })
+        .where(eq(waitlists.id, entryToPromote.id))
+        .returning();
+
+      return promotedEntry;
+    });
+  }
+
+  async expireWaitlistOffer(waitlistId: string): Promise<void> {
+    await db
+      .update(waitlists)
+      .set({
+        status: 'expired',
+        offerExpiresAt: null,
+      })
+      .where(eq(waitlists.id, waitlistId));
+  }
+
+  async updateWaitlistSettings(sessionId: string, settings: WaitlistSettings): Promise<FutsalSession> {
+    const [updatedSession] = await db
+      .update(futsalSessions)
+      .set(settings)
+      .where(eq(futsalSessions.id, sessionId))
+      .returning();
+    return updatedSession;
+  }
+
+  async getExpiredOffers(tenantId?: string): Promise<Waitlist[]> {
+    const now = new Date();
+    const query = db
+      .select()
+      .from(waitlists)
+      .where(
+        and(
+          eq(waitlists.status, 'offered'),
+          lte(waitlists.offerExpiresAt, now)
+        )
+      );
+
+    if (tenantId) {
+      query.where(eq(waitlists.tenantId, tenantId));
+    }
+
+    return await query;
+  }
+
+  async reorderWaitlist(sessionId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Get all active entries in order
+      const activeEntries = await tx
+        .select()
+        .from(waitlists)
+        .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')))
+        .orderBy(waitlists.position);
+
+      // Update positions to be contiguous starting from 1
+      for (let i = 0; i < activeEntries.length; i++) {
+        await tx
+          .update(waitlists)
+          .set({ position: i + 1 })
+          .where(eq(waitlists.id, activeEntries[i].id));
+      }
+    });
   }
 }
 

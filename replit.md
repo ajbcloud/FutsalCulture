@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - **Help Request System**: Structured fields, resolution tracking, and reply history.
 - **Business Branding**: Dynamic display of business name and logo configurable via admin settings.
 - **Comprehensive Seed Data**: Includes realistic multi-tenant data for testing across various scenarios.
+- **Session Waitlist System**: Complete waitlist functionality when sessions reach capacity, including automated promotion, payment windows, and position management.
 
 ### Business Logic
 - **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session.
@@ -62,6 +63,7 @@ Preferred communication style: Simple, everyday language.
 - **Background Jobs**: Monitor capacity and update session status every 5 minutes.
 - **Player Eligibility Enforcement**: Sessions filtered by player age and gender; portal access limited to players 13+.
 - **12-Hour Clock Format**: All time-related interfaces use 12-hour format with AM/PM.
+- **Waitlist Management**: When sessions reach capacity, parents/players can join waitlists with position tracking, automated promotion, configurable payment windows, and real-time notifications.
 
 ### UI/UX Decisions
 - **Tailwind CSS & Shadcn/UI**: For a consistent, modern, and accessible design.

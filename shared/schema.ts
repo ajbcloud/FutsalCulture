@@ -141,6 +141,11 @@ export const futsalSessions = pgTable("futsal_sessions", {
   // Access code protection
   hasAccessCode: boolean("has_access_code").default(false),
   accessCode: varchar("access_code"), // The actual code needed to book
+  // Waitlist settings
+  waitlistEnabled: boolean("waitlist_enabled").default(true),
+  waitlistLimit: integer("waitlist_limit"), // NULL = no limit
+  paymentWindowMinutes: integer("payment_window_minutes").default(60),
+  autoPromote: boolean("auto_promote").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("futsal_sessions_tenant_id_idx").on(table.tenantId),
@@ -161,6 +166,30 @@ export const signups = pgTable("signups", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("signups_tenant_id_idx").on(table.tenantId),
+]);
+
+// Waitlist status enum
+export const waitlistStatusEnum = pgEnum("waitlist_status", ["active", "offered", "accepted", "removed", "expired"]);
+
+// Waitlists table
+export const waitlists = pgTable("waitlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  sessionId: varchar("session_id").notNull().references(() => futsalSessions.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  parentId: varchar("parent_id").notNull().references(() => users.id),
+  position: integer("position").notNull(), // 1-based position
+  status: waitlistStatusEnum("status").notNull().default("active"),
+  notifyOnJoin: boolean("notify_on_join").default(true),
+  notifyOnPositionChange: boolean("notify_on_position_change").default(false),
+  offerExpiresAt: timestamp("offer_expires_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+}, (table) => [
+  index("waitlists_tenant_id_idx").on(table.tenantId),
+  index("waitlists_session_id_idx").on(table.sessionId),
+  index("waitlists_tenant_status_idx").on(table.tenantId, table.status),
+  index("waitlists_tenant_offer_expires_idx").on(table.tenantId, table.offerExpiresAt),
+  uniqueIndex("waitlists_session_player_unique_idx").on(table.sessionId, table.playerId),
 ]);
 
 // Payments table
@@ -337,10 +366,12 @@ export const playersRelations = relations(players, ({ one, many }) => ({
     references: [users.id],
   }),
   signups: many(signups),
+  waitlists: many(waitlists),
 }));
 
 export const futsalSessionsRelations = relations(futsalSessions, ({ many }) => ({
   signups: many(signups),
+  waitlists: many(waitlists),
 }));
 
 export const signupsRelations = relations(signups, ({ one, many }) => ({
@@ -375,6 +406,21 @@ export const notificationPreferencesRelations = relations(notificationPreference
 
 export const discountCodesRelations = relations(discountCodes, ({ many }) => ({
   signups: many(signups),
+}));
+
+export const waitlistsRelations = relations(waitlists, ({ one }) => ({
+  session: one(futsalSessions, {
+    fields: [waitlists.sessionId],
+    references: [futsalSessions.id],
+  }),
+  player: one(players, {
+    fields: [waitlists.playerId],
+    references: [players.id],
+  }),
+  parent: one(users, {
+    fields: [waitlists.parentId],
+    references: [users.id],
+  }),
 }));
 
 // Insert schemas
@@ -488,6 +534,32 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   updatedAt: true,
 });
 
+export const insertWaitlistSchema = createInsertSchema(waitlists).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const joinWaitlistSchema = z.object({
+  playerId: z.string().min(1, "Player ID is required"),
+  notifyOnJoin: z.boolean().default(true),
+  notifyOnPositionChange: z.boolean().default(false),
+});
+
+export const leaveWaitlistSchema = z.object({
+  playerId: z.string().min(1, "Player ID is required"),
+});
+
+export const promoteWaitlistSchema = z.object({
+  playerId: z.string().optional(),
+});
+
+export const waitlistSettingsSchema = z.object({
+  waitlistEnabled: z.boolean().optional(),
+  waitlistLimit: z.number().nullable().optional(),
+  paymentWindowMinutes: z.number().int().min(5).max(1440).optional(),
+  autoPromote: z.boolean().optional(),
+});
+
 // Types for upsert operations (includes id)
 export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -511,3 +583,9 @@ export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 export type DiscountCode = typeof discountCodes.$inferSelect;
 export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
+export type Waitlist = typeof waitlists.$inferSelect;
+export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
+export type JoinWaitlist = z.infer<typeof joinWaitlistSchema>;
+export type LeaveWaitlist = z.infer<typeof leaveWaitlistSchema>;
+export type PromoteWaitlist = z.infer<typeof promoteWaitlistSchema>;
+export type WaitlistSettings = z.infer<typeof waitlistSettingsSchema>;

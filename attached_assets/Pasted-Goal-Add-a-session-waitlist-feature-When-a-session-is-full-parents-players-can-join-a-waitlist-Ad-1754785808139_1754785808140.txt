@@ -1,0 +1,168 @@
+Goal
+Add a session waitlist feature. When a session is full, parents/players can join a waitlist. Admins can cap the waitlist, notify joiners of their position, send on‑going position updates, promote users when a spot opens with a payment deadline, and auto‑advance if the deadline passes. Users can remove themselves via the web portal. All actions respect tenant scoping, parent/player comms prefs, and enabled integrations.
+
+1) Database (Drizzle) – Non‑breaking migrations
+New table waitlists:
+
+id UUID PK, tenant_id UUID NOT NULL, session_id UUID NOT NULL, player_id UUID NOT NULL, parent_id UUID NOT NULL
+
+position INT NOT NULL (1‑based)
+
+status ENUM('active','offered','accepted','removed','expired') DEFAULT 'active'
+
+notify_on_join BOOL DEFAULT TRUE
+
+notify_on_position_change BOOL DEFAULT FALSE
+
+offer_expires_at TIMESTAMP NULL
+
+Unique: (session_id, player_id) to prevent duplicates
+
+Indexes: (tenant_id, session_id), (tenant_id, status), (tenant_id, offer_expires_at)
+
+Add to futsal_sessions (or your sessions table):
+
+waitlist_enabled BOOL DEFAULT TRUE
+
+waitlist_limit INT NULL (NULL = no limit)
+
+payment_window_minutes INT DEFAULT 60
+
+auto_promote BOOL DEFAULT TRUE // auto offer to next person when slot opens
+
+No destructive changes; keep existing schemas.
+
+2) Server routes (Express) – Tenant scoped
+All routes require auth and pull tenant_id from session/context; super‑admin can pass a tenant filter.
+
+POST /api/sessions/:sessionId/waitlist/join
+
+Body: { playerId, notifyOnJoin?, notifyOnPositionChange? }
+
+Guard: if session not full → 409 recommend booking; if waitlist_limit reached → 409; else insert with next position.
+
+Response includes position and status.
+
+If notifyOnJoin true and admin’s “include position in first message” is enabled, send “joined” notice with position.
+
+DELETE /api/sessions/:sessionId/waitlist/leave
+
+Body: { playerId }
+
+Mark status='removed'; re-number positions transactionally so there are no gaps.
+
+If others’ positions changed and their entry has notify_on_position_change, enqueue notifications.
+
+GET /api/sessions/:sessionId/waitlist (Admin)
+
+Returns: position, player, parent contacts, status, joinedAt, offer_expires_at.
+
+PATCH /api/admin/sessions/:sessionId/waitlist/settings (Admin)
+
+Body: { waitlistEnabled?, waitlistLimit?, paymentWindowMinutes?, autoPromote? }
+
+POST /api/admin/sessions/:sessionId/waitlist/promote (Admin/manual)
+
+Body: { playerId? } (default = top position)
+
+Sets entry to offered, sets offer_expires_at = now + paymentWindow.
+
+Hold a slot: either create a provisional signup or temporarily increase a “held” counter so you don’t oversell.
+
+Send “offer available” message with unique offer URL.
+
+POST /api/admin/sessions/:sessionId/waitlist/expire-offer (Admin/manual or job)
+
+Expire if unpaid: set status='expired', release held slot, optionally auto‑promote next.
+
+Optional: POST /api/admin/sessions/:sessionId/waitlist/reorder to force position changes; re‑number others.
+
+3) Offer → Checkout flow
+Offer URL includes a signed token (sessionId, playerId, waitlistId, tenantId).
+
+Landing page validates token, shows countdown to offer_expires_at, and a Checkout CTA.
+
+On successful payment:
+
+Create/complete the signup for (session, player).
+
+Set waitlist row status='accepted'.
+
+Release any held slot.
+
+If timer expires without payment:
+
+status='expired', notify, release hold, auto‑promote next if enabled.
+
+4) Notifications (SendGrid/Twilio), respecting prefs & integrations
+Use existing comms prefs (parent email/SMS opt‑ins) and tenant integrations; skip channels not configured.
+
+Templates (include session title, date/time, maps link, and player name):
+
+Joined Waitlist (optional): “You’re #{{position}} on the waitlist for {{sessionTitle}}.”
+
+Position Update (optional): “Your position moved to #{{newPosition}}.”
+
+Offer Available: “A spot is available. Complete payment by {{deadline}}: {{offerUrl}}”
+
+Offer Expired: “Your offer expired; you remain on the waitlist at #{{position}}.” (or removed per policy)
+
+5) UI – Parent/Player
+Session card (when full): Join Waitlist button. After joining, show “Position: #N” + Leave button.
+
+Dashboard: My Waitlists list with session info, position, status, offer countdown if applicable, and leave action.
+
+Offer page: sticky countdown bar + “Complete Payment” CTA.
+
+6) UI – Admin & Super‑Admin
+Sessions table/accordion: show Capacity, Signups, Waitlist: current/limit, and buttons:
+
+Waitlist Settings modal (enable/limit/payment window/auto‑promote + “include position in first message” toggle).
+
+Waitlist tab: table with position, player, parent, status, joinedAt, offer expires, actions (Promote, Expire, Remove, Reorder).
+
+Bulk actions: “Notify top N”, “Export CSV”.
+
+7) Position integrity (transactions)
+Every join/leave/reorder/promote/expire/accept runs in a DB transaction that:
+
+Locks rows for that session’s waitlist.
+
+Recomputes contiguous positions (1..M).
+
+Releases any held slot appropriately.
+
+8) Background jobs
+A lightweight scheduler runs every minute:
+
+Finds offer_expires_at < now AND status='offered' → expire & optionally auto‑promote next.
+
+Debounces and batches position‑change notifications to avoid spam if multiple changes occur quickly.
+
+9) Analytics
+Add per‑tenant and global metrics:
+
+waitlist_count, max_waitlist_seen, offers_sent, offers_accepted, offers_expired, avg_time_to_offer, waitlist_fill_rate (offers accepted / offers sent).
+
+Expose filters by tenant, location, age group, gender, date range.
+
+10) Guardrails & UX edge cases
+If a user clicks “Join Waitlist” and the session is no longer full, redirect to Book Now.
+
+If admin lowers waitlist_limit below current size, prompt to enforce or leave as‑is (no silent truncation).
+
+If session is cancelled, set all waitlist rows to removed and notify.
+
+All operations must be tenant‑scoped (tenant_id enforced in queries and tokens).
+
+Success Criteria
+
+Users can join/leave waitlists; positions are correct and update instantly.
+
+Admin can cap waitlists, set payment windows, auto‑promote, and send notifications.
+
+Promotion creates an offer with a hard deadline; acceptance converts to a paid signup; expiration auto‑moves to next.
+
+No overselling. Analytics reflect waitlist activity.
+
+Emails/SMS honor prefs and integration availability.

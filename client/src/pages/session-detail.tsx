@@ -1,5 +1,5 @@
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/navbar";
 import ReservationForm from "@/components/reservation-form";
@@ -7,16 +7,92 @@ import LocationLink from "@/components/LocationLink";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, DollarSign, Users } from "lucide-react";
+import { Clock, MapPin, DollarSign, Users, UserPlus, UserMinus } from "lucide-react";
 import { FutsalSession } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function SessionDetail() {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: sessionData, isLoading } = useQuery<FutsalSession & { signupsCount: number }>({
     queryKey: [`/api/sessions/${id}`],
     enabled: !!id,
+  });
+
+  // Fetch user's players
+  const { data: players } = useQuery({
+    queryKey: ["/api/players"],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch waitlist for this session (admin only)
+  const { data: waitlistData } = useQuery({
+    queryKey: [`/api/sessions/${id}/waitlist`],
+    enabled: isAuthenticated && !!id && (user?.isAdmin || user?.isAssistant),
+  });
+
+  // Fetch user's waitlist entries
+  const { data: waitlistEntries } = useQuery({
+    queryKey: ["/api/waitlists"],
+    enabled: isAuthenticated,
+  });
+
+  // Waitlist mutations
+  const joinWaitlistMutation = useMutation({
+    mutationFn: async ({ sessionId, playerId, notifyOnJoin = true, notifyOnPositionChange = false }: {
+      sessionId: string;
+      playerId: string;
+      notifyOnJoin?: boolean;
+      notifyOnPositionChange?: boolean;
+    }) => {
+      return apiRequest(`/api/sessions/${sessionId}/waitlist/join`, {
+        method: "POST",
+        body: { playerId, notifyOnJoin, notifyOnPositionChange },
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${id}/waitlist`] });
+      toast({
+        title: "Added to Waitlist",
+        description: `Position ${data.position} on the waitlist`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to join waitlist",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const leaveWaitlistMutation = useMutation({
+    mutationFn: async ({ sessionId, playerId }: { sessionId: string; playerId: string }) => {
+      return apiRequest(`/api/sessions/${sessionId}/waitlist/leave`, {
+        method: "DELETE",
+        body: { playerId },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${id}/waitlist`] });
+      toast({
+        title: "Left Waitlist",
+        description: "Successfully removed from the waitlist",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to leave waitlist",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
   });
 
   // Fetch admin settings to get location address data
@@ -47,6 +123,19 @@ export default function SessionDetail() {
 
   const session = sessionData;
   const fillPercentage = (session.signupsCount / session.capacity) * 100;
+  const isFull = session.status === "full" || fillPercentage >= 100;
+
+  // Check if any of the user's players are on the waitlist for this session
+  const getPlayerWaitlistStatus = (playerId: string) => {
+    if (!waitlistEntries) return null;
+    return waitlistEntries.find((entry: any) => 
+      entry.sessionId === session.id && entry.playerId === playerId && entry.status === 'active'
+    );
+  };
+
+  const hasAnyPlayerOnWaitlist = players?.some((player: any) => 
+    getPlayerWaitlistStatus(player.id)
+  );
 
   // Find matching location from admin settings to get address data
   const getLocationData = (locationName: string) => {
@@ -70,7 +159,10 @@ export default function SessionDetail() {
   };
   
   const getStatusBadge = () => {
-    if (session.status === "full") {
+    if (session.status === "full" || fillPercentage >= 100) {
+      if (session.waitlistEnabled) {
+        return <Badge variant="destructive">Full - Waitlist Available</Badge>;
+      }
       return <Badge variant="destructive">Full</Badge>;
     }
     if (fillPercentage >= 80) {
@@ -176,6 +268,111 @@ export default function SessionDetail() {
                      session.status === "closed" ? "This session is closed." :
                      "Booking opens at 8:00 AM on session day."}
                   </p>
+                </div>
+              ) : isFull && session.waitlistEnabled ? (
+                // Waitlist interface when session is full
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground">Session Waitlist</h3>
+                  
+                  {/* Current waitlist status */}
+                  {hasAnyPlayerOnWaitlist ? (
+                    <div className="p-4 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+                      <h4 className="font-medium text-orange-700 dark:text-orange-300 mb-2">You're on the waitlist</h4>
+                      {players?.map((player: any) => {
+                        const waitlistStatus = getPlayerWaitlistStatus(player.id);
+                        if (!waitlistStatus) return null;
+                        return (
+                          <div key={player.id} className="text-sm text-orange-600 dark:text-orange-400">
+                            {player.firstName} - Position #{waitlistStatus.position}
+                          </div>
+                        );
+                      })}
+                      <Button
+                        variant="outline"
+                        className="mt-3 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950"
+                        onClick={() => {
+                          players?.forEach((player: any) => {
+                            const waitlistStatus = getPlayerWaitlistStatus(player.id);
+                            if (waitlistStatus) {
+                              leaveWaitlistMutation.mutate({
+                                sessionId: session.id,
+                                playerId: player.id,
+                              });
+                            }
+                          });
+                        }}
+                        disabled={leaveWaitlistMutation.isPending}
+                      >
+                        <UserMinus className="w-4 h-4 mr-2" />
+                        Leave Waitlist
+                      </Button>
+                    </div>
+                  ) : (
+                    // Join waitlist interface
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-2">Join the Waitlist</h4>
+                      <p className="text-sm text-blue-600 dark:text-blue-400 mb-4">
+                        This session is full, but you can join the waitlist. You'll be notified if a spot becomes available.
+                      </p>
+                      
+                      {players && players.length > 0 ? (
+                        <div className="space-y-2">
+                          {players.map((player: any) => (
+                            <Button
+                              key={player.id}
+                              variant="outline"
+                              className="w-full justify-start border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950"
+                              onClick={() => {
+                                joinWaitlistMutation.mutate({
+                                  sessionId: session.id,
+                                  playerId: player.id,
+                                });
+                              }}
+                              disabled={joinWaitlistMutation.isPending}
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Join waitlist for {player.firstName}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No players found. Please add a player to join the waitlist.</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Admin waitlist management */}
+                  {(user?.isAdmin || user?.isAssistant) && waitlistData && waitlistData.length > 0 && (
+                    <div className="p-4 bg-muted border border-border rounded-lg">
+                      <h4 className="font-medium text-foreground mb-3">Waitlist Management</h4>
+                      <div className="space-y-2">
+                        {waitlistData.map((entry: any, index: number) => (
+                          <div key={entry.id} className="flex items-center justify-between p-3 bg-background border border-border rounded">
+                            <div>
+                              <span className="font-medium">{entry.player.firstName} {entry.player.lastName}</span>
+                              <span className="text-sm text-muted-foreground ml-2">
+                                Position #{entry.position}
+                              </span>
+                              {entry.status === 'offered' && (
+                                <Badge variant="secondary" className="ml-2">Offer Sent</Badge>
+                              )}
+                            </div>
+                            {entry.status === 'active' && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  // Implement promote functionality
+                                  console.log('Promote player:', entry.playerId);
+                                }}
+                              >
+                                Promote
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <ReservationForm 

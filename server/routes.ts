@@ -2,7 +2,18 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertPlayerSchema, insertSessionSchema, insertHelpRequestSchema, insertNotificationPreferencesSchema, updateUserSchema, systemSettings } from "@shared/schema";
+import { 
+  insertPlayerSchema, 
+  insertSessionSchema, 
+  insertHelpRequestSchema, 
+  insertNotificationPreferencesSchema, 
+  updateUserSchema, 
+  systemSettings,
+  joinWaitlistSchema,
+  leaveWaitlistSchema,
+  promoteWaitlistSchema,
+  waitlistSettingsSchema
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -771,6 +782,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating multi-booking:", error);
       res.status(500).json({ message: "Failed to book sessions" });
+    }
+  });
+
+  // Waitlist routes
+  app.post('/api/sessions/:sessionId/waitlist/join', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user's tenant information
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      const validatedData = joinWaitlistSchema.parse(req.body);
+      const { playerId, notifyOnJoin, notifyOnPositionChange } = validatedData;
+
+      // Check if session exists and is full
+      const session = await storage.getSession(sessionId, user.tenantId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const signupsCount = await storage.getSignupsCount(sessionId);
+      if (signupsCount < session.capacity) {
+        return res.status(409).json({ message: "Session is not full - you can book directly" });
+      }
+
+      // Check if waitlist is enabled
+      if (!session.waitlistEnabled) {
+        return res.status(400).json({ message: "Waitlist is not enabled for this session" });
+      }
+
+      // Check waitlist limit
+      const waitlistCount = await storage.getWaitlistCount(sessionId);
+      if (session.waitlistLimit && waitlistCount >= session.waitlistLimit) {
+        return res.status(409).json({ message: "Waitlist is full" });
+      }
+
+      // Check if player is already on waitlist
+      const existingEntry = await storage.getWaitlistEntry(sessionId, playerId);
+      if (existingEntry && existingEntry.status === 'active') {
+        return res.status(400).json({ message: "Player is already on the waitlist" });
+      }
+
+      // Join waitlist
+      const waitlistEntry = await storage.joinWaitlist(
+        sessionId,
+        playerId,
+        userId,
+        user.tenantId,
+        { notifyOnJoin, notifyOnPositionChange }
+      );
+
+      res.json({ 
+        waitlistEntry,
+        position: waitlistEntry.position,
+        message: `Added to waitlist at position ${waitlistEntry.position}` 
+      });
+    } catch (error) {
+      console.error("Error joining waitlist:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to join waitlist" });
+    }
+  });
+
+  app.delete('/api/sessions/:sessionId/waitlist/leave', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user's tenant information
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      const validatedData = leaveWaitlistSchema.parse(req.body);
+      const { playerId } = validatedData;
+
+      // Check if player is on waitlist
+      const existingEntry = await storage.getWaitlistEntry(sessionId, playerId);
+      if (!existingEntry || existingEntry.status !== 'active') {
+        return res.status(404).json({ message: "Player is not on the waitlist" });
+      }
+
+      // Leave waitlist
+      await storage.leaveWaitlist(sessionId, playerId);
+
+      res.json({ message: "Successfully left the waitlist" });
+    } catch (error) {
+      console.error("Error leaving waitlist:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to leave waitlist" });
+    }
+  });
+
+  app.get('/api/sessions/:sessionId/waitlist', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user information
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user is admin or accessing their own waitlist data
+      if (!user.isAdmin && !user.isAssistant) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const waitlistEntries = await storage.getWaitlistBySession(sessionId, user.tenantId);
+      
+      res.json(waitlistEntries);
+    } catch (error) {
+      console.error("Error fetching waitlist:", error);
+      res.status(500).json({ message: "Failed to fetch waitlist" });
+    }
+  });
+
+  app.get('/api/waitlists', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user's tenant information
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      const waitlistEntries = await storage.getWaitlistByParent(userId, user.tenantId);
+      
+      res.json(waitlistEntries);
+    } catch (error) {
+      console.error("Error fetching waitlists:", error);
+      res.status(500).json({ message: "Failed to fetch waitlists" });
+    }
+  });
+
+  // Admin waitlist routes
+  app.patch('/api/admin/sessions/:sessionId/waitlist/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user information and check admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const validatedData = waitlistSettingsSchema.parse(req.body);
+      
+      const updatedSession = await storage.updateWaitlistSettings(sessionId, validatedData);
+      
+      res.json(updatedSession);
+    } catch (error) {
+      console.error("Error updating waitlist settings:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update waitlist settings" });
+    }
+  });
+
+  app.post('/api/admin/sessions/:sessionId/waitlist/promote', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user information and check admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const validatedData = promoteWaitlistSchema.parse(req.body);
+      const { playerId } = validatedData;
+      
+      const promotedEntry = await storage.promoteFromWaitlist(sessionId, playerId);
+      
+      if (!promotedEntry) {
+        return res.status(404).json({ message: "No waitlist entry found to promote" });
+      }
+
+      res.json({ 
+        promotedEntry,
+        message: `Player promoted and offer expires at ${promotedEntry.offerExpiresAt}` 
+      });
+    } catch (error) {
+      console.error("Error promoting from waitlist:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to promote from waitlist" });
+    }
+  });
+
+  app.post('/api/admin/sessions/:sessionId/waitlist/expire-offer', isAuthenticated, async (req: any, res) => {
+    try {
+      const { waitlistId } = req.body;
+      const userId = req.user.claims.sub;
+      
+      // Get user information and check admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      await storage.expireWaitlistOffer(waitlistId);
+      
+      res.json({ message: "Offer expired successfully" });
+    } catch (error) {
+      console.error("Error expiring waitlist offer:", error);
+      res.status(500).json({ message: "Failed to expire offer" });
     }
   });
 

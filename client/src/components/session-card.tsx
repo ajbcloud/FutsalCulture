@@ -1,12 +1,14 @@
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, DollarSign, ShoppingCart } from "lucide-react";
+import { Clock, MapPin, DollarSign, ShoppingCart, Users, UserPlus, UserMinus } from "lucide-react";
 import { FutsalSession } from "@shared/schema";
 import LocationLink from "@/components/LocationLink";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SessionCardProps {
   session: FutsalSession;
@@ -15,9 +17,78 @@ interface SessionCardProps {
 }
 
 export default function SessionCard({ session, onAddToCart, showAddToCart = false }: SessionCardProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const { data: sessionData } = useQuery<FutsalSession & { signupsCount: number }>({
     queryKey: ["/api/sessions", session.id],
+  });
+
+  // Fetch user's players
+  const { data: players } = useQuery({
+    queryKey: ["/api/players"],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch user's waitlist entries
+  const { data: waitlistEntries } = useQuery({
+    queryKey: ["/api/waitlists"],
+    enabled: isAuthenticated,
+  });
+
+  // Waitlist mutations
+  const joinWaitlistMutation = useMutation({
+    mutationFn: async ({ sessionId, playerId, notifyOnJoin = true, notifyOnPositionChange = false }: {
+      sessionId: string;
+      playerId: string;
+      notifyOnJoin?: boolean;
+      notifyOnPositionChange?: boolean;
+    }) => {
+      return apiRequest(`/api/sessions/${sessionId}/waitlist/join`, {
+        method: "POST",
+        body: { playerId, notifyOnJoin, notifyOnPositionChange },
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sessions", session.id] });
+      toast({
+        title: "Added to Waitlist",
+        description: `You're position ${data.position} on the waitlist`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to join waitlist",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const leaveWaitlistMutation = useMutation({
+    mutationFn: async ({ sessionId, playerId }: { sessionId: string; playerId: string }) => {
+      return apiRequest(`/api/sessions/${sessionId}/waitlist/leave`, {
+        method: "DELETE",
+        body: { playerId },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sessions", session.id] });
+      toast({
+        title: "Left Waitlist",
+        description: "You have been removed from the waitlist",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to leave waitlist",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
   });
 
   // Fetch admin settings to get location address data
@@ -29,8 +100,23 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   const signupsCount = sessionData?.signupsCount || 0;
   const fillPercentage = (signupsCount / session.capacity) * 100;
   
+  // Check if any of the user's players are on the waitlist for this session
+  const getPlayerWaitlistStatus = (playerId: string) => {
+    if (!waitlistEntries) return null;
+    return waitlistEntries.find((entry: any) => 
+      entry.sessionId === session.id && entry.playerId === playerId && entry.status === 'active'
+    );
+  };
+
+  const hasAnyPlayerOnWaitlist = players?.some((player: any) => 
+    getPlayerWaitlistStatus(player.id)
+  );
+  
   const getStatusBadge = () => {
     if (session.status === "full" || fillPercentage >= 100) {
+      if (session.waitlistEnabled) {
+        return <Badge variant="destructive">Full - Waitlist Available</Badge>;
+      }
       return <Badge variant="destructive">Full</Badge>;
     }
     if (fillPercentage >= 80) {
@@ -130,6 +216,25 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           </div>
         </div>
 
+        {/* Waitlist status display */}
+        {hasAnyPlayerOnWaitlist && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+            <div className="flex items-center text-orange-700 dark:text-orange-300">
+              <Users className="w-4 h-4 mr-2" />
+              <span className="font-medium">On Waitlist</span>
+            </div>
+            {players?.map((player: any) => {
+              const waitlistStatus = getPlayerWaitlistStatus(player.id);
+              if (!waitlistStatus) return null;
+              return (
+                <div key={player.id} className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                  {player.firstName} - Position #{waitlistStatus.position}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex space-x-2">
           {showAddToCart && onAddToCart && isBookingOpen() && !isFull && (
             <Button 
@@ -142,6 +247,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
             </Button>
           )}
           
+          {/* Main booking/waitlist button */}
           <Button 
             asChild={!isFull && isBookingOpen() && isAuthenticated}
             disabled={isFull || !isBookingOpen()}
@@ -150,7 +256,11 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
             onClick={!isAuthenticated && isBookingOpen() && !isFull ? () => window.location.href = '/api/login' : undefined}
           >
             {isFull ? (
-              <span>Session Full</span>
+              session.waitlistEnabled ? (
+                <Link href={`/sessions/${session.id}`}>View Waitlist</Link>
+              ) : (
+                <span>Session Full</span>
+              )
             ) : !isBookingOpen() ? (
               <span>Booking Opens at 8 AM</span>
             ) : !isAuthenticated ? (
@@ -159,6 +269,51 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
               <Link href={`/sessions/${session.id}`}>Reserve Spot</Link>
             )}
           </Button>
+
+          {/* Waitlist controls for when session is full */}
+          {isFull && session.waitlistEnabled && isAuthenticated && players && !hasAnyPlayerOnWaitlist && (
+            <Button
+              variant="outline"
+              className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-950"
+              onClick={() => {
+                // For simplicity, join with the first player
+                if (players.length > 0) {
+                  joinWaitlistMutation.mutate({
+                    sessionId: session.id,
+                    playerId: players[0].id,
+                  });
+                }
+              }}
+              disabled={joinWaitlistMutation.isPending}
+            >
+              <UserPlus className="w-4 h-4 mr-1" />
+              Join Waitlist
+            </Button>
+          )}
+
+          {/* Leave waitlist button */}
+          {hasAnyPlayerOnWaitlist && (
+            <Button
+              variant="outline"
+              className="flex-1 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950"
+              onClick={() => {
+                // Leave waitlist for all players on this session
+                players?.forEach((player: any) => {
+                  const waitlistStatus = getPlayerWaitlistStatus(player.id);
+                  if (waitlistStatus) {
+                    leaveWaitlistMutation.mutate({
+                      sessionId: session.id,
+                      playerId: player.id,
+                    });
+                  }
+                });
+              }}
+              disabled={leaveWaitlistMutation.isPending}
+            >
+              <UserMinus className="w-4 h-4 mr-1" />
+              Leave Waitlist
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
