@@ -491,7 +491,7 @@ export default function AdminDashboard() {
                 <CardTitle className="text-foreground">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 quick-actions">
                   <a 
                     href="/admin/sessions/new" 
                     className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
