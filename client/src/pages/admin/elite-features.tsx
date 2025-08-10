@@ -130,7 +130,7 @@ export default function EliteFeatures() {
   const themeSettingsMutation = useMutation({
     mutationFn: async (settings: ThemeSettings) => {
       const response = await fetch('/api/theme', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
       });
