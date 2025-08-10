@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Palette, MessageSquare, Sparkles, Users, Phone, Mail } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import AdminLayout from '@/components/admin-layout';
 
 interface ThemeSettings {
   id?: string;
@@ -174,22 +175,23 @@ export default function EliteFeatures() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Sparkles className="h-8 w-8 text-purple-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Elite Features
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Exclusive customization and priority support for Elite plan users
-          </p>
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-8 w-8 text-purple-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Elite Features
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Exclusive customization and priority support for Elite plan users
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Elite Features Overview */}
-      <Card>
+        {/* Elite Features Overview */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -221,17 +223,17 @@ export default function EliteFeatures() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      <Tabs defaultValue="theme" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="theme">Theme Customization</TabsTrigger>
-          <TabsTrigger value="features">Feature Requests</TabsTrigger>
-          <TabsTrigger value="support">Priority Support</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="theme" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="theme">Theme Customization</TabsTrigger>
+            <TabsTrigger value="features">Feature Requests</TabsTrigger>
+            <TabsTrigger value="support">Priority Support</TabsTrigger>
+          </TabsList>
 
-        {/* Theme Customization Tab */}
-        <TabsContent value="theme" className="space-y-6">
+          {/* Theme Customization Tab */}
+          <TabsContent value="theme" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -393,10 +395,10 @@ export default function EliteFeatures() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Feature Requests Tab */}
-        <TabsContent value="features" className="space-y-6">
+          {/* Feature Requests Tab */}
+          <TabsContent value="features" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Submit New Request */}
             <Card>
@@ -492,10 +494,10 @@ export default function EliteFeatures() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+          </TabsContent>
 
-        {/* Priority Support Tab */}
-        <TabsContent value="support" className="space-y-6">
+          {/* Priority Support Tab */}
+          <TabsContent value="support" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -588,8 +590,9 @@ export default function EliteFeatures() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AdminLayout>
   );
 }
