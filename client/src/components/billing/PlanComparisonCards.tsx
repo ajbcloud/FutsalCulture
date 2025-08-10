@@ -51,6 +51,7 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
   // Key features to highlight in comparison
   const keyFeatures = [
     'maxPlayers',
+    'manualSessions',
     'sessionBooking',
     'basicNotifications',
     'payments', 
@@ -100,6 +101,39 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
                   const feature = plan.features[featureKey];
                   const label = FEATURE_LABELS[featureKey]?.label;
                   
+                  // Special handling for Free plan
+                  if (planId === 'free') {
+                    // Skip individual email/SMS notifications and basicNotifications for Free plan
+                    if (featureKey === 'emailNotifications' || featureKey === 'smsNotifications' || featureKey === 'basicNotifications') {
+                      return null;
+                    }
+                    
+                    // Skip theme customization for Free plan
+                    if (featureKey === 'themeCustomization') {
+                      return null;
+                    }
+                    
+                    // Add combined notifications after payments
+                    if (featureKey === 'payments') {
+                      return (
+                        <>
+                          <div key={featureKey} className="flex items-center gap-2 text-sm">
+                            <X className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-muted-foreground">
+                              Accept online payments
+                            </span>
+                          </div>
+                          <div key="combined-notifications" className="flex items-center gap-2 text-sm">
+                            <X className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-muted-foreground">
+                              Email & SMS notifications
+                            </span>
+                          </div>
+                        </>
+                      );
+                    }
+                  }
+                  
                   let displayText = label;
                   let hasFeature = !!feature;
                   
@@ -111,6 +145,10 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
                                 feature === 'advanced' ? 'Advanced analytics' : 
                                 feature === 'basic' ? 'Basic analytics' : 'Analytics';
                     hasFeature = !!feature;
+                  } else if (featureKey === 'manualSessions') {
+                    displayText = 'Manual session creation';
+                  } else if (featureKey === 'sessionBooking') {
+                    displayText = 'Parent & player session booking';
                   }
 
                   return (
