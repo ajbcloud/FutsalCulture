@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CustomAvatar } from "@/components/custom-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle } from "lucide-react";
 
@@ -85,12 +85,13 @@ export default function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-11 w-11 sm:h-8 sm:w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.profileImageUrl || undefined} alt={`${user?.firstName} ${user?.lastName}` || "User"} />
-                      <AvatarFallback>
-                        {user?.firstName?.[0] || <User className="h-4 w-4" />}
-                      </AvatarFallback>
-                    </Avatar>
+                    <CustomAvatar
+                      src={user?.profileImageUrl || undefined}
+                      alt={`${user?.firstName} ${user?.lastName}` || "User"}
+                      fallbackText={user?.firstName?.[0]}
+                      backgroundColor={user?.avatarColor || "#2563eb"}
+                      size="md"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>

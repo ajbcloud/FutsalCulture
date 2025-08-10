@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CustomAvatar } from "@/components/custom-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
@@ -155,12 +155,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2 w-full justify-start">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
-                    <AvatarFallback className="bg-green-600 text-white text-sm">
-                      {user?.firstName?.[0]?.toUpperCase() || 'A'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <CustomAvatar
+                    src={user?.profileImageUrl || undefined}
+                    alt={user?.firstName || "User"}
+                    fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
+                    backgroundColor={user?.avatarColor || "#10b981"}
+                    size="md"
+                  />
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-medium text-foreground truncate">
                       {user?.firstName} {user?.lastName}

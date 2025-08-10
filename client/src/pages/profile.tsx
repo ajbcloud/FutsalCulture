@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
 import Parent2InviteControls from "@/components/parent2-invite-controls";
+import { CustomAvatar } from "@/components/custom-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export default function Profile() {
     lastName: "", 
     email: "",
     phone: "",
+    avatarColor: "#2563eb",
     emailReminder: true,
     smsReminder: false,
   });
@@ -40,6 +42,7 @@ export default function Profile() {
         lastName: user.lastName || "",
         email: user.email || "",
         phone: user.phone || "",
+        avatarColor: user.avatarColor || "#2563eb",
         emailReminder: notificationPrefs.email ?? true,
         smsReminder: notificationPrefs.sms ?? false,
       });
@@ -55,6 +58,7 @@ export default function Profile() {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
+        avatarColor: data.avatarColor,
       });
       
       // Update notification preferences - only save if contact info is available
@@ -93,6 +97,7 @@ export default function Profile() {
         lastName: user.lastName || "",
         email: user.email || "",
         phone: user.phone || "",
+        avatarColor: user.avatarColor || "#2563eb",
         emailReminder: notificationPrefs.email ?? true, 
         smsReminder: notificationPrefs.sms ?? false,
       });
@@ -218,6 +223,67 @@ export default function Profile() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Avatar Customization */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                Avatar Appearance
+              </h3>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted rounded-lg border border-border">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-muted-foreground">Current Avatar:</div>
+                  <CustomAvatar
+                    src={user?.profileImageUrl || undefined}
+                    alt={`${user?.firstName} ${user?.lastName}` || "User"}
+                    fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
+                    backgroundColor={formData.avatarColor}
+                    size="lg"
+                  />
+                </div>
+                
+                {isEditing && (
+                  <div className="flex flex-col gap-2 flex-1">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Avatar Color
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="color"
+                        value={formData.avatarColor}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          avatarColor: e.target.value 
+                        })}
+                        className="w-16 h-10 p-1 border rounded cursor-pointer"
+                        data-testid="input-avatar-color"
+                      />
+                      <Input
+                        type="text"
+                        value={formData.avatarColor}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          avatarColor: e.target.value 
+                        })}
+                        placeholder="#2563eb"
+                        className="flex-1 bg-input border-border text-foreground focus:border-primary"
+                        data-testid="input-avatar-hex"
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Choose a background color for your avatar initial
+                    </div>
+                  </div>
+                )}
+                
+                {!isEditing && (
+                  <div className="text-sm text-muted-foreground">
+                    Edit your profile to customize avatar colors
+                  </div>
+                )}
               </div>
             </div>
 
