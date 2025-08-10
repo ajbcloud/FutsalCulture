@@ -1,7 +1,30 @@
 import { PlanLevel, FEATURE_KEYS, type FeatureKey } from './schema';
 
 // Feature configurations for each plan level
-export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
+export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolean>> = {
+  free: {
+    [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
+    [FEATURE_KEYS.LOCATION_LINKS]: false,
+    [FEATURE_KEYS.PARENT_PORTAL]: true,
+    [FEATURE_KEYS.THEME_CUSTOMIZATION]: false,
+    [FEATURE_KEYS.WAITLIST_MANUAL]: false,
+    [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: false,
+    [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: true,
+    [FEATURE_KEYS.NOTIFICATIONS_SMS]: false,
+    [FEATURE_KEYS.ANALYTICS_BASIC]: false,
+    [FEATURE_KEYS.ANALYTICS_ADVANCED]: false,
+    [FEATURE_KEYS.PAYMENTS_ENABLED]: false,
+    [FEATURE_KEYS.INTEGRATIONS_CALENDAR]: false,
+    [FEATURE_KEYS.INTEGRATIONS_MAILCHIMP]: false,
+    [FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS]: false,
+    [FEATURE_KEYS.INTEGRATIONS_ZAPIER]: false,
+    [FEATURE_KEYS.API_READ_ONLY]: false,
+    [FEATURE_KEYS.API_FULL_ACCESS]: false,
+    [FEATURE_KEYS.MULTI_TENANT]: false,
+    [FEATURE_KEYS.SSO]: false,
+    [FEATURE_KEYS.SUPPORT_STANDARD]: true,
+    [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
+  },
   core: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
     [FEATURE_KEYS.LOCATION_LINKS]: true,

@@ -49,9 +49,19 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    const planLevel = tenant[0].planLevel || 'core';
-    const features = getTenantFeatures(tenantId);
-    const limits = PLAN_LIMITS[planLevel as keyof typeof PLAN_LIMITS];
+    // For free tier (no active subscription), show limited features
+    const actualPlanLevel = tenant[0].planLevel || 'core';
+    
+    // Check subscription status - currently defaulting to free tier for inactive subscriptions
+    // TODO: Check actual subscription status from Stripe
+    const hasActiveSubscription = false;
+    const effectivePlanLevel = hasActiveSubscription ? actualPlanLevel : 'free';
+    
+    // Import PLAN_FEATURES from shared
+    const { PLAN_FEATURES } = await import('../shared/feature-flags');
+    const features = PLAN_FEATURES[effectivePlanLevel as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
+    
+    const limits = PLAN_LIMITS[actualPlanLevel as keyof typeof PLAN_LIMITS];
     
     // Get current player count for this tenant using proper Drizzle query
     const { players } = await import('../shared/schema');
@@ -61,8 +71,8 @@ router.get('/tenant/plan-features', async (req, res) => {
     const playerCount = playerCountResult.length;
 
     res.json({
-      planLevel,
-      features: await features,
+      planLevel: effectivePlanLevel,
+      features,
       limits,
       playerCount,
     });

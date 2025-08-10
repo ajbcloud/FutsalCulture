@@ -1322,12 +1322,22 @@ export default function AdminSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-muted/50 rounded-lg p-4">
                     <div className="text-2xl font-bold text-foreground capitalize mb-2">
-                      {planFeatures.planLevel} Plan
+                      {subscriptionInfo?.subscription?.status === 'active' || 
+                       (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription')
+                        ? `${planFeatures.planLevel} Plan` 
+                        : 'Free Tier'}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {planFeatures.planLevel === 'core' && '$99/month - Essential features for small organizations'}
-                      {planFeatures.planLevel === 'growth' && '$199/month - Advanced features for growing organizations'}
-                      {planFeatures.planLevel === 'elite' && '$499/month - Complete feature set with unlimited capacity'}
+                      {subscriptionInfo?.subscription?.status === 'active' || 
+                       (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription') ? (
+                        <>
+                          {planFeatures.planLevel === 'core' && '$99/month - Essential features for small organizations'}
+                          {planFeatures.planLevel === 'growth' && '$199/month - Advanced features for growing organizations'}
+                          {planFeatures.planLevel === 'elite' && '$499/month - Complete feature set with unlimited capacity'}
+                        </>
+                      ) : (
+                        'Limited features - Upgrade to unlock full functionality'
+                      )}
                     </div>
                   </div>
                   
