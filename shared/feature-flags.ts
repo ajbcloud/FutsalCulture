@@ -98,6 +98,13 @@ export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolea
 
 // Plan limits and configurations
 export const PLAN_LIMITS = {
+  free: {
+    maxPlayers: 10,
+    price: 0,
+    billingPeriod: 'monthly' as const,
+    name: 'Free Tier',
+    description: 'Basic features to get started',
+  },
   core: {
     maxPlayers: 150,
     price: 99,
