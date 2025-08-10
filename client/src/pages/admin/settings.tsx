@@ -1378,7 +1378,7 @@ export default function AdminSettings() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000001', '_blank')}
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
                               className="flex items-center gap-1 text-xs h-6 px-2"
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -1391,21 +1391,119 @@ export default function AdminSettings() {
                           <AlertCircle className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
                           <div className="text-sm font-medium text-foreground mb-1">Inactive</div>
                           <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
-                          <Button 
-                            onClick={() => window.open('https://buy.stripe.com/test_00000000001', '_blank')}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3"
-                            size="sm"
-                          >
-                            Set Up Subscription
-                          </Button>
+                          <div className="space-y-1">
+                            <Button 
+                              onClick={() => window.open('https://buy.stripe.com/test_28o4jM9b24BQaqA6oo', '_blank')}
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
+                              size="sm"
+                            >
+                              Set Up Core Plan ($99/mo)
+                            </Button>
+                            <Button 
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              variant="outline"
+                              className="text-xs h-6 px-3 w-full"
+                              size="sm"
+                            >
+                              Manage Billing Portal
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading plan information...
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-foreground capitalize mb-2">
+                      Core Plan
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      $99/month - Essential features for small organizations
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      150
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Maximum registered players
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-lg font-semibold text-foreground mb-2">Subscription Management</div>
+                    <div className="space-y-2">
+                      {loadingSubscription ? (
+                        <div className="text-center py-2">
+                          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1" />
+                          <p className="text-xs text-muted-foreground">Loading...</p>
+                        </div>
+                      ) : subscriptionInfo?.subscription?.status === 'active' ? (
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">Active</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div>Next billing: {subscriptionInfo.subscription.current_period_end 
+                              ? new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()
+                              : subscriptionInfo.subscription.currentPeriodEnd 
+                                ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
+                                : 'N/A'}</div>
+                            <div>Amount: ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month</div>
+                          </div>
+                          <div className="flex gap-1 mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
+                              disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
+                              className="flex items-center gap-1 text-xs h-6 px-2"
+                            >
+                              <Receipt className="w-3 h-3" />
+                              Invoice
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              className="flex items-center gap-1 text-xs h-6 px-2"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Manage
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <AlertCircle className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                          <div className="text-sm font-medium text-foreground mb-1">Inactive</div>
+                          <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
+                          <div className="space-y-1">
+                            <Button 
+                              onClick={() => window.open('https://buy.stripe.com/test_28o4jM9b24BQaqA6oo', '_blank')}
+                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
+                              size="sm"
+                            >
+                              Set Up Core Plan ($99/mo)
+                            </Button>
+                            <Button 
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              variant="outline"
+                              className="text-xs h-6 px-3 w-full"
+                              size="sm"
+                            >
+                              Manage Billing Portal
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1429,7 +1527,9 @@ export default function AdminSettings() {
                   { key: FEATURE_KEYS.THEME_CUSTOMIZATION, name: 'Theme Customization', description: 'Custom branding and colors' },
                   { key: FEATURE_KEYS.BULK_OPERATIONS, name: 'Bulk Operations', description: 'Mass upload sessions and players' },
                 ].map((feature, index) => {
-                  const hasFeature = planFeatures?.features.includes(feature.key);
+                  const hasFeature = Array.isArray(planFeatures?.features) 
+                    ? planFeatures.features.includes(feature.key)
+                    : Object.keys(planFeatures?.features || {}).includes(feature.key);
                   return (
                     <div key={`${feature.key}-${index}`} className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
                       <div className="mt-0.5">

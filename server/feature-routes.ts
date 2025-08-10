@@ -18,12 +18,24 @@ import {
 
 const router = Router();
 
+// Apply middleware to get user context
+router.use(async (req: any, res, next) => {
+  if (req.user?.claims?.sub) {
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(req.user.claims.sub);
+    (req as any).currentUser = user;
+  }
+  next();
+});
+
 // Get current tenant's plan features and limits
 router.get('/tenant/plan-features', async (req, res) => {
   try {
-    const tenantId = (req.session as any)?.user?.tenantId;
+    const user = (req as any).currentUser;
+    const tenantId = user?.tenantId;
     
     if (!tenantId) {
+      console.log('No tenant ID found. Current user:', user);
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 
@@ -41,12 +53,12 @@ router.get('/tenant/plan-features', async (req, res) => {
     const features = getTenantFeatures(tenantId);
     const limits = PLAN_LIMITS[planLevel as keyof typeof PLAN_LIMITS];
     
-    // Get current player count for this tenant
-    const playerCountResult = await db.execute(
-      `SELECT COUNT(*) as count FROM players WHERE tenant_id = $1`,
-      [tenantId]
-    );
-    const playerCount = parseInt(playerCountResult.rows[0]?.count || '0');
+    // Get current player count for this tenant using proper Drizzle query
+    const { players } = await import('../shared/schema');
+    const playerCountResult = await db.select({ count: players.id })
+      .from(players)
+      .where(eq(players.tenantId, tenantId));
+    const playerCount = playerCountResult.length;
 
     res.json({
       planLevel,

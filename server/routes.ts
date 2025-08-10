@@ -1314,7 +1314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');
-  app.use('/api', featureRoutes.default);
+  app.use('/api', isAuthenticated, featureRoutes.default);
 
   const httpServer = createServer(app);
   return httpServer;
