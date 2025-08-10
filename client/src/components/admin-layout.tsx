@@ -26,7 +26,8 @@ import {
   User,
   Shield,
   Shirt,
-  Sparkles
+  Sparkles,
+  TrendingUp
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/schema";
@@ -41,6 +42,7 @@ const adminNavItems = [
   { href: "/admin/parents", label: "Parents", icon: Users },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -55,6 +57,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
+  const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
+
+  // Filter navigation items based on feature access
+  const visibleNavItems = adminNavItems.filter(item => {
+    if (item.featureKey && item.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT) {
+      return hasPlayerDevelopment;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,7 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex-1 overflow-y-auto min-h-0">
           <nav className="py-6">
             <div className="px-3 space-y-1">
-              {adminNavItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.exact 
                   ? location === item.href 

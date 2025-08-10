@@ -25,6 +25,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_STANDARD]: true,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
     [FEATURE_KEYS.BULK_OPERATIONS]: false,  // Disabled for free
+    [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
   },
   core: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -49,6 +50,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_STANDARD]: true,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
+    [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
   },
   growth: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -73,6 +75,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_STANDARD]: false,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
+    [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
   },
   elite: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -97,6 +100,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_STANDARD]: false,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
+    [FEATURE_KEYS.PLAYER_DEVELOPMENT]: true,  // Elite-only feature
   },
 };
 

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots } from "@shared/schema";
 import { eq, sql, and, or, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import Stripe from "stripe";
@@ -3213,6 +3213,218 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     } catch (error) {
       console.error("Error fetching business insights:", error);
       res.status(500).json({ message: "Failed to fetch business insights" });
+    }
+  });
+
+  // Player Development API endpoints
+  app.get('/api/admin/player-development/assessments', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const assessments = await db.select()
+        .from(playerAssessments)
+        .where(eq(playerAssessments.tenantId, tenantId))
+        .orderBy(playerAssessments.createdAt);
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching player assessments:", error);
+      res.status(500).json({ message: "Failed to fetch player assessments" });
+    }
+  });
+
+  app.post('/api/admin/player-development/assessments', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).currentUser?.id;
+      const assessmentData = {
+        ...req.body,
+        tenantId,
+        assessedBy: adminUserId,
+        assessmentDate: new Date(req.body.assessmentDate || new Date())
+      };
+      
+      const [assessment] = await db.insert(playerAssessments)
+        .values(assessmentData)
+        .returning();
+      
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error creating player assessment:", error);
+      res.status(500).json({ message: "Failed to create player assessment" });
+    }
+  });
+
+  app.get('/api/admin/player-development/goals', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const goals = await db.select()
+        .from(playerGoals)
+        .where(eq(playerGoals.tenantId, tenantId))
+        .orderBy(playerGoals.createdAt);
+      res.json(goals);
+    } catch (error) {
+      console.error("Error fetching player goals:", error);
+      res.status(500).json({ message: "Failed to fetch player goals" });
+    }
+  });
+
+  app.post('/api/admin/player-development/goals', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).currentUser?.id;
+      const goalData = {
+        ...req.body,
+        tenantId,
+        createdBy: adminUserId,
+        targetDate: new Date(req.body.targetDate)
+      };
+      
+      const [goal] = await db.insert(playerGoals)
+        .values(goalData)
+        .returning();
+      
+      res.json(goal);
+    } catch (error) {
+      console.error("Error creating player goal:", error);
+      res.status(500).json({ message: "Failed to create player goal" });
+    }
+  });
+
+  app.get('/api/admin/player-development/progress', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const snapshots = await db.select()
+        .from(progressionSnapshots)
+        .where(eq(progressionSnapshots.tenantId, tenantId))
+        .orderBy(progressionSnapshots.createdAt);
+      res.json(snapshots);
+    } catch (error) {
+      console.error("Error fetching progression snapshots:", error);
+      res.status(500).json({ message: "Failed to fetch progression snapshots" });
+    }
+  });
+
+  app.post('/api/admin/player-development/progress', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).currentUser?.id;
+      const progressData = {
+        ...req.body,
+        tenantId,
+        // recordedBy: adminUserId, // Field not available in schema
+        // recordedAt: new Date(req.body.recordedAt || new Date()) // Field not available in schema
+      };
+      
+      const [progress] = await db.insert(progressionSnapshots)
+        .values(progressData)
+        .returning();
+      
+      res.json(progress);
+    } catch (error) {
+      console.error("Error creating progression snapshot:", error);
+      res.status(500).json({ message: "Failed to create progression snapshot" });
+    }
+  });
+
+  app.get('/api/admin/player-development/training-plans', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const plans = await db.select()
+        .from(trainingPlans)
+        .where(eq(trainingPlans.tenantId, tenantId))
+        .orderBy(trainingPlans.createdAt);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching training plans:", error);
+      res.status(500).json({ message: "Failed to fetch training plans" });
+    }
+  });
+
+  app.post('/api/admin/player-development/training-plans', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).currentUser?.id;
+      const planData = {
+        ...req.body,
+        tenantId,
+        createdBy: adminUserId
+      };
+      
+      const [plan] = await db.insert(trainingPlans)
+        .values(planData)
+        .returning();
+      
+      res.json(plan);
+    } catch (error) {
+      console.error("Error creating training plan:", error);
+      res.status(500).json({ message: "Failed to create training plan" });
+    }
+  });
+
+  app.get('/api/admin/player-development/achievements', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const achievements = await db.select()
+        .from(devAchievements)
+        .where(eq(devAchievements.tenantId, tenantId))
+        .orderBy(devAchievements.createdAt);
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  app.post('/api/admin/player-development/achievements', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const achievementData = {
+        ...req.body,
+        tenantId,
+        // earnedAt: new Date(req.body.earnedAt || new Date()) // Field not available in schema
+      };
+      
+      const [achievement] = await db.insert(devAchievements)
+        .values(achievementData)
+        .returning();
+      
+      res.json(achievement);
+    } catch (error) {
+      console.error("Error creating achievement:", error);
+      res.status(500).json({ message: "Failed to create achievement" });
+    }
+  });
+
+  app.get('/api/admin/player-development/attendance', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const attendance = await db.select()
+        .from(attendanceSnapshots)
+        .where(eq(attendanceSnapshots.tenantId, tenantId))
+        .orderBy(attendanceSnapshots.createdAt);
+      res.json(attendance);
+    } catch (error) {
+      console.error("Error fetching attendance snapshots:", error);
+      res.status(500).json({ message: "Failed to fetch attendance snapshots" });
+    }
+  });
+
+  app.post('/api/admin/player-development/attendance', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const attendanceData = {
+        ...req.body,
+        tenantId,
+        // snapshotDate: new Date(req.body.snapshotDate || new Date()) // Field not available in schema
+      };
+      
+      const [attendance] = await db.insert(attendanceSnapshots)
+        .values(attendanceData)
+        .returning();
+      
+      res.json(attendance);
+    } catch (error) {
+      console.error("Error creating attendance snapshot:", error);
+      res.status(500).json({ message: "Failed to create attendance snapshot" });
     }
   });
 }

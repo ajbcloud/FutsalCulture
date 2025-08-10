@@ -11,6 +11,7 @@ import {
   boolean,
   pgEnum,
   check,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -401,6 +402,227 @@ export const featureRequests = pgTable("feature_requests", {
   index("feature_requests_status_idx").on(table.status),
 ]);
 
+// Player Development Tables (Elite-only feature)
+
+// Development skill categories (Technical, Tactical, Physical, Psychological)
+export const devSkillCategories = pgTable("dev_skill_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(), // e.g., "Technical", "Tactical", "Physical", "Psychological"
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("dev_skill_categories_tenant_id_idx").on(table.tenantId),
+  index("dev_skill_categories_sort_order_idx").on(table.sortOrder),
+]);
+
+// Individual skills within categories
+export const devSkills = pgTable("dev_skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  categoryId: varchar("category_id").notNull().references(() => devSkillCategories.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  sport: varchar("sport"), // nullable for sport-specific skills
+  ageBand: varchar("age_band"), // U8, U9, U10, etc.
+  sortOrder: integer("sort_order").notNull().default(0),
+  status: varchar("status").notNull().default("active"), // active, archived
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("dev_skills_tenant_id_idx").on(table.tenantId),
+  index("dev_skills_category_id_idx").on(table.categoryId),
+  index("dev_skills_age_band_idx").on(table.ageBand),
+  index("dev_skills_status_idx").on(table.status),
+]);
+
+// 1-5 level rubrics for each skill
+export const devSkillRubrics = pgTable("dev_skill_rubrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  skillId: varchar("skill_id").notNull().references(() => devSkills.id),
+  level: integer("level").notNull(), // 1-5
+  label: varchar("label").notNull(), // e.g., "Foundation", "Emerging", "Developing", "Proficient", "Mastery"
+  descriptor: text("descriptor").notNull(), // rubric description for this level
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("dev_skill_rubrics_tenant_id_idx").on(table.tenantId),
+  index("dev_skill_rubrics_skill_id_idx").on(table.skillId),
+  uniqueIndex("dev_skill_rubrics_skill_level_idx").on(table.skillId, table.level),
+]);
+
+// Player assessments (header record)
+export const playerAssessments = pgTable("player_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  assessedBy: varchar("assessed_by").notNull().references(() => users.id), // coach/admin who did assessment
+  sessionId: varchar("session_id").references(() => futsalSessions.id), // optional - if assessed during a session
+  assessmentDate: timestamp("assessment_date").notNull(),
+  overallComment: text("overall_comment"),
+  visibility: varchar("visibility").notNull().default("private"), // "private", "share_with_parent"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("player_assessments_tenant_id_idx").on(table.tenantId),
+  index("player_assessments_player_id_idx").on(table.playerId),
+  index("player_assessments_assessed_by_idx").on(table.assessedBy),
+  index("player_assessments_assessment_date_idx").on(table.assessmentDate),
+]);
+
+// Individual skill ratings within an assessment
+export const playerAssessmentItems = pgTable("player_assessment_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  assessmentId: varchar("assessment_id").notNull().references(() => playerAssessments.id),
+  skillId: varchar("skill_id").notNull().references(() => devSkills.id),
+  level: integer("level").notNull(), // 1-5 rating
+  comment: text("comment"), // optional comment for this skill
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("player_assessment_items_tenant_id_idx").on(table.tenantId),
+  index("player_assessment_items_assessment_id_idx").on(table.assessmentId),
+  index("player_assessment_items_skill_id_idx").on(table.skillId),
+  uniqueIndex("player_assessment_items_assessment_skill_idx").on(table.assessmentId, table.skillId),
+]);
+
+// Player goals and objectives
+export const playerGoals = pgTable("player_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id), // coach/admin who created goal
+  title: varchar("title").notNull(),
+  description: text("description"),
+  targetDate: timestamp("target_date"),
+  status: varchar("status").notNull().default("active"), // "active", "achieved", "archived"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("player_goals_tenant_id_idx").on(table.tenantId),
+  index("player_goals_player_id_idx").on(table.playerId),
+  index("player_goals_created_by_idx").on(table.createdBy),
+  index("player_goals_status_idx").on(table.status),
+]);
+
+// Progress updates on goals
+export const playerGoalUpdates = pgTable("player_goal_updates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  goalId: varchar("goal_id").notNull().references(() => playerGoals.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  note: text("note").notNull(),
+  progressPercent: integer("progress_percent").notNull().default(0), // 0-100
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("player_goal_updates_tenant_id_idx").on(table.tenantId),
+  index("player_goal_updates_goal_id_idx").on(table.goalId),
+  index("player_goal_updates_created_at_idx").on(table.createdAt),
+]);
+
+// Training plans for players
+export const trainingPlans = pgTable("training_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").references(() => players.id), // nullable if it's a team plan
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  title: varchar("title").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("training_plans_tenant_id_idx").on(table.tenantId),
+  index("training_plans_player_id_idx").on(table.playerId),
+  index("training_plans_created_by_idx").on(table.createdBy),
+]);
+
+// Individual items/drills within training plans
+export const trainingPlanItems = pgTable("training_plan_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  planId: varchar("plan_id").notNull().references(() => trainingPlans.id),
+  dayOfWeek: integer("day_of_week").notNull(), // 0-6 (Sunday-Saturday)
+  drillId: varchar("drill_id").references(() => drillsLibrary.id), // nullable for custom text
+  customText: text("custom_text"), // if no drill selected
+  durationMinutes: integer("duration_minutes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("training_plan_items_tenant_id_idx").on(table.tenantId),
+  index("training_plan_items_plan_id_idx").on(table.planId),
+  index("training_plan_items_day_of_week_idx").on(table.dayOfWeek),
+]);
+
+// Library of reusable drills
+export const drillsLibrary = pgTable("drills_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  title: varchar("title").notNull(),
+  objective: text("objective"),
+  equipment: text("equipment"), // list of required equipment
+  steps: text("steps").notNull(), // detailed instructions (could be JSON)
+  videoUrl: varchar("video_url"), // optional video demonstration
+  tags: varchar("tags").array(), // searchable tags
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("drills_library_tenant_id_idx").on(table.tenantId),
+  index("drills_library_title_idx").on(table.title),
+]);
+
+// Attendance snapshots for development tracking
+export const attendanceSnapshots = pgTable("attendance_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  sessionId: varchar("session_id").notNull().references(() => futsalSessions.id),
+  attended: boolean("attended").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("attendance_snapshots_tenant_id_idx").on(table.tenantId),
+  index("attendance_snapshots_player_id_idx").on(table.playerId),
+  index("attendance_snapshots_session_id_idx").on(table.sessionId),
+  uniqueIndex("attendance_snapshots_player_session_idx").on(table.playerId, table.sessionId),
+]);
+
+// Development achievements/badges
+export const devAchievements = pgTable("dev_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  badgeKey: varchar("badge_key").notNull(), // unique identifier for badge type
+  title: varchar("title").notNull(),
+  description: text("description"),
+  awardedAt: timestamp("awarded_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("dev_achievements_tenant_id_idx").on(table.tenantId),
+  index("dev_achievements_player_id_idx").on(table.playerId),
+  index("dev_achievements_awarded_at_idx").on(table.awardedAt),
+]);
+
+// Progression snapshots for tracking development over time
+export const progressionSnapshots = pgTable("progression_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  skillId: varchar("skill_id").references(() => devSkills.id), // nullable for aggregate snapshots
+  aggregateLevel: numeric("aggregate_level", { precision: 3, scale: 2 }), // average across skills
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("progression_snapshots_tenant_id_idx").on(table.tenantId),
+  index("progression_snapshots_player_id_idx").on(table.playerId),
+  index("progression_snapshots_snapshot_date_idx").on(table.snapshotDate),
+]);
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   users: many(users),
@@ -416,6 +638,20 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   serviceBilling: many(serviceBilling),
   themeSettings: one(themeSettings),
   featureRequests: many(featureRequests),
+  // Player Development relations
+  devSkillCategories: many(devSkillCategories),
+  devSkills: many(devSkills),
+  devSkillRubrics: many(devSkillRubrics),
+  playerAssessments: many(playerAssessments),
+  playerAssessmentItems: many(playerAssessmentItems),
+  playerGoals: many(playerGoals),
+  playerGoalUpdates: many(playerGoalUpdates),
+  trainingPlans: many(trainingPlans),
+  trainingPlanItems: many(trainingPlanItems),
+  drillsLibrary: many(drillsLibrary),
+  attendanceSnapshots: many(attendanceSnapshots),
+  devAchievements: many(devAchievements),
+  progressionSnapshots: many(progressionSnapshots),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -426,6 +662,11 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   players: many(players),
   notificationPreferences: one(notificationPreferences),
   featureRequests: many(featureRequests),
+  // Player Development relations
+  playerAssessments: many(playerAssessments),
+  playerGoals: many(playerGoals),
+  playerGoalUpdates: many(playerGoalUpdates),
+  trainingPlans: many(trainingPlans),
 }));
 
 export const playersRelations = relations(players, ({ one, many }) => ({
@@ -435,11 +676,20 @@ export const playersRelations = relations(players, ({ one, many }) => ({
   }),
   signups: many(signups),
   waitlists: many(waitlists),
+  // Player Development relations
+  playerAssessments: many(playerAssessments),
+  playerGoals: many(playerGoals),
+  trainingPlans: many(trainingPlans),
+  attendanceSnapshots: many(attendanceSnapshots),
+  devAchievements: many(devAchievements),
+  progressionSnapshots: many(progressionSnapshots),
 }));
 
 export const futsalSessionsRelations = relations(futsalSessions, ({ many }) => ({
   signups: many(signups),
   waitlists: many(waitlists),
+  playerAssessments: many(playerAssessments),
+  attendanceSnapshots: many(attendanceSnapshots),
 }));
 
 export const signupsRelations = relations(signups, ({ one, many }) => ({
@@ -506,6 +756,186 @@ export const featureRequestsRelations = relations(featureRequests, ({ one }) => 
   submittedBy: one(users, {
     fields: [featureRequests.submittedBy],
     references: [users.id],
+  }),
+}));
+
+// Player Development Relations
+export const devSkillCategoriesRelations = relations(devSkillCategories, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [devSkillCategories.tenantId],
+    references: [tenants.id],
+  }),
+  skills: many(devSkills),
+}));
+
+export const devSkillsRelations = relations(devSkills, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [devSkills.tenantId],
+    references: [tenants.id],
+  }),
+  category: one(devSkillCategories, {
+    fields: [devSkills.categoryId],
+    references: [devSkillCategories.id],
+  }),
+  rubrics: many(devSkillRubrics),
+  assessmentItems: many(playerAssessmentItems),
+  progressionSnapshots: many(progressionSnapshots),
+}));
+
+export const devSkillRubricsRelations = relations(devSkillRubrics, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [devSkillRubrics.tenantId],
+    references: [tenants.id],
+  }),
+  skill: one(devSkills, {
+    fields: [devSkillRubrics.skillId],
+    references: [devSkills.id],
+  }),
+}));
+
+export const playerAssessmentsRelations = relations(playerAssessments, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [playerAssessments.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [playerAssessments.playerId],
+    references: [players.id],
+  }),
+  assessedBy: one(users, {
+    fields: [playerAssessments.assessedBy],
+    references: [users.id],
+  }),
+  session: one(futsalSessions, {
+    fields: [playerAssessments.sessionId],
+    references: [futsalSessions.id],
+  }),
+  items: many(playerAssessmentItems),
+}));
+
+export const playerAssessmentItemsRelations = relations(playerAssessmentItems, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [playerAssessmentItems.tenantId],
+    references: [tenants.id],
+  }),
+  assessment: one(playerAssessments, {
+    fields: [playerAssessmentItems.assessmentId],
+    references: [playerAssessments.id],
+  }),
+  skill: one(devSkills, {
+    fields: [playerAssessmentItems.skillId],
+    references: [devSkills.id],
+  }),
+}));
+
+export const playerGoalsRelations = relations(playerGoals, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [playerGoals.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [playerGoals.playerId],
+    references: [players.id],
+  }),
+  createdBy: one(users, {
+    fields: [playerGoals.createdBy],
+    references: [users.id],
+  }),
+  updates: many(playerGoalUpdates),
+}));
+
+export const playerGoalUpdatesRelations = relations(playerGoalUpdates, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [playerGoalUpdates.tenantId],
+    references: [tenants.id],
+  }),
+  goal: one(playerGoals, {
+    fields: [playerGoalUpdates.goalId],
+    references: [playerGoals.id],
+  }),
+  createdBy: one(users, {
+    fields: [playerGoalUpdates.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const trainingPlansRelations = relations(trainingPlans, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [trainingPlans.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [trainingPlans.playerId],
+    references: [players.id],
+  }),
+  createdBy: one(users, {
+    fields: [trainingPlans.createdBy],
+    references: [users.id],
+  }),
+  items: many(trainingPlanItems),
+}));
+
+export const trainingPlanItemsRelations = relations(trainingPlanItems, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [trainingPlanItems.tenantId],
+    references: [tenants.id],
+  }),
+  plan: one(trainingPlans, {
+    fields: [trainingPlanItems.planId],
+    references: [trainingPlans.id],
+  }),
+  drill: one(drillsLibrary, {
+    fields: [trainingPlanItems.drillId],
+    references: [drillsLibrary.id],
+  }),
+}));
+
+export const drillsLibraryRelations = relations(drillsLibrary, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [drillsLibrary.tenantId],
+    references: [tenants.id],
+  }),
+  trainingPlanItems: many(trainingPlanItems),
+}));
+
+export const attendanceSnapshotsRelations = relations(attendanceSnapshots, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [attendanceSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [attendanceSnapshots.playerId],
+    references: [players.id],
+  }),
+  session: one(futsalSessions, {
+    fields: [attendanceSnapshots.sessionId],
+    references: [futsalSessions.id],
+  }),
+}));
+
+export const devAchievementsRelations = relations(devAchievements, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [devAchievements.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [devAchievements.playerId],
+    references: [players.id],
+  }),
+}));
+
+export const progressionSnapshotsRelations = relations(progressionSnapshots, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [progressionSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+  player: one(players, {
+    fields: [progressionSnapshots.playerId],
+    references: [players.id],
+  }),
+  skill: one(devSkills, {
+    fields: [progressionSnapshots.skillId],
+    references: [devSkills.id],
   }),
 }));
 
@@ -685,6 +1115,81 @@ export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({
 export type FeatureFlagInsert = z.infer<typeof insertFeatureFlagSchema>;
 export type FeatureFlagSelect = typeof featureFlags.$inferSelect;
 
+// Player Development Insert Schemas
+export const insertDevSkillCategorySchema = createInsertSchema(devSkillCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDevSkillSchema = createInsertSchema(devSkills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDevSkillRubricSchema = createInsertSchema(devSkillRubrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlayerAssessmentSchema = createInsertSchema(playerAssessments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlayerAssessmentItemSchema = createInsertSchema(playerAssessmentItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlayerGoalSchema = createInsertSchema(playerGoals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlayerGoalUpdateSchema = createInsertSchema(playerGoalUpdates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrainingPlanSchema = createInsertSchema(trainingPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrainingPlanItemSchema = createInsertSchema(trainingPlanItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDrillSchema = createInsertSchema(drillsLibrary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAttendanceSnapshotSchema = createInsertSchema(attendanceSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDevAchievementSchema = createInsertSchema(devAchievements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProgressionSnapshotSchema = createInsertSchema(progressionSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Type exports for plan levels
 export type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
 
@@ -712,6 +1217,7 @@ export const FEATURE_KEYS = {
   SUPPORT_STANDARD: 'support_standard',
   SUPPORT_PRIORITY: 'support_priority',
   BULK_OPERATIONS: 'bulk_operations',
+  PLAYER_DEVELOPMENT: 'player_development',
 } as const;
 
 export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];
@@ -752,3 +1258,31 @@ export type JoinWaitlist = z.infer<typeof joinWaitlistSchema>;
 export type LeaveWaitlist = z.infer<typeof leaveWaitlistSchema>;
 export type PromoteWaitlist = z.infer<typeof promoteWaitlistSchema>;
 export type WaitlistSettings = z.infer<typeof waitlistSettingsSchema>;
+
+// Player Development Types
+export type DevSkillCategory = typeof devSkillCategories.$inferSelect;
+export type InsertDevSkillCategory = z.infer<typeof insertDevSkillCategorySchema>;
+export type DevSkill = typeof devSkills.$inferSelect;
+export type InsertDevSkill = z.infer<typeof insertDevSkillSchema>;
+export type DevSkillRubric = typeof devSkillRubrics.$inferSelect;
+export type InsertDevSkillRubric = z.infer<typeof insertDevSkillRubricSchema>;
+export type PlayerAssessment = typeof playerAssessments.$inferSelect;
+export type InsertPlayerAssessment = z.infer<typeof insertPlayerAssessmentSchema>;
+export type PlayerAssessmentItem = typeof playerAssessmentItems.$inferSelect;
+export type InsertPlayerAssessmentItem = z.infer<typeof insertPlayerAssessmentItemSchema>;
+export type PlayerGoal = typeof playerGoals.$inferSelect;
+export type InsertPlayerGoal = z.infer<typeof insertPlayerGoalSchema>;
+export type PlayerGoalUpdate = typeof playerGoalUpdates.$inferSelect;
+export type InsertPlayerGoalUpdate = z.infer<typeof insertPlayerGoalUpdateSchema>;
+export type TrainingPlan = typeof trainingPlans.$inferSelect;
+export type InsertTrainingPlan = z.infer<typeof insertTrainingPlanSchema>;
+export type TrainingPlanItem = typeof trainingPlanItems.$inferSelect;
+export type InsertTrainingPlanItem = z.infer<typeof insertTrainingPlanItemSchema>;
+export type Drill = typeof drillsLibrary.$inferSelect;
+export type InsertDrill = z.infer<typeof insertDrillSchema>;
+export type AttendanceSnapshot = typeof attendanceSnapshots.$inferSelect;
+export type InsertAttendanceSnapshot = z.infer<typeof insertAttendanceSnapshotSchema>;
+export type DevAchievement = typeof devAchievements.$inferSelect;
+export type InsertDevAchievement = z.infer<typeof insertDevAchievementSchema>;
+export type ProgressionSnapshot = typeof progressionSnapshots.$inferSelect;
+export type InsertProgressionSnapshot = z.infer<typeof insertProgressionSnapshotSchema>;
