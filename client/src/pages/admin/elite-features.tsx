@@ -662,11 +662,16 @@ export default function EliteFeatures() {
                         <Input
                           value={themeSettings.darkDescriptionColor}
                           onChange={(e) => {
-                            console.log('Dark description color text changed to:', e.target.value);
-                            setThemeSettings(prev => ({
-                              ...prev,
-                              darkDescriptionColor: e.target.value
-                            }));
+                            const newColor = e.target.value;
+                            console.log('Dark description color changed to:', newColor);
+                            setThemeSettings(prev => {
+                              const updated = {
+                                ...prev,
+                                darkDescriptionColor: newColor
+                              };
+                              console.log('Updated theme settings:', updated);
+                              return updated;
+                            });
                           }}
                           placeholder="#cbd5e1"
                           className="flex-1"
@@ -698,32 +703,38 @@ export default function EliteFeatures() {
                       }}
                     >
                       <h4 
+                        key={`light-heading-${themeSettings.lightHeadingColor}`}
                         style={{ 
                           color: themeSettings.lightHeadingColor,
                           fontWeight: '600',
                           fontSize: '1.125rem',
                           margin: 0,
-                          padding: 0
+                          padding: 0,
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Heading Color Preview
                       </h4>
                       <p 
+                        key={`light-desc-${themeSettings.lightDescriptionColor}`}
                         style={{ 
                           color: themeSettings.lightDescriptionColor,
                           fontSize: '0.875rem',
                           lineHeight: '1.25rem',
                           margin: 0,
-                          padding: 0
+                          padding: 0,
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Description Color - This text shows how descriptions and body text will appear in light mode.
                       </p>
                       <div 
+                        key={`light-text-${themeSettings.lightText}`}
                         style={{ 
                           color: themeSettings.lightText,
                           fontSize: '0.875rem',
-                          marginTop: '0.5rem'
+                          marginTop: '0.5rem',
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Text Color - General text content uses this color.
@@ -797,32 +808,38 @@ export default function EliteFeatures() {
                       }}
                     >
                       <h4 
+                        key={`dark-heading-${themeSettings.darkHeadingColor}`}
                         style={{ 
                           color: themeSettings.darkHeadingColor,
                           fontWeight: '600',
                           fontSize: '1.125rem',
                           margin: 0,
-                          padding: 0
+                          padding: 0,
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Heading Color Preview
                       </h4>
                       <p 
+                        key={`dark-desc-${themeSettings.darkDescriptionColor}`}
                         style={{ 
                           color: themeSettings.darkDescriptionColor,
                           fontSize: '0.875rem',
                           lineHeight: '1.25rem',
                           margin: 0,
-                          padding: 0
+                          padding: 0,
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Description Color - This text shows how descriptions and body text will appear in dark mode.
                       </p>
                       <div 
+                        key={`dark-text-${themeSettings.darkText}`}
                         style={{ 
                           color: themeSettings.darkText,
                           fontSize: '0.875rem',
-                          marginTop: '0.5rem'
+                          marginTop: '0.5rem',
+                          transition: 'color 0.2s ease'
                         }}
                       >
                         Text Color - General text content uses this color.
