@@ -667,6 +667,79 @@ export default function AdminSettings() {
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Business Schedule & Fiscal Year
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="weekdayStart" className="text-foreground">Business Week Start</Label>
+                <Select
+                  value={settings.weekdayStart}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayStart: value }))}
+                >
+                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="monday" className="text-foreground hover:bg-accent">Monday</SelectItem>
+                    <SelectItem value="tuesday" className="text-foreground hover:bg-accent">Tuesday</SelectItem>
+                    <SelectItem value="wednesday" className="text-foreground hover:bg-accent">Wednesday</SelectItem>
+                    <SelectItem value="thursday" className="text-foreground hover:bg-accent">Thursday</SelectItem>
+                    <SelectItem value="friday" className="text-foreground hover:bg-accent">Friday</SelectItem>
+                    <SelectItem value="saturday" className="text-foreground hover:bg-accent">Saturday</SelectItem>
+                    <SelectItem value="sunday" className="text-foreground hover:bg-accent">Sunday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="fiscalYearType" className="text-foreground">Fiscal Year Type</Label>
+                <Select
+                  value={settings.fiscalYearType}
+                  onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearType: value }))}
+                >
+                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    <SelectItem value="calendar" className="text-foreground hover:bg-accent">Calendar Year (Jan-Dec)</SelectItem>
+                    <SelectItem value="fiscal" className="text-foreground hover:bg-accent">Custom Fiscal Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {settings.fiscalYearType === 'fiscal' && (
+                <div>
+                  <Label htmlFor="fiscalYearStartMonth" className="text-foreground">Fiscal Year Start Month</Label>
+                  <Select
+                    value={settings.fiscalYearStartMonth.toString()}
+                    onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearStartMonth: parseInt(value) }))}
+                  >
+                    <SelectTrigger className="bg-input border-border text-foreground mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      <SelectItem value="1" className="text-foreground hover:bg-accent">January</SelectItem>
+                      <SelectItem value="2" className="text-foreground hover:bg-accent">February</SelectItem>
+                      <SelectItem value="3" className="text-foreground hover:bg-accent">March</SelectItem>
+                      <SelectItem value="4" className="text-foreground hover:bg-accent">April</SelectItem>
+                      <SelectItem value="5" className="text-foreground hover:bg-accent">May</SelectItem>
+                      <SelectItem value="6" className="text-foreground hover:bg-accent">June</SelectItem>
+                      <SelectItem value="7" className="text-foreground hover:bg-accent">July</SelectItem>
+                      <SelectItem value="8" className="text-foreground hover:bg-accent">August</SelectItem>
+                      <SelectItem value="9" className="text-foreground hover:bg-accent">September</SelectItem>
+                      <SelectItem value="10" className="text-foreground hover:bg-accent">October</SelectItem>
+                      <SelectItem value="11" className="text-foreground hover:bg-accent">November</SelectItem>
+                      <SelectItem value="12" className="text-foreground hover:bg-accent">December</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
                 <Users className="w-5 h-5 mr-2" />
                 Registration Settings
               </CardTitle>
@@ -971,78 +1044,7 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Business Schedule & Fiscal Year
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="weekdayStart" className="text-foreground">Business Week Start</Label>
-                <Select
-                  value={settings.weekdayStart}
-                  onValueChange={(value) => setSettings(prev => ({ ...prev, weekdayStart: value }))}
-                >
-                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    <SelectItem value="monday" className="text-foreground hover:bg-accent">Monday</SelectItem>
-                    <SelectItem value="tuesday" className="text-foreground hover:bg-accent">Tuesday</SelectItem>
-                    <SelectItem value="wednesday" className="text-foreground hover:bg-accent">Wednesday</SelectItem>
-                    <SelectItem value="thursday" className="text-foreground hover:bg-accent">Thursday</SelectItem>
-                    <SelectItem value="friday" className="text-foreground hover:bg-accent">Friday</SelectItem>
-                    <SelectItem value="saturday" className="text-foreground hover:bg-accent">Saturday</SelectItem>
-                    <SelectItem value="sunday" className="text-foreground hover:bg-accent">Sunday</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="fiscalYearType" className="text-foreground">Fiscal Year Type</Label>
-                <Select
-                  value={settings.fiscalYearType}
-                  onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearType: value }))}
-                >
-                  <SelectTrigger className="bg-input border-border text-foreground mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    <SelectItem value="calendar" className="text-foreground hover:bg-accent">Calendar Year (Jan-Dec)</SelectItem>
-                    <SelectItem value="fiscal" className="text-foreground hover:bg-accent">Custom Fiscal Year</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {settings.fiscalYearType === 'fiscal' && (
-                <div>
-                  <Label htmlFor="fiscalYearStartMonth" className="text-foreground">Fiscal Year Start Month</Label>
-                  <Select
-                    value={settings.fiscalYearStartMonth.toString()}
-                    onValueChange={(value) => setSettings(prev => ({ ...prev, fiscalYearStartMonth: parseInt(value) }))}
-                  >
-                    <SelectTrigger className="bg-input border-border text-foreground mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      <SelectItem value="1" className="text-foreground hover:bg-accent">January</SelectItem>
-                      <SelectItem value="2" className="text-foreground hover:bg-accent">February</SelectItem>
-                      <SelectItem value="3" className="text-foreground hover:bg-accent">March</SelectItem>
-                      <SelectItem value="4" className="text-foreground hover:bg-accent">April</SelectItem>
-                      <SelectItem value="5" className="text-foreground hover:bg-accent">May</SelectItem>
-                      <SelectItem value="6" className="text-foreground hover:bg-accent">June</SelectItem>
-                      <SelectItem value="7" className="text-foreground hover:bg-accent">July</SelectItem>
-                      <SelectItem value="8" className="text-foreground hover:bg-accent">August</SelectItem>
-                      <SelectItem value="9" className="text-foreground hover:bg-accent">September</SelectItem>
-                      <SelectItem value="10" className="text-foreground hover:bg-accent">October</SelectItem>
-                      <SelectItem value="11" className="text-foreground hover:bg-accent">November</SelectItem>
-                      <SelectItem value="12" className="text-foreground hover:bg-accent">December</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
 
           <Card className="bg-card border-border">
             <CardHeader>
