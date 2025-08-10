@@ -34,12 +34,12 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
 
     // Return default theme if no custom settings exist
     const themeData = settings[0] || {
-      primaryButton: '#2563eb',
-      secondaryButton: '#64748b', 
-      background: '#ffffff',
-      text: '#1f2937',
-      headingColor: '#111827',
-      descriptionColor: '#6b7280'
+      primaryButton: '#2563eb',   // Bright blue
+      secondaryButton: '#6b7280', // Light gray  
+      background: '#ffffff',      // White
+      text: '#111827',           // Dark text for contrast
+      headingColor: '#1f2937',   // Slightly lighter dark for headings
+      descriptionColor: '#6b7280' // Medium gray for descriptions
     };
 
     res.json(themeData);
