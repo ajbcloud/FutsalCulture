@@ -29,8 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AdminLayout from "@/components/admin-layout";
 import { Pagination } from "@/components/pagination";
 import { format } from "date-fns";
@@ -322,7 +324,14 @@ export default function DiscountCodes() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="lockedToPlayerId">Lock to Specific Player</Label>
-                    <Select
+                    <Combobox
+                      options={[
+                        { value: "none", label: "Any player can use" },
+                        ...players.map((player: any) => ({
+                          value: player.id,
+                          label: `${player.firstName} ${player.lastName}`
+                        }))
+                      ]}
                       value={formData.lockedToPlayerId}
                       onValueChange={(value) => setFormData({ 
                         ...formData, 
@@ -330,23 +339,21 @@ export default function DiscountCodes() {
                         // Clear parent lock if player is selected
                         lockedToParentId: value !== "none" ? "none" : formData.lockedToParentId
                       })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any player can use" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Any player can use</SelectItem>
-                        {players.map((player: any) => (
-                          <SelectItem key={player.id} value={player.id}>
-                            {player.firstName} {player.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Any player can use"
+                      searchPlaceholder="Search players..."
+                      emptyText="No players found."
+                    />
                   </div>
                   <div>
                     <Label htmlFor="lockedToParentId">Lock to Specific Parent</Label>
-                    <Select
+                    <Combobox
+                      options={[
+                        { value: "none", label: "Any parent can use" },
+                        ...parents.map((parent: any) => ({
+                          value: parent.id,
+                          label: `${parent.firstName} ${parent.lastName} (${parent.email})`
+                        }))
+                      ]}
                       value={formData.lockedToParentId}
                       onValueChange={(value) => setFormData({ 
                         ...formData, 
@@ -354,19 +361,10 @@ export default function DiscountCodes() {
                         // Clear player lock if parent is selected
                         lockedToPlayerId: value !== "none" ? "none" : formData.lockedToPlayerId
                       })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any parent can use" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Any parent can use</SelectItem>
-                        {parents.map((parent: any) => (
-                          <SelectItem key={parent.id} value={parent.id}>
-                            {parent.firstName} {parent.lastName} ({parent.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Any parent can use"
+                      searchPlaceholder="Search parents..."
+                      emptyText="No parents found."
+                    />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
