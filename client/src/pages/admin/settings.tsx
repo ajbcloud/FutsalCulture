@@ -513,12 +513,7 @@ export default function AdminSettings() {
             >
               Plan & Features
             </TabsTrigger>
-            <TabsTrigger 
-              value="billing" 
-              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
-            >
-              Service Billing
-            </TabsTrigger>
+
             <TabsTrigger 
               value="integrations" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
@@ -530,7 +525,7 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-5 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-4 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -539,9 +534,6 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Plan & Features
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              Service Billing
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Integrations
@@ -1600,26 +1592,7 @@ export default function AdminSettings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="billing" className="space-y-6">
-          {/* Billing tab content can be moved here if needed */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <DollarSign className="w-5 h-5 mr-2" />
-                Billing Configuration
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Configure billing and payment settings for session bookings
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Additional billing configuration options can be added here as needed.</p>
-                <p className="text-sm mt-2">Subscription management is now available in the Plan & Features tab.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
 
         <TabsContent value="integrations" className="space-y-6">
           <Card className="bg-card border-border">
