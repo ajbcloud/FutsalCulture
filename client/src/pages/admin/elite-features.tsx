@@ -1737,6 +1737,82 @@ export default function EliteFeatures() {
                           6. Description Color - smaller text and details will use this color.
                         </p>
                       </div>
+                      
+                      {/* Missing elements 10-15 for dark mode */}
+                      <div className="mt-4 space-y-2">
+                        <div 
+                          style={{ 
+                            backgroundColor: themeSettings.darkAccentColor,
+                            color: 'white',
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          10. Accent Color
+                        </div>
+                        
+                        <div 
+                          style={{ 
+                            border: `1px solid ${themeSettings.darkBorderColor}`,
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            color: themeSettings.darkTextColor,
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          11. Border Color Example
+                        </div>
+                        
+                        <div 
+                          style={{ 
+                            backgroundColor: themeSettings.darkInputBackground,
+                            border: `1px solid ${themeSettings.darkBorderColor}`,
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            color: themeSettings.darkTextColor,
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          12. Input Background
+                        </div>
+                        
+                        <div 
+                          style={{ 
+                            backgroundColor: themeSettings.darkSuccessColor,
+                            color: 'white',
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          13. Success Color
+                        </div>
+                        
+                        <div 
+                          style={{ 
+                            backgroundColor: themeSettings.darkWarningColor,
+                            color: 'white',
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          14. Warning Color
+                        </div>
+                        
+                        <div 
+                          style={{ 
+                            backgroundColor: themeSettings.darkErrorColor,
+                            color: 'white',
+                            padding: '0.5rem',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          15. Error Color
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
