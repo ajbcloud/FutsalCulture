@@ -1757,78 +1757,97 @@ export default function EliteFeatures() {
                       {/* Missing elements 10-15 for dark mode */}
                       <div className="mt-4 space-y-2">
                         <div 
+                          key={`dark-page-title-${themeSettings.darkPageTitle}`}
                           style={{ 
-                            color: themeSettings.darkPageTitle,
+                            color: `${themeSettings.darkPageTitle || themeSettings.darkHeadingColor} !important`,
                             fontSize: '1.5rem',
                             fontWeight: '700',
-                            padding: '0.5rem 0'
+                            padding: '0.5rem 0',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkPageTitle || themeSettings.darkHeadingColor
                           }}
                         >
                           10. Page Title - main page headings
                         </div>
                         
                         <div 
+                          key={`dark-card-bg-${themeSettings.darkCardBackground}`}
                           style={{ 
-                            backgroundColor: themeSettings.darkCardBackground,
+                            backgroundColor: themeSettings.darkCardBackground || '#1e293b',
                             padding: '0.75rem',
                             borderRadius: '0.5rem',
                             fontSize: '0.875rem',
-                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`
+                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`,
+                            color: `${themeSettings.darkText} !important`,
+                            transition: 'all 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkText
                           }}
                         >
                           11. Card Background - cards, modals, and elevated surfaces
                         </div>
                         
                         <div 
+                          key={`dark-card-title-${themeSettings.darkCardTitle}-${themeSettings.darkCardBackground}`}
                           style={{ 
-                            color: themeSettings.darkCardTitle,
-                            backgroundColor: themeSettings.darkCardBackground,
+                            color: `${themeSettings.darkCardTitle || themeSettings.darkText} !important`,
+                            backgroundColor: themeSettings.darkCardBackground || '#1e293b',
                             padding: '0.75rem',
                             borderRadius: '0.5rem',
                             fontSize: '1rem',
                             fontWeight: '600',
-                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`
+                            border: `1px solid ${themeSettings.darkBorderColor || '#374151'}`,
+                            transition: 'all 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkCardTitle || themeSettings.darkText
                           }}
                         >
                           12. Card Title - titles within cards and containers
                         </div>
                         
                         <div 
+                          key={`dark-feature-title-${themeSettings.darkFeatureTitle}`}
                           style={{ 
-                            color: themeSettings.darkFeatureTitle,
+                            color: `${themeSettings.darkFeatureTitle || themeSettings.darkHeadingColor} !important`,
                             padding: '0.5rem',
                             fontSize: '1rem',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkFeatureTitle || themeSettings.darkHeadingColor
                           }}
                         >
                           13. Feature Title - main feature headings
                         </div>
                         
                         <div 
+                          key={`dark-feature-desc-${themeSettings.darkFeatureDescription}`}
                           style={{ 
-                            color: themeSettings.darkFeatureDescription,
+                            color: `${themeSettings.darkFeatureDescription || themeSettings.darkDescriptionColor} !important`,
                             padding: '0.5rem',
                             fontSize: '0.875rem',
-                            fontStyle: 'italic'
+                            fontStyle: 'italic',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkFeatureDescription || themeSettings.darkDescriptionColor
                           }}
                         >
                           14. Feature Description - explanatory text and feature details
                         </div>
                         
                         <div 
+                          key={`dark-icon-color-${themeSettings.darkIconColor}`}
                           style={{ 
-                            color: themeSettings.darkIconColor,
+                            color: `${themeSettings.darkIconColor || themeSettings.darkPrimaryButton} !important`,
                             padding: '0.5rem',
                             fontSize: '0.875rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.5rem'
+                            gap: '0.5rem',
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkIconColor || themeSettings.darkPrimaryButton
                           }}
                         >
-                          <svg style={{ color: themeSettings.darkIconColor }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <svg style={{ color: themeSettings.darkIconColor || themeSettings.darkPrimaryButton }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                           </svg>
-                          <svg style={{ color: themeSettings.darkIconColor }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <svg style={{ color: themeSettings.darkIconColor || themeSettings.darkPrimaryButton }} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                           </svg>
                           15. Icon Color - icons and interactive elements
