@@ -76,24 +76,28 @@ interface SubscriptionInfo {
     status: string;
     current_period_start: number | null;
     current_period_end: number | null;
+    planName?: string;
+    amount?: number;
+    currentPeriodEnd?: string;
+    hostedInvoiceUrl?: string;
     plan?: {
       id: string;
       nickname: string;
       amount: number;
       currency: string;
       interval: string;
-      product: {
+      product?: {
         id: string;
         name: string;
         description: string;
       };
     } | null;
-    customer: {
+    customer?: {
       id: string;
       email: string;
     };
   };
-  invoices: Array<{
+  invoices?: Array<{
     id: string;
     status: string;
     amount_paid: number;
@@ -103,7 +107,7 @@ interface SubscriptionInfo {
     hosted_invoice_url?: string;
     invoice_pdf?: string;
   }>;
-  customer_id: string;
+  customer_id?: string;
 }
 
 
@@ -1345,16 +1349,19 @@ export default function AdminSettings() {
                           <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1" />
                           <p className="text-xs text-muted-foreground">Loading...</p>
                         </div>
-                      ) : subscriptionInfo?.subscription?.status === 'active' ? (
+                      ) : (subscriptionInfo?.subscription?.status === 'active' || 
+                           (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription')) ? (
                         <div>
                           <div className="flex items-center mb-2">
                             <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                             <span className="text-sm font-medium text-green-800 dark:text-green-200">Active</span>
                           </div>
                           <div className="text-xs text-muted-foreground space-y-1">
-                            <div>Next billing: {subscriptionInfo.subscription.currentPeriodEnd 
-                              ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
-                              : 'N/A'}</div>
+                            <div>Next billing: {subscriptionInfo.subscription.current_period_end 
+                              ? new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()
+                              : subscriptionInfo.subscription.currentPeriodEnd 
+                                ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
+                                : 'N/A'}</div>
                             <div>Amount: ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month</div>
                           </div>
                           <div className="flex gap-1 mt-2">

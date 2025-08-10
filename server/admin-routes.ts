@@ -2833,8 +2833,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           limit: 1
         });
 
-        let subscription = null;
-        let invoices = [];
+        let subscription: any = null;
+        let invoices: any[] = [];
 
         if (subscriptions.data.length > 0) {
           // Get the most recent subscription
@@ -2871,16 +2871,56 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           };
         }
 
+        // Transform subscription data for frontend
+        const subscriptionData = subscription && subscription.id !== "no_subscription" ? {
+          id: subscription.id,
+          status: subscription.status,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
+          planName: subscription.items?.data?.[0]?.price?.nickname || 
+                   (subscription.items?.data?.[0]?.price?.product as any)?.name || 
+                   'Unknown Plan',
+          amount: subscription.items?.data?.[0]?.price?.unit_amount || 0,
+          currentPeriodEnd: subscription.current_period_end ? 
+                           new Date(subscription.current_period_end * 1000).toISOString() : null,
+          hostedInvoiceUrl: invoices.length > 0 ? invoices[0].hosted_invoice_url : null,
+          plan: subscription.items?.data?.[0]?.price ? {
+            id: subscription.items.data[0].price.id,
+            nickname: subscription.items.data[0].price.nickname,
+            amount: subscription.items.data[0].price.unit_amount,
+            currency: subscription.items.data[0].price.currency,
+            interval: subscription.items.data[0].price.recurring?.interval || 'month'
+          } : null,
+          customer: {
+            id: customerId,
+            email: currentUser?.email || "admin@futsalculture.com"
+          }
+        } : {
+          id: "no_subscription",
+          status: "inactive",
+          current_period_start: null,
+          current_period_end: null,
+          planName: null,
+          amount: 0,
+          currentPeriodEnd: null,
+          hostedInvoiceUrl: null,
+          plan: null,
+          customer: {
+            id: customerId,
+            email: currentUser?.email || "admin@futsalculture.com"
+          }
+        };
+
         res.json({
-          subscription,
+          subscription: subscriptionData,
           invoices,
           customer_id: customerId
         });
-      } catch (stripeError) {
+      } catch (stripeError: any) {
         console.error("Stripe API error:", stripeError);
         return res.status(500).json({ 
           message: "Failed to fetch subscription data from Stripe",
-          error: stripeError.message 
+          error: stripeError?.message || 'Unknown Stripe error'
         });
       }
     } catch (error: any) {
