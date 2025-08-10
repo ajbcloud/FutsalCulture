@@ -206,6 +206,11 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Check if Twilio integration is enabled
+  const isTwilioEnabled = integrations.some(
+    integration => integration.provider.toLowerCase() === 'twilio' && integration.enabled
+  );
+
   useEffect(() => {
     // Check for payment success parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -776,6 +781,9 @@ export default function AdminSettings() {
                   <p className="text-sm text-muted-foreground">
                     Receive email notifications for important events
                   </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Default: Emails sent from company domain. White-label options available on higher plans.
+                  </p>
                 </div>
                 <Switch
                   checked={settings.emailNotifications}
@@ -786,16 +794,27 @@ export default function AdminSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-foreground">SMS Notifications</Label>
+                  <Label className={`${!isTwilioEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    SMS Notifications
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Receive SMS notifications for urgent events
+                    {isTwilioEnabled 
+                      ? 'Receive SMS notifications for urgent events'
+                      : 'Requires Twilio integration to be configured'
+                    }
                   </p>
+                  {!isTwilioEnabled && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Configure Twilio in the Integrations tab to enable SMS notifications
+                    </p>
+                  )}
                 </div>
                 <Switch
-                  checked={settings.smsNotifications}
+                  checked={settings.smsNotifications && isTwilioEnabled}
                   onCheckedChange={(checked) => 
                     setSettings(prev => ({ ...prev, smsNotifications: checked }))
                   }
+                  disabled={!isTwilioEnabled}
                 />
               </div>
             </CardContent>
@@ -945,6 +964,9 @@ export default function AdminSettings() {
                         <p className="text-sm text-muted-foreground">
                           Send email notifications for waitlist updates
                         </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                          Default: Emails sent from company domain. White-label options available on higher plans.
+                        </p>
                       </div>
                       <Switch
                         checked={settings.waitlistNotificationEmail}
@@ -956,16 +978,27 @@ export default function AdminSettings() {
 
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-foreground">SMS Notifications</Label>
+                        <Label className={`${!isTwilioEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                          SMS Notifications
+                        </Label>
                         <p className="text-sm text-muted-foreground">
-                          Send SMS notifications for urgent waitlist updates
+                          {isTwilioEnabled 
+                            ? 'Send SMS notifications for urgent waitlist updates'
+                            : 'Requires Twilio integration to be configured'
+                          }
                         </p>
+                        {!isTwilioEnabled && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            Configure Twilio in the Integrations tab to enable SMS notifications
+                          </p>
+                        )}
                       </div>
                       <Switch
-                        checked={settings.waitlistNotificationSMS}
+                        checked={settings.waitlistNotificationSMS && isTwilioEnabled}
                         onCheckedChange={(checked) => 
                           setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
                         }
+                        disabled={!isTwilioEnabled}
                       />
                     </div>
 
