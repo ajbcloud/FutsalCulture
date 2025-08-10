@@ -37,7 +37,9 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
       primaryButton: '#2563eb',
       secondaryButton: '#64748b', 
       background: '#ffffff',
-      text: '#1f2937'
+      text: '#1f2937',
+      headingColor: '#111827',
+      descriptionColor: '#6b7280'
     };
 
     res.json(themeData);

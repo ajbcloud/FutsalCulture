@@ -22,6 +22,8 @@ interface ThemeSettings {
   secondaryButton: string;
   background: string;
   text: string;
+  headingColor: string;
+  descriptionColor: string;
 }
 
 interface FeatureRequest {
@@ -50,7 +52,9 @@ export default function EliteFeatures() {
     primaryButton: '#2563eb',
     secondaryButton: '#64748b',
     background: '#ffffff',
-    text: '#1f2937'
+    text: '#1f2937',
+    headingColor: '#111827',
+    descriptionColor: '#6b7280'
   });
 
   // Feature Request State
@@ -72,7 +76,9 @@ export default function EliteFeatures() {
         primaryButton: theme.primaryButton || '#2563eb',
         secondaryButton: theme.secondaryButton || '#64748b',
         background: theme.background || '#ffffff',
-        text: theme.text || '#1f2937'
+        text: theme.text || '#1f2937',
+        headingColor: theme.headingColor || '#111827',
+        descriptionColor: theme.descriptionColor || '#6b7280'
       });
     }
   }, [currentTheme]);
@@ -135,7 +141,9 @@ export default function EliteFeatures() {
         primaryButton: '#2563eb',
         secondaryButton: '#64748b',
         background: '#ffffff',
-        text: '#1f2937'
+        text: '#1f2937',
+        headingColor: '#111827',
+        descriptionColor: '#6b7280'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
     },
@@ -210,7 +218,6 @@ export default function EliteFeatures() {
           
           <UpgradePrompt
             feature={FEATURE_KEYS.THEME_CUSTOMIZATION}
-            description="Access theme customization, feature request queue, and priority support with the Elite plan."
           />
         </div>
       </AdminLayout>
@@ -389,6 +396,58 @@ export default function EliteFeatures() {
                 </div>
 
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="headingColor">Heading Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="headingColor"
+                        type="color"
+                        value={themeSettings.headingColor}
+                        onChange={(e) => setThemeSettings(prev => ({
+                          ...prev,
+                          headingColor: e.target.value
+                        }))}
+                        className="w-20 h-10 p-1 border rounded"
+                      />
+                      <Input
+                        value={themeSettings.headingColor}
+                        onChange={(e) => setThemeSettings(prev => ({
+                          ...prev,
+                          headingColor: e.target.value
+                        }))}
+                        placeholder="#111827"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="descriptionColor">Description Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="descriptionColor"
+                        type="color"
+                        value={themeSettings.descriptionColor}
+                        onChange={(e) => setThemeSettings(prev => ({
+                          ...prev,
+                          descriptionColor: e.target.value
+                        }))}
+                        className="w-20 h-10 p-1 border rounded"
+                      />
+                      <Input
+                        value={themeSettings.descriptionColor}
+                        onChange={(e) => setThemeSettings(prev => ({
+                          ...prev,
+                          descriptionColor: e.target.value
+                        }))}
+                        placeholder="#6b7280"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   <h3 className="font-semibold">Theme Preview</h3>
                   <div 
                     className="p-6 rounded-lg border space-y-4"
@@ -397,9 +456,13 @@ export default function EliteFeatures() {
                       color: themeSettings.text
                     }}
                   >
-                    <h4 className="font-semibold">Sample Portal Content</h4>
-                    <p className="text-sm">This is how your custom theme will look in the portal.</p>
-                    <div className="flex gap-2">
+                    <h4 className="font-semibold" style={{ color: themeSettings.headingColor }}>
+                      Sample Portal Content
+                    </h4>
+                    <p className="text-sm" style={{ color: themeSettings.descriptionColor }}>
+                      This is how your custom theme will look in the portal with heading and description colors.
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
                       <button
                         className="px-4 py-2 rounded text-white text-sm"
                         style={{ backgroundColor: themeSettings.primaryButton }}
@@ -412,6 +475,14 @@ export default function EliteFeatures() {
                       >
                         Secondary Button
                       </button>
+                    </div>
+                    <div className="mt-4">
+                      <h5 className="font-medium mb-2" style={{ color: themeSettings.headingColor }}>
+                        Section Heading
+                      </h5>
+                      <p className="text-xs" style={{ color: themeSettings.descriptionColor }}>
+                        This shows how descriptions and smaller text will appear with the custom colors.
+                      </p>
                     </div>
                   </div>
                 </div>

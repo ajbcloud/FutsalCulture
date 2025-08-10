@@ -6,6 +6,8 @@ interface CustomTheme {
   secondaryButton: string;
   background: string;
   text: string;
+  headingColor: string;
+  descriptionColor: string;
 }
 
 interface CustomThemeContextType {
@@ -62,6 +64,10 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       // Also set button-specific colors for direct usage
       root.style.setProperty('--custom-primary-button', theme.primaryButton);
       root.style.setProperty('--custom-secondary-button', theme.secondaryButton);
+      
+      // Set heading and description colors
+      root.style.setProperty('--custom-heading-color', theme.headingColor);
+      root.style.setProperty('--custom-description-color', theme.descriptionColor);
     }
   }, [theme]);
 

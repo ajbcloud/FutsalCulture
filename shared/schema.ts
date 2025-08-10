@@ -374,6 +374,8 @@ export const themeSettings = pgTable("theme_settings", {
   secondaryButton: varchar("secondary_button").default("#64748b"), // Default gray
   background: varchar("background").default("#ffffff"), // Default white
   text: varchar("text").default("#1f2937"), // Default dark gray
+  headingColor: varchar("heading_color").default("#111827"), // Default dark gray for headings
+  descriptionColor: varchar("description_color").default("#6b7280"), // Default medium gray for descriptions
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
