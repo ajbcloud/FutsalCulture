@@ -22,9 +22,7 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
     try {
       setUpgradeLoading(targetPlan);
       
-      const response = await apiRequest(`/api/billing/checkout?planId=${targetPlan}`, {
-        method: 'POST'
-      });
+      const response = await apiRequest(`/api/billing/checkout?planId=${targetPlan}`, 'POST');
 
       if (response.url) {
         window.location.href = response.url;
@@ -106,7 +104,8 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
                     displayText = `${feature === 'unlimited' ? 'Unlimited' : feature} players`;
                     hasFeature = true;
                   } else if (featureKey === 'advancedAnalytics') {
-                    displayText = feature === 'advanced' ? 'Advanced analytics' : 
+                    displayText = feature === 'elite' ? 'AI-powered analytics & forecasting' :
+                                feature === 'advanced' ? 'Advanced analytics' : 
                                 feature === 'basic' ? 'Basic analytics' : 'Analytics';
                     hasFeature = !!feature;
                   }

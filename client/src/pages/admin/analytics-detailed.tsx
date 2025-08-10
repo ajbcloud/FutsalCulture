@@ -6,7 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DollarSign, Users, TrendingUp, Calendar, Download, Crown } from 'lucide-react';
-import { adminApi } from '../../lib/adminApi';
+
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/schema';
 import {
@@ -109,8 +109,8 @@ export default function DetailedAnalytics() {
                 Advanced Analytics Available on Elite Plans
               </CardTitle>
               <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-                Get detailed insights with advanced filtering, custom date ranges, revenue breakdowns, occupancy tracking, and comprehensive data export capabilities.
-                Upgrade to Elite plan to unlock advanced analytics.
+                Unlock AI-powered insights with machine learning forecasting, predictive revenue modeling, intelligent business optimization, and advanced data visualization.
+                Upgrade to Elite plan to access AI-driven analytics.
               </p>
             </CardHeader>
             <CardContent className="text-center pb-12">

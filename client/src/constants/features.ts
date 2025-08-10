@@ -30,8 +30,12 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     description: 'Send SMS alerts for important updates' 
   },
   advancedAnalytics: { 
-    label: 'Advanced analytics', 
-    description: 'Multi-location reports, player progression tracking, and revenue forecasting' 
+    label: 'AI-powered analytics & forecasting', 
+    description: 'Machine learning insights, predictive revenue modeling, and intelligent business optimization' 
+  },
+  revenueAnalytics: { 
+    label: 'Revenue analytics', 
+    description: 'Detailed revenue tracking and financial insights' 
   },
   autoPromotion: { 
     label: 'Waitlist auto-promotion', 
