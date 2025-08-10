@@ -76,9 +76,9 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
 
   // Group features by category - include ALL plan features
   const featureCategories = {
-    'Core Features': ['maxPlayers', 'sessionBooking', 'manualSessions', 'recurringSessions'] as FeatureKey[],
+    'Core Features': ['maxPlayers', 'manualSessions', 'parentPlayerBooking', 'recurringSessions'] as FeatureKey[],
     'Payment & Billing': ['payments', 'revenueAnalytics'] as FeatureKey[],
-    'Communication': ['basicNotifications', 'emailNotifications', 'smsNotifications', 'whiteLabelEmail'] as FeatureKey[],
+    'Communication': ['emailSmsNotifications', 'emailNotifications', 'smsNotifications', 'whiteLabelEmail'] as FeatureKey[],
     'Analytics & Automation': ['advancedAnalytics', 'autoPromotion'] as FeatureKey[],
     'Advanced Tools': ['csvImport', 'bulkOps', 'themeCustomization', 'apiAccess'] as FeatureKey[],
     'Player Development': ['playerDevelopment'] as FeatureKey[],
