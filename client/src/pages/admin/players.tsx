@@ -485,8 +485,7 @@ export default function AdminPlayers() {
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant={player.canAccessPortal ? "default" : "secondary"}
-                    className={player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-muted text-muted-foreground"}
+                    variant={player.canAccessPortal ? "success" : "disabled"}
                   >
                     {player.canAccessPortal ? 'Enabled' : 'Disabled'}
                   </Badge>
@@ -534,8 +533,8 @@ export default function AdminPlayers() {
                   </p>
                 </div>
                 <Badge 
-                  variant={player.canAccessPortal ? "default" : "secondary"}
-                  className={`shrink-0 text-xs ${player.canAccessPortal ? "bg-green-900 text-green-300" : "bg-muted text-muted-foreground"}`}
+                  variant={player.canAccessPortal ? "success" : "disabled"}
+                  className="shrink-0 text-xs"
                 >
                   {player.canAccessPortal ? 'Portal' : 'No Portal'}
                 </Badge>

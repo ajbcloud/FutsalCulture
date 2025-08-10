@@ -263,11 +263,11 @@ export default function AdminPayments() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</Badge>;
+        return <Badge variant="warning">Pending</Badge>;
       case 'paid':
-        return <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Paid</Badge>;
+        return <Badge variant="success">Paid</Badge>;
       case 'refunded':
-        return <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Refunded</Badge>;
+        return <Badge variant="destructive">Refunded</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }

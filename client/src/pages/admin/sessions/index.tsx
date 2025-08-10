@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
 import { Plus, Edit, Trash2, Upload, Download, Settings } from 'lucide-react';
 import { format } from 'date-fns';
@@ -525,13 +526,16 @@ export default function AdminSessions() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    session.status === 'open' ? 'bg-green-900 text-green-300' :
-                    session.status === 'full' ? 'bg-red-900 text-red-300' :
-                    'bg-yellow-900 text-yellow-300'
-                  }`}>
+                  <Badge 
+                    variant={
+                      session.status === 'open' ? 'success' :
+                      session.status === 'full' ? 'destructive' :
+                      'warning'
+                    }
+                    className="text-xs"
+                  >
                     {session.status}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">

@@ -427,14 +427,9 @@ export default function AdminHelpRequests() {
                 <TableCell>
                   <Badge 
                     variant={
-                      request.status === 'resolved' || request.resolved ? 'default' : 
-                      request.status === 'replied' ? 'secondary' : 
-                      'secondary'
-                    }
-                    className={
-                      request.status === 'resolved' || request.resolved ? 'bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300' : 
-                      request.status === 'replied' ? 'bg-yellow-50 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300' : 
-                      'bg-muted text-muted-foreground'
+                      request.status === 'resolved' || request.resolved ? 'success' : 
+                      request.status === 'replied' ? 'warning' : 
+                      'info'
                     }
                   >
                     {request.status || (request.resolved ? 'resolved' : 'open')}
