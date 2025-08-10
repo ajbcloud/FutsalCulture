@@ -699,8 +699,15 @@ export default function EliteFeatures() {
                       <h4 className="font-semibold" style={{ color: themeSettings.lightHeadingColor }}>
                         Sample Portal Content
                       </h4>
-                      <p className="text-sm" style={{ color: themeSettings.lightDescriptionColor }}>
+                      <p 
+                        style={{ 
+                          color: themeSettings.lightDescriptionColor,
+                          fontSize: '0.875rem',
+                          lineHeight: '1.25rem'
+                        }}
+                      >
                         This is how your custom theme will look in light mode with heading and description colors.
+                        (Color: {themeSettings.lightDescriptionColor})
                       </p>
                       <div className="flex gap-2 flex-wrap">
                         <button
@@ -720,8 +727,15 @@ export default function EliteFeatures() {
                         <h5 className="font-medium mb-2" style={{ color: themeSettings.lightHeadingColor }}>
                           Section Heading
                         </h5>
-                        <p className="text-xs" style={{ color: themeSettings.lightDescriptionColor }}>
+                        <p 
+                          style={{ 
+                            color: themeSettings.lightDescriptionColor,
+                            fontSize: '0.75rem',
+                            lineHeight: '1rem'
+                          }}
+                        >
                           This shows how descriptions and smaller text will appear with the custom colors.
+                          (Color: {themeSettings.lightDescriptionColor})
                         </p>
                       </div>
                     </div>
@@ -743,7 +757,13 @@ export default function EliteFeatures() {
                       <h4 className="font-semibold" style={{ color: themeSettings.darkHeadingColor }}>
                         Sample Portal Content
                       </h4>
-                      <p className="text-sm" style={{ color: themeSettings.darkDescriptionColor }}>
+                      <p 
+                        style={{ 
+                          color: themeSettings.darkDescriptionColor,
+                          fontSize: '0.875rem',
+                          lineHeight: '1.25rem'
+                        }}
+                      >
                         This is how your custom theme will look in dark mode with proper text visibility.
                         (Color: {themeSettings.darkDescriptionColor})
                       </p>
@@ -765,7 +785,13 @@ export default function EliteFeatures() {
                         <h5 className="font-medium mb-2" style={{ color: themeSettings.darkHeadingColor }}>
                           Section Heading
                         </h5>
-                        <p className="text-xs" style={{ color: themeSettings.darkDescriptionColor }}>
+                        <p 
+                          style={{ 
+                            color: themeSettings.darkDescriptionColor,
+                            fontSize: '0.75rem',
+                            lineHeight: '1rem'
+                          }}
+                        >
                           This shows how descriptions and smaller text will appear in dark mode.
                           (Color: {themeSettings.darkDescriptionColor})
                         </p>
