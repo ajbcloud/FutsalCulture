@@ -705,7 +705,7 @@ export default function EliteFeatures() {
                           padding: 0
                         }}
                       >
-                        Sample Portal Content
+                        Heading Color Preview
                       </h4>
                       <p 
                         style={{ 
@@ -716,8 +716,7 @@ export default function EliteFeatures() {
                           padding: 0
                         }}
                       >
-                        This is how your custom theme will look in light mode with heading and description colors.
-                        (Color: {themeSettings.lightDescriptionColor})
+                        Description Color - This text shows how descriptions and body text will appear in light mode.
                       </p>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
@@ -731,7 +730,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Primary Button
+                          Primary Button Color
                         </button>
                         <button
                           style={{ 
@@ -744,7 +743,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Secondary Button
+                          Secondary Button Color
                         </button>
                       </div>
                       <div className="mt-4">
@@ -757,7 +756,7 @@ export default function EliteFeatures() {
                             padding: 0
                           }}
                         >
-                          Section Heading
+                          Heading Color (smaller)
                         </h5>
                         <p 
                           style={{ 
@@ -768,8 +767,7 @@ export default function EliteFeatures() {
                             padding: 0
                           }}
                         >
-                          This shows how descriptions and smaller text will appear with the custom colors.
-                          (Color: {themeSettings.lightDescriptionColor})
+                          Description Color - smaller text and details will use this color.
                         </p>
                       </div>
                     </div>
@@ -797,7 +795,7 @@ export default function EliteFeatures() {
                           padding: 0
                         }}
                       >
-                        Sample Portal Content
+                        Heading Color Preview
                       </h4>
                       <p 
                         style={{ 
@@ -808,8 +806,7 @@ export default function EliteFeatures() {
                           padding: 0
                         }}
                       >
-                        This is how your custom theme will look in dark mode with proper text visibility.
-                        (Color: {themeSettings.darkDescriptionColor})
+                        Description Color - This text shows how descriptions and body text will appear in dark mode.
                       </p>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
@@ -823,7 +820,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Primary Button
+                          Primary Button Color
                         </button>
                         <button
                           style={{ 
@@ -836,7 +833,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Secondary Button
+                          Secondary Button Color
                         </button>
                       </div>
                       <div className="mt-4">
@@ -849,7 +846,7 @@ export default function EliteFeatures() {
                             padding: 0
                           }}
                         >
-                          Section Heading
+                          Heading Color (smaller)
                         </h5>
                         <p 
                           style={{ 
@@ -860,8 +857,7 @@ export default function EliteFeatures() {
                             padding: 0
                           }}
                         >
-                          This shows how descriptions and smaller text will appear in dark mode.
-                          (Color: {themeSettings.darkDescriptionColor})
+                          Description Color - smaller text and details will use this color.
                         </p>
                       </div>
                     </div>
