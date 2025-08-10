@@ -128,11 +128,15 @@ export default function EliteFeatures() {
 
   // Theme settings mutation
   const themeSettingsMutation = useMutation({
-    mutationFn: (settings: ThemeSettings) => 
-      apiRequest('/api/theme', {
+    mutationFn: async (settings: ThemeSettings) => {
+      const response = await fetch('/api/theme', {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
-      }),
+      });
+      if (!response.ok) throw new Error('Failed to update theme');
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Theme updated successfully",
@@ -151,8 +155,15 @@ export default function EliteFeatures() {
 
   // Feature request mutation
   const featureRequestMutation = useMutation({
-    mutationFn: (request: { title: string; description: string }) =>
-      apiRequest('POST', '/api/feature-requests', request),
+    mutationFn: async (request: { title: string; description: string }) => {
+      const response = await fetch('/api/feature-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      });
+      if (!response.ok) throw new Error('Failed to submit feature request');
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Feature request submitted",
@@ -172,7 +183,11 @@ export default function EliteFeatures() {
 
   // Theme reset mutation
   const resetThemeMutation = useMutation({
-    mutationFn: () => apiRequest('/api/theme', { method: 'DELETE' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/theme', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to reset theme');
+      return response.json();
+    },
     onSuccess: () => {
       toast({
         title: "Theme reset successfully",
