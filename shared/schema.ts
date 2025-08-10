@@ -365,8 +365,44 @@ export const featureFlags = pgTable("feature_flags", {
   uniqueIndex("feature_flags_plan_feature_idx").on(table.planLevel, table.featureKey),
 ]);
 
+// Theme settings table for Elite plan custom colors and themes
+export const themeSettings = pgTable("theme_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id).unique(),
+  primaryButton: varchar("primary_button").default("#2563eb"), // Default blue
+  secondaryButton: varchar("secondary_button").default("#64748b"), // Default gray
+  background: varchar("background").default("#ffffff"), // Default white
+  text: varchar("text").default("#1f2937"), // Default dark gray
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("theme_settings_tenant_id_idx").on(table.tenantId),
+]);
+
+// Feature request status enum
+export const featureRequestStatusEnum = pgEnum("feature_request_status", [
+  "received", "under_review", "approved", "in_development", "released"
+]);
+
+// Feature requests table for Elite plan custom feature request queue
+export const featureRequests = pgTable("feature_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  status: featureRequestStatusEnum("status").notNull().default("received"),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by"), // Super admin who reviewed
+  statusNotes: text("status_notes"), // Notes about status changes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("feature_requests_tenant_id_idx").on(table.tenantId),
+  index("feature_requests_status_idx").on(table.status),
+]);
+
 // Relations
-export const tenantsRelations = relations(tenants, ({ many }) => ({
+export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   users: many(users),
   players: many(players),
   futsalSessions: many(futsalSessions),
@@ -378,6 +414,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   integrations: many(integrations),
   discountCodes: many(discountCodes),
   serviceBilling: many(serviceBilling),
+  themeSettings: one(themeSettings),
+  featureRequests: many(featureRequests),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -387,6 +425,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   }),
   players: many(players),
   notificationPreferences: one(notificationPreferences),
+  featureRequests: many(featureRequests),
 }));
 
 export const playersRelations = relations(players, ({ one, many }) => ({
@@ -448,6 +487,24 @@ export const waitlistsRelations = relations(waitlists, ({ one }) => ({
   }),
   parent: one(users, {
     fields: [waitlists.parentId],
+    references: [users.id],
+  }),
+}));
+
+export const themeSettingsRelations = relations(themeSettings, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [themeSettings.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const featureRequestsRelations = relations(featureRequests, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [featureRequests.tenantId],
+    references: [tenants.id],
+  }),
+  submittedBy: one(users, {
+    fields: [featureRequests.submittedBy],
     references: [users.id],
   }),
 }));
@@ -555,6 +612,33 @@ export const insertIntegrationSchema = createInsertSchema(integrations).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertThemeSettingsSchema = createInsertSchema(themeSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ThemeSettingsInsert = z.infer<typeof insertThemeSettingsSchema>;
+export type ThemeSettingsSelect = typeof themeSettings.$inferSelect;
+
+export const insertFeatureRequestSchema = createInsertSchema(featureRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  reviewedBy: true,
+  statusNotes: true,
+}).extend({
+  title: z.string()
+    .min(5, "Title must be at least 5 characters")
+    .max(100, "Title must be less than 100 characters"),
+  description: z.string()
+    .min(20, "Description must be at least 20 characters")
+    .max(1000, "Description must be less than 1000 characters"),
+});
+
+export type FeatureRequestInsert = z.infer<typeof insertFeatureRequestSchema>;
+export type FeatureRequestSelect = typeof featureRequests.$inferSelect;
 
 export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   id: true,

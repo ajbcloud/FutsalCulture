@@ -25,7 +25,8 @@ import {
   LogOut,
   User,
   Shield,
-  Shirt
+  Shirt,
+  Sparkles
 } from "lucide-react";
 
 const adminNavItems = [
@@ -40,6 +41,7 @@ const adminNavItems = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/elite-features", label: "Elite Features", icon: Sparkles },
 ];
 
 interface AdminLayoutProps {

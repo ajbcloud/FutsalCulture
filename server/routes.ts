@@ -1328,6 +1328,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const tenantRoutes = await import('./tenant-routes');
   app.use('/api', isAuthenticated, tenantRoutes.default);
 
+  // Setup Elite feature routes
+  const themeRoutes = await import('./theme-routes');
+  app.use('/api/theme', isAuthenticated, themeRoutes.default);
+  
+  const featureRequestRoutes = await import('./feature-request-routes');
+  app.use('/api/feature-requests', isAuthenticated, featureRequestRoutes.default);
+
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {

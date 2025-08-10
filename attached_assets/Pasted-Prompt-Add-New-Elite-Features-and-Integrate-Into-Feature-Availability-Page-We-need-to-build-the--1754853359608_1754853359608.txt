@@ -1,0 +1,564 @@
+Prompt: Add New Elite Features and Integrate Into Feature Availability Page
+
+We need to build the following new features from scratch, then add them to the plan constants and show them correctly in the Admin Settings → Plan & Features “Feature Availability” section.
+
+1) Elite-Only Features to Add
+A) Custom Color & Theme Control
+For Elite plan users only.
+
+Allow customization of:
+
+Primary button color
+
+Secondary button color
+
+Background color for Player and Parent portals
+
+Text color for key UI elements
+
+Add a Theme Settings page in the Admin Portal (Settings → Theme Settings).
+
+Store theme settings in the database per tenant.
+Schema suggestion:
+
+ts
+Copy
+Edit
+theme: {
+  primaryButton: string;
+  secondaryButton: string;
+  background: string;
+  text: string;
+}
+When rendering Player/Parent portals, pull theme colors dynamically from the tenant’s settings.
+
+Must work in both light and dark mode.
+
+Include a reset to default button.
+
+B) Custom Feature Request Queue
+For Elite plan users only.
+
+A new menu option in the Admin Portal called Feature Requests.
+
+Allows the tenant to submit requests for new app features or changes.
+
+Stores requests in a feature_requests table with:
+
+ts
+Copy
+Edit
+id, tenantId, title, description, status, createdAt
+Admin Super Users (our internal team) can mark requests as:
+
+Received
+
+Under Review
+
+Approved
+
+In Development
+
+Released
+
+Include an email/SMS notification to the tenant when their request status changes.
+
+C) Advanced Analytics
+For Elite plan only.
+
+Includes:
+
+Multi-location Reports (aggregate stats across multiple saved locations for the same tenant).
+
+Player Progression Tracking (track player performance or attendance over time, graph by session date).
+
+Payment Forecasting (projected revenue from upcoming sessions and unpaid balances).
+
+Accessible from the Analytics menu, but only visible if planId = elite.
+
+Implement as new components in the Analytics page, pulling from existing session, player, and payment tables.
+
+D) Priority Support
+For Elite plan only.
+
+Show “Priority Support” badge in their Admin Portal header.
+
+Add phone and email contact details in the “Support” section.
+
+Store priority support contact info in constants so it can be easily updated.
+
+Optional: Tag all help requests from Elite tenants with priority=true in the database.
+
+2) Integrate Into Feature Availability
+Update PLANS constants in client/src/constants/plans.ts to include:
+
+themeCustomization → Elite only (newly built).
+
+customFeatureQueue → Elite only (newly built).
+
+advancedAnalytics → Elite only (expanded with sub-features listed above).
+
+prioritySupport → Elite only.
+
+Update FEATURE_LABELS in client/src/constants/features.ts to add human-readable names:
+
+ts
+Copy
+Edit
+themeCustomization: { label: 'Custom colors & themes' },
+customFeatureQueue: { label: 'Custom feature request queue' },
+advancedAnalytics: { label: 'Advanced analytics (multi-location, player progression, forecasting)' },
+prioritySupport: { label: 'Phone & email priority support' },
+Ensure the Feature Availability section on the Admin Settings page:
+
+Shows ✅ if included in current plan
+
+Shows ❌ with “Upgrade” button if locked
+
+Pulls this status from the updated PLANS mapping
+
+3) Files to Update
+Backend:
+
+Add DB migrations for theme settings and feature request queue
+
+Add new API routes:
+
+GET /api/theme
+
+POST /api/theme
+
+GET /api/feature-requests
+
+POST /api/feature-requests
+
+PATCH /api/feature-requests/:id
+
+Frontend:
+
+client/src/constants/plans.ts
+
+client/src/constants/features.ts
+
+client/src/pages/admin/settings/index.tsx (Feature Availability section)
+
+client/src/pages/admin/settings/theme-settings.tsx (new)
+
+client/src/pages/admin/feature-requests/index.tsx (new)
+
+client/src/pages/admin/analytics/index.tsx (expand for Elite analytics)
+
+Deliverable:
+When complete, Elite plan tenants will have working theme customization, a feature request queue, expanded analytics, and priority support, with all four features accurately shown in the Feature Availability section. Non-Elite tenants will see these features with ❌ and an Upgrade button.
+
+Prompt: Add New Elite Features and Integrate Into Feature Availability Page
+
+We need to build the following new features from scratch, then add them to the plan constants and show them correctly in the Admin Settings → Plan & Features “Feature Availability” section.
+
+1) Elite-Only Features to Add
+A) Custom Color & Theme Control
+For Elite plan users only.
+
+Allow customization of:
+
+Primary button color
+
+Secondary button color
+
+Background color for Player and Parent portals
+
+Text color for key UI elements
+
+Add a Theme Settings page in the Admin Portal (Settings → Theme Settings).
+
+Store theme settings in the database per tenant.
+Schema suggestion:
+
+ts
+Copy
+Edit
+theme: {
+  primaryButton: string;
+  secondaryButton: string;
+  background: string;
+  text: string;
+}
+When rendering Player/Parent portals, pull theme colors dynamically from the tenant’s settings.
+
+Must work in both light and dark mode.
+
+Include a reset to default button.
+
+B) Custom Feature Request Queue
+For Elite plan users only.
+
+A new menu option in the Admin Portal called Feature Requests.
+
+Allows the tenant to submit requests for new app features or changes.
+
+Stores requests in a feature_requests table with:
+
+ts
+Copy
+Edit
+id, tenantId, title, description, status, createdAt
+Admin Super Users (our internal team) can mark requests as:
+
+Received
+
+Under Review
+
+Approved
+
+In Development
+
+Released
+
+Include an email/SMS notification to the tenant when their request status changes.
+
+C) Advanced Analytics
+For Elite plan only.
+
+Includes:
+
+Multi-location Reports (aggregate stats across multiple saved locations for the same tenant).
+
+Player Progression Tracking (track player performance or attendance over time, graph by session date).
+
+Payment Forecasting (projected revenue from upcoming sessions and unpaid balances).
+
+Accessible from the Analytics menu, but only visible if planId = elite.
+
+Implement as new components in the Analytics page, pulling from existing session, player, and payment tables.
+
+D) Priority Support
+For Elite plan only.
+
+Show “Priority Support” badge in their Admin Portal header.
+
+Add phone and email contact details in the “Support” section.
+
+Store priority support contact info in constants so it can be easily updated.
+
+Optional: Tag all help requests from Elite tenants with priority=true in the database.
+
+2) Integrate Into Feature Availability
+Update PLANS constants in client/src/constants/plans.ts to include:
+
+themeCustomization → Elite only (newly built).
+
+customFeatureQueue → Elite only (newly built).
+
+advancedAnalytics → Elite only (expanded with sub-features listed above).
+
+prioritySupport → Elite only.
+
+Update FEATURE_LABELS in client/src/constants/features.ts to add human-readable names:
+
+ts
+Copy
+Edit
+themeCustomization: { label: 'Custom colors & themes' },
+customFeatureQueue: { label: 'Custom feature request queue' },
+advancedAnalytics: { label: 'Advanced analytics (multi-location, player progression, forecasting)' },
+prioritySupport: { label: 'Phone & email priority support' },
+Ensure the Feature Availability section on the Admin Settings page:
+
+Shows ✅ if included in current plan
+
+Shows ❌ with “Upgrade” button if locked
+
+Pulls this status from the updated PLANS mapping
+
+3) Files to Update
+Backend:
+
+Add DB migrations for theme settings and feature request queue
+
+Add new API routes:
+
+GET /api/theme
+
+POST /api/theme
+
+GET /api/feature-requests
+
+POST /api/feature-requests
+
+PATCH /api/feature-requests/:id
+
+Frontend:
+
+client/src/constants/plans.ts
+
+client/src/constants/features.ts
+
+client/src/pages/admin/settings/index.tsx (Feature Availability section)
+
+client/src/pages/admin/settings/theme-settings.tsx (new)
+
+client/src/pages/admin/feature-requests/index.tsx (new)
+
+client/src/pages/admin/analytics/index.tsx (expand for Elite analytics)
+
+Deliverable:
+When complete, Elite plan tenants will have working theme customization, a feature request queue, expanded analytics, and priority support, with all four features accurately shown in the Feature Availability section. Non-Elite tenants will see these features with ❌ and an Upgrade button.
+
+If you want, I can also give you the exact updated PLANS object so the new features slot right into your plan comparison and feature availability display. That would make this plug-and-play for the rest of your pricing logic.
+
+
+
+
+
+
+You said:
+yes
+
+
+ChatGPT said:
+Awesome — here’s a drop‑in set of constants (plus tiny helpers) you can paste into your codebase to light up the new Elite features and make the Feature Availability section work cleanly.
+
+1) Feature keys (single source of truth)
+Create or update: client/src/constants/features.ts
+
+ts
+Copy
+Edit
+// client/src/constants/features.ts
+export type FeatureKey =
+  | 'paymentProcessing'
+  | 'emailNotifications'
+  | 'smsNotifications'
+  | 'bulkOperations'
+  | 'autoPromotion'
+  | 'basicAnalytics'
+  | 'advancedAnalytics'              // NEW scope: multi-location, progression, forecasting
+  | 'themeCustomization'             // NEW: custom colors/themes (Elite)
+  | 'customFeatureQueue'             // NEW: feature request queue (Elite)
+  | 'prioritySupport';               // NEW: phone & email priority support (Elite)
+
+export const FEATURE_LABELS: Record<FeatureKey, string> = {
+  paymentProcessing: 'Accept payments',
+  emailNotifications: 'Email notifications',
+  smsNotifications: 'SMS notifications',
+  bulkOperations: 'Bulk operations (mass upload)',
+  autoPromotion: 'Auto-promotion from waitlist',
+  basicAnalytics: 'Basic analytics',
+  advancedAnalytics: 'Advanced analytics (multi-location, player progression, forecasting)',
+  themeCustomization: 'Custom colors & themes',
+  customFeatureQueue: 'Custom feature request queue',
+  prioritySupport: 'Phone & email priority support',
+};
+2) Plans (pricing + entitlements)
+Create or update: client/src/constants/plans.ts
+
+ts
+Copy
+Edit
+// client/src/constants/plans.ts
+import type { FeatureKey } from './features';
+
+export type PlanId = 'free' | 'core' | 'growth' | 'elite';
+
+export interface Plan {
+  id: PlanId;
+  name: string;
+  priceMonthly: number;     // in USD
+  playerLimit?: number;     // undefined = unlimited
+  userLimit?: number;       // optional if you need a combined limit
+  description: string;
+  includes: FeatureKey[];
+}
+
+export const PLANS: Record<PlanId, Plan> = {
+  free: {
+    id: 'free',
+    name: 'Free',
+    priceMonthly: 0,
+    playerLimit: 50, // or remove if you prefer 10 users combined, adjust to your model
+    description: 'Starter tools for manual sessions and simple rosters.',
+    includes: [
+      'basicAnalytics',
+      // No payment processing, no emails/SMS, no bulk, etc.
+    ],
+  },
+
+  core: {
+    id: 'core',
+    name: 'Core',
+    priceMonthly: 99,
+    playerLimit: 150,
+    description: 'Essential features for small clubs and academies.',
+    includes: [
+      'paymentProcessing',
+      'emailNotifications',
+      'basicAnalytics',
+      // No sms, bulk, autoPromotion, or elite items
+    ],
+  },
+
+  growth: {
+    id: 'growth',
+    name: 'Growth',
+    priceMonthly: 199,
+    playerLimit: 500,
+    description: 'Advanced automation and communications to scale.',
+    includes: [
+      'paymentProcessing',
+      'emailNotifications',
+      'smsNotifications',
+      'bulkOperations',
+      'autoPromotion',
+      'basicAnalytics',
+      // advancedAnalytics remains Elite-only per your spec
+    ],
+  },
+
+  elite: {
+    id: 'elite',
+    name: 'Elite',
+    priceMonthly: 499,
+    // No player limit by default (unlimited)
+    description: 'Complete feature set with customization and priority support.',
+    includes: [
+      'paymentProcessing',
+      'emailNotifications',
+      'smsNotifications',
+      'bulkOperations',
+      'autoPromotion',
+      'basicAnalytics',
+      'advancedAnalytics',     // NEW
+      'themeCustomization',    // NEW
+      'customFeatureQueue',    // NEW
+      'prioritySupport',       // NEW
+    ],
+  },
+};
+3) Tiny helpers (feature gating + plan lookup)
+Create: client/src/lib/planHelpers.ts
+
+ts
+Copy
+Edit
+import { PLANS, type PlanId } from '@/constants/plans';
+import type { FeatureKey } from '@/constants/features';
+
+export function getPlan(planId: PlanId) {
+  return PLANS[planId];
+}
+
+export function hasFeature(planId: PlanId, feature: FeatureKey): boolean {
+  const plan = getPlan(planId);
+  return plan ? plan.includes.includes(feature) : false;
+}
+4) Example: Feature Availability rendering
+In your Admin Settings → Plan & Features page (e.g., client/src/pages/admin/settings/plan-and-features.tsx), wire it like this:
+
+tsx
+Copy
+Edit
+import { FEATURE_LABELS, type FeatureKey } from '@/constants/features';
+import { PLANS, type PlanId } from '@/constants/plans';
+import { hasFeature } from '@/lib/planHelpers';
+
+// Derive a full ordered list for display (so every feature appears)
+const ALL_FEATURES: FeatureKey[] = [
+  'paymentProcessing',
+  'emailNotifications',
+  'smsNotifications',
+  'bulkOperations',
+  'autoPromotion',
+  'basicAnalytics',
+  'advancedAnalytics',
+  'themeCustomization',
+  'customFeatureQueue',
+  'prioritySupport',
+];
+
+type Props = {
+  currentPlanId: PlanId; // from tenant/org record
+  onUpgradeClick: () => void;
+};
+
+export function FeatureAvailability({ currentPlanId, onUpgradeClick }: Props) {
+  return (
+    <div className="space-y-3">
+      {ALL_FEATURES.map((key) => {
+        const enabled = hasFeature(currentPlanId, key);
+        return (
+          <div key={key} className="flex items-center justify-between rounded-md border p-3">
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-sm ${
+                  enabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                }`}
+                aria-label={enabled ? 'Enabled' : 'Not included'}
+                title={enabled ? 'Enabled' : 'Not included'}
+              >
+                {enabled ? '✓' : '×'}
+              </span>
+              <span className="font-medium">{FEATURE_LABELS[key]}</span>
+            </div>
+
+            {!enabled && (
+              <button className="btn btn-primary" onClick={onUpgradeClick}>
+                Upgrade
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+5) Plan comparison (“Current plan” badge)
+Where you render the plan cards, add a current marker:
+
+tsx
+Copy
+Edit
+function PlanCard({ planId, currentPlanId }: { planId: PlanId; currentPlanId: PlanId }) {
+  const plan = PLANS[planId];
+  const isCurrent = planId === currentPlanId;
+
+  return (
+    <div className={`rounded-xl border p-4 ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{plan.name}</h3>
+        {isCurrent && (
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            Current plan
+          </span>
+        )}
+      </div>
+      <div className="mt-1 text-2xl font-bold">
+        {plan.priceMonthly === 0 ? 'Free' : `$${plan.priceMonthly}/mo`}
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+
+      <ul className="mt-3 space-y-1 text-sm">
+        {plan.includes.map((f) => (
+          <li key={f} className="flex items-center gap-2">
+            <span className="inline-block h-4 w-4 rounded-full bg-green-500 text-white text-[10px] text-center">
+              ✓
+            </span>
+            {FEATURE_LABELS[f]}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+6) (Optional) DB bits for the new features
+You already said you’d wire these up, but for completeness:
+
+theme_settings (per tenant_id) with primary_button, secondary_button, background, text, updated_at.
+
+feature_requests (per tenant_id) with title, description, status, created_at, updated_at.
+
+Expose:
+
+GET/POST /api/theme
+
+GET/POST/PATCH /api/feature-requests
+

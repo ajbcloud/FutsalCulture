@@ -31,7 +31,7 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
   },
   advancedAnalytics: { 
     label: 'Advanced analytics', 
-    description: 'Detailed reporting and business insights' 
+    description: 'Multi-location reports, player progression tracking, and revenue forecasting' 
   },
   autoPromotion: { 
     label: 'Waitlist auto-promotion', 
@@ -42,8 +42,16 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     description: 'Perform actions on multiple items at once' 
   },
   themeCustomization: { 
-    label: 'Theme customization', 
-    description: 'Customize colors and branding' 
+    label: 'Custom colors & themes', 
+    description: 'Customize colors and branding for Player and Parent portals' 
+  },
+  customFeatureQueue: { 
+    label: 'Custom feature request queue', 
+    description: 'Submit feature requests directly to our development team' 
+  },
+  prioritySupport: { 
+    label: 'Phone & email priority support', 
+    description: 'Direct access to priority support via phone and email' 
   },
   apiAccess: { 
     label: 'API access', 

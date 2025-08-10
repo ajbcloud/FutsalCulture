@@ -10,6 +10,8 @@ export type FeatureKey =
   | 'autoPromotion'
   | 'bulkOps'
   | 'themeCustomization'
+  | 'customFeatureQueue'
+  | 'prioritySupport'
   | 'apiAccess'
   | 'whiteLabelEmail';
 
@@ -30,6 +32,8 @@ export const PLANS = {
       autoPromotion: false,
       bulkOps: false,
       themeCustomization: false,
+      customFeatureQueue: false,
+      prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
     },
@@ -50,6 +54,8 @@ export const PLANS = {
       autoPromotion: false,
       bulkOps: false,
       themeCustomization: false,
+      customFeatureQueue: false,
+      prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
     },
@@ -69,7 +75,9 @@ export const PLANS = {
       advancedAnalytics: 'advanced' as const,
       autoPromotion: true,
       bulkOps: true,
-      themeCustomization: true,
+      themeCustomization: false, // Now Elite-only
+      customFeatureQueue: false,
+      prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: true,
     },
@@ -86,10 +94,12 @@ export const PLANS = {
       payments: true,
       emailNotifications: true,
       smsNotifications: true,
-      advancedAnalytics: 'advanced' as const,
+      advancedAnalytics: 'elite' as const, // Enhanced with multi-location, progression, forecasting
       autoPromotion: true,
       bulkOps: true,
-      themeCustomization: true,
+      themeCustomization: true, // Elite-only feature
+      customFeatureQueue: true, // NEW Elite feature
+      prioritySupport: true, // NEW Elite feature
       apiAccess: true,
       whiteLabelEmail: true,
     },

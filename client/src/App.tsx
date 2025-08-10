@@ -27,6 +27,7 @@ import AdminDiscountCodes from "@/pages/admin/discount-codes";
 import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
 import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
+import AdminEliteFeatures from "@/pages/admin/elite-features";
 import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
@@ -88,6 +89,7 @@ function Router() {
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/admin/integrations" component={AdminIntegrations} />
+                <Route path="/admin/elite-features" component={AdminEliteFeatures} />
                 <Route path="/admin/payment" component={AdminPayment} />
               </>
             )}
