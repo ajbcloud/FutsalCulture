@@ -1324,6 +1324,7 @@ export default function EliteFeatures() {
                         backgroundColor: themeSettings.lightBackground,
                         color: themeSettings.lightText
                       }}
+                      data-testid="light-preview-3"
                     >
                       <h4 
                         key={`light-heading-${themeSettings.lightHeadingColor}`}
@@ -1338,7 +1339,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Heading Color Preview
+                        5. Heading Color Preview
                       </h4>
                       <p 
                         key={`light-desc-${themeSettings.lightDescriptionColor}`}
@@ -1353,7 +1354,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Description Color - This text shows how descriptions and body text will appear in light mode.
+                        6. Description Color - This text shows how descriptions and body text will appear in light mode.
                       </p>
                       <div 
                         key={`light-text-${themeSettings.lightText}`}
@@ -1366,7 +1367,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Text Color - General text content uses this color.
+                        4. Text Color - General text content uses this color.
                       </div>
                       
                       {/* Navigation Preview */}
@@ -1383,7 +1384,7 @@ export default function EliteFeatures() {
                             WebkitTextFillColor: themeSettings.lightNavTitle
                           }}
                         >
-                          Admin Portal
+                          7. Admin Portal
                         </div>
                         <div className="space-y-1">
                           <div 
@@ -1410,7 +1411,7 @@ export default function EliteFeatures() {
                               WebkitTextFillColor: themeSettings.lightNavActiveText
                             }}
                           >
-                            Sessions (Active)
+                            9. Sessions (Active)
                           </div>
                           <div 
                             key={`light-nav-text2-${themeSettings.lightNavText}`}
@@ -1422,7 +1423,7 @@ export default function EliteFeatures() {
                               WebkitTextFillColor: themeSettings.lightNavText
                             }}
                           >
-                            Players
+                            8. Players
                           </div>
                         </div>
                       </div>
@@ -1438,7 +1439,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Primary Button Color
+                          1. Primary Button Color
                         </button>
                         <button
                           style={{ 
@@ -1451,9 +1452,73 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Secondary Button Color
+                          2. Secondary Button Color
                         </button>
                       </div>
+                      
+                      {/* New Granular Preview Elements */}
+                      <div className="mt-4 p-3 border rounded" style={{ backgroundColor: themeSettings.lightCardBackground || '#ffffff' }}>
+                        <div className="text-xs text-gray-500 mb-2">11. Card Background & Components:</div>
+                        <h5 
+                          key={`light-card-title-${themeSettings.lightCardTitle}`}
+                          style={{ 
+                            color: `${themeSettings.lightCardTitle || '#111827'} !important`,
+                            fontWeight: '600',
+                            fontSize: '1rem',
+                            margin: '0 0 0.5rem 0',
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightCardTitle || '#111827'
+                          }}
+                          className=""
+                        >
+                          12. Card Title Color
+                        </h5>
+                        <h6 
+                          key={`light-feature-title-${themeSettings.lightFeatureTitle}`}
+                          style={{ 
+                            color: `${themeSettings.lightFeatureTitle || '#111827'} !important`,
+                            fontWeight: '500',
+                            fontSize: '0.9rem',
+                            margin: '0 0 0.25rem 0',
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightFeatureTitle || '#111827'
+                          }}
+                          className=""
+                        >
+                          13. Feature Title Color
+                        </h6>
+                        <p 
+                          key={`light-feature-desc-${themeSettings.lightFeatureDescription}`}
+                          style={{ 
+                            color: `${themeSettings.lightFeatureDescription || '#4b5563'} !important`,
+                            fontSize: '0.8rem',
+                            lineHeight: '1.2rem',
+                            margin: '0 0 0.5rem 0',
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightFeatureDescription || '#4b5563'
+                          }}
+                          className=""
+                        >
+                          14. Feature Description Color - Small descriptive text
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            style={{ 
+                              width: '16px', 
+                              height: '16px', 
+                              borderRadius: '50%',
+                              backgroundColor: themeSettings.lightIconColor || '#6366f1'
+                            }}
+                          ></div>
+                          <span className="text-xs" style={{ color: themeSettings.lightFeatureDescription || '#4b5563' }}>
+                            15. Icon Color Preview
+                          </span>
+                        </div>
+                      </div>
+
                       <div className="mt-4">
                         <h5 
                           key={`light-heading-small-${themeSettings.lightHeadingColor}`}
@@ -1468,7 +1533,7 @@ export default function EliteFeatures() {
                           }}
                           className=""
                         >
-                          Heading Color (smaller)
+                          5. Heading Color (smaller)
                         </h5>
                         <p 
                           key={`light-desc-small-${themeSettings.lightDescriptionColor}`}
