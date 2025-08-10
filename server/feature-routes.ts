@@ -61,20 +61,31 @@ router.get('/tenant/plan-features', async (req, res) => {
     const { PLAN_FEATURES } = await import('../shared/feature-flags');
     const features = PLAN_FEATURES[effectivePlanLevel as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
     
-    const limits = PLAN_LIMITS[actualPlanLevel as keyof typeof PLAN_LIMITS];
+    const limits = PLAN_LIMITS[effectivePlanLevel as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
     
-    // Get current player count for this tenant using proper Drizzle query
-    const { players } = await import('../shared/schema');
+    // Get current player and user counts for this tenant
+    const { players, users } = await import('../shared/schema');
+    
     const playerCountResult = await db.select({ count: players.id })
       .from(players)
       .where(eq(players.tenantId, tenantId));
     const playerCount = playerCountResult.length;
 
+    // For free tier, count total users (parents + players)
+    const userCountResult = await db.select({ count: users.id })
+      .from(users)
+      .where(eq(users.tenantId, tenantId));
+    const totalUserCount = userCountResult.length;
+
+    const displayCount = effectivePlanLevel === 'free' ? totalUserCount : playerCount;
+
     res.json({
       planLevel: effectivePlanLevel,
       features,
       limits,
-      playerCount,
+      playerCount: displayCount,
+      totalUsers: totalUserCount,
+      actualPlayers: playerCount,
     });
   } catch (error) {
     console.error('Error fetching plan features:', error);

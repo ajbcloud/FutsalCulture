@@ -1,19 +1,19 @@
 import { PlanLevel, FEATURE_KEYS, type FeatureKey } from './schema';
 
 // Feature configurations for each plan level
-export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolean>> = {
+export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
   free: {
-    [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
+    [FEATURE_KEYS.SESSION_MANAGEMENT]: true,  // Manual creation only
     [FEATURE_KEYS.LOCATION_LINKS]: false,
     [FEATURE_KEYS.PARENT_PORTAL]: true,
     [FEATURE_KEYS.THEME_CUSTOMIZATION]: false,
-    [FEATURE_KEYS.WAITLIST_MANUAL]: false,
+    [FEATURE_KEYS.WAITLIST_MANUAL]: false,  // Disabled for free
     [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: false,
-    [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: true,
+    [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: false,  // Disabled for free
     [FEATURE_KEYS.NOTIFICATIONS_SMS]: false,
-    [FEATURE_KEYS.ANALYTICS_BASIC]: false,
+    [FEATURE_KEYS.ANALYTICS_BASIC]: false,  // Disabled for free
     [FEATURE_KEYS.ANALYTICS_ADVANCED]: false,
-    [FEATURE_KEYS.PAYMENTS_ENABLED]: false,
+    [FEATURE_KEYS.PAYMENTS_ENABLED]: false,  // Disabled for free
     [FEATURE_KEYS.INTEGRATIONS_CALENDAR]: false,
     [FEATURE_KEYS.INTEGRATIONS_MAILCHIMP]: false,
     [FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS]: false,
@@ -24,6 +24,7 @@ export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolea
     [FEATURE_KEYS.SSO]: false,
     [FEATURE_KEYS.SUPPORT_STANDARD]: true,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
+    [FEATURE_KEYS.BULK_OPERATIONS]: false,  // Disabled for free
   },
   core: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -47,6 +48,7 @@ export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolea
     [FEATURE_KEYS.SSO]: false,
     [FEATURE_KEYS.SUPPORT_STANDARD]: true,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
+    [FEATURE_KEYS.BULK_OPERATIONS]: true,
   },
   growth: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -70,6 +72,7 @@ export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolea
     [FEATURE_KEYS.SSO]: false,
     [FEATURE_KEYS.SUPPORT_STANDARD]: false,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
+    [FEATURE_KEYS.BULK_OPERATIONS]: true,
   },
   elite: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -93,20 +96,27 @@ export const PLAN_FEATURES: Record<PlanLevel | 'free', Record<FeatureKey, boolea
     [FEATURE_KEYS.SSO]: true,
     [FEATURE_KEYS.SUPPORT_STANDARD]: false,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
+    [FEATURE_KEYS.BULK_OPERATIONS]: true,
   },
 };
 
 // Plan limits and configurations
 export const PLAN_LIMITS = {
   free: {
-    maxPlayers: 10,
+    maxPlayers: null, // No specific player limit, but total user limit applies
+    maxUsers: 10, // Maximum 10 total users (parents + players combined)
+    maxSessions: null, // No session limit, but manual creation only
+    maxLocations: 1,
     price: 0,
     billingPeriod: 'monthly' as const,
-    name: 'Free Tier',
-    description: 'Basic features to get started',
+    name: 'Free Plan',
+    description: 'Basic features with user and functionality restrictions',
   },
   core: {
     maxPlayers: 150,
+    maxUsers: null, // No user limit for paid plans
+    maxSessions: null,
+    maxLocations: 3,
     price: 99,
     billingPeriod: 'monthly' as const,
     name: 'Core',
@@ -114,6 +124,9 @@ export const PLAN_LIMITS = {
   },
   growth: {
     maxPlayers: 500,
+    maxUsers: null, // No user limit for paid plans
+    maxSessions: null,
+    maxLocations: 10,
     price: 199,
     billingPeriod: 'monthly' as const,
     name: 'Growth',
@@ -121,6 +134,9 @@ export const PLAN_LIMITS = {
   },
   elite: {
     maxPlayers: null, // unlimited
+    maxUsers: null, // No user limit for paid plans
+    maxSessions: null,
+    maxLocations: null, // unlimited
     price: 499,
     billingPeriod: 'monthly' as const,
     name: 'Elite',
@@ -229,6 +245,7 @@ export const FEATURE_NAMES: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SSO]: 'Single Sign-On (SSO)',
   [FEATURE_KEYS.SUPPORT_STANDARD]: 'Standard Support',
   [FEATURE_KEYS.SUPPORT_PRIORITY]: 'Priority Support',
+  [FEATURE_KEYS.BULK_OPERATIONS]: 'Bulk Operations',
 };
 
 // Feature descriptions for tooltips/help text
@@ -254,4 +271,5 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SSO]: 'Single Sign-On integration for staff with Google/Microsoft',
   [FEATURE_KEYS.SUPPORT_STANDARD]: '48-hour email support response time',
   [FEATURE_KEYS.SUPPORT_PRIORITY]: '24-hour priority support with dedicated account manager',
+  [FEATURE_KEYS.BULK_OPERATIONS]: 'Mass upload sessions and players via CSV imports',
 };

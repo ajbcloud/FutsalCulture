@@ -1342,12 +1342,21 @@ export default function AdminSettings() {
                   </div>
                   
                   <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
+                    <div className="text-lg font-semibold text-foreground mb-2">
+                      {planFeatures?.planLevel === 'free' ? 'User Limit' : 'Player Limit'}
+                    </div>
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {planLimits?.maxPlayers === null ? 'Unlimited' : `${planLimits?.maxPlayers || 150}`}
+                      {planFeatures?.planLevel === 'free' ? (
+                        `${planFeatures?.playerCount || 0}/10`
+                      ) : (
+                        planLimits?.maxPlayers === null ? 'Unlimited' : `${planLimits?.maxPlayers || planFeatures?.limits?.maxPlayers || 150}`
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Maximum registered players
+                      {planFeatures?.planLevel === 'free' 
+                        ? 'Total users (parents + players combined)'
+                        : 'Maximum registered players'
+                      }
                     </div>
                   </div>
                   

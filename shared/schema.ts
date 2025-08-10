@@ -602,7 +602,7 @@ export type FeatureFlagInsert = z.infer<typeof insertFeatureFlagSchema>;
 export type FeatureFlagSelect = typeof featureFlags.$inferSelect;
 
 // Type exports for plan levels
-export type PlanLevel = 'core' | 'growth' | 'elite';
+export type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
 
 // Feature key constants
 export const FEATURE_KEYS = {
@@ -627,6 +627,7 @@ export const FEATURE_KEYS = {
   SSO: 'sso',
   SUPPORT_STANDARD: 'support_standard',
   SUPPORT_PRIORITY: 'support_priority',
+  BULK_OPERATIONS: 'bulk_operations',
 } as const;
 
 export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];

@@ -1,0 +1,61 @@
+Implement a new Free Plan tier for the application with the following restrictions and functionality:
+
+1. User Limit:
+
+Maximum of 10 total registered users (this includes parents and players combined).
+
+If a new user tries to register once the 10-user limit is reached, the system must block the registration and display a customizable message set by the admin (default: “You have reached the maximum allowed users for your plan. Please upgrade to add more.”).
+
+The Super Admin portal should show a “Free Plan” badge and a user count tracker (e.g., 8/10 users).
+
+2. Session Creation Restrictions:
+
+Sessions can only be created manually via the admin portal.
+
+Disable any recurring session automation features for the Free Plan.
+
+No ability to bulk import sessions from CSV or API integrations.
+
+Show a tooltip or lock icon next to disabled features explaining they require an upgrade.
+
+3. Communication Restrictions:
+
+Disable all automated or mass email and SMS notifications for the Free Plan.
+
+Admins can still view the “Communication” section but all send actions should be disabled with an upgrade prompt.
+
+4. Analytics Restrictions:
+
+Disable access to all analytics dashboards and KPI metrics for Free Plan tenants.
+
+The “Analytics” menu item should still be visible but greyed out, showing a modal with the message “Analytics are available on Growth and Elite plans.”
+
+5. Payment Processing:
+
+Disable online payment processing for sessions in the Free Plan.
+
+The “Accept Payments” toggle in session creation should be locked with an upgrade prompt.
+
+6. UI Indicators:
+
+Add a “Free Plan” label in the tenant’s admin dashboard header.
+
+Any locked or restricted feature must have a tooltip or modal explaining which plan unlocks it.
+
+7. Upgrade Path:
+
+Add a persistent “Upgrade Now” button in the top-right of the admin dashboard for Free Plan tenants.
+
+Clicking “Upgrade Now” should open the pricing page with a pre-selected plan upgrade flow.
+
+8. Mobile-Friendly:
+
+Ensure all Free Plan restrictions and upgrade prompts are fully responsive and mobile-friendly.
+
+9. Database & Logic:
+
+Store the tenant’s plan type in the database.
+
+All feature access checks must validate against the plan type before allowing an action.
+
+Make sure these checks exist on both front-end (UI lock) and back-end (security enforcement).
