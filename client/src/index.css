@@ -168,11 +168,100 @@
   
   /* Apply semantic colors to common elements */
   h1, h2, h3, h4, h5, h6 {
-    color: var(--theme-heading);
+    color: var(--theme-heading) !important;
   }
   
-  p, .text-muted-foreground, .text-gray-600, .text-gray-500 {
-    color: var(--theme-description);
+  /* High contrast text for dark mode - force white text */
+  .dark {
+    color: #ffffff;
+  }
+  
+  .dark * {
+    color: #ffffff !important;
+  }
+  
+  /* Dark mode headings - use blue as specified */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #5b8def !important;
+  }
+  
+  /* Dark mode muted text - light gray for contrast */
+  .dark .text-muted-foreground, .dark .text-gray-600, .dark .text-gray-500, 
+  .dark .text-gray-400, .dark .text-sm.text-gray-600, .dark .text-xs.text-gray-600,
+  .dark .text-secondary {
+    color: #d1d9e6 !important;
+  }
+  
+  /* Light mode - ensure proper contrast */
+  :not(.dark) {
+    color: #0c1629;
+  }
+  
+  :not(.dark) * {
+    color: #0c1629;
+  }
+  
+  :not(.dark) h1, :not(.dark) h2, :not(.dark) h3, :not(.dark) h4, :not(.dark) h5, :not(.dark) h6 {
+    color: #0c1629 !important;
+  }
+  
+  :not(.dark) .text-muted-foreground, :not(.dark) .text-gray-600, :not(.dark) .text-gray-500 {
+    color: #475569 !important;
+  }
+  
+  /* Card content override */
+  .dark [data-testid*="card"], .dark .bg-card, .dark .card {
+    background-color: var(--bg-elev);
+    color: #ffffff !important;
+  }
+  
+  /* Tab content and navigation */
+  .dark .tabs-content, .dark .tab-content {
+    color: #ffffff !important;
+  }
+  
+  /* Badge and label overrides */
+  .dark .badge, .dark .label {
+    color: inherit !important;
+  }
+  
+  /* Form elements */
+  .dark input, .dark textarea, .dark select {
+    color: #ffffff !important;
+    background-color: var(--input);
+  }
+  
+  /* Specific overrides for components that might resist styling */
+  .dark [class*="text-"], .dark .text-xs, .dark .text-sm, .dark .text-base,
+  .dark .text-lg, .dark .text-xl {
+    color: #ffffff !important;
+  }
+  
+  /* Description and subtitle text */
+  .dark .description, .dark .subtitle, .dark [class*="description"] {
+    color: #d1d9e6 !important;
+  }
+  
+  /* Input elements */
+  input, textarea, select {
+    background-color: var(--input);
+    color: var(--theme-foreground) !important;
+    border-color: var(--border);
+  }
+  
+  /* Button text contrast */
+  button {
+    color: inherit;
+  }
+  
+  /* Table elements */
+  table {
+    background-color: var(--bg-elev);
+  }
+  
+  table th, table td {
+    color: var(--theme-foreground) !important;
+    border-color: var(--border);
   }
 }
 
