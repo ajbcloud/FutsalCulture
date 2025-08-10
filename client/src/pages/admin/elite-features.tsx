@@ -650,18 +650,24 @@ export default function EliteFeatures() {
                           id="darkDescriptionColor"
                           type="color"
                           value={themeSettings.darkDescriptionColor}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            darkDescriptionColor: e.target.value
-                          }))}
+                          onChange={(e) => {
+                            console.log('Dark description color changed to:', e.target.value);
+                            setThemeSettings(prev => ({
+                              ...prev,
+                              darkDescriptionColor: e.target.value
+                            }));
+                          }}
                           className="w-20 h-10 p-1 border rounded"
                         />
                         <Input
                           value={themeSettings.darkDescriptionColor}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            darkDescriptionColor: e.target.value
-                          }))}
+                          onChange={(e) => {
+                            console.log('Dark description color text changed to:', e.target.value);
+                            setThemeSettings(prev => ({
+                              ...prev,
+                              darkDescriptionColor: e.target.value
+                            }));
+                          }}
                           placeholder="#cbd5e1"
                           className="flex-1"
                         />
@@ -673,6 +679,9 @@ export default function EliteFeatures() {
               
               <div className="space-y-4 mt-6">
                 <h3 className="font-semibold">Theme Preview</h3>
+                <div className="text-xs text-gray-500 mb-2">
+                  Debug: Dark Description Color = {themeSettings.darkDescriptionColor}
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Light Mode Preview */}
                   <div className="space-y-2">
@@ -736,6 +745,7 @@ export default function EliteFeatures() {
                       </h4>
                       <p className="text-sm" style={{ color: themeSettings.darkDescriptionColor }}>
                         This is how your custom theme will look in dark mode with proper text visibility.
+                        (Color: {themeSettings.darkDescriptionColor})
                       </p>
                       <div className="flex gap-2 flex-wrap">
                         <button
@@ -757,6 +767,7 @@ export default function EliteFeatures() {
                         </h5>
                         <p className="text-xs" style={{ color: themeSettings.darkDescriptionColor }}>
                           This shows how descriptions and smaller text will appear in dark mode.
+                          (Color: {themeSettings.darkDescriptionColor})
                         </p>
                       </div>
                     </div>
