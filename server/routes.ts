@@ -1338,30 +1338,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const currentUser = req.currentUser;
       
-      if (!user || !user.tenantId) {
+      if (!currentUser || !currentUser.tenantId) {
         return res.status(400).json({ message: "User or tenant not found" });
       }
 
-      // Update tenant to core plan for testing
+      // Update tenant to growth plan for testing
       const { tenants } = await import('@shared/schema');
       await db.update(tenants)
         .set({
-          planLevel: 'core',
-          stripeSubscriptionId: 'sub_test_debug_123',
-          stripeCustomerId: 'cus_test_debug_123',
+          planLevel: 'growth',
+          stripeSubscriptionId: 'sub_test_growth_123',
+          stripeCustomerId: 'cus_test_growth_123',
         })
-        .where(eq(tenants.id, user.tenantId));
+        .where(eq(tenants.id, currentUser.tenantId));
 
-      console.log(`🧪 DEBUG: Updated tenant ${user.tenantId} to core plan`);
+      console.log(`🧪 DEBUG: Updated tenant ${currentUser.tenantId} to growth plan`);
       
       res.json({ 
         success: true, 
-        message: "Subscription updated to Core plan",
-        tenantId: user.tenantId,
-        newPlan: 'core'
+        message: "Subscription updated to Growth plan",
+        tenantId: currentUser.tenantId,
+        newPlan: 'growth'
       });
     } catch (error) {
       console.error('Debug subscription update error:', error);
