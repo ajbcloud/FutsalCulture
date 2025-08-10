@@ -71,7 +71,7 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
 
         return (
           <Card key={planId} className={`relative ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
-            {planId === 'elite' && (
+            {planId === 'growth' && (
               <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
                 <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600">
                   <Crown className="h-3 w-3 mr-1" />
