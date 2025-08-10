@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X, Activity, Phone, Mail } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
 import { useLocation, Link } from 'wouter';
@@ -255,6 +255,31 @@ export default function AdminParents() {
     return <Badge variant="secondary" className="bg-muted text-muted-foreground">Parent</Badge>;
   };
 
+  // Calculate parent statistics
+  const calculateParentStats = () => {
+    const totalParents = parents.length;
+    const activeParents = parents.filter(p => !p.isAdmin && !p.isAssistant).length;
+    const parentsWithPhone = parents.filter(p => p.phone && !p.isAdmin && !p.isAssistant).length;
+    const multiPlayerParents = parents.filter(p => p.playersCount > 1 && !p.isAdmin && !p.isAssistant).length;
+    const recentlyActive = parents.filter(p => {
+      if (!p.lastLogin || p.isAdmin || p.isAssistant) return false;
+      const lastLogin = new Date(p.lastLogin);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      return lastLogin > oneWeekAgo;
+    }).length;
+
+    return {
+      totalParents: activeParents,
+      totalAccounts: totalParents,
+      parentsWithPhone,
+      multiPlayerParents,
+      recentlyActive
+    };
+  };
+
+  const parentStats = calculateParentStats();
+
   if (loading) {
     return (
       <AdminLayout>
@@ -275,47 +300,57 @@ export default function AdminParents() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Total Parents</CardTitle>
+        {/* Parent Statistics KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Parents</CardTitle>
+              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{parents.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Active Parents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-400">
-                {parents.filter((p: any) => p.playersCount > 0).length}
-              </div>
+              <div className="text-2xl font-bold text-foreground">{parentStats.totalParents}</div>
+              <p className="text-xs text-muted-foreground">
+                {parentStats.totalAccounts} total accounts
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Admins</CardTitle>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Multi-Player Families</CardTitle>
+              <Activity className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-400">
-                {parents.filter((p: any) => p.isAdmin).length}
-              </div>
+              <div className="text-2xl font-bold text-foreground">{parentStats.multiPlayerParents}</div>
+              <p className="text-xs text-muted-foreground">
+                Multiple children registered
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-muted-foreground">Total Players</CardTitle>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Phone Numbers</CardTitle>
+              <Phone className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-400">
-                {parents.reduce((sum: number, p: any) => sum + (p.playersCount || 0), 0)}
-              </div>
+              <div className="text-2xl font-bold text-foreground">{parentStats.parentsWithPhone}</div>
+              <p className="text-xs text-muted-foreground">
+                {parentStats.totalParents > 0 ? Math.round((parentStats.parentsWithPhone / parentStats.totalParents) * 100) : 0}% with phone numbers
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Recently Active</CardTitle>
+              <UserCheck className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{parentStats.recentlyActive}</div>
+              <p className="text-xs text-muted-foreground">
+                Active in past week
+              </p>
             </CardContent>
           </Card>
         </div>

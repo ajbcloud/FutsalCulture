@@ -17,12 +17,13 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
-import { Upload, Download, Edit } from 'lucide-react';
+import { Upload, Download, Edit, Users, UserCheck, Activity, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -94,6 +95,35 @@ export default function AdminPlayers() {
       setLoading(false);
     }
   };
+
+  // Calculate player statistics
+  const calculatePlayerStats = () => {
+    const totalPlayers = players.length;
+    const activePortalUsers = players.filter(p => p.canAccessPortal).length;
+    const ageGroups = players.reduce((acc, player) => {
+      const age = new Date().getFullYear() - player.birthYear;
+      const ageGroup = calculateAgeGroupFromAge(age);
+      acc[ageGroup] = (acc[ageGroup] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const mostPopularAgeGroup = Object.entries(ageGroups).reduce((a, b) => 
+      ageGroups[a[0]] > ageGroups[b[0]] ? a : b, ['', 0])[0] || 'N/A';
+    const genderSplit = players.reduce((acc, player) => {
+      acc[player.gender] = (acc[player.gender] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      totalPlayers,
+      activePortalUsers,
+      mostPopularAgeGroup,
+      boysCount: genderSplit.boys || 0,
+      girlsCount: genderSplit.girls || 0,
+      canBookAndPay: players.filter(p => p.canBookAndPay).length
+    };
+  };
+
+  const playerStats = calculatePlayerStats();
 
   // This useEffect is no longer needed since the one above handles all cases
 
@@ -272,6 +302,61 @@ export default function AdminPlayers() {
             <span className="sm:hidden">Import</span>
           </Button>
         </div>
+      </div>
+
+      {/* Player Statistics KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Players</CardTitle>
+            <Users className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{playerStats.totalPlayers}</div>
+            <p className="text-xs text-muted-foreground">
+              {playerStats.boysCount} boys, {playerStats.girlsCount} girls
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Portal Access</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{playerStats.activePortalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              {playerStats.totalPlayers > 0 ? Math.round((playerStats.activePortalUsers / playerStats.totalPlayers) * 100) : 0}% of players
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Most Popular Age</CardTitle>
+            <Target className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{playerStats.mostPopularAgeGroup}</div>
+            <p className="text-xs text-muted-foreground">
+              Primary age group
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Can Book & Pay</CardTitle>
+            <Activity className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{playerStats.canBookAndPay}</div>
+            <p className="text-xs text-muted-foreground">
+              Booking privileges enabled
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filter Controls */}
