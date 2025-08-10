@@ -775,24 +775,32 @@ export default function EliteFeatures() {
                       </div>
                       <div className="mt-4">
                         <h5 
+                          key={`light-heading-small-${themeSettings.lightHeadingColor}`}
                           style={{ 
-                            color: themeSettings.lightHeadingColor,
+                            color: `${themeSettings.lightHeadingColor} !important`,
                             fontWeight: '500',
                             fontSize: '1rem',
                             margin: '0 0 0.5rem 0',
-                            padding: 0
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightHeadingColor
                           }}
+                          className=""
                         >
                           Heading Color (smaller)
                         </h5>
                         <p 
+                          key={`light-desc-small-${themeSettings.lightDescriptionColor}`}
                           style={{ 
-                            color: themeSettings.lightDescriptionColor,
+                            color: `${themeSettings.lightDescriptionColor} !important`,
                             fontSize: '0.75rem',
                             lineHeight: '1rem',
                             margin: 0,
-                            padding: 0
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.lightDescriptionColor
                           }}
+                          className=""
                         >
                           Description Color - smaller text and details will use this color.
                         </p>
@@ -886,24 +894,32 @@ export default function EliteFeatures() {
                       </div>
                       <div className="mt-4">
                         <h5 
+                          key={`dark-heading-small-${themeSettings.darkHeadingColor}`}
                           style={{ 
-                            color: themeSettings.darkHeadingColor,
+                            color: `${themeSettings.darkHeadingColor} !important`,
                             fontWeight: '500',
                             fontSize: '1rem',
                             margin: '0 0 0.5rem 0',
-                            padding: 0
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkHeadingColor
                           }}
+                          className=""
                         >
                           Heading Color (smaller)
                         </h5>
                         <p 
+                          key={`dark-desc-small-${themeSettings.darkDescriptionColor}`}
                           style={{ 
-                            color: themeSettings.darkDescriptionColor,
+                            color: `${themeSettings.darkDescriptionColor} !important`,
                             fontSize: '0.75rem',
                             lineHeight: '1rem',
                             margin: 0,
-                            padding: 0
+                            padding: 0,
+                            transition: 'color 0.2s ease',
+                            WebkitTextFillColor: themeSettings.darkDescriptionColor
                           }}
+                          className=""
                         >
                           Description Color - smaller text and details will use this color.
                         </p>
