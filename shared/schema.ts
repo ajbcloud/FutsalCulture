@@ -386,6 +386,16 @@ export const themeSettings = pgTable("theme_settings", {
   lightNavText: varchar("light_nav_text").default("#6b7280"), // Navigation text color
   lightNavActiveText: varchar("light_nav_active_text").default("#ffffff"), // Active navigation text
   
+  // Extended light mode colors for granular control
+  lightPageTitle: varchar("light_page_title").default("#111827"), // Page titles like "Elite Features"
+  lightCardBackground: varchar("light_card_background").default("#ffffff"), // Card backgrounds
+  lightCardTitle: varchar("light_card_title").default("#111827"), // Card titles
+  lightFeatureTitle: varchar("light_feature_title").default("#111827"), // Feature benefit titles
+  lightFeatureDescription: varchar("light_feature_description").default("#4b5563"), // Feature descriptions
+  lightIconColor: varchar("light_icon_color").default("#6366f1"), // Icon colors for features
+  lightAccentColor: varchar("light_accent_color").default("#8b5cf6"), // Accent elements
+  lightBorderColor: varchar("light_border_color").default("#e5e7eb"), // Borders and dividers
+  
   // Dark mode colors
   darkPrimaryButton: varchar("dark_primary_button").default("#3b82f6"), // Default blue for better contrast
   darkSecondaryButton: varchar("dark_secondary_button").default("#64748b"), // Default gray
@@ -396,6 +406,16 @@ export const themeSettings = pgTable("theme_settings", {
   darkNavTitle: varchar("dark_nav_title").default("#ffffff"), // Navigation title color (Admin Portal)
   darkNavText: varchar("dark_nav_text").default("#e2e8f0"), // Navigation text color
   darkNavActiveText: varchar("dark_nav_active_text").default("#ffffff"), // Active navigation text
+  
+  // Extended dark mode colors for granular control
+  darkPageTitle: varchar("dark_page_title").default("#5b8def"), // Page titles like "Elite Features" - blue as specified
+  darkCardBackground: varchar("dark_card_background").default("#1e293b"), // Card backgrounds - elevated surface
+  darkCardTitle: varchar("dark_card_title").default("#ffffff"), // Card titles - white for contrast
+  darkFeatureTitle: varchar("dark_feature_title").default("#ffffff"), // Feature benefit titles - white
+  darkFeatureDescription: varchar("dark_feature_description").default("#d1d9e6"), // Feature descriptions - light gray
+  darkIconColor: varchar("dark_icon_color").default("#818cf8"), // Icon colors for features - lighter purple
+  darkAccentColor: varchar("dark_accent_color").default("#a78bfa"), // Accent elements - lighter purple
+  darkBorderColor: varchar("dark_border_color").default("#334155"), // Borders and dividers - subtle gray
   
   // Legacy fields for backward compatibility (deprecated)
   primaryButton: varchar("primary_button").default("#2563eb"),

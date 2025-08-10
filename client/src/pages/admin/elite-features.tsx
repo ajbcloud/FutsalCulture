@@ -28,6 +28,15 @@ interface ThemeSettings {
   lightNavTitle: string;
   lightNavText: string;
   lightNavActiveText: string;
+  // Extended light mode colors
+  lightPageTitle?: string;
+  lightCardBackground?: string;
+  lightCardTitle?: string;
+  lightFeatureTitle?: string;
+  lightFeatureDescription?: string;
+  lightIconColor?: string;
+  lightAccentColor?: string;
+  lightBorderColor?: string;
   // Dark mode colors
   darkPrimaryButton: string;
   darkSecondaryButton: string;
@@ -38,6 +47,15 @@ interface ThemeSettings {
   darkNavTitle: string;
   darkNavText: string;
   darkNavActiveText: string;
+  // Extended dark mode colors
+  darkPageTitle?: string;
+  darkCardBackground?: string;
+  darkCardTitle?: string;
+  darkFeatureTitle?: string;
+  darkFeatureDescription?: string;
+  darkIconColor?: string;
+  darkAccentColor?: string;
+  darkBorderColor?: string;
   // Legacy fields for backward compatibility
   primaryButton?: string;
   secondaryButton?: string;
@@ -80,6 +98,15 @@ export default function EliteFeatures() {
     lightNavTitle: '#111827',
     lightNavText: '#6b7280',
     lightNavActiveText: '#ffffff',
+    // Extended light mode
+    lightPageTitle: '#111827',
+    lightCardBackground: '#ffffff',
+    lightCardTitle: '#111827',
+    lightFeatureTitle: '#111827',
+    lightFeatureDescription: '#4b5563',
+    lightIconColor: '#6366f1',
+    lightAccentColor: '#8b5cf6',
+    lightBorderColor: '#e5e7eb',
     // Dark mode defaults
     darkPrimaryButton: '#3b82f6',
     darkSecondaryButton: '#64748b',
@@ -89,7 +116,16 @@ export default function EliteFeatures() {
     darkDescriptionColor: '#e2e8f0',
     darkNavTitle: '#ffffff',
     darkNavText: '#e2e8f0',
-    darkNavActiveText: '#ffffff'
+    darkNavActiveText: '#ffffff',
+    // Extended dark mode
+    darkPageTitle: '#5b8def',
+    darkCardBackground: '#1e293b',
+    darkCardTitle: '#ffffff',
+    darkFeatureTitle: '#ffffff',
+    darkFeatureDescription: '#d1d9e6',
+    darkIconColor: '#818cf8',
+    darkAccentColor: '#a78bfa',
+    darkBorderColor: '#334155'
   });
 
   // Feature Request State
@@ -118,6 +154,15 @@ export default function EliteFeatures() {
         lightNavTitle: theme.lightNavTitle || '#111827',
         lightNavText: theme.lightNavText || '#6b7280',
         lightNavActiveText: theme.lightNavActiveText || '#ffffff',
+        // Extended light mode
+        lightPageTitle: theme.lightPageTitle || '#111827',
+        lightCardBackground: theme.lightCardBackground || '#ffffff',
+        lightCardTitle: theme.lightCardTitle || '#111827',
+        lightFeatureTitle: theme.lightFeatureTitle || '#111827',
+        lightFeatureDescription: theme.lightFeatureDescription || '#4b5563',
+        lightIconColor: theme.lightIconColor || '#6366f1',
+        lightAccentColor: theme.lightAccentColor || '#8b5cf6',
+        lightBorderColor: theme.lightBorderColor || '#e5e7eb',
         // Dark mode colors
         darkPrimaryButton: theme.darkPrimaryButton || '#3b82f6',
         darkSecondaryButton: theme.darkSecondaryButton || '#64748b',
@@ -128,6 +173,15 @@ export default function EliteFeatures() {
         darkNavTitle: theme.darkNavTitle || '#ffffff',
         darkNavText: theme.darkNavText || '#e2e8f0',
         darkNavActiveText: theme.darkNavActiveText || '#ffffff',
+        // Extended dark mode
+        darkPageTitle: theme.darkPageTitle || '#5b8def',
+        darkCardBackground: theme.darkCardBackground || '#1e293b',
+        darkCardTitle: theme.darkCardTitle || '#ffffff',
+        darkFeatureTitle: theme.darkFeatureTitle || '#ffffff',
+        darkFeatureDescription: theme.darkFeatureDescription || '#d1d9e6',
+        darkIconColor: theme.darkIconColor || '#818cf8',
+        darkAccentColor: theme.darkAccentColor || '#a78bfa',
+        darkBorderColor: theme.darkBorderColor || '#334155',
         // Legacy fallbacks
         primaryButton: theme.primaryButton || '#2563eb',
         secondaryButton: theme.secondaryButton || '#64748b',
@@ -221,6 +275,15 @@ export default function EliteFeatures() {
         lightNavTitle: '#111827',
         lightNavText: '#6b7280',
         lightNavActiveText: '#ffffff',
+        // Extended light mode
+        lightPageTitle: '#111827',
+        lightCardBackground: '#ffffff',
+        lightCardTitle: '#111827',
+        lightFeatureTitle: '#111827',
+        lightFeatureDescription: '#4b5563',
+        lightIconColor: '#6366f1',
+        lightAccentColor: '#8b5cf6',
+        lightBorderColor: '#e5e7eb',
         darkPrimaryButton: '#3b82f6',
         darkSecondaryButton: '#64748b',
         darkBackground: '#0f172a',
@@ -229,7 +292,16 @@ export default function EliteFeatures() {
         darkDescriptionColor: '#e2e8f0',
         darkNavTitle: '#ffffff',
         darkNavText: '#e2e8f0',
-        darkNavActiveText: '#ffffff'
+        darkNavActiveText: '#ffffff',
+        // Extended dark mode
+        darkPageTitle: '#5b8def',
+        darkCardBackground: '#1e293b',
+        darkCardTitle: '#ffffff',
+        darkFeatureTitle: '#ffffff',
+        darkFeatureDescription: '#d1d9e6',
+        darkIconColor: '#818cf8',
+        darkAccentColor: '#a78bfa',
+        darkBorderColor: '#334155'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
     },
@@ -317,8 +389,14 @@ export default function EliteFeatures() {
         <div className="flex items-center gap-3">
           <Sparkles className="h-8 w-8 text-purple-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Elite Features
+            <h1 
+              className="text-3xl font-bold"
+              style={{
+                color: 'var(--theme-page-title, rgb(17, 24, 39))'
+              }}
+              data-testid="page-title-10"
+            >
+              10. Elite Features
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Exclusive customization and priority support for Elite plan users
@@ -327,34 +405,83 @@ export default function EliteFeatures() {
         </div>
 
         {/* Elite Features Overview */}
-        <Card>
+        <Card 
+          data-testid="card-benefits-11"
+          style={{ backgroundColor: 'var(--theme-card-background, white)' }}
+        >
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle 
+            className="flex items-center gap-2"
+            style={{ color: 'var(--theme-card-title, rgb(17, 24, 39))' }}
+            data-testid="card-title-12"
+          >
             <Users className="h-5 w-5" />
-            Elite Plan Benefits
+            12. Elite Plan Benefits
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <Palette className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-              <h3 className="font-semibold">Custom Colors & Themes</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Customize your portal's appearance with your brand colors
+              <Palette 
+                className="h-8 w-8 mx-auto mb-2" 
+                style={{ color: 'var(--theme-icon-color, #6366f1)' }}
+                data-testid="icon-palette-15"
+              />
+              <h3 
+                className="font-semibold"
+                style={{ color: 'var(--theme-feature-title, rgb(17, 24, 39))' }}
+                data-testid="feature-title-13"
+              >
+                13. Custom Colors & Themes
+              </h3>
+              <p 
+                className="text-sm"
+                style={{ color: 'var(--theme-feature-description, rgb(75, 85, 99))' }}
+                data-testid="feature-description-14"
+              >
+                14. Customize your portal's appearance with your brand colors
               </p>
             </div>
             <div className="text-center">
-              <MessageSquare className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <h3 className="font-semibold">Feature Request Queue</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Submit feature requests directly to our development team
+              <MessageSquare 
+                className="h-8 w-8 mx-auto mb-2" 
+                style={{ color: 'var(--theme-icon-color, #6366f1)' }}
+                data-testid="icon-message-15"
+              />
+              <h3 
+                className="font-semibold"
+                style={{ color: 'var(--theme-feature-title, rgb(17, 24, 39))' }}
+                data-testid="feature-title-13"
+              >
+                13. Feature Request Queue
+              </h3>
+              <p 
+                className="text-sm"
+                style={{ color: 'var(--theme-feature-description, rgb(75, 85, 99))' }}
+                data-testid="feature-description-14"
+              >
+                14. Submit feature requests directly to our development team
               </p>
             </div>
             <div className="text-center">
-              <Phone className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <h3 className="font-semibold">Priority Support</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Direct access to phone and email priority support
+              <Phone 
+                className="h-8 w-8 mx-auto mb-2" 
+                style={{ color: 'var(--theme-icon-color, #6366f1)' }}
+                data-testid="icon-phone-15"
+              />
+              <h3 
+                className="font-semibold"
+                style={{ color: 'var(--theme-feature-title, rgb(17, 24, 39))' }}
+                data-testid="feature-title-13"
+              >
+                13. Priority Support
+              </h3>
+              <p 
+                className="text-sm"
+                style={{ color: 'var(--theme-feature-description, rgb(75, 85, 99))' }}
+                data-testid="feature-description-14"
+              >
+                14. Direct access to phone and email priority support
               </p>
             </div>
           </div>
@@ -388,8 +515,9 @@ export default function EliteFeatures() {
                 <TabsContent value="light" className="space-y-4 mt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="lightPrimaryButton">Primary Button Color</Label>
+                      <Label htmlFor="lightPrimaryButton">1. Primary Button Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">1</span>
                         <Input
                           id="lightPrimaryButton"
                           type="color"
@@ -413,8 +541,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightSecondaryButton">Secondary Button Color</Label>
+                      <Label htmlFor="lightSecondaryButton">2. Secondary Button Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">2</span>
                         <Input
                           id="lightSecondaryButton"
                           type="color"
@@ -438,8 +567,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightBackground">Background Color</Label>
+                      <Label htmlFor="lightBackground">3. Background Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">3</span>
                         <Input
                           id="lightBackground"
                           type="color"
@@ -463,8 +593,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightText">Text Color</Label>
+                      <Label htmlFor="lightText">4. Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">4</span>
                         <Input
                           id="lightText"
                           type="color"
@@ -488,8 +619,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightHeadingColor">Heading Color</Label>
+                      <Label htmlFor="lightHeadingColor">5. Heading Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">5</span>
                         <Input
                           id="lightHeadingColor"
                           type="color"
@@ -513,8 +645,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightDescriptionColor">Description Color</Label>
+                      <Label htmlFor="lightDescriptionColor">6. Description Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">6</span>
                         <Input
                           id="lightDescriptionColor"
                           type="color"
@@ -538,8 +671,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightNavTitle">Navigation Title Color (Admin Portal)</Label>
+                      <Label htmlFor="lightNavTitle">7. Navigation Title Color (Admin Portal)</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">7</span>
                         <Input
                           id="lightNavTitle"
                           type="color"
@@ -563,8 +697,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightNavText">Navigation Text Color</Label>
+                      <Label htmlFor="lightNavText">8. Navigation Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">8</span>
                         <Input
                           id="lightNavText"
                           type="color"
@@ -588,8 +723,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="lightNavActiveText">Active Navigation Text Color</Label>
+                      <Label htmlFor="lightNavActiveText">9. Active Navigation Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">9</span>
                         <Input
                           id="lightNavActiveText"
                           type="color"
@@ -612,6 +748,162 @@ export default function EliteFeatures() {
                       </div>
                     </div>
 
+                    {/* New granular color controls */}
+                    <div>
+                      <Label htmlFor="lightPageTitle">10. Page Title Color (Elite Features)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">10</span>
+                        <Input
+                          id="lightPageTitle"
+                          type="color"
+                          value={themeSettings.lightPageTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightPageTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightPageTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightPageTitle: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightCardBackground">11. Card Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">11</span>
+                        <Input
+                          id="lightCardBackground"
+                          type="color"
+                          value={themeSettings.lightCardBackground || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightCardBackground: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightCardBackground || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightCardBackground: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightCardTitle">12. Card Title Color (Elite Plan Benefits)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">12</span>
+                        <Input
+                          id="lightCardTitle"
+                          type="color"
+                          value={themeSettings.lightCardTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightCardTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightCardTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightCardTitle: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightFeatureTitle">13. Feature Title Color (Custom Colors & Themes)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">13</span>
+                        <Input
+                          id="lightFeatureTitle"
+                          type="color"
+                          value={themeSettings.lightFeatureTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightFeatureTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightFeatureTitle || '#111827'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightFeatureTitle: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightFeatureDescription">14. Feature Description Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">14</span>
+                        <Input
+                          id="lightFeatureDescription"
+                          type="color"
+                          value={themeSettings.lightFeatureDescription || '#4b5563'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightFeatureDescription: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightFeatureDescription || '#4b5563'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightFeatureDescription: e.target.value
+                          }))}
+                          placeholder="#4b5563"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightIconColor">15. Icon Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">15</span>
+                        <Input
+                          id="lightIconColor"
+                          type="color"
+                          value={themeSettings.lightIconColor || '#6366f1'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightIconColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightIconColor || '#6366f1'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightIconColor: e.target.value
+                          }))}
+                          placeholder="#6366f1"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
 
                   </div>
                 </TabsContent>
@@ -831,8 +1123,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkNavActiveText">Active Navigation Text Color</Label>
+                      <Label htmlFor="darkNavActiveText">9. Active Navigation Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">9</span>
                         <Input
                           id="darkNavActiveText"
                           type="color"
@@ -855,6 +1148,162 @@ export default function EliteFeatures() {
                       </div>
                     </div>
 
+                    {/* New granular color controls for dark mode */}
+                    <div>
+                      <Label htmlFor="darkPageTitle">10. Page Title Color (Elite Features)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">10</span>
+                        <Input
+                          id="darkPageTitle"
+                          type="color"
+                          value={themeSettings.darkPageTitle || '#5b8def'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkPageTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkPageTitle || '#5b8def'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkPageTitle: e.target.value
+                          }))}
+                          placeholder="#5b8def"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkCardBackground">11. Card Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">11</span>
+                        <Input
+                          id="darkCardBackground"
+                          type="color"
+                          value={themeSettings.darkCardBackground || '#1e293b'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkCardBackground: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkCardBackground || '#1e293b'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkCardBackground: e.target.value
+                          }))}
+                          placeholder="#1e293b"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkCardTitle">12. Card Title Color (Elite Plan Benefits)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">12</span>
+                        <Input
+                          id="darkCardTitle"
+                          type="color"
+                          value={themeSettings.darkCardTitle || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkCardTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkCardTitle || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkCardTitle: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkFeatureTitle">13. Feature Title Color (Custom Colors & Themes)</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">13</span>
+                        <Input
+                          id="darkFeatureTitle"
+                          type="color"
+                          value={themeSettings.darkFeatureTitle || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkFeatureTitle: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkFeatureTitle || '#ffffff'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkFeatureTitle: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkFeatureDescription">14. Feature Description Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">14</span>
+                        <Input
+                          id="darkFeatureDescription"
+                          type="color"
+                          value={themeSettings.darkFeatureDescription || '#d1d9e6'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkFeatureDescription: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkFeatureDescription || '#d1d9e6'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkFeatureDescription: e.target.value
+                          }))}
+                          placeholder="#d1d9e6"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkIconColor">15. Icon Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">15</span>
+                        <Input
+                          id="darkIconColor"
+                          type="color"
+                          value={themeSettings.darkIconColor || '#818cf8'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkIconColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkIconColor || '#818cf8'}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkIconColor: e.target.value
+                          }))}
+                          placeholder="#818cf8"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
 
                   </div>
                 </TabsContent>

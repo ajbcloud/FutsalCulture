@@ -2,28 +2,46 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 interface CustomTheme {
-  // Light mode colors
-  lightPrimaryButton: string;
-  lightSecondaryButton: string;
-  lightBackground: string;
-  lightText: string;
-  lightHeadingColor: string;
-  lightDescriptionColor: string;
-  lightNavTitle?: string;
-  lightNavText?: string;
-  lightNavActiveText?: string;
+  // Light mode colors (numbered 1-15)
+  lightPrimaryButton: string;        // 1
+  lightSecondaryButton: string;      // 2
+  lightBackground: string;           // 3
+  lightText: string;                 // 4
+  lightHeadingColor: string;         // 5
+  lightDescriptionColor: string;     // 6
+  lightNavTitle?: string;            // 7
+  lightNavText?: string;             // 8
+  lightNavActiveText?: string;       // 9
+  lightPageTitle?: string;           // 10
+  lightCardBackground?: string;      // 11
+  lightCardTitle?: string;           // 12
+  lightFeatureTitle?: string;        // 13
+  lightFeatureDescription?: string;  // 14
+  lightIconColor?: string;           // 15
+  lightAccentColor?: string;
+  lightBorderColor?: string;
   lightNavActiveBg?: string;
-  // Dark mode colors
-  darkPrimaryButton: string;
-  darkSecondaryButton: string;
-  darkBackground: string;
-  darkText: string;
-  darkHeadingColor: string;
-  darkDescriptionColor: string;
-  darkNavTitle?: string;
-  darkNavText?: string;
-  darkNavActiveText?: string;
+  
+  // Dark mode colors (numbered 1-15)
+  darkPrimaryButton: string;         // 1
+  darkSecondaryButton: string;       // 2
+  darkBackground: string;            // 3
+  darkText: string;                  // 4
+  darkHeadingColor: string;          // 5
+  darkDescriptionColor: string;      // 6
+  darkNavTitle?: string;             // 7
+  darkNavText?: string;              // 8
+  darkNavActiveText?: string;        // 9
+  darkPageTitle?: string;            // 10
+  darkCardBackground?: string;       // 11
+  darkCardTitle?: string;            // 12
+  darkFeatureTitle?: string;         // 13
+  darkFeatureDescription?: string;   // 14
+  darkIconColor?: string;            // 15
+  darkAccentColor?: string;
+  darkBorderColor?: string;
   darkNavActiveBg?: string;
+  
   // Legacy fallbacks
   primaryButton?: string;
   secondaryButton?: string;
@@ -86,12 +104,20 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-light-heading', `hsl(${hexToHsl(theme.lightHeadingColor)})`);
       root.style.setProperty('--custom-light-description', `hsl(${hexToHsl(theme.lightDescriptionColor)})`);
       
-      // Apply light mode navigation colors
+      // Apply light mode navigation colors (numbered 7-9)
       root.style.setProperty('--custom-light-nav-title', `hsl(${hexToHsl(theme.lightNavTitle || '#111827')})`);
       root.style.setProperty('--custom-light-nav-text', `hsl(${hexToHsl(theme.lightNavText || '#6b7280')})`);
       root.style.setProperty('--custom-light-nav-active-text', `hsl(${hexToHsl(theme.lightNavActiveText || '#ffffff')})`);
       // Use primary button color for active navigation background
       root.style.setProperty('--custom-light-nav-active-bg', `hsl(${hexToHsl(theme.lightPrimaryButton || '#2563eb')})`);
+
+      // Apply extended light mode colors (numbered 10-15)
+      root.style.setProperty('--theme-page-title', theme.lightPageTitle || '#111827');
+      root.style.setProperty('--theme-card-background', theme.lightCardBackground || '#ffffff');
+      root.style.setProperty('--theme-card-title', theme.lightCardTitle || '#111827');
+      root.style.setProperty('--theme-feature-title', theme.lightFeatureTitle || '#111827');
+      root.style.setProperty('--theme-feature-description', theme.lightFeatureDescription || '#4b5563');
+      root.style.setProperty('--theme-icon-color', theme.lightIconColor || '#6366f1');
       
       // Apply dark mode custom colors as CSS variables
       root.style.setProperty('--custom-dark-primary', `hsl(${hexToHsl(theme.darkPrimaryButton)})`);
@@ -101,12 +127,20 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-dark-heading', `hsl(${hexToHsl(theme.darkHeadingColor)})`);
       root.style.setProperty('--custom-dark-description', `hsl(${hexToHsl(theme.darkDescriptionColor)})`);
 
-      // Apply dark mode navigation colors
+      // Apply dark mode navigation colors (numbered 7-9)
       root.style.setProperty('--custom-dark-nav-title', `hsl(${hexToHsl(theme.darkNavTitle || '#f8fafc')})`);
       root.style.setProperty('--custom-dark-nav-text', `hsl(${hexToHsl(theme.darkNavText || '#cbd5e1')})`);
       root.style.setProperty('--custom-dark-nav-active-text', `hsl(${hexToHsl(theme.darkNavActiveText || '#ffffff')})`);
       // Use primary button color for active navigation background
       root.style.setProperty('--custom-dark-nav-active-bg', `hsl(${hexToHsl(theme.darkPrimaryButton || '#2563eb')})`);
+
+      // Apply extended dark mode colors (numbered 10-15) - set as CSS variables for dark mode switching
+      if (theme.darkPageTitle) root.style.setProperty('--theme-dark-page-title', theme.darkPageTitle);
+      if (theme.darkCardBackground) root.style.setProperty('--theme-dark-card-background', theme.darkCardBackground);
+      if (theme.darkCardTitle) root.style.setProperty('--theme-dark-card-title', theme.darkCardTitle);
+      if (theme.darkFeatureTitle) root.style.setProperty('--theme-dark-feature-title', theme.darkFeatureTitle);
+      if (theme.darkFeatureDescription) root.style.setProperty('--theme-dark-feature-description', theme.darkFeatureDescription);
+      if (theme.darkIconColor) root.style.setProperty('--theme-dark-icon-color', theme.darkIconColor);
 
       // Override system theme with custom theme in both modes
       root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);
