@@ -34,29 +34,29 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
 
     // Return default theme if no custom settings exist
     const themeData = settings[0] || {
-      // Light mode defaults
-      lightPrimaryButton: '#2563eb',
-      lightSecondaryButton: '#64748b', 
-      lightBackground: '#ffffff',
-      lightText: '#111827',
-      lightHeadingColor: '#111827',
-      lightDescriptionColor: '#4b5563',
+      // Light mode defaults - WCAG AA compliant
+      lightPrimaryButton: '#3b66d9',      // Brand blue - slightly darker for better contrast
+      lightSecondaryButton: '#f1f5f9',    // Light gray background
+      lightBackground: '#ffffff',         // Pure white
+      lightText: '#0c1629',               // High contrast dark text
+      lightHeadingColor: '#0c1629',       // Same as text for consistency
+      lightDescriptionColor: '#475569',   // Medium gray - WCAG AA compliant
       
-      // Dark mode defaults
-      darkPrimaryButton: '#2563eb',
-      darkSecondaryButton: '#64748b',
-      darkBackground: '#0f172a',
-      darkText: '#f8fafc',
-      darkHeadingColor: '#f8fafc',
-      darkDescriptionColor: '#cbd5e1',
+      // Dark mode defaults - High contrast with white text
+      darkPrimaryButton: '#5b8def',       // Lighter brand blue for dark backgrounds
+      darkSecondaryButton: '#334155',     // Dark gray
+      darkBackground: '#0c1629',          // Very dark blue-gray
+      darkText: '#ffffff',                // Pure white text as requested
+      darkHeadingColor: '#5b8def',        // Blue headings as specified
+      darkDescriptionColor: '#d1d9e6',    // Light gray for descriptions
       
       // Legacy fields for backward compatibility
-      primaryButton: '#2563eb',
-      secondaryButton: '#6b7280',
+      primaryButton: '#3b66d9',
+      secondaryButton: '#f1f5f9',
       background: '#ffffff',
-      text: '#111827',
-      headingColor: '#1f2937',
-      descriptionColor: '#6b7280'
+      text: '#0c1629',
+      headingColor: '#0c1629',
+      descriptionColor: '#475569'
     };
 
     res.json(themeData);

@@ -71,12 +71,12 @@
   --radius: 0.5rem;
   
   /* Theme customization overrides - Light mode */
-  --theme-primary: var(--custom-light-primary, var(--brand));
-  --theme-secondary: var(--custom-light-secondary, var(--input));
-  --theme-background: var(--custom-light-background, var(--bg));
-  --theme-foreground: var(--custom-light-foreground, var(--text));
-  --theme-heading: var(--custom-light-heading, var(--text));
-  --theme-description: var(--custom-light-description, var(--text-muted));
+  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));
+  --theme-secondary: var(--custom-light-secondary, hsl(214, 32%, 96%));
+  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));
+  --theme-foreground: var(--custom-light-foreground, hsl(220, 89%, 11%));
+  --theme-heading: var(--custom-light-heading, hsl(220, 89%, 11%));
+  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));
 }
 
 /* Dark mode semantic colors */
@@ -147,12 +147,12 @@
   --ring: var(--focus);
   
   /* Theme customization overrides - Dark mode */
-  --theme-primary: var(--custom-dark-primary, var(--brand));
-  --theme-secondary: var(--custom-dark-secondary, var(--input));
-  --theme-background: var(--custom-dark-background, var(--bg));
-  --theme-foreground: var(--custom-dark-foreground, var(--text));
-  --theme-heading: var(--custom-dark-heading, var(--brand));
-  --theme-description: var(--custom-dark-description, var(--text-muted));
+  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 70%));
+  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 18%));
+  --theme-background: var(--custom-dark-background, hsl(220, 89%, 11%));
+  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));
+  --theme-heading: var(--custom-dark-heading, hsl(217, 91%, 70%));
+  --theme-description: var(--custom-dark-description, hsl(210, 40%, 85%));
 }
 
 @layer base {
@@ -161,7 +161,18 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased;
+    background-color: var(--theme-background);
+    color: var(--theme-foreground);
+  }
+  
+  /* Apply semantic colors to common elements */
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--theme-heading);
+  }
+  
+  p, .text-muted-foreground, .text-gray-600, .text-gray-500 {
+    color: var(--theme-description);
   }
 }
 
