@@ -1,0 +1,271 @@
+Goal
+Create a first‑class “Player Development” module that is automatically feature‑gated to Elite subscriptions. Coaches get tools to track skills, evaluations, goals and training plans; parents/players get read‑only progress and reports. Must be multi‑tenant, mobile‑friendly, and consistent with our existing stack (Drizzle ORM, Express routes, Tailwind/React, Recharts).
+
+1) Feature Gating (Elite only)
+Add a reusable gate: requireFeature('playerDevelopment') that checks current tenant’s plan (Elite) and returns 403 if not enabled.
+
+Add playerDevelopment to our feature constants and include it only in elite.includes.
+
+All API routes and Admin UI for this module must enforce this gate.
+
+In non‑Elite plans, show a locked card with feature description + “Upgrade to Elite” CTA.
+
+2) Data Model (Drizzle / Postgres)
+Add tables, all with tenant_id and standard timestamps:
+
+dev_skill_categories
+
+id, tenant_id, name (e.g., “Technical”, “Tactical”, “Physical”, “Psychological”), sort_order
+
+dev_skills
+
+id, tenant_id, category_id FK, name, description, sport (nullable), age_band (U8/U9…U18), sort_order, status (active/archived)
+
+dev_skill_rubrics
+
+id, tenant_id, skill_id FK, level (1–5), label (e.g., “Foundation”, “Emerging”, …), descriptor (short rubric text)
+
+player_assessments
+
+id, tenant_id, player_id FK, assessed_by (user_id FK), session_id (nullable), assessment_date, overall_comment, visibility (“private”, “share_with_parent”)
+
+player_assessment_items
+
+id, tenant_id, assessment_id FK, skill_id FK, level (int, 1–5), comment (nullable)
+
+player_goals
+
+id, tenant_id, player_id FK, created_by (user_id), title, description, target_date, status (“active”, “achieved”, “archived”)
+
+player_goal_updates
+
+id, tenant_id, goal_id FK, created_by, note, progress_percent (0–100)
+
+training_plans
+
+id, tenant_id, player_id FK (nullable if team plan), created_by, title, start_date, end_date, notes
+
+training_plan_items
+
+id, tenant_id, plan_id FK, day_of_week (0–6), drill_id FK (nullable), custom_text, duration_minutes
+
+drills_library
+
+id, tenant_id, title, objective, equipment, steps (text/json), video_url (nullable)
+
+attendance_snapshots (light integration to Sessions)
+
+id, tenant_id, player_id FK, session_id FK, attended (bool)
+
+dev_achievements
+
+id, tenant_id, player_id FK, badge_key, title, description, awarded_at
+
+progression_snapshots
+
+id, tenant_id, player_id FK, snapshot_date, skill_id FK (nullable), aggregate_level (avg across skills), notes
+
+Add indices on (tenant_id, player_id), (tenant_id, category_id), etc.
+
+Seed data (script):
+
+4 default categories (Technical/Tactical/Physical/Psychological).
+
+20–30 baseline skills with 1–5 rubrics (soccer/futsal defaults; sport‑agnostic naming).
+
+A few example drills.
+
+3) API Endpoints (Express)
+All routes under /api/dev/* and protected by requireAuth + requireFeature('playerDevelopment'). Coach/Admin permissions required to create/update; parents/players read‑only where noted.
+
+Skills & Rubrics
+
+GET /api/dev/skills?category_id&age_band&status — list skills (coach/admin).
+
+POST /api/dev/skills — create skill + optional rubrics (coach/admin).
+
+PATCH /api/dev/skills/:id — update; support archive.
+
+GET /api/dev/skills/:id/rubrics — list rubrics.
+
+POST /api/dev/skills/:id/rubrics — upsert rubric levels 1–5.
+
+Assessments
+
+POST /api/dev/assessments — create assessment header (player_id, date, session_id?, overall_comment, visibility).
+
+POST /api/dev/assessments/:id/items — bulk upsert items [{skill_id, level, comment}].
+
+GET /api/dev/assessments?player_id&from&to — list; parents/players can only view their own if visibility = share_with_parent or created for them.
+
+GET /api/dev/assessments/:id — detail.
+
+Goals
+
+POST /api/dev/goals — create goal (coach/admin; parents can propose if we choose; default coach only).
+
+PATCH /api/dev/goals/:id — update status/properties.
+
+POST /api/dev/goals/:id/updates — add progress note.
+
+GET /api/dev/goals?player_id&status — list (parents/players read‑only).
+
+Training Plans
+
+POST /api/dev/plans — create plan.
+
+POST /api/dev/plans/:id/items — upsert items.
+
+GET /api/dev/plans?player_id&activeOnly — list; parents/players read‑only.
+
+Drills
+
+GET /api/dev/drills?query — search.
+
+POST /api/dev/drills — create/update (coach/admin).
+
+Reports & Snapshots
+
+POST /api/dev/progression/snapshot — compute and store snapshot (avg level across selected skills) for a player on a date.
+
+GET /api/dev/reports/player/:playerId — JSON for UI charts (progress over time, radar by category, goal completion).
+
+Attendance bridge
+
+GET /api/dev/attendance?player_id&from&to — read session attendance from existing signups/sessions tables (read‑only).
+
+Notifications (optional v1)
+
+When assessment is shared or goal achieved, enqueue a message using existing email/SMS preferences.
+
+4) Admin/Coach UI (Elite only)
+Add a new nav item under Admin → Player Development (visible only for Elite tenants). Pages:
+
+Overview
+
+Filters: Age group, Gender, Team/Group (if any), Player.
+
+Cards: Assessments this month, Active goals, Avg skill level change (30d), Attendance trend.
+
+Charts (Recharts):
+
+Line: Average skill level over time.
+
+Radar: Category strengths (Technical/Tactical/Physical/Psych).
+
+Bar: Goals by status.
+
+Skills & Rubrics
+
+Table of skills grouped by category and age band.
+
+Inline edit of rubric levels 1–5.
+
+Archive/unarchive.
+
+Assessments
+
+Create/edit assessment (left: player/session/date; right: skill matrix 1–5 with quick‑rate UI, optional comments).
+
+Visibility toggle (“private” vs “share with parent”).
+
+Save & Share → triggers notification if enabled.
+
+Assessment history per player.
+
+Goals
+
+Create goal, set target date, status.
+
+Timeline of updates with progress %.
+
+“Mark achieved” workflow; optional badge award.
+
+Training Plans
+
+Calendar‑like week view; drag/drop drills; set durations and notes.
+
+Copy plan to another player or duplicate week.
+
+Drills Library
+
+CRUD drills; search/tag; attach video URL.
+
+Quick insert into a plan.
+
+Parent/Player portal:
+
+New “Development” tab with:
+
+Recent assessments (shared only).
+
+Goals & progress.
+
+Training plan for this week.
+
+Charts: progress line, category radar.
+
+Mobile‑first cards (no table scrolling).
+
+UX Details
+
+1–5 level selector = accessible radio group with color scale.
+
+Autosave per skill line item (debounced) with optimistic UI.
+
+Everything responsive; tables become stacked cards <640px.
+
+5) Permissions
+Admin/Coach: full CRUD for skills, assessments, goals, drills, plans.
+
+Parent/Player: read‑only where allowed (visibility), can comment on goals optional later.
+
+All queries filtered by tenant_id.
+
+6) Analytics Hooks
+Emit events: dev.assessment.created, dev.goal.created, dev.goal.achieved, dev.snapshot.created.
+
+Feed into existing analytics so Elite dashboards can chart: count, rates, average levels.
+
+7) Settings & Integrations
+In Admin → Settings → Plan & Features, show “Player Development” as a feature with a green check for Elite; red X + Upgrade for others.
+
+In Integrations, add toggles for:
+
+“Share assessments via email/SMS” (reuse notification preferences).
+
+“Allow parents to view assessments by default” (org‑level default).
+
+8) Tests & Acceptance
+Unit tests for service methods creating assessments, computing averages, and gating.
+
+API tests for permissions (403 for non‑Elite and non‑coach).
+
+Seed script creates 3 players with sample assessments, goals, and a training plan so charts render.
+
+Manual QA checklist:
+
+Create skill & rubrics → appears in matrix.
+
+Create assessment with items → scores persist; parent sees it if shared.
+
+Create goal → add updates → mark achieved → badge logged.
+
+Create training plan → weekly view shows items; mobile view stacks.
+
+Feature hidden on non‑Elite tenant; locked card with Upgrade CTA.
+
+9) Deliverables
+DB migrations + seed.
+
+API routes & services.
+
+Admin UI pages (Overview, Skills, Assessments, Goals, Plans, Drills).
+
+Parent/Player Development tab (read‑only).
+
+Feature gating + settings.
+
+Docs: docs/player-development.md (data model, flows, permissions, screenshots).
+
+Please implement iteratively, committing per milestone (schema → APIs → admin UI → portal UI → tests), and post a short demo gif once the seed data renders the charts.
