@@ -912,8 +912,9 @@ export default function EliteFeatures() {
                 <TabsContent value="dark" className="space-y-4 mt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="darkPrimaryButton">Primary Button Color</Label>
+                      <Label htmlFor="darkPrimaryButton">1. Primary Button Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">1</span>
                         <Input
                           id="darkPrimaryButton"
                           type="color"
@@ -937,8 +938,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkSecondaryButton">Secondary Button Color</Label>
+                      <Label htmlFor="darkSecondaryButton">2. Secondary Button Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">2</span>
                         <Input
                           id="darkSecondaryButton"
                           type="color"
@@ -962,8 +964,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkBackground">Background Color</Label>
+                      <Label htmlFor="darkBackground">3. Background Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">3</span>
                         <Input
                           id="darkBackground"
                           type="color"
@@ -987,8 +990,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkText">Text Color</Label>
+                      <Label htmlFor="darkText">4. Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">4</span>
                         <Input
                           id="darkText"
                           type="color"
@@ -1012,8 +1016,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkHeadingColor">Heading Color</Label>
+                      <Label htmlFor="darkHeadingColor">5. Heading Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">5</span>
                         <Input
                           id="darkHeadingColor"
                           type="color"
@@ -1037,8 +1042,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkDescriptionColor">Description Color</Label>
+                      <Label htmlFor="darkDescriptionColor">6. Description Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">6</span>
                         <Input
                           id="darkDescriptionColor"
                           type="color"
@@ -1073,8 +1079,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkNavTitle">Navigation Title Color (Admin Portal)</Label>
+                      <Label htmlFor="darkNavTitle">7. Navigation Title Color (Admin Portal)</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">7</span>
                         <Input
                           id="darkNavTitle"
                           type="color"
@@ -1098,8 +1105,9 @@ export default function EliteFeatures() {
                     </div>
 
                     <div>
-                      <Label htmlFor="darkNavText">Navigation Text Color</Label>
+                      <Label htmlFor="darkNavText">8. Navigation Text Color</Label>
                       <div className="flex gap-2 mt-1">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-mono">8</span>
                         <Input
                           id="darkNavText"
                           type="color"
@@ -1580,7 +1588,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Heading Color Preview
+                        5. Heading Color Preview
                       </h4>
                       <p 
                         key={`dark-desc-${themeSettings.darkDescriptionColor}`}
@@ -1595,7 +1603,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Description Color - This text shows how descriptions and body text will appear in dark mode.
+                        6. Description Color - This text shows how descriptions and body text will appear in dark mode.
                       </p>
                       <div 
                         key={`dark-text-${themeSettings.darkText}`}
@@ -1608,7 +1616,7 @@ export default function EliteFeatures() {
                         }}
                         className=""
                       >
-                        Text Color - General text content uses this color.
+                        4. Text Color - General text content uses this color.
                       </div>
                       
                       {/* Navigation Preview */}
@@ -1625,7 +1633,7 @@ export default function EliteFeatures() {
                             WebkitTextFillColor: themeSettings.darkNavTitle
                           }}
                         >
-                          Admin Portal
+                          7. Admin Portal
                         </div>
                         <div className="space-y-1">
                           <div 
@@ -1638,7 +1646,7 @@ export default function EliteFeatures() {
                               WebkitTextFillColor: themeSettings.darkNavText
                             }}
                           >
-                            Dashboard
+                            8. Dashboard
                           </div>
                           <div 
                             key={`dark-nav-active-${themeSettings.darkNavActiveBg}-${themeSettings.darkNavActiveText}`}
@@ -1652,7 +1660,7 @@ export default function EliteFeatures() {
                               WebkitTextFillColor: themeSettings.darkNavActiveText
                             }}
                           >
-                            Sessions (Active)
+                            9. Sessions (Active)
                           </div>
                           <div 
                             key={`dark-nav-text2-${themeSettings.darkNavText}`}
@@ -1664,7 +1672,7 @@ export default function EliteFeatures() {
                               WebkitTextFillColor: themeSettings.darkNavText
                             }}
                           >
-                            Players
+                            8. Players
                           </div>
                         </div>
                       </div>
@@ -1681,7 +1689,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Primary Button Color
+                          1. Primary Button Color
                         </button>
                         <button
                           style={{ 
@@ -1694,7 +1702,7 @@ export default function EliteFeatures() {
                             cursor: 'default'
                           }}
                         >
-                          Secondary Button Color
+                          2. Secondary Button Color
                         </button>
                       </div>
                       <div className="mt-4">
@@ -1711,7 +1719,7 @@ export default function EliteFeatures() {
                           }}
                           className=""
                         >
-                          Heading Color (smaller)
+                          5. Heading Color (smaller)
                         </h5>
                         <p 
                           key={`dark-desc-small-${themeSettings.darkDescriptionColor}`}
@@ -1726,7 +1734,7 @@ export default function EliteFeatures() {
                           }}
                           className=""
                         >
-                          Description Color - smaller text and details will use this color.
+                          6. Description Color - smaller text and details will use this color.
                         </p>
                       </div>
                     </div>
