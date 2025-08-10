@@ -212,10 +212,12 @@ function PlanAndFeaturesContent() {
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers === 'unlimited' 
                   ? 'Unlimited' 
-                  : PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers || 10}
+                  : `${planFeatures?.playerCount || 0}/${PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers || 10}`}
               </div>
               <div className="text-sm text-muted-foreground">
-                Currently registered: {planFeatures?.playerCount || 0}
+                {PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers === 'unlimited' 
+                  ? `Currently registered: ${planFeatures?.playerCount || 0}`
+                  : 'Current vs maximum players'}
               </div>
             </div>
             
