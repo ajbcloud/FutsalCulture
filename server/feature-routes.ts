@@ -67,29 +67,22 @@ router.get('/tenant/plan-features', async (req, res) => {
     
     const limits = PLAN_LIMITS[effectivePlanLevel as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
     
-    // Get current player and user counts for this tenant
-    const { players, users } = await import('../shared/schema');
+    // Get current player count for this tenant (only players, not parents)
+    const { players } = await import('../shared/schema');
     
     const playerCountResult = await db.select({ count: players.id })
       .from(players)
       .where(eq(players.tenantId, tenantId));
     const playerCount = playerCountResult.length;
 
-    // For free tier, count total users (parents + players)
-    const userCountResult = await db.select({ count: users.id })
-      .from(users)
-      .where(eq(users.tenantId, tenantId));
-    const totalUserCount = userCountResult.length;
-
-    const displayCount = effectivePlanLevel === 'free' ? totalUserCount : playerCount;
+    // User limits should only count players, not parents
+    const displayCount = playerCount;
 
     res.json({
       planLevel: effectivePlanLevel,
       features,
       limits,
       playerCount: displayCount,
-      totalUsers: totalUserCount,
-      actualPlayers: playerCount,
     });
   } catch (error) {
     console.error('Error fetching plan features:', error);

@@ -2785,6 +2785,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     try {
       // First check database for tenant subscription info
       const currentUser = (req as any).currentUser;
+      const { tenants } = await import('../shared/schema');
       const tenant = await db.select({
         planLevel: tenants.planLevel,
         stripeSubscriptionId: tenants.stripeSubscriptionId,

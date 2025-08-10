@@ -16,6 +16,11 @@ import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
+import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
+import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
+import { FeatureAvailabilityList } from '../../components/billing/FeatureAvailabilityList';
+import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
+import { PLANS } from '../../constants/plans';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
@@ -158,6 +163,114 @@ const getTimezones = () => {
   return [...priorityTimezones, ...remainingTimezones];
 };
 
+// Plan & Features Component
+function PlanAndFeaturesContent() {
+  const { data: tenantPlan, isLoading: tenantPlanLoading } = useTenantPlan();
+  const { data: subscriptionInfo, isLoading: subscriptionLoading } = useSubscriptionInfo();
+  const { data: planFeatures } = usePlanFeatures();
+
+  if (tenantPlanLoading || subscriptionLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-muted-foreground">Loading plan information...</div>
+      </div>
+    );
+  }
+
+  const currentPlan = tenantPlan?.planId || planFeatures?.planLevel || 'free';
+  const planDisplayName = PLANS[currentPlan as keyof typeof PLANS]?.name || 'Free';
+  const planPrice = PLANS[currentPlan as keyof typeof PLANS]?.price || 0;
+  const billingStatus = tenantPlan?.billingStatus || 'none';
+  const hasActiveSubscription = billingStatus === 'active';
+
+  return (
+    <div className="space-y-6">
+      {/* Current Plan Overview */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center">
+            <Crown className="w-5 h-5 mr-2 text-amber-500" />
+            Current Plan
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Your plan determines which features and limits are available for your organization.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-foreground capitalize mb-2">
+                {planDisplayName} Plan
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {planPrice === 0 ? 'Free forever' : `$${planPrice}/month`}
+              </div>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers === 'unlimited' 
+                  ? 'Unlimited' 
+                  : PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers || 10}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Currently registered: {planFeatures?.playerCount || 0}
+              </div>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-lg font-semibold text-foreground mb-2">Billing Status</div>
+              <div className="space-y-2">
+                {hasActiveSubscription ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Active
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {currentPlan === 'free' ? 'Free Plan' : 'Inactive'}
+                    </span>
+                  </div>
+                )}
+                
+                <ManageSubscriptionButton
+                  planId={currentPlan as any}
+                  billingStatus={billingStatus as any}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Plan Comparison Cards */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center">
+            <DollarSign className="w-5 h-5 mr-2" />
+            Plan Options
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Compare features and upgrade to unlock more capabilities for your organization.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <PlanComparisonCards currentPlan={currentPlan as any} />
+        </CardContent>
+      </Card>
+
+      {/* Feature Availability */}
+      <FeatureAvailabilityList currentPlan={currentPlan as any} />
+    </div>
+  );
+}
+
 export default function AdminSettings() {
   const businessName = useBusinessName();
   const { upgradeStatus, clearUpgradeStatus } = useUpgradeStatus();
@@ -195,10 +308,8 @@ export default function AdminSettings() {
     waitlistPromotionMessage: "Great news! A spot opened up in {session}. You have until {expires} to complete your booking."
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [loadingSubscription, setLoadingSubscription] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationData | null>(null);
@@ -247,7 +358,6 @@ export default function AdminSettings() {
 
     fetchSettings();
     fetchIntegrations();
-    fetchSubscriptionInfo();
   }, [toast]);
 
   const fetchSettings = async () => {
@@ -302,28 +412,9 @@ export default function AdminSettings() {
     }
   };
 
-  const fetchSubscriptionInfo = async () => {
-    setLoadingSubscription(true);
-    try {
-      const response = await fetch('/api/admin/subscription-info');
-      if (response.ok) {
-        const data = await response.json();
-        setSubscriptionInfo(data);
-      } else {
-        console.error('Failed to fetch subscription info');
-      }
-    } catch (error) {
-      console.error('Error fetching subscription info:', error);
-    } finally {
-      setLoadingSubscription(false);
-    }
-  };
 
-  const openBillingPortal = () => {
-    // Use the direct Stripe customer portal URL
-    const portalUrl = 'https://billing.stripe.com/p/login/test_14AeVe4GC2cAeVI4Ns2Fa00';
-    window.open(portalUrl, '_blank');
-  };
+
+
 
   const openLocationDialog = (location?: LocationData) => {
     if (location) {
@@ -1325,377 +1416,7 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="plan" className="space-y-6">
-          {/* Current Plan Overview */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Crown className="w-5 h-5 mr-2 text-amber-500" />
-                Current Subscription Plan
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Your plan determines which features and limits are available for your organization.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {planFeatures ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-foreground capitalize mb-2">
-                      {subscriptionInfo?.subscription?.status === 'active' || 
-                       (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription')
-                        ? `${planFeatures.planLevel} Plan` 
-                        : 'Free Tier'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {subscriptionInfo?.subscription?.status === 'active' || 
-                       (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription') ? (
-                        <>
-                          {planFeatures.planLevel === 'core' && '$99/month - Essential features for small organizations'}
-                          {planFeatures.planLevel === 'growth' && '$199/month - Advanced features for growing organizations'}
-                          {planFeatures.planLevel === 'elite' && '$499/month - Complete feature set with unlimited capacity'}
-                        </>
-                      ) : (
-                        'Limited features - Upgrade to unlock full functionality'
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">
-                      {planFeatures?.planLevel === 'free' ? 'User Limit' : 'Player Limit'}
-                    </div>
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {planFeatures?.planLevel === 'free' ? (
-                        `${planFeatures?.playerCount || 0}/10`
-                      ) : (
-                        planLimits?.maxPlayers === null ? 'Unlimited' : `${planLimits?.maxPlayers || planFeatures?.limits?.maxPlayers || 150}`
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {planFeatures?.planLevel === 'free' 
-                        ? 'Total users (parents + players combined)'
-                        : 'Maximum registered players'
-                      }
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">Subscription Status</div>
-                    <div className="space-y-2">
-                      {loadingSubscription ? (
-                        <div className="text-center py-2">
-                          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1" />
-                          <p className="text-xs text-muted-foreground">Loading...</p>
-                        </div>
-                      ) : (subscriptionInfo?.subscription?.status === 'active' || 
-                           (subscriptionInfo?.subscription && subscriptionInfo.subscription.id !== 'no_subscription')) ? (
-                        <div>
-                          <div className="flex items-center mb-2">
-                            <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                            <span className="text-sm font-medium text-green-800 dark:text-green-200">Active</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <div>Next billing: {subscriptionInfo.subscription.current_period_end 
-                              ? new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()
-                              : subscriptionInfo.subscription.currentPeriodEnd 
-                                ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
-                                : 'N/A'}</div>
-                            <div>Amount: ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month</div>
-                          </div>
-                          <div className="flex gap-1 mt-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
-                              disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
-                              className="flex items-center gap-1 text-xs h-6 px-2"
-                            >
-                              <Receipt className="w-3 h-3" />
-                              Invoice
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
-                              className="flex items-center gap-1 text-xs h-6 px-2"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              Manage
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <AlertCircle className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
-                          <div className="text-sm font-medium text-foreground mb-1">Inactive</div>
-                          <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
-                          <div className="space-y-1">
-                            <Button 
-                              onClick={() => window.open('https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00', '_blank')}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
-                              size="sm"
-                            >
-                              Set Up Core Plan ($99/mo)
-                            </Button>
-                            <Button 
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
-                              variant="outline"
-                              className="text-xs h-6 px-3 w-full"
-                              size="sm"
-                            >
-                              Manage Billing Portal
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-2xl font-bold text-foreground capitalize mb-2">
-                      Core Plan
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      $99/month - Essential features for small organizations
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      150
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Maximum registered players
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">Subscription Management</div>
-                    <div className="space-y-2">
-                      {loadingSubscription ? (
-                        <div className="text-center py-2">
-                          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1" />
-                          <p className="text-xs text-muted-foreground">Loading...</p>
-                        </div>
-                      ) : subscriptionInfo?.subscription?.status === 'active' ? (
-                        <div>
-                          <div className="flex items-center mb-2">
-                            <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                            <span className="text-sm font-medium text-green-800 dark:text-green-200">Active</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <div>Next billing: {subscriptionInfo.subscription.current_period_end 
-                              ? new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString()
-                              : subscriptionInfo.subscription.currentPeriodEnd 
-                                ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
-                                : 'N/A'}</div>
-                            <div>Amount: ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month</div>
-                          </div>
-                          <div className="flex gap-1 mt-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
-                              disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
-                              className="flex items-center gap-1 text-xs h-6 px-2"
-                            >
-                              <Receipt className="w-3 h-3" />
-                              Invoice
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
-                              className="flex items-center gap-1 text-xs h-6 px-2"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              Manage
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <AlertCircle className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
-                          <div className="text-sm font-medium text-foreground mb-1">Inactive</div>
-                          <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
-                          <div className="space-y-1">
-                            <Button 
-                              onClick={() => window.open('https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00', '_blank')}
-                              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
-                              size="sm"
-                            >
-                              Set Up Core Plan ($99/mo)
-                            </Button>
-                            <Button 
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
-                              variant="outline"
-                              className="text-xs h-6 px-3 w-full"
-                              size="sm"
-                            >
-                              Manage Billing Portal
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Feature Availability Grid */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                Feature Availability
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { key: FEATURE_KEYS.PAYMENTS_ENABLED, name: 'Payment Processing', description: 'Accept payments through Stripe' },
-                  { key: FEATURE_KEYS.NOTIFICATIONS_SMS, name: 'SMS Notifications', description: 'Send SMS alerts to parents and players' },
-                  { key: FEATURE_KEYS.ANALYTICS_ADVANCED, name: 'Advanced Analytics', description: 'Detailed reporting and insights' },
-                  { key: FEATURE_KEYS.WAITLIST_AUTO_PROMOTE, name: 'Auto-Promotion', description: 'Automatically promote from waitlist' },
-                  { key: FEATURE_KEYS.THEME_CUSTOMIZATION, name: 'Theme Customization', description: 'Custom branding and colors' },
-                  { key: FEATURE_KEYS.BULK_OPERATIONS, name: 'Bulk Operations', description: 'Mass upload sessions and players' },
-                ].map((feature, index) => {
-                  const hasFeature = Array.isArray(planFeatures?.features) 
-                    ? planFeatures.features.includes(feature.key)
-                    : Object.keys(planFeatures?.features || {}).includes(feature.key);
-                  return (
-                    <div key={`${feature.key}-${index}`} className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
-                      <div className="mt-0.5">
-                        {hasFeature ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className={`font-medium ${hasFeature ? 'text-foreground' : 'text-muted-foreground'}`}>
-                          {feature.name}
-                          {!hasFeature && <Crown className="w-4 h-4 inline ml-1 text-amber-500" />}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{feature.description}</div>
-                        {!hasFeature && (
-                          <UpgradePrompt 
-                            feature={feature.key} 
-                            className="mt-2"
-                            targetPlan={feature.key === FEATURE_KEYS.PAYMENTS_ENABLED || feature.key === FEATURE_KEYS.NOTIFICATIONS_SMS ? 'growth' : 'elite'}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Plan Comparison */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Zap className="w-5 h-5 mr-2" />
-                Plan Comparison
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Core Plan */}
-                <div className="border border-border rounded-lg p-4 bg-muted/20">
-                  <div className="text-center mb-4">
-                    <div className="text-xl font-bold text-foreground">Core</div>
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">$99<span className="text-sm font-normal">/mo</span></div>
-                    <div className="text-sm text-muted-foreground">Essential features</div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>150 players max</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Basic session management</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Email notifications</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Basic analytics</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Growth Plan */}
-                <div className={`border-2 rounded-lg p-4 ${planFeatures?.planLevel === 'growth' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'}`}>
-                  <div className="text-center mb-4">
-                    {planFeatures?.planLevel !== 'growth' && (
-                      <Badge className="mb-2 bg-amber-500 text-white">Popular</Badge>
-                    )}
-                    <div className="text-xl font-bold text-foreground">Growth</div>
-                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">$199<span className="text-sm font-normal">/mo</span></div>
-                    <div className="text-sm text-muted-foreground">Advanced features</div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>500 players max</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Payment processing</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>SMS notifications</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Auto-promotion</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Elite Plan */}
-                <div className={`border rounded-lg p-4 ${planFeatures?.planLevel === 'elite' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-border bg-muted/20'}`}>
-                  <div className="text-center mb-4">
-                    <div className="text-xl font-bold text-foreground">Elite</div>
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">$499<span className="text-sm font-normal">/mo</span></div>
-                    <div className="text-sm text-muted-foreground">Complete feature set</div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Unlimited players</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Advanced analytics</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Theme customization</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Bulk operations</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-
+          <PlanAndFeaturesContent />
         </TabsContent>
 
 

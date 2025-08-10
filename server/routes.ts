@@ -1320,6 +1320,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const featureRoutes = await import('./feature-routes');
   app.use('/api', isAuthenticated, featureRoutes.default);
 
+  // Setup billing routes
+  const billingRoutes = await import('./billing-routes');
+  app.use('/api', isAuthenticated, billingRoutes.default);
+
+  // Setup tenant routes
+  const tenantRoutes = await import('./tenant-routes');
+  app.use('/api', isAuthenticated, tenantRoutes.default);
+
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
