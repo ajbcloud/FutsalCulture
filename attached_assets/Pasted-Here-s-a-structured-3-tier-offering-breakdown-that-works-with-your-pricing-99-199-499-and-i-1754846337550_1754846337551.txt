@@ -1,0 +1,370 @@
+Here’s a structured 3-tier offering breakdown that works with your pricing ($99 / $199 / $499) and is designed so each tier has a clear jump in value without cannibalizing the others.
+
+I’ve built it with two principles in mind:
+
+Keep Tier 1 usable for small clubs without overwhelming them.
+
+Make Tier 2 a “must have” for most serious organizations.
+
+Make Tier 3 clearly enterprise-level with exclusives they can’t get elsewhere.
+
+Tier 1 — Core ($99/mo)
+Target: Small clubs, leagues, or coaches just starting to digitize operations.
+Player Limit: Up to 150 active registered players per month (soft cap).
+
+Features:
+
+Session & registration management (create events, track sign-ups)
+
+Parent & player portals (default theme)
+
+Waitlist system (manual promotions only, no automation)
+
+Location linking to Google Maps (basic)
+
+Basic email notifications (system-branded)
+
+Basic analytics dashboard (attendance, revenue summary)
+
+Manual payment tracking (mark payments as received, no in-app checkout)
+
+Standard support (48-hour response time)
+
+No access to: In-app payments, SMS, white-label branding, API, advanced integrations.
+
+Tier 2 — Growth ($199/mo)
+Target: Established clubs and academies looking to automate, grow, and provide a better parent experience.
+Player Limit: Up to 500 active registered players per month (soft cap).
+
+Everything in Core, plus:
+
+In-app payment processing (Stripe integration)
+
+Automated waitlist promotions + notifications
+
+SMS notifications for urgent updates
+
+White-labeled emails (club logo, custom sender address)
+
+Expanded analytics (revenue trends, player retention)
+
+Basic integration options (Google Calendar, Twilio SMS, Mailchimp)
+
+API access (read-only) for basic data sync
+
+Priority email support (24-hour response time)
+
+Tier 3 — Elite ($499/mo)
+Target: Multi-location organizations, pro academies, or enterprise sports programs.
+Player Limit: Unlimited active registered players
+
+Everything in Growth, plus:
+
+Fully customized parent/player portal (colors, branding, custom domain)
+
+Advanced integration suite (Microsoft 365, QuickBooks, Zapier, etc.)
+
+API access (full read/write, automation hooks)
+
+Advanced analytics (cross-location performance, player progression, payment forecasting)
+
+Priority support with dedicated account manager (phone + email)
+
+Custom feature requests queue
+
+Multi-tenant management (run multiple clubs/locations under one super admin account)
+
+SSO options for staff (Google, Microsoft login)
+
+Why this structure works
+Core is “good enough” for small orgs but pushes them toward Tier 2 as soon as they want payments or automation.
+
+Growth hits the sweet spot most will want — payments, automation, integrations, branding — while staying affordable.
+
+Elite appeals to bigger orgs that value customization, enterprise integrations, and unlimited scaling.
+
+Possible Add-Ons (Any Tier)
+Extra player packs (e.g., $20/mo per 100 players over the limit in Tier 1 & 2)
+
+Additional locations
+
+One-time customization projects
+
+here’s a tier-to-feature mapping for your SaaS so we can clearly control what’s enabled per subscription.
+This assumes we’ll set feature flags or plan checks in the code, so the right modules, buttons, and API endpoints are only available if the customer’s plan supports them.
+
+Tier-to-Feature Map for PlayHQ (Proposed)
+1. Core — $99/mo
+Feature Flags Enabled:
+
+Registration & Session Management
+
+Create/manage sessions and events
+
+Assign locations (Google Maps hyperlink)
+
+Track attendance
+
+Parent & Player Portals
+
+Default PlayHQ theme only (no customization)
+
+View sessions & registrations
+
+Manual waitlist join & promotion (admin must promote manually)
+
+Notifications
+
+Email notifications (system-branded, no custom sender)
+
+No SMS support
+
+Analytics
+
+Basic stats (sessions hosted, attendance totals, simple revenue tracking)
+
+Payments
+
+Disabled in-app checkout
+
+Manual “Payment Received” toggle in admin portal
+
+Support
+
+Standard email support (48-hour SLA)
+
+2. Growth — $199/mo
+Everything in Core, plus:
+
+Payments
+
+In-app checkout via Stripe integration
+
+Refund tracking (manual)
+
+Waitlist
+
+Auto-promote to next spot
+
+Position notifications via email/SMS
+
+Notifications
+
+SMS notifications via Twilio integration
+
+Email customization (club logo, custom sender address)
+
+Analytics
+
+Expanded analytics:
+
+Player retention reports
+
+Revenue trends
+
+Top-performing sessions
+
+Integrations
+
+Google Calendar sync
+
+Mailchimp email list sync
+
+Twilio SMS setup
+
+API Access
+
+Read-only endpoints (sessions, players, payments)
+
+Support
+
+Priority email support (24-hour SLA)
+
+3. Elite — $499/mo
+Everything in Growth, plus:
+
+Customization
+
+Full portal branding (colors, fonts, logo)
+
+Custom domain mapping (clubname.playhq.app → clubdomain.com)
+
+Integrations
+
+Microsoft 365 Calendar
+
+QuickBooks
+
+Zapier integration
+
+Advanced webhook triggers
+
+API Access
+
+Full read/write
+
+Automation hooks for external CRMs and reporting tools
+
+Advanced Analytics
+
+Multi-location reports
+
+Player progression tracking
+
+Payment forecasting
+
+Multi-Tenant Management
+
+Super Admin control for orgs with multiple locations/clubs
+
+SSO for Staff
+
+Google Workspace login
+
+Microsoft login
+
+Support
+
+Dedicated account manager
+
+Phone & email priority support
+
+Custom feature request queue
+
+Technical Implementation Approach
+Feature Flags: Use a plan_level field in the tenants table (core, growth, elite)
+
+Plan Middleware: On every route and component render, check if the feature is allowed for the current plan_level
+
+UI/UX Control: Hide unavailable features from the interface for lower tiers (don’t just disable; remove entirely to avoid confusion)
+
+Upgrade Path: If they click on a disabled feature, trigger a modal explaining it’s available in a higher tier with a “Request Upgrade” button
+
+here’s the full feature flag schema + integration checklist so your devs (or Replit agent) can drop it straight into the app and enforce the $99 / $199 / $499 tiers without ambiguity.
+
+Feature Flag Schema
+Database Table: feature_flags
+Purpose: Store which features are enabled for each plan level.
+
+Proposed Fields:
+
+Column	Type	Description
+id	UUID	Primary key
+plan_level	ENUM	core, growth, elite
+feature_key	TEXT	Unique key for feature (e.g., payments_enabled)
+enabled	BOOLEAN	If feature is available for this plan
+created_at	TIMESTAMP	Auto
+updated_at	TIMESTAMP	Auto
+
+Feature Key List & Mapping
+Core ($99/mo)
+json
+Copy
+Edit
+{
+  "session_management": true,
+  "location_links": true,
+  "parent_portal": true,
+  "theme_customization": false,
+  "waitlist_manual": true,
+  "waitlist_auto_promote": false,
+  "notifications_email": true,
+  "notifications_sms": false,
+  "analytics_basic": true,
+  "analytics_advanced": false,
+  "payments_enabled": false,
+  "integrations_calendar": false,
+  "integrations_mailchimp": false,
+  "integrations_quickbooks": false,
+  "integrations_zapier": false,
+  "api_read_only": false,
+  "api_full_access": false,
+  "multi_tenant": false,
+  "sso": false,
+  "support_standard": true,
+  "support_priority": false
+}
+Growth ($199/mo)
+json
+Copy
+Edit
+{
+  "session_management": true,
+  "location_links": true,
+  "parent_portal": true,
+  "theme_customization": false,
+  "waitlist_manual": true,
+  "waitlist_auto_promote": true,
+  "notifications_email": true,
+  "notifications_sms": true,
+  "analytics_basic": true,
+  "analytics_advanced": true,
+  "payments_enabled": true,
+  "integrations_calendar": true,
+  "integrations_mailchimp": true,
+  "integrations_quickbooks": false,
+  "integrations_zapier": false,
+  "api_read_only": true,
+  "api_full_access": false,
+  "multi_tenant": false,
+  "sso": false,
+  "support_standard": false,
+  "support_priority": true
+}
+Elite ($499/mo)
+json
+Copy
+Edit
+{
+  "session_management": true,
+  "location_links": true,
+  "parent_portal": true,
+  "theme_customization": true,
+  "waitlist_manual": true,
+  "waitlist_auto_promote": true,
+  "notifications_email": true,
+  "notifications_sms": true,
+  "analytics_basic": true,
+  "analytics_advanced": true,
+  "payments_enabled": true,
+  "integrations_calendar": true,
+  "integrations_mailchimp": true,
+  "integrations_quickbooks": true,
+  "integrations_zapier": true,
+  "api_read_only": true,
+  "api_full_access": true,
+  "multi_tenant": true,
+  "sso": true,
+  "support_standard": false,
+  "support_priority": true
+}
+Backend Enforcement Middleware (Pseudocode)
+ts
+Copy
+Edit
+function checkFeatureAccess(tenantId, featureKey) {
+    const planLevel = getTenantPlanLevel(tenantId);
+    const featureStatus = getFeatureFlag(planLevel, featureKey);
+
+    if (!featureStatus) {
+        throw new Error("Feature not available on your current plan");
+    }
+    return true;
+}
+Use this on API routes and in frontend components before rendering or processing any request.
+
+Frontend Guard Example (React)
+tsx
+Copy
+Edit
+if (!hasFeature('payments_enabled')) {
+  return <UpgradePrompt feature="Payments" />;
+}
+Integration Checklist Before Launch
+✅ Add plan_level column to tenants table (default to core for new tenants)
+✅ Create feature_flags table and populate with above JSON mapping
+✅ Add middleware for backend API checks
+✅ Add frontend utility function hasFeature(featureKey) for conditional rendering
+✅ Add Upgrade Prompt modal linking to subscription management
+✅ Test each tier with seed data to ensure features are correctly hidden or accessible
+✅ Update subscription billing logic to switch plan_level when payment changes in Stripe

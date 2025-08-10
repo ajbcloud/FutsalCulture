@@ -5,8 +5,10 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { DollarSign, Users, TrendingUp, Calendar, Download } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Calendar, Download, Crown } from 'lucide-react';
 import { adminApi } from '../../lib/adminApi';
+import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 import {
   LineChart,
   Line,
@@ -36,6 +38,9 @@ export default function DetailedAnalytics() {
     location: '',
     viewBy: 'account'
   });
+
+  // Feature flag hooks
+  const { hasFeature: hasAdvancedAnalytics } = useHasFeature(FEATURE_KEYS.ANALYTICS_ADVANCED);
 
   useEffect(() => {
     Promise.all([
@@ -84,6 +89,42 @@ export default function DetailedAnalytics() {
     a.download = `analytics-${filters.startDate}-${filters.endDate}.csv`;
     a.click();
   };
+
+  // If advanced analytics feature is not available, show upgrade prompt
+  if (!hasAdvancedAnalytics) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold flex items-center">
+              Advanced Analytics Dashboard
+              <Crown className="w-6 h-6 ml-2 text-amber-500" />
+            </h1>
+          </div>
+          
+          <Card className="bg-card border-border">
+            <CardHeader className="text-center py-12">
+              <CardTitle className="flex items-center justify-center text-2xl text-muted-foreground">
+                <Crown className="w-8 h-8 mr-3 text-amber-500" />
+                Advanced Analytics Available on Elite Plans
+              </CardTitle>
+              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+                Get detailed insights with advanced filtering, custom date ranges, revenue breakdowns, occupancy tracking, and comprehensive data export capabilities.
+                Upgrade to Elite plan to unlock advanced analytics.
+              </p>
+            </CardHeader>
+            <CardContent className="text-center pb-12">
+              <UpgradePrompt 
+                feature={FEATURE_KEYS.ANALYTICS_ADVANCED} 
+                targetPlan="elite"
+                className="inline-block"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   if (loading) {
     return (

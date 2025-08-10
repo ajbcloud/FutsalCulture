@@ -53,6 +53,8 @@ Preferred communication style: Simple, everyday language.
 - **Business Branding**: Dynamic display of business name and logo configurable via admin settings.
 - **Comprehensive Seed Data**: Includes realistic multi-tenant data for testing across various scenarios.
 - **Session Waitlist System**: Complete waitlist functionality when sessions reach capacity, including automated promotion, payment windows, and position management.
+- **3-Tier SaaS Pricing Structure**: Comprehensive plan-based feature access control with Core ($99/mo), Growth ($199/mo), and Elite ($499/mo) tiers.
+- **Feature Flag System**: Backend middleware and frontend hooks for plan-based feature restrictions and upgrade prompts.
 
 ### Business Logic
 - **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session.
@@ -82,3 +84,21 @@ Preferred communication style: Simple, everyday language.
 - **Mailchimp**: Email marketing.
 - **QuickBooks Online**: Accounting integration.
 - **Braintree**: Alternative payment processing.
+
+## SaaS Pricing & Feature Control
+
+### Pricing Tiers
+- **Core Plan ($99/mo)**: 150 players max, basic session management, email notifications, basic analytics
+- **Growth Plan ($199/mo)**: 500 players max, payment processing, SMS notifications, auto-promotion, advanced features  
+- **Elite Plan ($499/mo)**: Unlimited players, advanced analytics, theme customization, bulk operations, complete feature set
+
+### Feature Flag System
+- **Backend**: Middleware-based feature checking with tenant-scoped plan validation
+- **Frontend**: React hooks for conditional rendering and upgrade prompts
+- **Database**: Feature flags table with plan-level mappings and per-tenant overrides
+- **Integration**: Seamless feature restrictions across SMS, payments, analytics, and advanced functionality
+
+### Plan Limits & Enforcement
+- **Player Limits**: Hard enforcement based on plan level with upgrade prompts
+- **Feature Access**: Real-time checking with graceful degradation for restricted features
+- **Upgrade Flows**: Contextual upgrade prompts with plan comparison and feature benefits

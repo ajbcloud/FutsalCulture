@@ -16,6 +16,20 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Plan level enum for feature flags (must be declared before tenants table)
+export const planLevelEnum = pgEnum("plan_level", ["core", "growth", "elite"]);
+
+// Registration status enum
+export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
+
+// Integration provider enum
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks", "braintree"
+]);
+
+// Waitlist offer status enum
+export const waitlistOfferStatusEnum = pgEnum("waitlist_offer_status", ["none", "offered", "accepted", "expired"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -32,19 +46,13 @@ export const tenants = pgTable("tenants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   subdomain: varchar("subdomain").unique().notNull(),
+  planLevel: planLevelEnum("plan_level").default("core"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Registration status enum
-export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
 
-// Integration provider enum
-export const integrationProviderEnum = pgEnum("integration_provider", [
-  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks", "braintree"
-]);
-
-// Waitlist offer status enum
-export const waitlistOfferStatusEnum = pgEnum("waitlist_offer_status", ["none", "offered", "accepted", "expired"]);
 
 // User storage table for Replit Auth
 export const users = pgTable("users", {
@@ -345,6 +353,18 @@ export const serviceBilling = pgTable("service_billing", {
   index("service_billing_tenant_id_idx").on(table.tenantId),
 ]);
 
+// Feature flags table for plan-based access control
+export const featureFlags = pgTable("feature_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  planLevel: planLevelEnum("plan_level").notNull(),
+  featureKey: varchar("feature_key").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("feature_flags_plan_feature_idx").on(table.planLevel, table.featureKey),
+]);
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -547,11 +567,7 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
     .max(50, "Code must be less than 50 characters")
     .regex(/^[A-Z0-9_-]+$/, "Code can only contain uppercase letters, numbers, underscores, and hyphens"),
   discountType: z.enum(['percentage', 'fixed', 'full']),
-  discountValue: z.number().int().optional().refine((val, ctx) => {
-    const { discountType } = ctx.parent;
-    if (discountType === 'full') return true;
-    return val !== undefined && val > 0;
-  }, "Discount value is required for percentage and fixed discounts"),
+  discountValue: z.number().int().optional(),
   maxUses: z.number().int().positive().optional(),
   lockedToPlayerId: z.string().optional(),
   lockedToParentId: z.string().optional(),
@@ -575,6 +591,45 @@ export const leaveWaitlistSchema = z.object({
 export const promoteWaitlistSchema = z.object({
   playerId: z.string().optional(),
 });
+
+export const insertFeatureFlagSchema = createInsertSchema(featureFlags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type FeatureFlagInsert = z.infer<typeof insertFeatureFlagSchema>;
+export type FeatureFlagSelect = typeof featureFlags.$inferSelect;
+
+// Type exports for plan levels
+export type PlanLevel = 'core' | 'growth' | 'elite';
+
+// Feature key constants
+export const FEATURE_KEYS = {
+  SESSION_MANAGEMENT: 'session_management',
+  LOCATION_LINKS: 'location_links', 
+  PARENT_PORTAL: 'parent_portal',
+  THEME_CUSTOMIZATION: 'theme_customization',
+  WAITLIST_MANUAL: 'waitlist_manual',
+  WAITLIST_AUTO_PROMOTE: 'waitlist_auto_promote',
+  NOTIFICATIONS_EMAIL: 'notifications_email',
+  NOTIFICATIONS_SMS: 'notifications_sms',
+  ANALYTICS_BASIC: 'analytics_basic',
+  ANALYTICS_ADVANCED: 'analytics_advanced',
+  PAYMENTS_ENABLED: 'payments_enabled',
+  INTEGRATIONS_CALENDAR: 'integrations_calendar',
+  INTEGRATIONS_MAILCHIMP: 'integrations_mailchimp',
+  INTEGRATIONS_QUICKBOOKS: 'integrations_quickbooks',
+  INTEGRATIONS_ZAPIER: 'integrations_zapier',
+  API_READ_ONLY: 'api_read_only',
+  API_FULL_ACCESS: 'api_full_access',
+  MULTI_TENANT: 'multi_tenant',
+  SSO: 'sso',
+  SUPPORT_STANDARD: 'support_standard',
+  SUPPORT_PRIORITY: 'support_priority',
+} as const;
+
+export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];
 
 export const waitlistSettingsSchema = z.object({
   waitlistEnabled: z.boolean().optional(),

@@ -10,11 +10,13 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2 } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 
 interface LocationData {
   name: string;
@@ -206,10 +208,22 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Feature flag hooks
+  const { data: planFeatures } = usePlanFeatures();
+  const { hasFeature: hasSmsFeature } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
+  const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
+  const { hasFeature: hasAdvancedAnalytics } = useHasFeature(FEATURE_KEYS.ANALYTICS_ADVANCED);
+  const { hasFeature: hasAutoPromotion } = useHasFeature(FEATURE_KEYS.WAITLIST_AUTO_PROMOTE);
+  const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
+  const planLimits = usePlanLimits();
+
   // Check if Twilio integration is enabled
   const isTwilioEnabled = integrations.some(
     integration => integration.provider.toLowerCase() === 'twilio' && integration.enabled
   );
+
+  // Combined SMS availability check (requires both plan feature and Twilio integration)
+  const canUseSms = hasSmsFeature && isTwilioEnabled;
 
   useEffect(() => {
     // Check for payment success parameter
@@ -494,6 +508,12 @@ export default function AdminSettings() {
               Sessions & Schedule
             </TabsTrigger>
             <TabsTrigger 
+              value="plan" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Plan & Features
+            </TabsTrigger>
+            <TabsTrigger 
               value="billing" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
@@ -510,12 +530,15 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-4 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-5 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
             <TabsTrigger value="sessions" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Sessions & Schedule
+            </TabsTrigger>
+            <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Plan & Features
             </TabsTrigger>
             <TabsTrigger value="billing" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Service Billing
@@ -794,27 +817,38 @@ export default function AdminSettings() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className={`${!isTwilioEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  <Label className={`${!canUseSms ? 'text-muted-foreground' : 'text-foreground'}`}>
                     SMS Notifications
+                    {!hasSmsFeature && (
+                      <Crown className="w-4 h-4 inline ml-1 text-amber-500" />
+                    )}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {isTwilioEnabled 
-                      ? 'Receive SMS notifications for urgent events'
-                      : 'Requires Twilio integration to be configured'
+                    {!hasSmsFeature 
+                      ? 'SMS notifications are available on Growth and Elite plans'
+                      : isTwilioEnabled 
+                        ? 'Receive SMS notifications for urgent events'
+                        : 'Requires Twilio integration to be configured'
                     }
                   </p>
-                  {!isTwilioEnabled && (
+                  {!hasSmsFeature ? (
+                    <UpgradePrompt 
+                      feature={FEATURE_KEYS.NOTIFICATIONS_SMS} 
+                      className="mt-2"
+                      targetPlan="growth"
+                    />
+                  ) : !isTwilioEnabled && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
                       Configure Twilio in the Integrations tab to enable SMS notifications
                     </p>
                   )}
                 </div>
                 <Switch
-                  checked={settings.smsNotifications && isTwilioEnabled}
+                  checked={settings.smsNotifications && canUseSms}
                   onCheckedChange={(checked) => 
                     setSettings(prev => ({ ...prev, smsNotifications: checked }))
                   }
-                  disabled={!isTwilioEnabled}
+                  disabled={!canUseSms}
                 />
               </div>
             </CardContent>
@@ -938,16 +972,32 @@ export default function AdminSettings() {
                   
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label className="text-foreground">Auto-promote by Default</Label>
+                      <Label className={`${!hasAutoPromotion ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        Auto-promote by Default
+                        {!hasAutoPromotion && (
+                          <Crown className="w-4 h-4 inline ml-1 text-amber-500" />
+                        )}
+                      </Label>
                       <p className="text-sm text-muted-foreground">
-                        Automatically offer spots to next person on waitlist
+                        {hasAutoPromotion 
+                          ? 'Automatically offer spots to next person on waitlist'
+                          : 'Automatic waitlist promotion is available on Growth and Elite plans'
+                        }
                       </p>
+                      {!hasAutoPromotion && (
+                        <UpgradePrompt 
+                          feature={FEATURE_KEYS.WAITLIST_AUTO_PROMOTE} 
+                          className="mt-2"
+                          targetPlan="growth"
+                        />
+                      )}
                     </div>
                     <Switch
-                      checked={settings.defaultAutoPromote}
+                      checked={settings.defaultAutoPromote && hasAutoPromotion}
                       onCheckedChange={(checked) => 
                         setSettings(prev => ({ ...prev, defaultAutoPromote: checked }))
                       }
+                      disabled={!hasAutoPromotion}
                     />
                   </div>
                 </div>
@@ -1257,6 +1307,207 @@ export default function AdminSettings() {
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
+        </TabsContent>
+
+        <TabsContent value="plan" className="space-y-6">
+          {/* Current Plan Overview */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <Crown className="w-5 h-5 mr-2 text-amber-500" />
+                Current Subscription Plan
+              </CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Your plan determines which features and limits are available for your organization.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {planFeatures ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-foreground capitalize mb-2">
+                      {planFeatures.planLevel} Plan
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {planFeatures.planLevel === 'core' && '$99/month - Essential features for small organizations'}
+                      {planFeatures.planLevel === 'growth' && '$199/month - Advanced features for growing organizations'}
+                      {planFeatures.planLevel === 'elite' && '$499/month - Complete feature set with unlimited capacity'}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {planLimits?.maxPlayers === null ? 'Unlimited' : `${planLimits?.maxPlayers || 150}`}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Maximum registered players
+                    </div>
+                  </div>
+                  
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-lg font-semibold text-foreground mb-2">Features Included</div>
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {planFeatures.features.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Active features in your plan
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading plan information...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Feature Availability Grid */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                Feature Availability
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { key: FEATURE_KEYS.PAYMENTS_ENABLED, name: 'Payment Processing', description: 'Accept payments through Stripe' },
+                  { key: FEATURE_KEYS.NOTIFICATIONS_SMS, name: 'SMS Notifications', description: 'Send SMS alerts to parents and players' },
+                  { key: FEATURE_KEYS.ANALYTICS_ADVANCED, name: 'Advanced Analytics', description: 'Detailed reporting and insights' },
+                  { key: FEATURE_KEYS.WAITLIST_AUTO_PROMOTE, name: 'Auto-Promotion', description: 'Automatically promote from waitlist' },
+                  { key: FEATURE_KEYS.THEME_CUSTOMIZATION, name: 'Theme Customization', description: 'Custom branding and colors' },
+                  { key: FEATURE_KEYS.BULK_OPERATIONS, name: 'Bulk Operations', description: 'Mass upload sessions and players' },
+                ].map((feature, index) => {
+                  const hasFeature = planFeatures?.features.includes(feature.key);
+                  return (
+                    <div key={`${feature.key}-${index}`} className="flex items-start space-x-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="mt-0.5">
+                        {hasFeature ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className={`font-medium ${hasFeature ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {feature.name}
+                          {!hasFeature && <Crown className="w-4 h-4 inline ml-1 text-amber-500" />}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{feature.description}</div>
+                        {!hasFeature && (
+                          <UpgradePrompt 
+                            feature={feature.key} 
+                            className="mt-2"
+                            targetPlan={feature.key === FEATURE_KEYS.PAYMENTS_ENABLED || feature.key === FEATURE_KEYS.NOTIFICATIONS_SMS ? 'growth' : 'elite'}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Plan Comparison */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <Zap className="w-5 h-5 mr-2" />
+                Plan Comparison
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Core Plan */}
+                <div className="border border-border rounded-lg p-4 bg-muted/20">
+                  <div className="text-center mb-4">
+                    <div className="text-xl font-bold text-foreground">Core</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">$99<span className="text-sm font-normal">/mo</span></div>
+                    <div className="text-sm text-muted-foreground">Essential features</div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>150 players max</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Basic session management</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Email notifications</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Basic analytics</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Growth Plan */}
+                <div className={`border-2 rounded-lg p-4 ${planFeatures?.planLevel === 'growth' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'}`}>
+                  <div className="text-center mb-4">
+                    {planFeatures?.planLevel !== 'growth' && (
+                      <Badge className="mb-2 bg-amber-500 text-white">Popular</Badge>
+                    )}
+                    <div className="text-xl font-bold text-foreground">Growth</div>
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">$199<span className="text-sm font-normal">/mo</span></div>
+                    <div className="text-sm text-muted-foreground">Advanced features</div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>500 players max</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Payment processing</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>SMS notifications</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Auto-promotion</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Elite Plan */}
+                <div className={`border rounded-lg p-4 ${planFeatures?.planLevel === 'elite' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-border bg-muted/20'}`}>
+                  <div className="text-center mb-4">
+                    <div className="text-xl font-bold text-foreground">Elite</div>
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">$499<span className="text-sm font-normal">/mo</span></div>
+                    <div className="text-sm text-muted-foreground">Complete feature set</div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Unlimited players</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Advanced analytics</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Theme customization</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Bulk operations</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6">

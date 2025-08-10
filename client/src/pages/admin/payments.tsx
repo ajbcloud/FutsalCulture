@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { CheckCircle, RefreshCw, DollarSign, XCircle, Info, Check } from 'lucide-react';
+import { CheckCircle, RefreshCw, DollarSign, XCircle, Info, Check, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -22,6 +22,9 @@ import { Badge } from '../../components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
+import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export default function AdminPayments() {
   const [allPayments, setAllPayments] = useState<any[]>([]);
@@ -43,6 +46,9 @@ export default function AdminPayments() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   
   const { toast } = useToast();
+  
+  // Feature flag hooks
+  const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
   
   // Refresh payments data when returning to page
   usePageRefresh(["/api/admin/payments"]);
@@ -335,6 +341,42 @@ export default function AdminPayments() {
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // If payments feature is not available, show upgrade prompt
+  if (!hasPaymentsFeature) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold flex items-center">
+              Payments & Refunds
+              <Crown className="w-6 h-6 ml-2 text-amber-500" />
+            </h1>
+          </div>
+          
+          <Card className="bg-card border-border">
+            <CardHeader className="text-center py-12">
+              <CardTitle className="flex items-center justify-center text-2xl text-muted-foreground">
+                <Crown className="w-8 h-8 mr-3 text-amber-500" />
+                Payment Processing Available on Growth and Elite Plans
+              </CardTitle>
+              <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+                Accept payments through Stripe, manage refunds, and track payment analytics with our advanced payment processing system.
+                Upgrade to Growth or Elite plan to enable this feature.
+              </p>
+            </CardHeader>
+            <CardContent className="text-center pb-12">
+              <UpgradePrompt 
+                feature={FEATURE_KEYS.PAYMENTS_ENABLED} 
+                targetPlan="growth"
+                className="inline-block"
+              />
+            </CardContent>
+          </Card>
         </div>
       </AdminLayout>
     );
