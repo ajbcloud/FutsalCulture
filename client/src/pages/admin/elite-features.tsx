@@ -37,6 +37,10 @@ interface ThemeSettings {
   lightIconColor?: string;
   lightAccentColor?: string;
   lightBorderColor?: string;
+  lightInputBackground?: string;
+  lightSuccessColor?: string;
+  lightWarningColor?: string;
+  lightErrorColor?: string;
   // Dark mode colors
   darkPrimaryButton: string;
   darkSecondaryButton: string;
@@ -56,6 +60,10 @@ interface ThemeSettings {
   darkIconColor?: string;
   darkAccentColor?: string;
   darkBorderColor?: string;
+  darkInputBackground?: string;
+  darkSuccessColor?: string;
+  darkWarningColor?: string;
+  darkErrorColor?: string;
   // Legacy fields for backward compatibility
   primaryButton?: string;
   secondaryButton?: string;
@@ -86,46 +94,54 @@ export default function EliteFeatures() {
   const queryClient = useQueryClient();
   const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
   
-  // Theme Settings State
+  // Theme Settings State - Updated to match standard application colors
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
-    // Light mode defaults
-    lightPrimaryButton: '#2563eb',
-    lightSecondaryButton: '#64748b',
-    lightBackground: '#ffffff',
-    lightText: '#111827',
-    lightHeadingColor: '#111827',
-    lightDescriptionColor: '#4b5563',
-    lightNavTitle: '#111827',
-    lightNavText: '#6b7280',
-    lightNavActiveText: '#ffffff',
+    // Light mode defaults - matching standard application theme
+    lightPrimaryButton: '#3b82f6',      // 1. hsl(217, 91%, 60%) - Primary brand color
+    lightSecondaryButton: '#f3f4f6',    // 2. hsl(214, 32%, 96%) - Input background
+    lightBackground: '#ffffff',         // 3. hsl(0, 0%, 100%) - Main background
+    lightText: '#0f172a',              // 4. hsl(222, 84%, 5%) - Primary text
+    lightHeadingColor: '#0f172a',      // 5. hsl(222, 84%, 5%) - Primary text for headings
+    lightDescriptionColor: '#64748b',   // 6. hsl(215, 16%, 35%) - Secondary text
+    lightNavTitle: '#0f172a',          // 7. Primary text for nav title
+    lightNavText: '#64748b',           // 8. Secondary text for nav
+    lightNavActiveText: '#ffffff',      // 9. White text on active nav items
     // Extended light mode
-    lightPageTitle: '#111827',
-    lightCardBackground: '#ffffff',
-    lightCardTitle: '#111827',
-    lightFeatureTitle: '#111827',
-    lightFeatureDescription: '#4b5563',
-    lightIconColor: '#6366f1',
-    lightAccentColor: '#8b5cf6',
-    lightBorderColor: '#e5e7eb',
-    // Dark mode defaults
-    darkPrimaryButton: '#3b82f6',
-    darkSecondaryButton: '#64748b',
-    darkBackground: '#0f172a',
-    darkText: '#ffffff',
-    darkHeadingColor: '#3b82f6',
-    darkDescriptionColor: '#e2e8f0',
-    darkNavTitle: '#ffffff',
-    darkNavText: '#e2e8f0',
-    darkNavActiveText: '#ffffff',
+    lightPageTitle: '#0f172a',         // 10. Primary text for page titles
+    lightCardBackground: '#ffffff',     // 11. White card backgrounds
+    lightCardTitle: '#0f172a',         // 12. Primary text for card titles
+    lightFeatureTitle: '#0f172a',      // 13. Primary text for features
+    lightFeatureDescription: '#64748b', // 14. Secondary text for descriptions
+    lightIconColor: '#3b82f6',         // 15. Primary brand color for icons
+    lightAccentColor: '#22c55e',       // Success/accent color
+    lightBorderColor: '#e2e8f0',       // Default borders
+    lightInputBackground: '#f8fafc',   // Input backgrounds
+    lightSuccessColor: '#22c55e',      // Success states
+    lightWarningColor: '#f59e0b',      // Warning states
+    lightErrorColor: '#dc2626',        // Error states
+    // Dark mode defaults - matching dark theme
+    darkPrimaryButton: '#60a5fa',      // 1. hsl(217, 91%, 70%) - Lighter brand for contrast
+    darkSecondaryButton: '#475569',     // 2. Dark secondary button
+    darkBackground: '#0f1629',         // 3. hsl(222, 84%, 4%) - Main dark background
+    darkText: '#ffffff',               // 4. Pure white text
+    darkHeadingColor: '#ffffff',       // 5. White headings in dark mode
+    darkDescriptionColor: '#cbd5e1',   // 6. hsl(210, 40%, 85%) - Light gray descriptions
+    darkNavTitle: '#ffffff',           // 7. White nav title
+    darkNavText: '#cbd5e1',           // 8. Light gray nav text
+    darkNavActiveText: '#ffffff',       // 9. White active nav text
     // Extended dark mode
-    darkPageTitle: '#5b8def',
-    darkCardBackground: '#1e293b',
-    darkCardTitle: '#ffffff',
-    darkFeatureTitle: '#ffffff',
-    darkFeatureDescription: '#d1d9e6',
-    darkIconColor: '#818cf8',
-    darkAccentColor: '#a78bfa',
-    darkBorderColor: '#334155'
+    darkPageTitle: '#ffffff',          // 10. White page titles
+    darkCardBackground: '#1e293b',     // 11. hsl(217, 33%, 8%) - Elevated surfaces
+    darkCardTitle: '#ffffff',          // 12. White card titles
+    darkFeatureTitle: '#ffffff',       // 13. White feature titles
+    darkFeatureDescription: '#cbd5e1', // 14. Light gray feature descriptions
+    darkIconColor: '#60a5fa',          // 15. Lighter brand color for icons
+    darkAccentColor: '#34d399',        // Success/accent color for dark mode
+    darkBorderColor: '#374151',        // hsl(217, 33%, 25%) - Dark borders
+    darkInputBackground: '#1e293b',    // Dark input backgrounds
+    darkSuccessColor: '#34d399',       // Success states for dark mode
+    darkWarningColor: '#fbbf24',       // Warning states for dark mode
+    darkErrorColor: '#f87171',         // Error states for dark mode
   });
 
   // Feature Request State
@@ -1408,9 +1424,9 @@ export default function EliteFeatures() {
                             Dashboard
                           </div>
                           <div 
-                            key={`light-nav-active-${themeSettings.lightNavActiveBg}-${themeSettings.lightNavActiveText}`}
+                            key={`light-nav-active-${themeSettings.lightPrimaryButton}-${themeSettings.lightNavActiveText}`}
                             style={{ 
-                              backgroundColor: `${themeSettings.lightNavActiveBg} !important`,
+                              backgroundColor: `${themeSettings.lightPrimaryButton} !important`,
                               color: `${themeSettings.lightNavActiveText} !important`,
                               fontSize: '0.875rem',
                               padding: '0.25rem 0.5rem',
@@ -1649,9 +1665,9 @@ export default function EliteFeatures() {
                             8. Dashboard
                           </div>
                           <div 
-                            key={`dark-nav-active-${themeSettings.darkNavActiveBg}-${themeSettings.darkNavActiveText}`}
+                            key={`dark-nav-active-${themeSettings.darkPrimaryButton}-${themeSettings.darkNavActiveText}`}
                             style={{ 
-                              backgroundColor: `${themeSettings.darkNavActiveBg} !important`,
+                              backgroundColor: `${themeSettings.darkPrimaryButton} !important`,
                               color: `${themeSettings.darkNavActiveText} !important`,
                               fontSize: '0.875rem',
                               padding: '0.25rem 0.5rem',
@@ -1757,7 +1773,7 @@ export default function EliteFeatures() {
                             border: `1px solid ${themeSettings.darkBorderColor}`,
                             padding: '0.5rem',
                             borderRadius: '0.375rem',
-                            color: themeSettings.darkTextColor,
+                            color: themeSettings.darkText,
                             fontSize: '0.875rem'
                           }}
                         >
@@ -1770,7 +1786,7 @@ export default function EliteFeatures() {
                             border: `1px solid ${themeSettings.darkBorderColor}`,
                             padding: '0.5rem',
                             borderRadius: '0.375rem',
-                            color: themeSettings.darkTextColor,
+                            color: themeSettings.darkText,
                             fontSize: '0.875rem'
                           }}
                         >
