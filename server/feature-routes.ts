@@ -37,13 +37,14 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    const planLevel = tenant[0].planLevel;
+    const planLevel = tenant[0].planLevel || 'core';
     const features = getTenantFeatures(tenantId);
-    const limits = PLAN_LIMITS[planLevel];
+    const limits = PLAN_LIMITS[planLevel as keyof typeof PLAN_LIMITS];
     
     // Get current player count for this tenant
     const playerCountResult = await db.execute(
-      `SELECT COUNT(*) as count FROM players WHERE tenant_id = $1`
+      `SELECT COUNT(*) as count FROM players WHERE tenant_id = $1`,
+      [tenantId]
     );
     const playerCount = parseInt(playerCountResult.rows[0]?.count || '0');
 
@@ -172,9 +173,9 @@ router.get('/tenant/upgrade-recommendations', async (req, res) => {
     
     const recommendations = {
       currentPlan: planLevel,
-      nextPlan: planLevel === 'core' ? 'growth' : planLevel === 'growth' ? 'elite' : null,
-      upgradeBenefits: [],
-      planLimits: PLAN_LIMITS[planLevel],
+      nextPlan: planLevel === 'core' ? 'growth' as const : planLevel === 'growth' ? 'elite' as const : null,
+      upgradeBenefits: [] as string[],
+      planLimits: PLAN_LIMITS[planLevel as keyof typeof PLAN_LIMITS],
     };
 
     if (recommendations.nextPlan) {
