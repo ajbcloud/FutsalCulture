@@ -1,0 +1,183 @@
+Goal
+Make every page readable and consistent in both light and dark modes after introducing Elite custom themes. Establish semantic color tokens, enforce contrast (WCAG AA), and provide safe defaults + fallbacks when a customer theme reduces legibility.
+
+1) Audit & inventory
+Scan all pages & major components in both modes:
+
+Dashboard (admin + super admin), Sessions, Payments, Registrations, Players, Parents, Analytics, Help Requests, Settings (incl. Plan & Features, Integrations), Parent/Player portal.
+
+Reusable UI: navbars, sidebars, cards, tables, accordions, badges, toasts, charts, forms, toggles, buttons, tabs, pagination, tooltips, empty states, banners.
+
+Log problem spots (low contrast, invisible focus rings, off-brand link colors, unreadable badges) and note the component/class names.
+
+2) Introduce semantic color tokens via CSS variables
+Create (or refactor to) tokens in :root (light) and .dark (dark). Use neutral scale + brand scale only through tokens, not raw hex.
+
+css
+Copy
+Edit
+/* base.css */
+:root {
+  --bg: #0b0d10;         /* if our default is dark-first, invert if light-first */
+  --bg-elev: #14171c;
+  --surface: #1b1f26;
+  --text: #e9edf1;
+  --text-muted: #a8b0bb;
+  --border: #2a3039;
+
+  --brand: #3b82f6;      /* primary */
+  --brand-contrast: #0b1220;
+  --accent: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --success: #16a34a;
+
+  /* states */
+  --focus: #60a5fa;
+  --link: var(--brand);
+  --link-hover: #2563eb;
+
+  /* charts (fallbacks) */
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #a855f7;
+}
+
+/* Light mode overrides */
+:root.light, .light {
+  --bg: #f7f9fc;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --border: #e2e8f0;
+
+  --brand: #2563eb;
+  --brand-contrast: #ffffff;
+  --accent: #059669;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #0e7490;
+  --success: #047857;
+
+  --link: var(--brand);
+  --link-hover: #1d4ed8;
+}
+Map Tailwind to these variables (update tailwind.config):
+
+js
+Copy
+Edit
+// tailwind.config.cjs
+module.exports = {
+  darkMode: ['class'],
+  theme: {
+    extend: {
+      colors: {
+        bg: 'var(--bg)',
+        'bg-elev': 'var(--bg-elev)',
+        surface: 'var(--surface)',
+        text: 'var(--text)',
+        'text-muted': 'var(--text-muted)',
+        border: 'var(--border)',
+        brand: 'var(--brand)',
+        'brand-contrast': 'var(--brand-contrast)',
+        accent: 'var(--accent)',
+        warning: 'var(--warning)',
+        danger: 'var(--danger)',
+        info: 'var(--info)',
+        success: 'var(--success)',
+      },
+    },
+  },
+};
+3) Refactor components to semantic tokens
+Replace direct hex/utility colors with token classes (e.g., bg-surface, text-text, border-border, buttons bg-brand text-brand-contrast hover:bg-brand/90).
+
+Ensure hover/active/disabled states use alpha variants that maintain AA contrast (≥ 4.5:1 for body, ≥ 3:1 for large text/icons).
+
+Buttons/badges:
+
+Primary: bg-brand text-brand-contrast
+
+Secondary: bg-bg-elev text-text border border-border
+
+Destructive: bg-danger text-brand-contrast
+
+Success/Info/Warning badges use bg-* text-brand-contrast or bg-* /10 text-* depending on background for contrast.
+
+Links: text-link hover:text-link-hover underline-offset-2 hover:underline.
+
+Focus: add focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] focus-visible:outline-offset-2.
+
+4) Dark & light defaults + mode switch
+Confirm the app toggles .dark on <html> or <body>. Provide a light mode default if that’s our brand; otherwise keep dark-first but verify every screen in both.
+
+Ensure charts (Recharts) read from CSS vars for line/fill colors; apply different grid/axis colors by mode (--border, --text-muted).
+
+5) Elite custom theme hardening
+Where Elite selects brand/accent colors, only set --brand, --accent (and optional neutrals if implemented). Do not override base neutrals unless explicitly supported.
+
+Add a small utility to validate contrast when a user picks --brand:
+
+If contrast(--brand, --surface) < 4.5, automatically set --brand-contrast to #0b1220 or #ffffff based on which yields ≥ 4.5 against --brand.
+
+Clamp overly light/dark choices by slightly adjusting L* to reach AA (document in UI with “Adjusted for readability”).
+
+Provide Reset to defaults and Preview before saving theme.
+
+Store the theme at tenant level; on load, merge tenant overrides into CSS vars with fallbacks to platform defaults.
+
+6) Fix known problem areas
+Toasts/snackbars: increase contrast of text vs. background; ensure close icon visible in both modes.
+
+Disabled inputs/buttons: ensure text-muted vs. surface meets contrast; avoid ultra-low opacity.
+
+Tables: header bg vs. text, row hover states, selected row highlight; zebra striping subtle but visible.
+
+Badges in dark mode (warning/info) often fail AA—adjust to darker hues or add border.
+
+Tooltips & popovers: default bg-surface with border-border, text-text.
+
+Info icons (KPI tooltips): ensure visible in light & dark; hover/focus states meet contrast.
+
+Empty states & skeletons: keep neutral but legible.
+
+7) Testing & acceptance criteria
+Run automated checks (use a11y/axe in dev if available) and manually verify AA contrast across all pages in both modes.
+
+Verify Elite theme picker:
+
+Can’t save a theme that produces non‑AA primary button text.
+
+Theme preview matches saved theme after refresh.
+
+Fallbacks kick in if values are missing/invalid.
+
+Confirm charts, badges, links, buttons, and focus rings are consistent platform‑wide.
+
+Update screenshots/docs if we have a design system README.
+
+8) Deliverables
+Updated base.css (or global stylesheet) with tokens for light/dark.
+
+Updated tailwind.config to map tokens.
+
+Refactors for components/pages to adopt tokens.
+
+Theme validation utility for Elite custom themes.
+
+Short doc: theming.md (tokens, how to add new colors, validation rules).
+
+Checklist of pages/components verified, with before/after notes.
+
+Notes
+
+Do not regress existing layouts; this is primarily color/contrast and tokenization.
+
+Keep chart palettes accessible and distinct; ensure legends/labels meet contrast.
+
+Preserve current brand “pop,” but never at the expense of readability.

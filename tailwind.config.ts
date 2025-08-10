@@ -11,6 +11,53 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        /* Semantic color tokens */
+        bg: "var(--bg)",
+        "bg-elev": "var(--bg-elev)",
+        surface: "var(--surface)",
+        text: "var(--text)",
+        "text-muted": "var(--text-muted)",
+        "text-subtle": "var(--text-subtle)",
+        border: "var(--border)",
+        "border-hover": "var(--border-hover)",
+        input: "var(--input)",
+        
+        /* Brand colors */
+        brand: {
+          DEFAULT: "var(--brand)",
+          contrast: "var(--brand-contrast)",
+          hover: "var(--brand-hover)",
+          light: "var(--brand-light)",
+        },
+        
+        /* Status colors */
+        accent: {
+          DEFAULT: "var(--accent)",
+          contrast: "var(--accent-contrast)",
+        },
+        warning: {
+          DEFAULT: "var(--warning)",
+          contrast: "var(--warning-contrast)",
+        },
+        danger: {
+          DEFAULT: "var(--danger)",
+          contrast: "var(--danger-contrast)",
+        },
+        info: {
+          DEFAULT: "var(--info)",
+          contrast: "var(--info-contrast)",
+        },
+        success: {
+          DEFAULT: "var(--success)",
+          contrast: "var(--success-contrast)",
+        },
+        
+        /* Interactive states */
+        focus: "var(--focus)",
+        link: "var(--link)",
+        "link-hover": "var(--link-hover)",
+        
+        /* Legacy Shadcn compatibility */
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {
@@ -33,16 +80,10 @@ export default {
           DEFAULT: "var(--muted)",
           foreground: "var(--muted-foreground)",
         },
-        accent: {
-          DEFAULT: "var(--accent)",
-          foreground: "var(--accent-foreground)",
-        },
         destructive: {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
         },
-        border: "var(--border)",
-        input: "var(--input)",
         ring: "var(--ring)",
         chart: {
           "1": "var(--chart-1)",

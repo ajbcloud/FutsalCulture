@@ -2,89 +2,157 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode semantic colors (default) */
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(222, 84%, 5%);
-  --muted: hsl(210, 40%, 96%);
-  --muted-foreground: hsl(215, 16%, 35%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(222, 84%, 5%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(222, 84%, 5%);
-  --border: hsl(214, 32%, 91%);
-  --input: hsl(214, 32%, 91%);
-  --primary: hsl(217, 91%, 60%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(210, 40%, 96%);
-  --secondary-foreground: hsl(222, 84%, 5%);
-  --accent: hsl(210, 40%, 96%);
-  --accent-foreground: hsl(222, 84%, 5%);
-  --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(217, 91%, 60%);
+  /* Core backgrounds */
+  --bg: hsl(0, 0%, 100%);              /* Main background */
+  --bg-elev: hsl(0, 0%, 100%);         /* Elevated surfaces (cards, modals) */
+  --surface: hsl(0, 0%, 100%);         /* Interactive surfaces */
+  
+  /* Text colors */
+  --text: hsl(222, 84%, 5%);           /* Primary text - high contrast */
+  --text-muted: hsl(215, 16%, 35%);    /* Secondary text - medium contrast */
+  --text-subtle: hsl(210, 40%, 60%);   /* Tertiary text - low contrast */
+  
+  /* Interactive elements */
+  --border: hsl(214, 32%, 91%);        /* Default borders */
+  --border-hover: hsl(214, 32%, 85%);  /* Hover borders */
+  --input: hsl(214, 32%, 96%);         /* Input backgrounds */
+  
+  /* Brand colors */
+  --brand: hsl(217, 91%, 60%);         /* Primary brand color */
+  --brand-contrast: hsl(0, 0%, 100%);  /* Text on brand backgrounds */
+  --brand-hover: hsl(217, 91%, 55%);   /* Brand hover state */
+  --brand-light: hsl(217, 91%, 95%);   /* Light brand backgrounds */
+  
+  /* Status colors */
+  --accent: hsl(142, 76%, 36%);        /* Success/positive actions */
+  --accent-contrast: hsl(0, 0%, 100%);
+  --warning: hsl(38, 92%, 50%);        /* Warning states */
+  --warning-contrast: hsl(0, 0%, 100%);
+  --danger: hsl(0, 84%, 60%);          /* Error/destructive actions */
+  --danger-contrast: hsl(0, 0%, 100%);
+  --info: hsl(199, 89%, 48%);          /* Information */
+  --info-contrast: hsl(0, 0%, 100%);
+  --success: hsl(142, 76%, 36%);       /* Success confirmation */
+  --success-contrast: hsl(0, 0%, 100%);
+  
+  /* Interactive states */
+  --focus: hsl(217, 91%, 70%);         /* Focus rings */
+  --link: hsl(217, 91%, 60%);          /* Link colors */
+  --link-hover: hsl(217, 91%, 50%);    /* Link hover */
+  
+  /* Chart colors - WCAG compliant palette */
+  --chart-1: hsl(217, 91%, 60%);       /* Blue */
+  --chart-2: hsl(142, 76%, 36%);       /* Green */
+  --chart-3: hsl(38, 92%, 50%);        /* Orange */
+  --chart-4: hsl(0, 84%, 60%);         /* Red */
+  --chart-5: hsl(271, 91%, 65%);       /* Purple */
+  --chart-6: hsl(199, 89%, 48%);       /* Cyan */
+  
+  /* Legacy Shadcn variables for compatibility */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted: var(--input);
+  --muted-foreground: var(--text-muted);
+  --popover: var(--bg-elev);
+  --popover-foreground: var(--text);
+  --card: var(--bg-elev);
+  --card-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-contrast);
+  --secondary: var(--input);
+  --secondary-foreground: var(--text);
+  --accent: var(--input);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-contrast);
+  --ring: var(--focus);
   --radius: 0.5rem;
   
-  /* Futsal Brand Colors */
-  --futsal-50: hsl(138, 76%, 97%);
-  --futsal-100: hsl(141, 84%, 93%);
-  --futsal-200: hsl(141, 79%, 85%);
-  --futsal-300: hsl(142, 77%, 73%);
-  --futsal-400: hsl(142, 69%, 58%);
-  --futsal-500: hsl(142, 76%, 36%);
-  --futsal-600: hsl(142, 72%, 29%);
-  --futsal-700: hsl(142, 64%, 24%);
-  --futsal-800: hsl(142, 53%, 20%);
-  --futsal-900: hsl(143, 61%, 10%);
-  
-  /* Brand Blue Colors */
-  --brand-50: hsl(214, 100%, 97%);
-  --brand-100: hsl(214, 95%, 93%);
-  --brand-200: hsl(213, 97%, 87%);
-  --brand-300: hsl(212, 96%, 78%);
-  --brand-400: hsl(213, 94%, 68%);
-  --brand-500: hsl(217, 91%, 60%);
-  --brand-600: hsl(221, 83%, 53%);
-  --brand-700: hsl(224, 76%, 48%);
-  --brand-800: hsl(226, 71%, 40%);
-  --brand-900: hsl(224, 64%, 33%);
-
-  /* Theme-aware custom colors - Light Mode defaults */
-  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));
-  --theme-secondary: var(--custom-light-secondary, hsl(210, 40%, 96%));
-  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));
-  --theme-foreground: var(--custom-light-foreground, hsl(222, 84%, 5%));
-  --theme-heading: var(--custom-light-heading, hsl(222, 84%, 5%));
-  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));
+  /* Theme customization overrides - Light mode */
+  --theme-primary: var(--custom-light-primary, var(--brand));
+  --theme-secondary: var(--custom-light-secondary, var(--input));
+  --theme-background: var(--custom-light-background, var(--bg));
+  --theme-foreground: var(--custom-light-foreground, var(--text));
+  --theme-heading: var(--custom-light-heading, var(--text));
+  --theme-description: var(--custom-light-description, var(--text-muted));
 }
 
+/* Dark mode semantic colors */
 .dark {
-  --background: hsl(222, 84%, 4%);
-  --foreground: hsl(210, 40%, 98%);
-  --muted: hsl(217, 33%, 22%);
-  --muted-foreground: hsl(215, 20%, 88%);
-  --popover: hsl(222, 84%, 4%);
-  --popover-foreground: hsl(210, 40%, 98%);
-  --card: hsl(222, 84%, 4%);
-  --card-foreground: hsl(210, 40%, 98%);
-  --border: hsl(217, 33%, 25%);
-  --input: hsl(217, 33%, 25%);
-  --primary: hsl(217, 91%, 65%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(217, 33%, 17%);
-  --secondary-foreground: hsl(210, 40%, 98%);
-  --accent: hsl(217, 33%, 17%);
-  --accent-foreground: hsl(210, 40%, 98%);
-  --destructive: hsl(0, 63%, 31%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --ring: hsl(217, 91%, 60%);
-
-  /* Theme-aware custom colors - Dark Mode override */
-  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 75%));
-  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 17%));
-  --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));
-  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));
-  --theme-heading: var(--custom-dark-heading, hsl(217, 91%, 75%));
-  --theme-description: var(--custom-dark-description, hsl(210, 40%, 90%));
+  /* Core backgrounds */
+  --bg: hsl(222, 84%, 4%);             /* Main dark background */
+  --bg-elev: hsl(217, 33%, 8%);        /* Elevated surfaces - slightly lighter */
+  --surface: hsl(217, 33%, 12%);       /* Interactive surfaces */
+  
+  /* Text colors - high contrast for readability */
+  --text: hsl(0, 0%, 100%);            /* Primary text - pure white */
+  --text-muted: hsl(210, 40%, 85%);    /* Secondary text - light gray */
+  --text-subtle: hsl(210, 40%, 70%);   /* Tertiary text - medium gray */
+  
+  /* Interactive elements */
+  --border: hsl(217, 33%, 25%);        /* Default borders */
+  --border-hover: hsl(217, 33%, 35%);  /* Hover borders */
+  --input: hsl(217, 33%, 18%);         /* Input backgrounds */
+  
+  /* Brand colors - adjusted for dark mode contrast */
+  --brand: hsl(217, 91%, 70%);         /* Primary brand - lighter for contrast */
+  --brand-contrast: hsl(222, 84%, 4%); /* Dark text on light brand */
+  --brand-hover: hsl(217, 91%, 65%);   /* Brand hover state */
+  --brand-light: hsl(217, 91%, 15%);   /* Dark brand backgrounds */
+  
+  /* Status colors - adjusted for dark mode */
+  --accent: hsl(142, 76%, 45%);        /* Success - slightly lighter */
+  --accent-contrast: hsl(0, 0%, 100%);
+  --warning: hsl(38, 92%, 55%);        /* Warning - slightly lighter */
+  --warning-contrast: hsl(0, 0%, 0%);
+  --danger: hsl(0, 84%, 65%);          /* Error - lighter for contrast */
+  --danger-contrast: hsl(0, 0%, 100%);
+  --info: hsl(199, 89%, 58%);          /* Information - lighter */
+  --info-contrast: hsl(0, 0%, 100%);
+  --success: hsl(142, 76%, 45%);       /* Success - slightly lighter */
+  --success-contrast: hsl(0, 0%, 100%);
+  
+  /* Interactive states */
+  --focus: hsl(217, 91%, 75%);         /* Focus rings - brighter */
+  --link: hsl(217, 91%, 70%);          /* Link colors - lighter */
+  --link-hover: hsl(217, 91%, 80%);    /* Link hover - even lighter */
+  
+  /* Chart colors - dark mode optimized */
+  --chart-1: hsl(217, 91%, 70%);       /* Blue - lighter */
+  --chart-2: hsl(142, 76%, 50%);       /* Green - lighter */
+  --chart-3: hsl(38, 92%, 60%);        /* Orange - lighter */
+  --chart-4: hsl(0, 84%, 70%);         /* Red - lighter */
+  --chart-5: hsl(271, 91%, 75%);       /* Purple - lighter */
+  --chart-6: hsl(199, 89%, 65%);       /* Cyan - lighter */
+  
+  /* Legacy Shadcn variables for compatibility */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted: var(--input);
+  --muted-foreground: var(--text-muted);
+  --popover: var(--bg-elev);
+  --popover-foreground: var(--text);
+  --card: var(--bg-elev);
+  --card-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-contrast);
+  --secondary: var(--input);
+  --secondary-foreground: var(--text);
+  --accent: var(--input);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-contrast);
+  --ring: var(--focus);
+  
+  /* Theme customization overrides - Dark mode */
+  --theme-primary: var(--custom-dark-primary, var(--brand));
+  --theme-secondary: var(--custom-dark-secondary, var(--input));
+  --theme-background: var(--custom-dark-background, var(--bg));
+  --theme-foreground: var(--custom-dark-foreground, var(--text));
+  --theme-heading: var(--custom-dark-heading, var(--brand));
+  --theme-description: var(--custom-dark-description, var(--text-muted));
 }
 
 @layer base {
