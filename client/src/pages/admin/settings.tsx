@@ -40,6 +40,7 @@ interface SystemSettings {
   smsNotifications: boolean;
   sessionCapacityWarning: number;
   paymentReminderMinutes: number;
+  paymentSubmissionTimeMinutes: number;
   weekdayStart: string;
   weekdayEnd: string;
   fiscalYearType: string;
@@ -48,10 +49,10 @@ interface SystemSettings {
   // Waitlist settings
   defaultWaitlistEnabled: boolean;
   defaultWaitlistLimit: number;
-  defaultPaymentWindowMinutes: number;
+  defaultWaitlistOfferTimeMinutes: number;
   defaultAutoPromote: boolean;
   waitlistNotificationEmail: boolean;
-  waitlistNotificationSms: boolean;
+  waitlistNotificationSMS: boolean;
   waitlistJoinMessage: string;
   waitlistPromotionMessage: string;
   waitlistExpirationHours: number;
@@ -163,6 +164,7 @@ export default function AdminSettings() {
     smsNotifications: false,
     sessionCapacityWarning: 3,
     paymentReminderMinutes: 60,
+    paymentSubmissionTimeMinutes: 30,
     weekdayStart: 'monday',
     weekdayEnd: 'sunday',
     fiscalYearType: 'calendar',
@@ -175,10 +177,10 @@ export default function AdminSettings() {
     // Waitlist settings
     defaultWaitlistEnabled: true,
     defaultWaitlistLimit: 10,
-    defaultPaymentWindowMinutes: 60,
+    defaultWaitlistOfferTimeMinutes: 45,
     defaultAutoPromote: true,
     waitlistNotificationEmail: true,
-    waitlistNotificationSms: false,
+    waitlistNotificationSMS: false,
     waitlistJoinMessage: "You've been added to the waitlist for {session}. You're #{position} in line.",
     waitlistPromotionMessage: "Great news! A spot opened up in {session}. You have until {expires} to complete your booking.",
     waitlistExpirationHours: 24
@@ -743,30 +745,121 @@ export default function AdminSettings() {
                 Session Settings
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="capacityWarning" className="text-foreground">Session Capacity Warning</Label>
-                <Input
-                  id="capacityWarning"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={settings.sessionCapacityWarning}
-                  onChange={(e) => setSettings(prev => ({ ...prev, sessionCapacityWarning: parseInt(e.target.value) || 3 }))}
-                  className="bg-input border-border text-foreground mt-1"
-                />
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Session Management</h4>
+                <div>
+                  <Label htmlFor="capacityWarning" className="text-foreground">Session Capacity Warning</Label>
+                  <Input
+                    id="capacityWarning"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={settings.sessionCapacityWarning}
+                    onChange={(e) => setSettings(prev => ({ ...prev, sessionCapacityWarning: parseInt(e.target.value) || 3 }))}
+                    className="bg-input border-border text-foreground mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Spots remaining before showing capacity warning</p>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="paymentReminder" className="text-foreground">Payment Reminder Minutes</Label>
-                <Input
-                  id="paymentReminder"
-                  type="number"
-                  min="5"
-                  max="1440"
-                  value={settings.paymentReminderMinutes}
-                  onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderMinutes: parseInt(e.target.value) || 60 }))}
-                  className="bg-input border-border text-foreground mt-1"
-                />
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Payment & Booking Timeframes</h4>
+                
+                <div>
+                  <Label htmlFor="paymentSubmissionTime" className="text-foreground">Payment Submission Time (minutes)</Label>
+                  <Input
+                    id="paymentSubmissionTime"
+                    type="number"
+                    min="5"
+                    max="1440"
+                    value={settings.paymentSubmissionTimeMinutes || 30}
+                    onChange={(e) => setSettings(prev => ({ ...prev, paymentSubmissionTimeMinutes: parseInt(e.target.value) || 30 }))}
+                    className="bg-input border-border text-foreground mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">How long parents/players have to complete payment after selecting a session to book</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="paymentReminder" className="text-foreground">Payment Reminder Minutes</Label>
+                  <Input
+                    id="paymentReminder"
+                    type="number"
+                    min="5"
+                    max="1440"
+                    value={settings.paymentReminderMinutes}
+                    onChange={(e) => setSettings(prev => ({ ...prev, paymentReminderMinutes: parseInt(e.target.value) || 60 }))}
+                    className="bg-input border-border text-foreground mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Send payment reminders this many minutes before deadline</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Default Waitlist Settings</h4>
+                <p className="text-sm text-muted-foreground">These settings will be applied to new sessions by default. Individual sessions can override these values.</p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-foreground">Enable Waitlists by Default</Label>
+                    <p className="text-sm text-muted-foreground">
+                      New sessions will have waitlists enabled automatically
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.defaultWaitlistEnabled}
+                    onCheckedChange={(checked) => 
+                      setSettings(prev => ({ ...prev, defaultWaitlistEnabled: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="defaultWaitlistLimit" className="text-foreground">Default Waitlist Limit</Label>
+                    <Input
+                      id="defaultWaitlistLimit"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={settings.defaultWaitlistLimit}
+                      onChange={(e) => setSettings(prev => ({ ...prev, defaultWaitlistLimit: parseInt(e.target.value) || 10 }))}
+                      className="bg-input border-border text-foreground mt-1"
+                      placeholder="10"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Maximum waitlist size (0 = unlimited)</p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="defaultWaitlistOfferTime" className="text-foreground">Waitlist Offer Time (minutes)</Label>
+                    <Input
+                      id="defaultWaitlistOfferTime"
+                      type="number"
+                      min="15"
+                      max="1440"
+                      value={settings.defaultWaitlistOfferTimeMinutes || 45}
+                      onChange={(e) => setSettings(prev => ({ ...prev, defaultWaitlistOfferTimeMinutes: parseInt(e.target.value) || 45 }))}
+                      className="bg-input border-border text-foreground mt-1"
+                      placeholder="45"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">How long to accept a waitlist offer</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-foreground">Auto-promote by Default</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically offer spots to next person on waitlist
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.defaultAutoPromote}
+                      onCheckedChange={(checked) => 
+                        setSettings(prev => ({ ...prev, defaultAutoPromote: checked }))
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1017,89 +1110,27 @@ export default function AdminSettings() {
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                Waitlist Settings
+                <Clock className="w-5 h-5 mr-2" />
+                Waitlist Cleanup & Automation
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Default Session Settings</h4>
+                <h4 className="text-sm font-medium text-foreground">Automated Cleanup</h4>
                 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-foreground">Enable Waitlists by Default</Label>
-                    <p className="text-sm text-muted-foreground">
-                      New sessions will have waitlists enabled automatically
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.defaultWaitlistEnabled}
-                    onCheckedChange={(checked) => 
-                      setSettings(prev => ({ ...prev, defaultWaitlistEnabled: checked }))
-                    }
+                <div>
+                  <Label htmlFor="waitlistExpiration" className="text-foreground">Cleanup After (hours)</Label>
+                  <Input
+                    id="waitlistExpiration"
+                    type="number"
+                    min="1"
+                    max="168"
+                    value={settings.waitlistExpirationHours}
+                    onChange={(e) => setSettings(prev => ({ ...prev, waitlistExpirationHours: parseInt(e.target.value) || 24 }))}
+                    className="bg-input border-border text-foreground mt-1"
+                    placeholder="24"
                   />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="defaultWaitlistLimit" className="text-foreground">Default Waitlist Limit</Label>
-                    <Input
-                      id="defaultWaitlistLimit"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={settings.defaultWaitlistLimit}
-                      onChange={(e) => setSettings(prev => ({ ...prev, defaultWaitlistLimit: parseInt(e.target.value) || 10 }))}
-                      className="bg-input border-border text-foreground mt-1"
-                      placeholder="10"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">0 = no limit</p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="defaultPaymentWindow" className="text-foreground">Payment Window (minutes)</Label>
-                    <Input
-                      id="defaultPaymentWindow"
-                      type="number"
-                      min="15"
-                      max="1440"
-                      value={settings.defaultPaymentWindowMinutes}
-                      onChange={(e) => setSettings(prev => ({ ...prev, defaultPaymentWindowMinutes: parseInt(e.target.value) || 60 }))}
-                      className="bg-input border-border text-foreground mt-1"
-                      placeholder="60"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Time to complete booking</p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="waitlistExpiration" className="text-foreground">Cleanup After (hours)</Label>
-                    <Input
-                      id="waitlistExpiration"
-                      type="number"
-                      min="1"
-                      max="168"
-                      value={settings.waitlistExpirationHours}
-                      onChange={(e) => setSettings(prev => ({ ...prev, waitlistExpirationHours: parseInt(e.target.value) || 24 }))}
-                      className="bg-input border-border text-foreground mt-1"
-                      placeholder="24"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Clean up data after session</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-foreground">Auto-Promote by Default</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically offer spots to next person when someone drops out
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.defaultAutoPromote}
-                    onCheckedChange={(checked) => 
-                      setSettings(prev => ({ ...prev, defaultAutoPromote: checked }))
-                    }
-                  />
+                  <p className="text-xs text-muted-foreground mt-1">Clean up data after session</p>
                 </div>
               </div>
 
@@ -1129,51 +1160,17 @@ export default function AdminSettings() {
                     </p>
                   </div>
                   <Switch
-                    checked={settings.waitlistNotificationSms}
+                    checked={settings.waitlistNotificationSMS}
                     onCheckedChange={(checked) => 
-                      setSettings(prev => ({ ...prev, waitlistNotificationSms: checked }))
+                      setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
                     }
                   />
                 </div>
               </div>
-
-              <div className="border-t border-border pt-6 space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Communication Templates</h4>
-                
-                <div>
-                  <Label htmlFor="waitlistJoinMessage" className="text-foreground">Join Waitlist Message</Label>
-                  <Textarea
-                    id="waitlistJoinMessage"
-                    value={settings.waitlistJoinMessage}
-                    onChange={(e) => setSettings(prev => ({ ...prev, waitlistJoinMessage: e.target.value }))}
-                    className="bg-input border-border text-foreground mt-1"
-                    rows={2}
-                    placeholder="You've been added to the waitlist for {session}. You're #{position} in line."
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Available variables: {"{session}"}, {"{position}"}
-                  </p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="waitlistPromotionMessage" className="text-foreground">Promotion Message</Label>
-                  <Textarea
-                    id="waitlistPromotionMessage"
-                    value={settings.waitlistPromotionMessage}
-                    onChange={(e) => setSettings(prev => ({ ...prev, waitlistPromotionMessage: e.target.value }))}
-                    className="bg-input border-border text-foreground mt-1"
-                    rows={2}
-                    placeholder="Great news! A spot opened up in {session}. You have until {expires} to complete your booking."
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Available variables: {"{session}"}, {"{expires}"}
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
-          
-          {/* Save Button at bottom of Sessions & Schedule tab */}
+
+          {/* Save Button at bottom of Sessions tab */}
           <div className="flex justify-start">
             <Button onClick={handleSave} disabled={saving} className="px-6">
               {saving ? 'Saving...' : 'Save Changes'}

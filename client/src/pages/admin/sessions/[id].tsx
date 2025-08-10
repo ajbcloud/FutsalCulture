@@ -652,7 +652,7 @@ export default function AdminSessionDetail() {
                   
                   <div>
                     <Label htmlFor="paymentWindowMinutes" className="text-muted-foreground">
-                      Payment Window (minutes)
+                      Waitlist Offer Time (minutes)
                     </Label>
                     <Input
                       id="paymentWindowMinutes"
@@ -666,7 +666,7 @@ export default function AdminSessionDetail() {
                       data-testid="input-payment-window"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Time to complete payment when offered
+                      How long waitlisted players have to accept their offer
                     </p>
                   </div>
                   
