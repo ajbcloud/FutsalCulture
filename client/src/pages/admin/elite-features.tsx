@@ -679,8 +679,9 @@ export default function EliteFeatures() {
               
               <div className="space-y-4 mt-6">
                 <h3 className="font-semibold">Theme Preview</h3>
-                <div className="text-xs text-gray-500 mb-2">
-                  Debug: Dark Description Color = {themeSettings.darkDescriptionColor}
+                <div className="text-xs text-gray-500 mb-2 space-y-1">
+                  <div>Debug Light: Heading={themeSettings.lightHeadingColor} | Text={themeSettings.lightText} | Description={themeSettings.lightDescriptionColor}</div>
+                  <div>Debug Dark: Heading={themeSettings.darkHeadingColor} | Text={themeSettings.darkText} | Description={themeSettings.darkDescriptionColor}</div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Light Mode Preview */}
@@ -718,6 +719,15 @@ export default function EliteFeatures() {
                       >
                         Description Color - This text shows how descriptions and body text will appear in light mode.
                       </p>
+                      <div 
+                        style={{ 
+                          color: themeSettings.lightText,
+                          fontSize: '0.875rem',
+                          marginTop: '0.5rem'
+                        }}
+                      >
+                        Text Color - General text content uses this color.
+                      </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                           style={{ 
@@ -808,6 +818,15 @@ export default function EliteFeatures() {
                       >
                         Description Color - This text shows how descriptions and body text will appear in dark mode.
                       </p>
+                      <div 
+                        style={{ 
+                          color: themeSettings.darkText,
+                          fontSize: '0.875rem',
+                          marginTop: '0.5rem'
+                        }}
+                      >
+                        Text Color - General text content uses this color.
+                      </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                           style={{ 
