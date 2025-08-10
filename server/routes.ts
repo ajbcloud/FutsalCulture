@@ -1025,6 +1025,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Discount code checkout validation
+  app.post('/api/checkout/apply-discount', isAuthenticated, async (req: any, res) => {
+    try {
+      const { code, playerId } = req.body;
+      const userId = req.user.claims.sub;
+      
+      // Get user to find tenant and parent info
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const validation = await storage.validateDiscountCode(code, user.tenantId, playerId, userId);
+      
+      if (!validation.valid) {
+        return res.status(400).json({ message: validation.error });
+      }
+
+      res.json({
+        valid: true,
+        discountCode: {
+          id: validation.discountCode!.id,
+          code: validation.discountCode!.code,
+          discountType: validation.discountCode!.discountType,
+          discountValue: validation.discountCode!.discountValue,
+        }
+      });
+    } catch (error) {
+      console.error("Error applying discount code:", error);
+      res.status(500).json({ message: "Failed to apply discount code" });
+    }
+  });
+
   // Notification preferences routes
   app.get('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
     try {
@@ -1097,6 +1130,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching help requests:", error);
       res.status(500).json({ message: "Failed to fetch help requests" });
+    }
+  });
+
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const tenantId = user.tenantId;
+      const role = req.query.role;
+      
+      let users;
+      if (role === 'parent') {
+        users = await storage.getParentsByTenant(tenantId);
+      } else {
+        users = await storage.getUsersByTenant(tenantId);
+      }
+      
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
     }
   });
 

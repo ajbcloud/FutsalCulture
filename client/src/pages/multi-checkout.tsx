@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
@@ -9,12 +9,44 @@ import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, Clock, MapPin, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Clock, MapPin, DollarSign, Tag } from "lucide-react";
+import type { Player } from "@shared/schema";
 
 export default function MultiCheckout() {
   const { isAuthenticated, isLoading } = useAuth();
   const { cartItems, removeFromCart, clearCart, totalPrice } = useCart();
   const { toast } = useToast();
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
+  const [discountError, setDiscountError] = useState("");
+  const [selectedPlayers, setSelectedPlayers] = useState<Record<string, string>>({});
+
+  // Fetch players for discount validation
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ["/api/players"],
+  });
+
+  // Calculate discount amount
+  const calculateDiscountAmount = () => {
+    if (!appliedDiscount) return 0;
+    
+    switch (appliedDiscount.discountType) {
+      case 'full':
+        return totalPrice;
+      case 'percentage':
+        return Math.round(totalPrice * (appliedDiscount.discountValue / 100));
+      case 'fixed':
+        return Math.min(appliedDiscount.discountValue * 100, totalPrice); // Convert to cents
+      default:
+        return 0;
+    }
+  };
+
+  const discountAmount = calculateDiscountAmount();
+  const finalTotal = totalPrice - discountAmount;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -30,13 +62,39 @@ export default function MultiCheckout() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  const applyDiscountMutation = useMutation({
+    mutationFn: async () => {
+      // Use the first selected player for discount validation
+      const firstPlayerId = Object.values(selectedPlayers)[0];
+      const response = await apiRequest("POST", "/api/checkout/apply-discount", {
+        code: discountCode,
+        playerId: firstPlayerId
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAppliedDiscount(data.discountCode);
+      setDiscountError("");
+      toast({
+        title: "Discount applied",
+        description: `${discountCode} discount has been applied successfully`,
+      });
+    },
+    onError: (error: any) => {
+      setDiscountError(error.message || "Invalid discount code");
+      setAppliedDiscount(null);
+    },
+  });
+
   const createMultiCheckoutMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/multi-checkout", {
         sessions: cartItems.map(session => ({ 
           sessionId: session.id,
-          playerId: "default-player-id" // TODO: Implement player selection in cart
-        }))
+          playerId: selectedPlayers[session.id] || players[0]?.id
+        })),
+        discountCode: appliedDiscount?.code,
+        discountAmount: discountAmount
       });
       return response.json();
     },
@@ -132,6 +190,28 @@ export default function MultiCheckout() {
                             {session.ageGroup}
                           </Badge>
                         </div>
+                        
+                        {/* Player Selection */}
+                        <div className="mt-3">
+                          <Label htmlFor={`player-${session.id}`} className="text-sm text-zinc-400">
+                            Select Player:
+                          </Label>
+                          <Select 
+                            value={selectedPlayers[session.id] || ""}
+                            onValueChange={(value) => setSelectedPlayers(prev => ({ ...prev, [session.id]: value }))}
+                          >
+                            <SelectTrigger className="w-full mt-1 bg-zinc-800 border-zinc-600">
+                              <SelectValue placeholder="Choose player" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {players.map((player) => (
+                                <SelectItem key={player.id} value={player.id}>
+                                  {player.firstName} {player.lastName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                     
@@ -171,12 +251,76 @@ export default function MultiCheckout() {
                     <span>Processing fee</span>
                     <span>$0.00</span>
                   </div>
+                  {appliedDiscount && (
+                    <div className="flex justify-between text-green-400">
+                      <span>Discount ({appliedDiscount.code})</span>
+                      <span>-${(discountAmount / 100).toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-zinc-600 pt-2">
                     <div className="flex justify-between text-white font-semibold text-lg">
                       <span>Total</span>
-                      <span>${(totalPrice / 100).toFixed(2)}</span>
+                      <span>${(finalTotal / 100).toFixed(2)}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Discount Code Section */}
+                <div className="border-t border-zinc-600 pt-4">
+                  <h3 className="text-white font-medium mb-3 flex items-center">
+                    <Tag className="w-4 h-4 mr-2" />
+                    Discount Code
+                  </h3>
+                  
+                  {!appliedDiscount ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter discount code"
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                          className="flex-1 bg-zinc-800 border-zinc-600 text-white"
+                        />
+                        <Button
+                          onClick={() => applyDiscountMutation.mutate()}
+                          disabled={!discountCode.trim() || applyDiscountMutation.isPending || Object.keys(selectedPlayers).length === 0}
+                          variant="outline"
+                          className="border-zinc-600 text-zinc-400 hover:text-white"
+                        >
+                          {applyDiscountMutation.isPending ? "..." : "Apply"}
+                        </Button>
+                      </div>
+                      {discountError && (
+                        <p className="text-red-400 text-sm">{discountError}</p>
+                      )}
+                      {Object.keys(selectedPlayers).length === 0 && (
+                        <p className="text-yellow-400 text-sm">Please select a player for each session to apply discount codes</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-zinc-800 p-3 rounded-md">
+                      <div>
+                        <span className="text-green-400 font-medium">{appliedDiscount.code}</span>
+                        <p className="text-zinc-400 text-sm">
+                          {appliedDiscount.discountType === 'full' ? '100% off' :
+                           appliedDiscount.discountType === 'percentage' ? `${appliedDiscount.discountValue}% off` :
+                           `$${(appliedDiscount.discountValue / 100).toFixed(2)} off`}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAppliedDiscount(null);
+                          setDiscountCode("");
+                          setDiscountError("");
+                        }}
+                        className="text-zinc-400 hover:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-3 pt-4">

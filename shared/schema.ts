@@ -301,11 +301,16 @@ export const discountCodes = pgTable("discount_codes", {
   validUntil: timestamp("valid_until"),
   // Status
   isActive: boolean("is_active").default(true),
+  // User restrictions
+  lockedToPlayerId: varchar("locked_to_player_id").references(() => players.id), // null = not locked to specific player
+  lockedToParentId: varchar("locked_to_parent_id").references(() => users.id), // null = not locked to specific parent
   createdBy: varchar("created_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("discount_codes_tenant_id_idx").on(table.tenantId),
+  index("discount_codes_locked_to_player_idx").on(table.lockedToPlayerId),
+  index("discount_codes_locked_to_parent_idx").on(table.lockedToParentId),
 ]);
 
 // Service billing table for platform service payment configuration
@@ -532,6 +537,20 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   currentUses: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  code: z.string()
+    .min(3, "Code must be at least 3 characters")
+    .max(50, "Code must be less than 50 characters")
+    .regex(/^[A-Z0-9_-]+$/, "Code can only contain uppercase letters, numbers, underscores, and hyphens"),
+  discountType: z.enum(['percentage', 'fixed', 'full']),
+  discountValue: z.number().int().optional().refine((val, ctx) => {
+    const { discountType } = ctx.parent;
+    if (discountType === 'full') return true;
+    return val !== undefined && val > 0;
+  }, "Discount value is required for percentage and fixed discounts"),
+  maxUses: z.number().int().positive().optional(),
+  lockedToPlayerId: z.string().optional(),
+  lockedToParentId: z.string().optional(),
 });
 
 export const insertWaitlistSchema = createInsertSchema(waitlists).omit({

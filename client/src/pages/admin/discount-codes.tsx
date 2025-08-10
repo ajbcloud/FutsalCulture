@@ -52,10 +52,21 @@ export default function DiscountCodes() {
     validFrom: "",
     validUntil: "",
     isActive: true,
+    lockedToPlayerId: "",
+    lockedToParentId: "",
   });
 
   const { data: discountCodes = [], isLoading } = useQuery<DiscountCode[]>({
     queryKey: ["/api/admin/discount-codes"],
+  });
+
+  // Fetch players and parents for selection
+  const { data: players = [] } = useQuery({
+    queryKey: ["/api/admin/players"],
+  });
+
+  const { data: parents = [] } = useQuery({
+    queryKey: ["/api/admin/users?role=parent"],
   });
 
   const createMutation = useMutation({
@@ -119,6 +130,8 @@ export default function DiscountCodes() {
       validFrom: "",
       validUntil: "",
       isActive: true,
+      lockedToPlayerId: "",
+      lockedToParentId: "",
     });
   };
 
@@ -132,6 +145,8 @@ export default function DiscountCodes() {
           maxUses: formData.maxUses || null,
           validFrom: formData.validFrom || null,
           validUntil: formData.validUntil || null,
+          lockedToPlayerId: formData.lockedToPlayerId || null,
+          lockedToParentId: formData.lockedToParentId || null,
         },
       });
     } else {
@@ -140,6 +155,8 @@ export default function DiscountCodes() {
         maxUses: formData.maxUses || null,
         validFrom: formData.validFrom || null,
         validUntil: formData.validUntil || null,
+        lockedToPlayerId: formData.lockedToPlayerId || null,
+        lockedToParentId: formData.lockedToParentId || null,
       });
     }
   };
@@ -155,6 +172,8 @@ export default function DiscountCodes() {
       validFrom: code.validFrom ? format(new Date(code.validFrom), "yyyy-MM-dd'T'HH:mm") : "",
       validUntil: code.validUntil ? format(new Date(code.validUntil), "yyyy-MM-dd'T'HH:mm") : "",
       isActive: code.isActive ?? true,
+      lockedToPlayerId: code.lockedToPlayerId || "",
+      lockedToParentId: code.lockedToParentId || "",
     });
   };
 
@@ -295,6 +314,64 @@ export default function DiscountCodes() {
                     onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Player/Parent Restrictions */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Usage Restrictions (Optional)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="lockedToPlayerId">Lock to Specific Player</Label>
+                    <Select
+                      value={formData.lockedToPlayerId}
+                      onValueChange={(value) => setFormData({ 
+                        ...formData, 
+                        lockedToPlayerId: value,
+                        // Clear parent lock if player is selected
+                        lockedToParentId: value ? "" : formData.lockedToParentId
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any player can use" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any player can use</SelectItem>
+                        {players.map((player: any) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.firstName} {player.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="lockedToParentId">Lock to Specific Parent</Label>
+                    <Select
+                      value={formData.lockedToParentId}
+                      onValueChange={(value) => setFormData({ 
+                        ...formData, 
+                        lockedToParentId: value,
+                        // Clear player lock if parent is selected
+                        lockedToPlayerId: value ? "" : formData.lockedToPlayerId
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any parent can use" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any parent can use</SelectItem>
+                        {parents.map((parent: any) => (
+                          <SelectItem key={parent.id} value={parent.id}>
+                            {parent.firstName} {parent.lastName} ({parent.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Lock this code to a specific player or parent. When locked, only that user can use this discount code.
+                </p>
               </div>
 
               <div className="flex justify-end space-x-2">

@@ -249,6 +249,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(players).where(and(...conditions)).orderBy(desc(players.createdAt));
   }
 
+  async getParentsByTenant(tenantId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.tenantId, tenantId))
+      .orderBy(users.firstName, users.lastName);
+  }
+
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const [newPlayer] = await db.insert(players).values(player).returning();
     return newPlayer;
@@ -779,6 +785,60 @@ export class DatabaseStorage implements IStorage {
       .from(discountCodes)
       .where(eq(discountCodes.code, code));
     return discount;
+  }
+
+  async validateDiscountCode(code: string, tenantId: string, playerId?: string, parentId?: string): Promise<{
+    valid: boolean;
+    discountCode?: DiscountCode;
+    error?: string;
+  }> {
+    // Get the discount code
+    const [discountCode] = await db
+      .select()
+      .from(discountCodes)
+      .where(and(
+        eq(discountCodes.code, code),
+        eq(discountCodes.tenantId, tenantId)
+      ));
+
+    if (!discountCode) {
+      return { valid: false, error: "Discount code not found" };
+    }
+
+    // Check if code is active
+    if (!discountCode.isActive) {
+      return { valid: false, error: "Discount code is not active" };
+    }
+
+    // Check time validity
+    const now = new Date();
+    if (discountCode.validFrom && new Date(discountCode.validFrom) > now) {
+      return { valid: false, error: "Discount code is not yet valid" };
+    }
+    if (discountCode.validUntil && new Date(discountCode.validUntil) < now) {
+      return { valid: false, error: "Discount code has expired" };
+    }
+
+    // Check usage limits
+    if (discountCode.maxUses && discountCode.currentUses >= discountCode.maxUses) {
+      return { valid: false, error: "Discount code has reached its usage limit" };
+    }
+
+    // Check player restriction
+    if (discountCode.lockedToPlayerId) {
+      if (!playerId || discountCode.lockedToPlayerId !== playerId) {
+        return { valid: false, error: "This discount code is not available for the selected player" };
+      }
+    }
+
+    // Check parent restriction
+    if (discountCode.lockedToParentId) {
+      if (!parentId || discountCode.lockedToParentId !== parentId) {
+        return { valid: false, error: "This discount code is not available for your account" };
+      }
+    }
+
+    return { valid: true, discountCode };
   }
 
   async createDiscountCode(discountCode: InsertDiscountCode): Promise<DiscountCode> {
