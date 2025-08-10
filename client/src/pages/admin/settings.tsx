@@ -16,6 +16,9 @@ import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
+import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
+import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
+import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
 import { FEATURE_KEYS } from '@shared/schema';
 
 interface LocationData {
@@ -157,6 +160,7 @@ const getTimezones = () => {
 
 export default function AdminSettings() {
   const businessName = useBusinessName();
+  const { upgradeStatus, clearUpgradeStatus } = useUpgradeStatus();
   const [settings, setSettings] = useState<SystemSettings>({
     autoApproveRegistrations: true,
     businessName: '',
@@ -490,10 +494,25 @@ export default function AdminSettings() {
   }
 
   return (
-    <AdminLayout>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Settings</h1>
-      </div>
+    <>
+      {/* Upgrade Status Banners */}
+      <SubscriptionUpgradeBanner
+        isAnimating={upgradeStatus.isAnimating}
+        plan={upgradeStatus.plan}
+        onClose={clearUpgradeStatus}
+      />
+      
+      {upgradeStatus.success && !upgradeStatus.isAnimating && (
+        <SubscriptionSuccessBanner
+          plan={upgradeStatus.plan}
+          onClose={clearUpgradeStatus}
+        />
+      )}
+      
+      <AdminLayout>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Admin Settings</h1>
+        </div>
 
       <Tabs defaultValue="general" className="space-y-6">
         {/* Mobile Tab Navigation - Vertical Stack */}
@@ -1729,7 +1748,8 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
-    </AdminLayout>
+        </Tabs>
+      </AdminLayout>
+    </>
   );
 }

@@ -31,6 +31,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Webhook needs raw body parsing before JSON middleware
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

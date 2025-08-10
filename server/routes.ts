@@ -21,6 +21,7 @@ import "./jobs/capacity-monitor";
 import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
+import { stripeWebhookRouter } from './stripe-webhooks';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1315,6 +1316,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');
   app.use('/api', isAuthenticated, featureRoutes.default);
+
+  // Stripe webhook routes (must be before auth middleware since webhooks use their own verification)
+  app.use('/api/stripe', stripeWebhookRouter);
 
   const httpServer = createServer(app);
   return httpServer;
