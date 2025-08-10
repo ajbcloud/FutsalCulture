@@ -18,46 +18,22 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
 
   const currentPlanFeatures = PLANS[currentPlan].features;
 
-  const handleUpgradeForFeature = async (featureKey: FeatureKey) => {
+  const handleUpgradeSubscription = async () => {
     try {
-      setUpgradeLoading(featureKey);
+      setUpgradeLoading('upgrade');
       
-      // Find the cheapest plan that includes this feature
-      const planOrder: PlanId[] = ['free', 'core', 'growth', 'elite'];
-      const availablePlans = planOrder.slice(planOrder.indexOf(currentPlan) + 1);
-      
-      let targetPlan: PlanId | null = null;
-      for (const planId of availablePlans) {
-        const planFeatures = PLANS[planId].features;
-        if (planFeatures[featureKey]) {
-          targetPlan = planId;
-          break;
-        }
-      }
-
-      if (!targetPlan) {
-        toast({
-          title: "Feature not available",
-          description: "This feature is not available in any upgrade plan.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const response = await apiRequest(`/api/billing/checkout?planId=${targetPlan}`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('/api/billing/manage-subscription', 'POST');
 
       if (response.url) {
         window.location.href = response.url;
       } else {
-        throw new Error('No checkout URL returned');
+        throw new Error('No manage subscription URL returned');
       }
     } catch (error: any) {
-      console.error('Error starting upgrade:', error);
+      console.error('Error starting subscription management:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to start upgrade. Please try again.",
+        description: error.message || "Failed to open subscription management. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -98,13 +74,15 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
     return null;
   };
 
-  // Group features by category
+  // Group features by category - include ALL plan features
   const featureCategories = {
     'Core Features': ['maxPlayers', 'manualSessions', 'recurringSessions'] as FeatureKey[],
-    'Payment & Billing': ['payments'] as FeatureKey[],
+    'Payment & Billing': ['payments', 'revenueAnalytics'] as FeatureKey[],
     'Communication': ['emailNotifications', 'smsNotifications', 'whiteLabelEmail'] as FeatureKey[],
     'Analytics & Automation': ['advancedAnalytics', 'autoPromotion'] as FeatureKey[],
-    'Advanced Tools': ['csvImport', 'bulkOps', 'themeCustomization', 'apiAccess'] as FeatureKey[]
+    'Advanced Tools': ['csvImport', 'bulkOps', 'themeCustomization', 'apiAccess'] as FeatureKey[],
+    'Player Development': ['playerDevelopment'] as FeatureKey[],
+    'Premium Support': ['customFeatureQueue', 'prioritySupport'] as FeatureKey[]
   };
 
   return (
@@ -137,7 +115,7 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
                           {enabled ? (
                             <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                           ) : (
-                            <X className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            <X className="h-5 w-5 text-red-500 flex-shrink-0" />
                           )}
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -161,15 +139,16 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
                           </div>
                         </div>
 
-                        {!enabled && requiredPlan && requiredPlan !== currentPlan && (
+                        {!enabled && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleUpgradeForFeature(featureKey)}
-                            disabled={isLoading}
+                            onClick={handleUpgradeSubscription}
+                            disabled={upgradeLoading === 'upgrade'}
                             className="ml-4"
+                            data-testid="button-upgrade-subscription"
                           >
-                            {isLoading ? 'Loading...' : `Upgrade to ${PLANS[requiredPlan].name}`}
+                            {upgradeLoading === 'upgrade' ? 'Loading...' : 'Upgrade Subscription'}
                           </Button>
                         )}
                       </div>
