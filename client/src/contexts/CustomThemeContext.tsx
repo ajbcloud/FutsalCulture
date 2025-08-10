@@ -90,7 +90,8 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-light-nav-title', `hsl(${hexToHsl(theme.lightNavTitle || '#111827')})`);
       root.style.setProperty('--custom-light-nav-text', `hsl(${hexToHsl(theme.lightNavText || '#6b7280')})`);
       root.style.setProperty('--custom-light-nav-active-text', `hsl(${hexToHsl(theme.lightNavActiveText || '#ffffff')})`);
-      root.style.setProperty('--custom-light-nav-active-bg', `hsl(${hexToHsl(theme.lightNavActiveBg || '#2563eb')})`);
+      // Use primary button color for active navigation background
+      root.style.setProperty('--custom-light-nav-active-bg', `hsl(${hexToHsl(theme.lightPrimaryButton || '#2563eb')})`);
       
       // Apply dark mode custom colors as CSS variables
       root.style.setProperty('--custom-dark-primary', `hsl(${hexToHsl(theme.darkPrimaryButton)})`);
@@ -104,7 +105,8 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-dark-nav-title', `hsl(${hexToHsl(theme.darkNavTitle || '#f8fafc')})`);
       root.style.setProperty('--custom-dark-nav-text', `hsl(${hexToHsl(theme.darkNavText || '#cbd5e1')})`);
       root.style.setProperty('--custom-dark-nav-active-text', `hsl(${hexToHsl(theme.darkNavActiveText || '#ffffff')})`);
-      root.style.setProperty('--custom-dark-nav-active-bg', `hsl(${hexToHsl(theme.darkNavActiveBg || '#2563eb')})`);
+      // Use primary button color for active navigation background
+      root.style.setProperty('--custom-dark-nav-active-bg', `hsl(${hexToHsl(theme.darkPrimaryButton || '#2563eb')})`);
 
       // Override system theme with custom theme in both modes
       root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);

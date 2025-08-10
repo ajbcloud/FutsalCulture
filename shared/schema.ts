@@ -385,7 +385,6 @@ export const themeSettings = pgTable("theme_settings", {
   lightNavTitle: varchar("light_nav_title").default("#111827"), // Navigation title color (Admin Portal)
   lightNavText: varchar("light_nav_text").default("#6b7280"), // Navigation text color
   lightNavActiveText: varchar("light_nav_active_text").default("#ffffff"), // Active navigation text
-  lightNavActiveBg: varchar("light_nav_active_bg").default("#2563eb"), // Active navigation background
   
   // Dark mode colors
   darkPrimaryButton: varchar("dark_primary_button").default("#2563eb"), // Default blue (same as light)
@@ -397,7 +396,6 @@ export const themeSettings = pgTable("theme_settings", {
   darkNavTitle: varchar("dark_nav_title").default("#f8fafc"), // Navigation title color (Admin Portal)
   darkNavText: varchar("dark_nav_text").default("#cbd5e1"), // Navigation text color
   darkNavActiveText: varchar("dark_nav_active_text").default("#ffffff"), // Active navigation text
-  darkNavActiveBg: varchar("dark_nav_active_bg").default("#2563eb"), // Active navigation background
   
   // Legacy fields for backward compatibility (deprecated)
   primaryButton: varchar("primary_button").default("#2563eb"),

@@ -28,7 +28,6 @@ interface ThemeSettings {
   lightNavTitle: string;
   lightNavText: string;
   lightNavActiveText: string;
-  lightNavActiveBg: string;
   // Dark mode colors
   darkPrimaryButton: string;
   darkSecondaryButton: string;
@@ -39,7 +38,6 @@ interface ThemeSettings {
   darkNavTitle: string;
   darkNavText: string;
   darkNavActiveText: string;
-  darkNavActiveBg: string;
   // Legacy fields for backward compatibility
   primaryButton?: string;
   secondaryButton?: string;
@@ -82,7 +80,6 @@ export default function EliteFeatures() {
     lightNavTitle: '#111827',
     lightNavText: '#6b7280',
     lightNavActiveText: '#ffffff',
-    lightNavActiveBg: '#2563eb',
     // Dark mode defaults
     darkPrimaryButton: '#2563eb',
     darkSecondaryButton: '#64748b',
@@ -92,8 +89,7 @@ export default function EliteFeatures() {
     darkDescriptionColor: '#cbd5e1',
     darkNavTitle: '#f8fafc',
     darkNavText: '#cbd5e1',
-    darkNavActiveText: '#ffffff',
-    darkNavActiveBg: '#2563eb'
+    darkNavActiveText: '#ffffff'
   });
 
   // Feature Request State
@@ -122,7 +118,6 @@ export default function EliteFeatures() {
         lightNavTitle: theme.lightNavTitle || '#111827',
         lightNavText: theme.lightNavText || '#6b7280',
         lightNavActiveText: theme.lightNavActiveText || '#ffffff',
-        lightNavActiveBg: theme.lightNavActiveBg || '#2563eb',
         // Dark mode colors
         darkPrimaryButton: theme.darkPrimaryButton || '#2563eb',
         darkSecondaryButton: theme.darkSecondaryButton || '#64748b',
@@ -133,7 +128,6 @@ export default function EliteFeatures() {
         darkNavTitle: theme.darkNavTitle || '#f8fafc',
         darkNavText: theme.darkNavText || '#cbd5e1',
         darkNavActiveText: theme.darkNavActiveText || '#ffffff',
-        darkNavActiveBg: theme.darkNavActiveBg || '#2563eb',
         // Legacy fallbacks
         primaryButton: theme.primaryButton || '#2563eb',
         secondaryButton: theme.secondaryButton || '#64748b',
@@ -224,12 +218,18 @@ export default function EliteFeatures() {
         lightText: '#111827',
         lightHeadingColor: '#111827',
         lightDescriptionColor: '#4b5563',
+        lightNavTitle: '#111827',
+        lightNavText: '#6b7280',
+        lightNavActiveText: '#ffffff',
         darkPrimaryButton: '#2563eb',
         darkSecondaryButton: '#64748b',
         darkBackground: '#0f172a',
         darkText: '#f8fafc',
         darkHeadingColor: '#f8fafc',
-        darkDescriptionColor: '#cbd5e1'
+        darkDescriptionColor: '#cbd5e1',
+        darkNavTitle: '#f8fafc',
+        darkNavText: '#cbd5e1',
+        darkNavActiveText: '#ffffff'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
     },
@@ -612,30 +612,7 @@ export default function EliteFeatures() {
                       </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="lightNavActiveBg">Active Navigation Background Color</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input
-                          id="lightNavActiveBg"
-                          type="color"
-                          value={themeSettings.lightNavActiveBg}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            lightNavActiveBg: e.target.value
-                          }))}
-                          className="w-20 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={themeSettings.lightNavActiveBg}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            lightNavActiveBg: e.target.value
-                          }))}
-                          placeholder="#2563eb"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
+
                   </div>
                 </TabsContent>
 
@@ -878,30 +855,7 @@ export default function EliteFeatures() {
                       </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="darkNavActiveBg">Active Navigation Background Color</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input
-                          id="darkNavActiveBg"
-                          type="color"
-                          value={themeSettings.darkNavActiveBg}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            darkNavActiveBg: e.target.value
-                          }))}
-                          className="w-20 h-10 p-1 border rounded"
-                        />
-                        <Input
-                          value={themeSettings.darkNavActiveBg}
-                          onChange={(e) => setThemeSettings(prev => ({
-                            ...prev,
-                            darkNavActiveBg: e.target.value
-                          }))}
-                          placeholder="#2563eb"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
+
                   </div>
                 </TabsContent>
               </Tabs>
