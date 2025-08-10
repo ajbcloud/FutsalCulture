@@ -608,6 +608,80 @@ export default function AdminSessions() {
                           No players signed up yet
                         </div>
                       )}
+                      
+                      {/* Waitlist Information */}
+                      {session.waitlistEnabled && (
+                        <div className="mt-6 border-t border-border pt-4">
+                          <h4 className="text-md font-semibold text-foreground mb-3">
+                            Waitlist Information
+                          </h4>
+                          <div className="bg-muted/50 rounded-lg p-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                              <div>
+                                <span className="text-muted-foreground text-sm">Status</span>
+                                <div className="font-medium text-foreground">
+                                  {session.waitlistEnabled ? 'Enabled' : 'Disabled'}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-sm">Limit</span>
+                                <div className="font-medium text-foreground">
+                                  {session.waitlistLimit || 'Unlimited'}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-sm">Payment Window</span>
+                                <div className="font-medium text-foreground">
+                                  {session.paymentWindowMinutes || 60} minutes
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-sm">Auto-promote</span>
+                                <div className="font-medium text-foreground">
+                                  {session.autoPromote ? 'Yes' : 'No'}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {session.waitlistEntries && session.waitlistEntries.length > 0 ? (
+                              <div className="space-y-2">
+                                <h5 className="text-sm font-medium text-foreground">
+                                  Waitlist ({session.waitlistEntries.length})
+                                </h5>
+                                {session.waitlistEntries.map((entry: any, idx: number) => (
+                                  <div key={entry.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                                    <div>
+                                      <span className="text-foreground font-medium">
+                                        #{entry.position} {entry.firstName} {entry.lastName}
+                                      </span>
+                                      <div className="text-muted-foreground text-xs">
+                                        Status: {entry.status}
+                                        {entry.offerExpiresAt && (
+                                          <span className="ml-2">
+                                            • Expires: {format(new Date(entry.offerExpiresAt), 'MMM d, h:mm a')}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${
+                                      entry.status === 'offered' ? 'bg-blue-900 text-blue-300' :
+                                      entry.status === 'accepted' ? 'bg-green-900 text-green-300' :
+                                      entry.status === 'expired' ? 'bg-red-900 text-red-300' :
+                                      'bg-gray-900 text-gray-300'
+                                    }`}>
+                                      {entry.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-4 text-sm">
+                                No one on waitlist
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

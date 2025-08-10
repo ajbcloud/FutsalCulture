@@ -784,6 +784,11 @@ export function setupAdminRoutes(app: any) {
           bookingOpenHour: futsalSessions.bookingOpenHour,
           bookingOpenMinute: futsalSessions.bookingOpenMinute,
           createdAt: futsalSessions.createdAt,
+          // Waitlist configuration fields
+          waitlistEnabled: futsalSessions.waitlistEnabled,
+          waitlistLimit: futsalSessions.waitlistLimit,
+          autoPromote: futsalSessions.autoPromote,
+          paymentWindowMinutes: futsalSessions.paymentWindowMinutes,
           signupCount: sql<number>`(
             SELECT COUNT(*)::integer FROM signups
              WHERE signups.session_id = futsal_sessions.id
@@ -815,17 +820,44 @@ export function setupAdminRoutes(app: any) {
         return acc;
       }, {} as Record<string, typeof allSignups>);
 
+      // Fetch waitlist entries for all sessions
+      const { waitlists } = await import('@shared/schema');
+      const allWaitlistEntries = await db
+        .select({
+          sessionId: waitlists.sessionId,
+          id: waitlists.id,
+          playerId: waitlists.playerId,
+          position: waitlists.position,
+          status: waitlists.status,
+          offerStatus: waitlists.offerStatus,
+          offerExpiresAt: waitlists.offerExpiresAt,
+          firstName: players.firstName,
+          lastName: players.lastName,
+        })
+        .from(waitlists)
+        .innerJoin(players, eq(waitlists.playerId, players.id))
+        .where(inArray(waitlists.sessionId, sessions.map(s => s.id)))
+        .orderBy(waitlists.position);
+
+      // Group waitlist entries by session
+      const waitlistsBySession = allWaitlistEntries.reduce((acc, row) => {
+        acc[row.sessionId] = acc[row.sessionId] || [];
+        acc[row.sessionId].push(row);
+        return acc;
+      }, {} as Record<string, typeof allWaitlistEntries>);
+
       // Convert signupCount to actual numbers and combine with player details
       const sessionsWithNumbers = sessions.map(s => ({
         ...s,
         signupCount: Number(s.signupCount),
       }));
 
-      // Combine sessions with their player details
+      // Combine sessions with their player details and waitlist information
       const sessionsWithDetails = sessionsWithNumbers.map(s => ({
         ...s,
         signupsCount: s.signupCount, // Keep both for compatibility
         playersSigned: signupsBySession[s.id] || [],
+        waitlistEntries: waitlistsBySession[s.id] || [],
       }));
 
       console.log('Sessions with signup counts:', sessionsWithDetails.slice(0, 2).map(s => ({ 
