@@ -111,13 +111,13 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       // Use primary button color for active navigation background
       root.style.setProperty('--custom-light-nav-active-bg', `hsl(${hexToHsl(theme.lightPrimaryButton || '#2563eb')})`);
 
-      // Apply extended light mode colors (numbered 10-15)
-      root.style.setProperty('--theme-page-title', theme.lightPageTitle || '#111827');
-      root.style.setProperty('--theme-card-background', theme.lightCardBackground || '#ffffff');
-      root.style.setProperty('--theme-card-title', theme.lightCardTitle || '#111827');
-      root.style.setProperty('--theme-feature-title', theme.lightFeatureTitle || '#111827');
-      root.style.setProperty('--theme-feature-description', theme.lightFeatureDescription || '#4b5563');
-      root.style.setProperty('--theme-icon-color', theme.lightIconColor || '#6366f1');
+      // Apply extended light mode colors (numbered 10-15) as HSL
+      root.style.setProperty('--custom-light-page-title', `hsl(${hexToHsl(theme.lightPageTitle || '#111827')})`);
+      root.style.setProperty('--custom-light-card-background', `hsl(${hexToHsl(theme.lightCardBackground || '#ffffff')})`);
+      root.style.setProperty('--custom-light-card-title', `hsl(${hexToHsl(theme.lightCardTitle || '#111827')})`);
+      root.style.setProperty('--custom-light-feature-title', `hsl(${hexToHsl(theme.lightFeatureTitle || '#111827')})`);
+      root.style.setProperty('--custom-light-feature-description', `hsl(${hexToHsl(theme.lightFeatureDescription || '#4b5563')})`);
+      root.style.setProperty('--custom-light-icon-color', `hsl(${hexToHsl(theme.lightIconColor || '#6366f1')})`);
       
       // Apply dark mode custom colors as CSS variables
       root.style.setProperty('--custom-dark-primary', `hsl(${hexToHsl(theme.darkPrimaryButton)})`);

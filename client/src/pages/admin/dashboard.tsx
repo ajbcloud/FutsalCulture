@@ -242,8 +242,8 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-3xl font-bold theme-page-title">Admin Dashboard</h1>
+            <p className="theme-description mt-2">
               Welcome to the {businessName} management portal
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
                 iconColor="text-green-500"
                 subtitle="This Month"
                 growth={metrics?.revenueGrowth || 0}
-                showGrowth={hasAdvancedAnalytics}
+                showGrowth={hasAdvancedAnalytics.hasFeature}
               />
             ) : (
               <Card className="border-2 border-dashed border-border">
@@ -373,8 +373,8 @@ export default function AdminDashboard() {
                 icon={DollarSign}
                 iconColor="text-green-500"
                 subtitle="Year to Date"
-                growth={hasAdvancedAnalytics ? metrics?.ytdGrowth || 0 : undefined}
-                showGrowth={hasAdvancedAnalytics}
+                growth={hasAdvancedAnalytics.hasFeature ? metrics?.ytdGrowth || 0 : undefined}
+                showGrowth={hasAdvancedAnalytics.hasFeature}
               />
             ) : (
               <Card className="border-2 border-dashed border-border">

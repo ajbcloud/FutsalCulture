@@ -42,22 +42,22 @@ export function KPICard({
 
   return (
     <TooltipProvider>
-      <Card className={cn("bg-card border-border", className)}>
+      <Card className={cn("theme-card-bg border-border", className)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium theme-card-title">{title}</CardTitle>
           <div className="flex items-center space-x-2">
-            {Icon && <Icon className={cn("h-4 w-4", iconColor)} />}
+            {Icon && <Icon className={cn("h-4 w-4 theme-icon-color")} />}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info 
-                  className="h-4 w-4 text-muted-foreground hover:text-blue-400 cursor-help transition-colors"
+                  className="h-4 w-4 theme-description hover:text-blue-400 cursor-help transition-colors"
                   tabIndex={0}
                   aria-label={tooltip}
                 />
               </TooltipTrigger>
               <TooltipContent 
                 side="top" 
-                className="max-w-xs bg-card border-border text-foreground"
+                className="max-w-xs theme-card-bg border-border theme-card-title"
               >
                 <p>{tooltip}</p>
               </TooltipContent>
@@ -65,9 +65,9 @@ export function KPICard({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-foreground">{value}</div>
+          <div className="text-2xl font-bold theme-card-title">{value}</div>
           <div className="flex items-center justify-between mt-1">
-            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+            {subtitle && <p className="text-xs theme-description">{subtitle}</p>}
             {showGrowth && growth !== undefined && formatGrowth(growth)}
           </div>
         </CardContent>

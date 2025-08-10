@@ -70,13 +70,22 @@
   --ring: var(--focus);
   --radius: 0.5rem;
   
-  /* Theme customization overrides - Light mode */
-  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));
-  --theme-secondary: var(--custom-light-secondary, hsl(214, 32%, 96%));
-  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));
-  --theme-foreground: var(--custom-light-foreground, hsl(220, 89%, 11%));
-  --theme-heading: var(--custom-light-heading, hsl(220, 89%, 11%));
-  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));
+  /* Theme customization overrides - Light mode (numbered 1-15) */
+  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));           /* 1. Primary Button */
+  --theme-secondary: var(--custom-light-secondary, hsl(214, 32%, 96%));       /* 2. Secondary Button */
+  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));       /* 3. Background */
+  --theme-foreground: var(--custom-light-foreground, hsl(220, 89%, 11%));     /* 4. Text Color */
+  --theme-heading: var(--custom-light-heading, hsl(220, 89%, 11%));           /* 5. Heading Color */
+  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));   /* 6. Description Color */
+  --theme-nav-title: var(--custom-light-nav-title, hsl(220, 89%, 11%));       /* 7. Nav Title */
+  --theme-nav-text: var(--custom-light-nav-text, hsl(215, 16%, 35%));         /* 8. Nav Text */
+  --theme-nav-active-text: var(--custom-light-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text */
+  --theme-page-title: var(--custom-light-page-title, hsl(220, 89%, 11%));     /* 10. Page Title */
+  --theme-card-background: var(--custom-light-card-background, hsl(0, 0%, 100%)); /* 11. Card Background */
+  --theme-card-title: var(--custom-light-card-title, hsl(220, 89%, 11%));     /* 12. Card Title */
+  --theme-feature-title: var(--custom-light-feature-title, hsl(220, 89%, 11%)); /* 13. Feature Title */
+  --theme-feature-description: var(--custom-light-feature-description, hsl(215, 16%, 35%)); /* 14. Feature Description */
+  --theme-icon-color: var(--custom-light-icon-color, hsl(217, 91%, 60%));     /* 15. Icon Color */
 }
 
 /* Dark mode semantic colors */
@@ -123,36 +132,80 @@
   --chart-1: hsl(217, 91%, 70%);       /* Blue - lighter */
   --chart-2: hsl(142, 76%, 50%);       /* Green - lighter */
   --chart-3: hsl(38, 92%, 60%);        /* Orange - lighter */
-  --chart-4: hsl(0, 84%, 70%);         /* Red - lighter */
-  --chart-5: hsl(271, 91%, 75%);       /* Purple - lighter */
-  --chart-6: hsl(199, 89%, 65%);       /* Cyan - lighter */
   
-  /* Legacy Shadcn variables for compatibility */
-  --background: var(--bg);
-  --foreground: var(--text);
-  --muted: var(--input);
-  --muted-foreground: var(--text-muted);
-  --popover: var(--bg-elev);
-  --popover-foreground: var(--text);
-  --card: var(--bg-elev);
-  --card-foreground: var(--text);
-  --primary: var(--brand);
-  --primary-foreground: var(--brand-contrast);
-  --secondary: var(--input);
-  --secondary-foreground: var(--text);
-  --accent: var(--input);
-  --accent-foreground: var(--text);
-  --destructive: var(--danger);
-  --destructive-foreground: var(--danger-contrast);
-  --ring: var(--focus);
+  /* Theme customization overrides - Dark mode (numbered 1-15) */
+  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 70%));           /* 1. Primary Button */
+  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 18%));       /* 2. Secondary Button */
+  --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));       /* 3. Background */
+  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));       /* 4. Text Color */
+  --theme-heading: var(--custom-dark-heading, hsl(0, 0%, 100%));             /* 5. Heading Color */
+  --theme-description: var(--custom-dark-description, hsl(210, 40%, 85%));   /* 6. Description Color */
+  --theme-nav-title: var(--custom-dark-nav-title, hsl(0, 0%, 100%));         /* 7. Nav Title */
+  --theme-nav-text: var(--custom-dark-nav-text, hsl(210, 40%, 85%));         /* 8. Nav Text */
+  --theme-nav-active-text: var(--custom-dark-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text */
+  --theme-page-title: var(--custom-dark-page-title, hsl(0, 0%, 100%));       /* 10. Page Title */
+  --theme-card-background: var(--custom-dark-card-background, hsl(217, 33%, 8%)); /* 11. Card Background */
+  --theme-card-title: var(--custom-dark-card-title, hsl(0, 0%, 100%));       /* 12. Card Title */
+  --theme-feature-title: var(--custom-dark-feature-title, hsl(0, 0%, 100%)); /* 13. Feature Title */
+  --theme-feature-description: var(--custom-dark-feature-description, hsl(210, 40%, 85%)); /* 14. Feature Description */
+  --theme-icon-color: var(--custom-dark-icon-color, hsl(217, 91%, 70%));     /* 15. Icon Color */
+}
+
+/* Theme utility classes for numbered color system */
+@layer utilities {
+  .theme-page-title {
+    color: var(--theme-page-title);
+  }
   
-  /* Theme customization overrides - Dark mode */
-  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 70%));
-  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 18%));
-  --theme-background: var(--custom-dark-background, hsl(220, 89%, 11%));
-  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));
-  --theme-heading: var(--custom-dark-heading, hsl(217, 91%, 70%));
-  --theme-description: var(--custom-dark-description, hsl(210, 40%, 85%));
+  .theme-card-bg {
+    background-color: var(--theme-card-background);
+  }
+  
+  .theme-card-title {
+    color: var(--theme-card-title);
+  }
+  
+  .theme-heading {
+    color: var(--theme-heading);
+  }
+  
+  .theme-description {
+    color: var(--theme-description);
+  }
+  
+  .theme-nav-title {
+    color: var(--theme-nav-title);
+  }
+  
+  .theme-nav-text {
+    color: var(--theme-nav-text);
+  }
+  
+  .theme-nav-active-text {
+    color: var(--theme-nav-active-text);
+  }
+  
+  .theme-feature-title {
+    color: var(--theme-feature-title);
+  }
+  
+  .theme-feature-description {
+    color: var(--theme-feature-description);
+  }
+  
+  .theme-icon-color {
+    color: var(--theme-icon-color);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased;
+  }
 }
 
 @layer base {

@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="w-full"
               />
             </div>
-            <h1 className="text-xl font-bold text-foreground text-center w-full admin-nav-title">Admin Portal</h1>
+            <h1 className="text-xl font-bold theme-nav-title text-center w-full admin-nav-title">Admin Portal</h1>
           </div>
           <Button
             variant="ghost"
@@ -123,7 +123,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       onClick={() => setSidebarOpen(false)}
                     >
                       <Icon className="w-5 h-5 mr-3" />
-                      <span className="admin-nav-text">{item.label}</span>
+                      <span className={`admin-nav-text ${isActive ? 'theme-nav-active-text' : 'theme-nav-text'}`}>{item.label}</span>
                     </div>
                   </Link>
                 );
@@ -141,7 +141,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Sparkles className="w-5 h-5 mr-3" />
-                    <span className="admin-nav-text">Elite Features</span>
+                    <span className={`admin-nav-text ${location.startsWith("/admin/elite-features") ? 'theme-nav-active-text' : 'theme-nav-text'}`}>Elite Features</span>
                   </div>
                 </Link>
               )}
