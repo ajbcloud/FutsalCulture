@@ -45,10 +45,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const { theme } = useCustomTheme();
     const Comp = asChild ? Slot : "button"
     
-    // Apply custom theme colors for primary and secondary variants
+    // Apply custom theme colors via inline styles (works in both light and dark mode)
     let customStyle = style || {};
-    if (theme && (variant === 'default' || variant === 'secondary')) {
-      if (variant === 'default') {
+    
+    if (theme) {
+      // Apply custom primary color to default variant
+      if (variant === 'default' || variant === undefined) {
         customStyle = {
           ...customStyle,
           backgroundColor: theme.primaryButton,

@@ -81,6 +81,55 @@
   }
 }
 
+/* Custom theme overrides */
+@layer components {
+  /* Specifically target buttons with background colors that should use custom theme */
+  html[style*="--custom-primary-button"] button.bg-green-600,
+  html[style*="--custom-primary-button"] button.bg-green-500,  
+  html[style*="--custom-primary-button"] button.bg-blue-600,
+  html[style*="--custom-primary-button"] button.bg-blue-500,
+  html[style*="--custom-primary-button"] button.bg-red-600,
+  html[style*="--custom-primary-button"] .bg-green-600,
+  html[style*="--custom-primary-button"] .bg-green-500,
+  html[style*="--custom-primary-button"] .bg-blue-600,
+  html[style*="--custom-primary-button"] .bg-blue-500,
+  html[style*="--custom-primary-button"] .bg-red-600 {
+    background-color: var(--custom-primary-button) !important;
+    border-color: var(--custom-primary-button) !important;
+    color: white !important;
+  }
+  
+  /* Hover states for custom primary buttons */
+  html[style*="--custom-primary-button"] button.bg-green-600:hover,
+  html[style*="--custom-primary-button"] button.bg-green-500:hover,
+  html[style*="--custom-primary-button"] button.bg-blue-600:hover,
+  html[style*="--custom-primary-button"] button.bg-blue-500:hover,
+  html[style*="--custom-primary-button"] .bg-green-600:hover,
+  html[style*="--custom-primary-button"] .bg-green-500:hover,
+  html[style*="--custom-primary-button"] .bg-blue-600:hover,
+  html[style*="--custom-primary-button"] .bg-blue-500:hover,
+  html[style*="--custom-primary-button"] .hover\\:bg-green-700:hover,
+  html[style*="--custom-primary-button"] .hover\\:bg-green-600:hover,
+  html[style*="--custom-primary-button"] .hover\\:bg-blue-700:hover {
+    background-color: var(--custom-primary-button) !important;
+    filter: brightness(0.9) !important;
+  }
+  
+  /* Default button variant override when custom theme is active */
+  html[style*="--custom-primary-button"] .bg-primary {
+    background-color: var(--custom-primary-button) !important;
+    border-color: var(--custom-primary-button) !important;
+  }
+  
+  /* Secondary button overrides */
+  html[style*="--custom-secondary-button"] .bg-secondary,
+  html[style*="--custom-secondary-button"] button[data-variant="secondary"] {
+    background-color: var(--custom-secondary-button) !important;
+    border-color: var(--custom-secondary-button) !important;
+    color: white !important;
+  }
+}
+
 @layer utilities {
   .text-futsal-50 { color: var(--futsal-50); }
   .text-futsal-100 { color: var(--futsal-100); }
