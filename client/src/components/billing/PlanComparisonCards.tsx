@@ -56,7 +56,8 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
     'smsNotifications',
     'advancedAnalytics',
     'autoPromotion',
-    'themeCustomization'
+    'themeCustomization',
+    'playerDevelopment'
   ] as const;
 
   return (

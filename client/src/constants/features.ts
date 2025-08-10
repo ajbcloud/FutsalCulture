@@ -65,4 +65,8 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     label: 'White-label email sending', 
     description: 'Send emails from your custom domain' 
   },
+  playerDevelopment: { 
+    label: 'Advanced player development system', 
+    description: 'Comprehensive skill assessments, goal tracking, training plans, and progress analytics for individual player growth' 
+  },
 };

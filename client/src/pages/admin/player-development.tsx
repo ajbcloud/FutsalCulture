@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHasFeature, UpgradePrompt } from '@/hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/schema';
+import AdminLayout from '@/components/admin-layout';
 import { 
   User, 
   BookOpen, 

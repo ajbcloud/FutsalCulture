@@ -14,7 +14,8 @@ export type FeatureKey =
   | 'customFeatureQueue'
   | 'prioritySupport'
   | 'apiAccess'
-  | 'whiteLabelEmail';
+  | 'whiteLabelEmail'
+  | 'playerDevelopment';
 
 export const PLANS = {
   free: {
@@ -38,6 +39,7 @@ export const PLANS = {
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
+      playerDevelopment: false,
     },
   },
   core: {
@@ -61,6 +63,7 @@ export const PLANS = {
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
+      playerDevelopment: false,
     },
   },
   growth: {
@@ -84,6 +87,7 @@ export const PLANS = {
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: true,
+      playerDevelopment: false,
     },
   },
   elite: {
@@ -107,6 +111,7 @@ export const PLANS = {
       prioritySupport: true, // NEW Elite feature
       apiAccess: true,
       whiteLabelEmail: true,
+      playerDevelopment: true, // Elite-only comprehensive player development system
     },
   },
 } as const;
