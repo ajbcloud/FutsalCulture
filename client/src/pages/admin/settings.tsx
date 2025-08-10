@@ -859,6 +859,114 @@ export default function AdminSettings() {
                     />
                   </div>
                 </div>
+
+                {/* Communication Settings - Last section */}
+                <div className="border-t border-border pt-6 space-y-4">
+                  <h4 className="text-sm font-medium text-foreground">Communication Settings</h4>
+                  <p className="text-sm text-muted-foreground">Configure how parents are notified about waitlist updates</p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-foreground">Email Notifications</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Send email notifications for waitlist updates
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.waitlistNotificationEmail}
+                        onCheckedChange={(checked) => 
+                          setSettings(prev => ({ ...prev, waitlistNotificationEmail: checked }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-foreground">SMS Notifications</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Send SMS notifications for urgent waitlist updates
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.waitlistNotificationSMS}
+                        onCheckedChange={(checked) => 
+                          setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
+                        }
+                      />
+                    </div>
+
+                    {/* Message Templates */}
+                    <div className="space-y-4 pt-4">
+                      <h5 className="text-sm font-medium text-foreground">Message Templates</h5>
+                      <p className="text-xs text-muted-foreground">
+                        Customize the messages sent to parents. Variables will be automatically replaced with actual session details.
+                      </p>
+                      
+                      <div>
+                        <Label htmlFor="waitlistJoinMessage" className="text-foreground">Join Waitlist Message</Label>
+                        <Textarea
+                          id="waitlistJoinMessage"
+                          value={settings.waitlistJoinMessage}
+                          onChange={(e) => setSettings(prev => ({ ...prev, waitlistJoinMessage: e.target.value }))}
+                          className="bg-input border-border text-foreground mt-1"
+                          rows={2}
+                          placeholder="You've been added to the waitlist for {session}. You're #{position} in line."
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Available variables: {"{session}"}, {"{position}"}, {"{location}"}, {"{date}"}, {"{time}"}
+                        </p>
+                        
+                        {/* Dynamic Preview */}
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <div className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">Preview:</div>
+                          <div className="text-sm text-blue-700 dark:text-blue-300">
+                            {settings.waitlistJoinMessage
+                              .replace('{session}', 'U12 Boys Training Session')
+                              .replace('{position}', '3')
+                              .replace('{location}', 'Main Field')
+                              .replace('{date}', new Date().toLocaleDateString())
+                              .replace('{time}', '6:00 PM')
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="waitlistPromotionMessage" className="text-foreground">Promotion Message</Label>
+                        <Textarea
+                          id="waitlistPromotionMessage"
+                          value={settings.waitlistPromotionMessage}
+                          onChange={(e) => setSettings(prev => ({ ...prev, waitlistPromotionMessage: e.target.value }))}
+                          className="bg-input border-border text-foreground mt-1"
+                          rows={3}
+                          placeholder="Great news! A spot opened up in {session}. You have until {expires} to complete your booking."
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Available variables: {"{session}"}, {"{expires}"}, {"{location}"}, {"{date}"}, {"{time}"}, {"{offerTime}"}
+                        </p>
+                        
+                        {/* Dynamic Preview */}
+                        <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                          <div className="text-xs text-green-800 dark:text-green-200 font-medium mb-1">Preview:</div>
+                          <div className="text-sm text-green-700 dark:text-green-300">
+                            {(() => {
+                              const now = new Date();
+                              const expiresDate = new Date(now.getTime() + (settings.defaultWaitlistOfferTimeMinutes || 45) * 60 * 1000);
+                              return settings.waitlistPromotionMessage
+                                .replace('{session}', 'U12 Boys Training Session')
+                                .replace('{expires}', expiresDate.toLocaleString())
+                                .replace('{location}', 'Main Field')
+                                .replace('{date}', new Date().toLocaleDateString())
+                                .replace('{time}', '6:00 PM')
+                                .replace('{offerTime}', `${settings.defaultWaitlistOfferTimeMinutes || 45} minutes`);
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
