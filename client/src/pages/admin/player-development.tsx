@@ -94,26 +94,29 @@ export default function PlayerDevelopment() {
 
   if (!hasFeature) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Player Development</h1>
-            <p className="text-muted-foreground">
-              Comprehensive player assessment and development tracking
-            </p>
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Player Development</h1>
+              <p className="text-muted-foreground">
+                Comprehensive player assessment and development tracking
+              </p>
+            </div>
           </div>
+          
+          <UpgradePrompt 
+            feature={FEATURE_KEYS.PLAYER_DEVELOPMENT}
+            targetPlan="elite"
+          />
         </div>
-        
-        <UpgradePrompt 
-          feature={FEATURE_KEYS.PLAYER_DEVELOPMENT}
-          targetPlan="elite"
-        />
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Player Development</h1>
@@ -411,6 +414,7 @@ export default function PlayerDevelopment() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
