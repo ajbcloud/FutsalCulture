@@ -50,18 +50,18 @@
 }
 
 .dark {
-  --background: hsl(222, 84%, 5%);
+  --background: hsl(222, 84%, 4%);
   --foreground: hsl(210, 40%, 98%);
   --muted: hsl(217, 33%, 17%);
-  --muted-foreground: hsl(215, 16%, 65%);
-  --popover: hsl(222, 84%, 5%);
+  --muted-foreground: hsl(215, 20%, 85%);
+  --popover: hsl(222, 84%, 4%);
   --popover-foreground: hsl(210, 40%, 98%);
-  --card: hsl(222, 84%, 5%);
+  --card: hsl(222, 84%, 4%);
   --card-foreground: hsl(210, 40%, 98%);
   --border: hsl(217, 33%, 17%);
   --input: hsl(217, 33%, 17%);
   --primary: hsl(217, 91%, 60%);
-  --primary-foreground: hsl(222, 84%, 5%);
+  --primary-foreground: hsl(210, 40%, 98%);
   --secondary: hsl(217, 33%, 17%);
   --secondary-foreground: hsl(210, 40%, 98%);
   --accent: hsl(217, 33%, 17%);

@@ -503,19 +503,20 @@ export default function EliteFeatures() {
                       <div 
                         className="p-6 rounded-lg border space-y-4"
                         style={{ 
-                          backgroundColor: '#0f172a', // Dark background
-                          color: '#f1f5f9' // Light text for dark mode
+                          backgroundColor: 'hsl(222, 84%, 4%)', // Match our dark theme background
+                          color: 'hsl(210, 40%, 98%)', // Bright text for dark mode
+                          borderColor: 'hsl(217, 33%, 17%)' // Match dark border
                         }}
                       >
                         <h4 className="font-semibold" style={{ 
-                          color: themeSettings.headingColor === '#111827' ? '#f1f5f9' : themeSettings.headingColor 
+                          color: themeSettings.headingColor === '#111827' ? 'hsl(210, 40%, 98%)' : themeSettings.headingColor 
                         }}>
                           Sample Portal Content
                         </h4>
                         <p className="text-sm" style={{ 
-                          color: themeSettings.descriptionColor === '#6b7280' ? '#94a3b8' : themeSettings.descriptionColor 
+                          color: themeSettings.descriptionColor === '#6b7280' ? 'hsl(215, 20%, 85%)' : themeSettings.descriptionColor 
                         }}>
-                          This is how your custom theme will look in dark mode with adjusted text colors for visibility.
+                          This is how your custom theme will look in dark mode with proper text visibility.
                         </p>
                         <div className="flex gap-2 flex-wrap">
                           <button
@@ -533,12 +534,12 @@ export default function EliteFeatures() {
                         </div>
                         <div className="mt-4">
                           <h5 className="font-medium mb-2" style={{ 
-                            color: themeSettings.headingColor === '#111827' ? '#f1f5f9' : themeSettings.headingColor 
+                            color: themeSettings.headingColor === '#111827' ? 'hsl(210, 40%, 98%)' : themeSettings.headingColor 
                           }}>
                             Section Heading
                           </h5>
                           <p className="text-xs" style={{ 
-                            color: themeSettings.descriptionColor === '#6b7280' ? '#94a3b8' : themeSettings.descriptionColor 
+                            color: themeSettings.descriptionColor === '#6b7280' ? 'hsl(215, 20%, 85%)' : themeSettings.descriptionColor 
                           }}>
                             This shows how descriptions and smaller text will appear in dark mode.
                           </p>
