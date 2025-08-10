@@ -1508,10 +1508,8 @@ export default function AdminSettings() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="billing" className="space-y-6">
-          {/* Stripe Payment Processing Card */}
+          {/* Service Payment Section */}
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center">
@@ -1524,129 +1522,101 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent className="space-y-6">
               {loadingSubscription ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-muted-foreground">Loading subscription info...</div>
-                </div>
-              ) : subscriptionInfo ? (
-                <>
-                  {subscriptionInfo.subscription.status === 'active' && subscriptionInfo.subscription.plan ? (
-                    <>
-                      {/* Current Plan Display */}
-                      <div className="bg-muted p-4 rounded-lg border border-border">
-                        <div className="flex justify-between items-center mb-3">
-                          <div>
-                            <h3 className="text-foreground font-medium">Current Plan</h3>
-                            <p className="text-muted-foreground text-sm">{subscriptionInfo.subscription.plan.product.name}</p>
-                          </div>
-                          <Badge className="bg-green-900 text-green-300">
-                            Active
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Monthly Fee:</span>
-                            <span className="text-foreground ml-2 font-medium">
-                              ${(subscriptionInfo.subscription.plan.amount / 100).toFixed(2)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Next Billing:</span>
-                            <span className="text-foreground ml-2">
-                              {subscriptionInfo.subscription.current_period_end ? 
-                                new Date(subscriptionInfo.subscription.current_period_end * 1000).toLocaleDateString() 
-                                : 'N/A'
-                              }
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Customer:</span>
-                            <span className="text-foreground ml-2">{subscriptionInfo.subscription.customer.email}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Interval:</span>
-                            <span className="text-foreground ml-2 capitalize">{subscriptionInfo.subscription.plan.interval}ly</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Billing History */}
-                      {subscriptionInfo.invoices.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <h4 className="text-foreground font-medium">Recent Invoices</h4>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-blue-400 hover:text-blue-300 hover:bg-accent"
-                              onClick={openBillingPortal}
-                            >
-                              View All
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            {subscriptionInfo.invoices.map((invoice) => (
-                              <div key={invoice.id} className="bg-muted p-3 rounded border border-border flex justify-between items-center">
-                                <div>
-                                  <p className="text-foreground text-sm">
-                                    {new Date(invoice.created * 1000).toLocaleDateString()}
-                                  </p>
-                                  <p className="text-muted-foreground text-xs">Monthly Subscription</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-foreground text-sm font-medium">
-                                    ${(invoice.amount_paid / 100).toFixed(2)}
-                                  </p>
-                                  <Badge className="bg-green-900 text-green-300 text-xs capitalize">
-                                    {invoice.status}
-                                  </Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Button */}
-                      <div className="flex justify-center pt-4">
-                        <Button 
-                          className="bg-blue-600 hover:bg-blue-700 px-8"
-                          onClick={openBillingPortal}
-                        >
-                          Manage Subscription & Billing
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    /* No active subscription */
-                    <div className="text-center py-8">
-                      <div className="bg-muted p-6 rounded-lg border border-border mb-4">
-                        <h3 className="text-foreground font-medium mb-2">No Active Subscription</h3>
-                        <p className="text-muted-foreground text-sm mb-4">
-                          You don't have an active subscription. Set up billing to access all platform features.
-                        </p>
-                        <Badge className="bg-yellow-900 text-yellow-300">
-                          Inactive
-                        </Badge>
-                      </div>
-                      <Link href="/admin/payment">
-                        <Button className="bg-blue-600 hover:bg-blue-700">
-                          Set Up Subscription
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                </>
-              ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Unable to load subscription information</p>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={fetchSubscriptionInfo}
-                  >
-                    Retry
-                  </Button>
+                  <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2" />
+                  <p className="text-muted-foreground">Loading subscription details...</p>
+                </div>
+              ) : subscriptionInfo?.subscription?.status === 'active' ? (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                      <span className="font-medium text-green-800 dark:text-green-200">Active Subscription</span>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                      {subscriptionInfo.subscription.planName}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Next billing:</span>
+                      <div className="font-medium">
+                        {subscriptionInfo.subscription.currentPeriodEnd 
+                          ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
+                          : 'Not available'
+                        }
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Amount:</span>
+                      <div className="font-medium">
+                        ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
+                      disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
+                      className="flex items-center gap-2"
+                    >
+                      <Receipt className="w-4 h-4" />
+                      View Invoice
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000001', '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Manage Billing
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/30 border border-border rounded-lg p-6 text-center">
+                  <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Active Subscription</h3>
+                  <p className="text-muted-foreground mb-4">
+                    You don't have an active subscription. Set up billing to access all platform features.
+                  </p>
+                  <Badge variant="secondary" className="mb-4">Inactive</Badge>
+                  <div className="mt-4">
+                    <Button 
+                      onClick={() => window.open('https://buy.stripe.com/test_00000000001', '_blank')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Set Up Subscription
+                    </Button>
+                  </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-6">
+          {/* Billing tab content can be moved here if needed */}
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <DollarSign className="w-5 h-5 mr-2" />
+                Billing Configuration
+              </CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Configure billing and payment settings for session bookings
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Additional billing configuration options can be added here as needed.</p>
+                <p className="text-sm mt-2">Subscription management is now available in the Plan & Features tab.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
