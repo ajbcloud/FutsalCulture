@@ -1,0 +1,91 @@
+Goal
+When a waitlisted parent/player is promoted to a confirmed spot, they must log in to the web portal to complete payment. The system should display an “Available Session” with a Pay Now button on their dashboard. Clicking Pay Now routes to the normal payment flow for that session. Payment completion confirms their booking; failure to pay within the set window expires the offer.
+
+1) Backend Changes (Node/Express + Drizzle ORM)
+Database
+
+Add offer_status ENUM('none','offered','accepted','expired') to waitlists table.
+
+Add offer_expires_at TIMESTAMP to track payment deadlines.
+
+Promotion Logic
+
+When an admin promotes a waitlist entry:
+
+Set offer_status='offered' and offer_expires_at = now + payment_window_minutes.
+
+Create a provisional hold in the session (do not decrement available spots until payment).
+
+Send notification (email/SMS) with login instructions and expiration time.
+
+Notification text should NOT include a payment link — instead, instruct them to log in to the portal.
+
+API Endpoints
+
+GET /api/player/offers
+
+Returns all active offers for the logged-in parent/player.
+
+Fields: session_id, session_name, session_date_time, location, offer_expires_at, price.
+
+POST /api/player/offers/:offerId/accept
+
+Verifies offer is active and not expired.
+
+Redirects/returns payment session URL (reuse existing payment endpoint for regular session booking).
+
+POST /api/player/offers/:offerId/cancel
+
+Marks offer expired, releases hold, promotes next waitlist entry if auto-promote enabled.
+
+Expiration Job
+
+Background job runs every minute:
+
+Finds expired offers → marks as expired, releases holds, and triggers auto-promote if enabled.
+
+2) Frontend Changes (React)
+Parent/Player Dashboard
+
+Add a new “Available Sessions” widget at the top of the dashboard.
+
+For each active offer:
+
+Show session name, date/time, location (hyperlinked to Google Maps), price, expiration countdown.
+
+Show Pay Now button → navigates to /session/:sessionId/payment?offerId=...
+
+Show Decline Offer option.
+
+Session Payment Page
+
+Use existing session payment UI.
+
+Pass offerId to payment API.
+
+On successful payment:
+
+Set offer_status='accepted'.
+
+Convert provisional hold into confirmed booking.
+
+Remove player from waitlist for that session.
+
+3) Messaging Changes
+Promotion Message Template (updated for portal payment):
+
+pgsql
+Copy
+Edit
+Great news! A spot opened in {session}. Log in to your account to confirm and pay by {expires} or the offer will be given to the next person.
+Variables: {session}, {expires}.
+
+No payment link in the message — forces login.
+
+4) UX & Guardrails
+If the user tries to pay after offer_expires_at, block payment and show “Offer expired.”
+
+Prevent overselling by validating availability again before creating payment session.
+
+If the user declines the offer, remove them from the waitlist for that session.
+

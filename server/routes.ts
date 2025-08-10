@@ -606,8 +606,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
-      const { playerId, sessionId, accessCode } = req.body;
+      const { playerId, sessionId, accessCode, fromWaitlistOffer, offerId } = req.body;
       
+      // Special handling for waitlist offers
+      if (fromWaitlistOffer && offerId) {
+        // Verify the waitlist offer exists and is still valid
+        const offer = await storage.getWaitlistEntry(sessionId, playerId);
+        if (!offer || offer.id !== offerId || offer.offerStatus !== 'offered') {
+          return res.status(400).json({ message: "Invalid or expired waitlist offer" });
+        }
+        
+        // Check if offer has expired
+        const now = new Date();
+        if (offer.offerExpiresAt && offer.offerExpiresAt < now) {
+          return res.status(400).json({ message: "Waitlist offer has expired" });
+        }
+        
+        // Mark the waitlist offer as accepted and create signup
+        const updatedOffer = await storage.acceptWaitlistOffer(offerId);
+        
+        // Create signup with paid = true since this is from a waitlist promotion
+        const session = await storage.getSession(sessionId);
+        const userId = req.user.claims.sub;
+        const currentUser = await storage.getUser(userId);
+        
+        const signup = await storage.createSignup({
+          tenantId: currentUser?.tenantId || session.tenantId,
+          playerId,
+          sessionId,
+          paid: true, // Waitlist offers are marked as paid immediately
+        });
+
+        // Remove the waitlist entry since player is now signed up
+        await storage.leaveWaitlist(sessionId, playerId);
+        
+        const player = await storage.getPlayer(playerId);
+        
+        return res.json({
+          ...signup,
+          player,
+          session,
+          message: "Successfully confirmed spot from waitlist offer"
+        });
+      }
+      
+      // Regular signup flow
       // Check if signup already exists
       const existing = await storage.checkExistingSignup(playerId, sessionId);
       if (existing) {
@@ -1045,6 +1088,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error expiring waitlist offer:", error);
       res.status(500).json({ message: "Failed to expire offer" });
+    }
+  });
+
+  // Player Offer routes (for waitlist promotion)
+  app.get('/api/player/offers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const offers = await storage.getPlayerOffers(userId, user.tenantId);
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching player offers:", error);
+      res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
+  app.post('/api/player/offers/:offerId/accept', isAuthenticated, async (req: any, res) => {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Verify the offer belongs to the current user
+      const user = await storage.getUser(userId);
+      const offers = await storage.getPlayerOffers(userId, user?.tenantId);
+      const offer = offers.find(o => o.id === offerId);
+      
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found or expired" });
+      }
+      
+      const result = await storage.acceptWaitlistOffer(offerId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error accepting offer:", error);
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to accept offer" });
+    }
+  });
+
+  app.post('/api/player/offers/:offerId/cancel', isAuthenticated, async (req: any, res) => {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Verify the offer belongs to the current user
+      const user = await storage.getUser(userId);
+      const offers = await storage.getPlayerOffers(userId, user?.tenantId);
+      const offer = offers.find(o => o.id === offerId);
+      
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
+      
+      await storage.cancelWaitlistOffer(offerId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error canceling offer:", error);
+      res.status(500).json({ message: "Failed to cancel offer" });
     }
   });
 

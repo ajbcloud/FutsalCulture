@@ -10,6 +10,7 @@ import PlayerPortalControls from "@/components/player-portal-controls";
 import PlayerForm from "@/components/player-form";
 import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
+import WaitlistOffers from "@/components/waitlist-offers";
 
 
 import { Button } from "@/components/ui/button";
@@ -270,6 +271,11 @@ export default function Dashboard() {
         </div>
       </section>
 
+
+      {/* Waitlist Offers Section */}
+      <section className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <WaitlistOffers />
+      </section>
 
       {/* Today's Sessions - Mobile First */}
       <section className="py-6 bg-background sm:py-8">

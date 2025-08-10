@@ -31,6 +31,7 @@ import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
+import SessionPayment from "@/pages/session-payment";
 import PlayerInvite from "@/pages/player-invite";
 import Parent2Invite from "@/pages/parent2-invite";
 import NotFound from "@/pages/not-found";
@@ -61,6 +62,7 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
+            <Route path="/session/:id/payment" component={SessionPayment} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/calendar" component={Calendar} />
             <Route path="/profile" component={Profile} />

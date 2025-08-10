@@ -7,32 +7,11 @@ export function startWaitlistProcessor() {
 
   const processExpiredOffers = async () => {
     try {
-      // Get all expired offers
-      const expiredOffers = await storage.getExpiredOffers();
+      // Process expired offers using the new storage method
+      const processedCount = await storage.processExpiredOffers();
       
-      console.log(`Found ${expiredOffers.length} expired waitlist offers`);
-      
-      for (const offer of expiredOffers) {
-        console.log(`Processing expired offer for waitlist entry ${offer.id}`);
-        
-        // Mark offer as expired
-        await storage.expireWaitlistOffer(offer.id);
-        
-        // Auto-promote next person if enabled
-        const session = await storage.getSession(offer.sessionId, offer.tenantId);
-        if (session?.autoPromote) {
-          console.log(`Auto-promoting next person for session ${offer.sessionId}`);
-          
-          // Check if there's still capacity
-          const signupsCount = await storage.getSignupsCount(offer.sessionId);
-          if (signupsCount < session.capacity) {
-            await storage.promoteFromWaitlist(offer.sessionId);
-          }
-        }
-      }
-      
-      if (expiredOffers.length > 0) {
-        console.log(`Processed ${expiredOffers.length} expired waitlist offers`);
+      if (processedCount > 0) {
+        console.log(`Found ${processedCount} expired waitlist offers`);
       }
     } catch (error) {
       console.error("Error processing expired waitlist offers:", error);

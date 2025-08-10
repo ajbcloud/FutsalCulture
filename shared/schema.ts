@@ -43,6 +43,9 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks", "braintree"
 ]);
 
+// Waitlist offer status enum
+export const waitlistOfferStatusEnum = pgEnum("waitlist_offer_status", ["none", "offered", "accepted", "expired"]);
+
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -180,6 +183,7 @@ export const waitlists = pgTable("waitlists", {
   parentId: varchar("parent_id").notNull().references(() => users.id),
   position: integer("position").notNull(), // 1-based position
   status: waitlistStatusEnum("status").notNull().default("active"),
+  offerStatus: waitlistOfferStatusEnum("offer_status").notNull().default("none"),
   notifyOnJoin: boolean("notify_on_join").default(true),
   notifyOnPositionChange: boolean("notify_on_position_change").default(false),
   offerExpiresAt: timestamp("offer_expires_at"),

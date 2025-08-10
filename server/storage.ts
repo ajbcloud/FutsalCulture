@@ -96,6 +96,13 @@ export interface IStorage {
   reorderWaitlist(sessionId: string): Promise<void>;
   cleanupExpiredWaitlists(): Promise<number>;
   
+  // Waitlist offer operations
+  getPlayerOffers(parentId: string, tenantId?: string): Promise<Array<Waitlist & { session: FutsalSession; player: Player }>>;
+  createWaitlistOffer(waitlistId: string, paymentWindowMinutes: number): Promise<Waitlist>;
+  acceptWaitlistOffer(offerId: string): Promise<{ waitlist: Waitlist; paymentUrl: string }>;
+  cancelWaitlistOffer(offerId: string): Promise<void>;
+  processExpiredOffers(tenantId?: string): Promise<number>;
+  
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(signupId: string, paidAt: Date): Promise<void>;
@@ -1827,6 +1834,7 @@ export class DatabaseStorage implements IStorage {
         .update(waitlists)
         .set({
           status: 'offered',
+          offerStatus: 'offered',
           offerExpiresAt,
         })
         .where(eq(waitlists.id, entryToPromote.id))
@@ -1908,6 +1916,128 @@ export class DatabaseStorage implements IStorage {
       );
 
     return result.rowCount || 0;
+  }
+
+  // Waitlist offer operations
+  async getPlayerOffers(parentId: string, tenantId?: string): Promise<Array<Waitlist & { session: FutsalSession; player: Player }>> {
+    const now = new Date();
+    const query = db
+      .select({
+        waitlist: waitlists,
+        session: futsalSessions,
+        player: players,
+      })
+      .from(waitlists)
+      .innerJoin(futsalSessions, eq(waitlists.sessionId, futsalSessions.id))
+      .innerJoin(players, eq(waitlists.playerId, players.id))
+      .where(
+        and(
+          eq(waitlists.parentId, parentId),
+          eq(waitlists.offerStatus, 'offered'),
+          gte(waitlists.offerExpiresAt, now)
+        )
+      )
+      .orderBy(waitlists.offerExpiresAt);
+
+    if (tenantId) {
+      query.where(eq(waitlists.tenantId, tenantId));
+    }
+
+    const result = await query;
+    return result.map(r => ({ ...r.waitlist, session: r.session, player: r.player }));
+  }
+
+  async createWaitlistOffer(waitlistId: string, paymentWindowMinutes: number): Promise<Waitlist> {
+    const offerExpiresAt = new Date(Date.now() + paymentWindowMinutes * 60 * 1000);
+    
+    const [updatedWaitlist] = await db
+      .update(waitlists)
+      .set({
+        offerStatus: 'offered',
+        offerExpiresAt,
+      })
+      .where(eq(waitlists.id, waitlistId))
+      .returning();
+
+    return updatedWaitlist;
+  }
+
+  async acceptWaitlistOffer(offerId: string): Promise<{ waitlist: Waitlist; paymentUrl: string }> {
+    // This would need to integrate with Stripe for payment URL generation
+    // For now, returning a placeholder URL that would be handled by the payment route
+    const [waitlist] = await db
+      .select()
+      .from(waitlists)
+      .where(eq(waitlists.id, offerId));
+
+    if (!waitlist) {
+      throw new Error('Waitlist offer not found');
+    }
+
+    // Verify offer is still valid
+    const now = new Date();
+    if (waitlist.offerStatus !== 'offered' || (waitlist.offerExpiresAt && waitlist.offerExpiresAt < now)) {
+      throw new Error('Offer has expired');
+    }
+
+    // Generate payment URL (placeholder - would integrate with actual payment system)
+    const paymentUrl = `/session/${waitlist.sessionId}/payment?offerId=${offerId}`;
+
+    return { waitlist, paymentUrl };
+  }
+
+  async cancelWaitlistOffer(offerId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Mark offer as expired
+      const [expiredOffer] = await tx
+        .update(waitlists)
+        .set({
+          offerStatus: 'expired',
+          status: 'removed',
+        })
+        .where(eq(waitlists.id, offerId))
+        .returning();
+
+      if (!expiredOffer) return;
+
+      // Check if auto-promote is enabled for the session
+      const [session] = await tx
+        .select()
+        .from(futsalSessions)
+        .where(eq(futsalSessions.id, expiredOffer.sessionId));
+
+      if (session?.autoPromote) {
+        // Promote next person in line
+        await this.promoteFromWaitlist(expiredOffer.sessionId);
+      }
+    });
+  }
+
+  async processExpiredOffers(tenantId?: string): Promise<number> {
+    const now = new Date();
+    let expiredOffersQuery = db
+      .select()
+      .from(waitlists)
+      .where(
+        and(
+          eq(waitlists.offerStatus, 'offered'),
+          lte(waitlists.offerExpiresAt, now)
+        )
+      );
+
+    if (tenantId) {
+      expiredOffersQuery = expiredOffersQuery.where(eq(waitlists.tenantId, tenantId));
+    }
+
+    const expiredOffers = await expiredOffersQuery;
+    let processedCount = 0;
+
+    for (const offer of expiredOffers) {
+      await this.cancelWaitlistOffer(offer.id);
+      processedCount++;
+    }
+
+    return processedCount;
   }
 }
 
