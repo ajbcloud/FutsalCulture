@@ -22,6 +22,19 @@ const textSizes = {
   lg: "text-base"
 };
 
+// Function to calculate if a color is light or dark
+function isLightColor(color: string): boolean {
+  // Convert hex to RGB
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
+}
+
 export function CustomAvatar({ 
   src, 
   alt, 
@@ -30,12 +43,14 @@ export function CustomAvatar({
   size = "md",
   className = ""
 }: CustomAvatarProps) {
+  const textColor = isLightColor(backgroundColor) ? "#000000" : "#ffffff";
+  
   return (
     <Avatar className={`${sizeClasses[size]} ${className}`}>
       <AvatarImage src={src} alt={alt} />
       <AvatarFallback 
-        className={`${textSizes[size]} text-white font-medium`}
-        style={{ backgroundColor }}
+        className={`${textSizes[size]} font-medium`}
+        style={{ backgroundColor, color: textColor }}
         data-testid="avatar-fallback"
       >
         {fallbackText || <User className="h-4 w-4" />}
