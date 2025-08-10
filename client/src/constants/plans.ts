@@ -7,6 +7,7 @@ export type FeatureKey =
   | 'emailNotifications'
   | 'smsNotifications'
   | 'advancedAnalytics'
+  | 'revenueAnalytics'
   | 'autoPromotion'
   | 'bulkOps'
   | 'themeCustomization'
@@ -29,6 +30,7 @@ export const PLANS = {
       emailNotifications: false,
       smsNotifications: false,
       advancedAnalytics: false,
+      revenueAnalytics: false,
       autoPromotion: false,
       bulkOps: false,
       themeCustomization: false,
@@ -51,6 +53,7 @@ export const PLANS = {
       emailNotifications: true,
       smsNotifications: false,
       advancedAnalytics: 'basic' as const,
+      revenueAnalytics: false, // Basic analytics only, no revenue tracking
       autoPromotion: false,
       bulkOps: false,
       themeCustomization: false,
@@ -73,6 +76,7 @@ export const PLANS = {
       emailNotifications: true,
       smsNotifications: true,
       advancedAnalytics: 'advanced' as const,
+      revenueAnalytics: true, // Revenue analytics available since they can accept payments
       autoPromotion: true,
       bulkOps: true,
       themeCustomization: false, // Now Elite-only
@@ -95,6 +99,7 @@ export const PLANS = {
       emailNotifications: true,
       smsNotifications: true,
       advancedAnalytics: 'elite' as const, // Enhanced with multi-location, progression, forecasting
+      revenueAnalytics: true, // Full revenue analytics available
       autoPromotion: true,
       bulkOps: true,
       themeCustomization: true, // Elite-only feature

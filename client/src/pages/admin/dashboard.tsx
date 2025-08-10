@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBusinessName } from "@/contexts/BusinessContext";
+import { useHasFeature } from "@/hooks/use-feature-flags";
 import { 
   DollarSign, 
   Users, 
@@ -27,7 +28,8 @@ import {
   ChevronRight,
   Activity,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from "lucide-react";
 
 interface DashboardMetrics {
@@ -86,6 +88,11 @@ interface AdminStats {
 export default function AdminDashboard() {
   const businessName = useBusinessName();
   const [, setLocation] = useLocation();
+  
+  // Check feature access
+  const hasBasicAnalytics = useHasFeature('analytics_basic');
+  const hasAdvancedAnalytics = useHasFeature('analytics_advanced');
+  const hasPayments = useHasFeature('payments_enabled');
   
   // Automatically refresh data when navigating back to dashboard
   usePageRefresh([
@@ -243,32 +250,81 @@ export default function AdminDashboard() {
 
           {/* Primary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <KPICard
-              title="Total Revenue"
-              value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
-              tooltip="Sum of all payments received this month from session bookings."
-              icon={DollarSign}
-              iconColor="text-green-500"
-              subtitle="This Month"
-              growth={metrics?.revenueGrowth || 0}
-              showGrowth={true}
-            />
-            <KPICard
-              title="Total Players"
-              value={(metrics?.totalPlayers || 0).toString()}
-              tooltip="Total number of registered players in the system."
-              icon={Users}
-              iconColor="text-blue-500"
-              subtitle="All Time"
-            />
-            <KPICard
-              title="Total Registrations"
-              value={(metrics?.totalSignups || 0).toString()}
-              tooltip="Total number of session bookings across all training sessions."
-              icon={ClipboardList}
-              iconColor="text-purple-500"
-              subtitle="All Time"
-            />
+            {/* Revenue analytics - only show if has payments enabled (Growth/Elite plans) */}
+            {hasPayments ? (
+              <KPICard
+                title="Total Revenue"
+                value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
+                tooltip="Sum of all payments received this month from session bookings."
+                icon={DollarSign}
+                iconColor="text-green-500"
+                subtitle="This Month"
+                growth={metrics?.revenueGrowth || 0}
+                showGrowth={hasAdvancedAnalytics}
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Revenue Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Available in Growth & Elite plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {hasBasicAnalytics ? (
+              <KPICard
+                title="Total Players"
+                value={(metrics?.totalPlayers || 0).toString()}
+                tooltip="Total number of registered players in the system."
+                icon={Users}
+                iconColor="text-blue-500"
+                subtitle="All Time"
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Player Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Available in Core & higher plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {hasBasicAnalytics ? (
+              <KPICard
+                title="Total Registrations"
+                value={(metrics?.totalSignups || 0).toString()}
+                tooltip="Total number of session bookings across all training sessions."
+                icon={ClipboardList}
+                iconColor="text-purple-500"
+                subtitle="All Time"
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Registration Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Available in Core & higher plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
             <KPICard
               title="Sessions This Week"
               value={(metrics?.sessionsThisWeek || 0).toString()}
@@ -276,48 +332,112 @@ export default function AdminDashboard() {
               icon={Calendar}
               iconColor="text-orange-500"
               subtitle="Current Week"
-              growth={metrics?.sessionsGrowth || 0}
-              showGrowth={true}
+              growth={hasAdvancedAnalytics ? metrics?.sessionsGrowth || 0 : undefined}
+              showGrowth={hasAdvancedAnalytics}
             />
-            <KPICard
-              title="Pending Payments"
-              value={(metrics?.pendingPayments || 0).toString()}
-              tooltip="Unpaid reservations older than 1 hour that require attention."
-              icon={CreditCard}
-              iconColor={(metrics?.pendingPayments || 0) > 0 ? "text-yellow-500" : "text-muted-foreground"}
-              subtitle="Needs Attention"
-              className={(metrics?.pendingPayments || 0) > 0 ? "border-yellow-500/50" : ""}
-            />
+            
+            {hasPayments ? (
+              <KPICard
+                title="Pending Payments"
+                value={(metrics?.pendingPayments || 0).toString()}
+                tooltip="Unpaid reservations older than 1 hour that require attention."
+                icon={CreditCard}
+                iconColor={(metrics?.pendingPayments || 0) > 0 ? "text-yellow-500" : "text-muted-foreground"}
+                subtitle="Needs Attention"
+                className={(metrics?.pendingPayments || 0) > 0 ? "border-yellow-500/50" : ""}
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Payment Tracking</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Available in Growth & Elite plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Secondary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <KPICard
-              title="YTD Revenue"
-              value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
-              tooltip="Total revenue from January 1 to today across all sessions."
-              icon={DollarSign}
-              iconColor="text-green-500"
-              subtitle="Year to Date"
-              growth={metrics?.ytdGrowth || 0}
-              showGrowth={true}
-            />
-            <KPICard
-              title="Active Parents"
-              value={(metrics?.activeParents || 0).toString()}
-              tooltip="Parents who logged in within the last 30 days."
-              icon={UserCheck}
-              iconColor="text-blue-500"
-              subtitle="Last 30 Days"
-            />
-            <KPICard
-              title="Fill Rate"
-              value={`${metrics?.fillRate || 0}%`}
-              tooltip="Percentage of session capacity filled across all sessions."
-              icon={TrendingUp}
-              iconColor="text-orange-500"
-              subtitle="Average Capacity"
-            />
+            {/* YTD Revenue - only show if has payments enabled */}
+            {hasPayments ? (
+              <KPICard
+                title="YTD Revenue"
+                value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
+                tooltip="Total revenue from January 1 to today across all sessions."
+                icon={DollarSign}
+                iconColor="text-green-500"
+                subtitle="Year to Date"
+                growth={hasAdvancedAnalytics ? metrics?.ytdGrowth || 0 : undefined}
+                showGrowth={hasAdvancedAnalytics}
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">YTD Revenue</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Yearly revenue tracking available in Growth & Elite plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {hasBasicAnalytics ? (
+              <KPICard
+                title="Active Parents"
+                value={(metrics?.activeParents || 0).toString()}
+                tooltip="Parents who logged in within the last 30 days."
+                icon={UserCheck}
+                iconColor="text-blue-500"
+                subtitle="Last 30 Days"
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Parent Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Parent activity tracking available in Core & higher plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {hasBasicAnalytics ? (
+              <KPICard
+                title="Fill Rate"
+                value={`${metrics?.fillRate || 0}%`}
+                tooltip="Percentage of session capacity filled across all sessions."
+                icon={TrendingUp}
+                iconColor="text-orange-500"
+                subtitle="Average Capacity"
+              />
+            ) : (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Capacity Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Upgrade Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Session fill rate analytics available in Core & higher plans
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Alerts and Tasks */}
