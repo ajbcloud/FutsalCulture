@@ -1338,12 +1338,61 @@ export default function AdminSettings() {
                   </div>
                   
                   <div className="bg-muted/50 rounded-lg p-4">
-                    <div className="text-lg font-semibold text-foreground mb-2">Features Included</div>
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {planFeatures.features.length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Active features in your plan
+                    <div className="text-lg font-semibold text-foreground mb-2">Subscription Status</div>
+                    <div className="space-y-2">
+                      {loadingSubscription ? (
+                        <div className="text-center py-2">
+                          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1" />
+                          <p className="text-xs text-muted-foreground">Loading...</p>
+                        </div>
+                      ) : subscriptionInfo?.subscription?.status === 'active' ? (
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">Active</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div>Next billing: {subscriptionInfo.subscription.currentPeriodEnd 
+                              ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
+                              : 'N/A'}</div>
+                            <div>Amount: ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month</div>
+                          </div>
+                          <div className="flex gap-1 mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
+                              disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
+                              className="flex items-center gap-1 text-xs h-6 px-2"
+                            >
+                              <Receipt className="w-3 h-3" />
+                              Invoice
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000001', '_blank')}
+                              className="flex items-center gap-1 text-xs h-6 px-2"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Manage
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <AlertCircle className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                          <div className="text-sm font-medium text-foreground mb-1">Inactive</div>
+                          <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
+                          <Button 
+                            onClick={() => window.open('https://buy.stripe.com/test_00000000001', '_blank')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3"
+                            size="sm"
+                          >
+                            Set Up Subscription
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1501,95 +1550,7 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          {/* Service Payment Section */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <CreditCard className="w-5 h-5 mr-2" />
-                Service Payment
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Pay for your {businessName} platform subscription and services
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {loadingSubscription ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2" />
-                  <p className="text-muted-foreground">Loading subscription details...</p>
-                </div>
-              ) : subscriptionInfo?.subscription?.status === 'active' ? (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                      <span className="font-medium text-green-800 dark:text-green-200">Active Subscription</span>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                      {subscriptionInfo.subscription.planName}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Next billing:</span>
-                      <div className="font-medium">
-                        {subscriptionInfo.subscription.currentPeriodEnd 
-                          ? new Date(subscriptionInfo.subscription.currentPeriodEnd).toLocaleDateString()
-                          : 'Not available'
-                        }
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Amount:</span>
-                      <div className="font-medium">
-                        ${((subscriptionInfo.subscription.amount || 0) / 100).toFixed(2)}/month
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(subscriptionInfo.subscription.hostedInvoiceUrl, '_blank')}
-                      disabled={!subscriptionInfo.subscription.hostedInvoiceUrl}
-                      className="flex items-center gap-2"
-                    >
-                      <Receipt className="w-4 h-4" />
-                      View Invoice
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000001', '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Manage Billing
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-muted/30 border border-border rounded-lg p-6 text-center">
-                  <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No Active Subscription</h3>
-                  <p className="text-muted-foreground mb-4">
-                    You don't have an active subscription. Set up billing to access all platform features.
-                  </p>
-                  <Badge variant="secondary" className="mb-4">Inactive</Badge>
-                  <div className="mt-4">
-                    <Button 
-                      onClick={() => window.open('https://buy.stripe.com/test_00000000001', '_blank')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      Set Up Subscription
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
         </TabsContent>
 
 
