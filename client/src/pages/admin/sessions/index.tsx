@@ -53,6 +53,10 @@ export default function AdminSessions() {
     capacity: '',
     bookingOpenHour: '',
     bookingOpenMinute: '',
+    waitlistEnabled: '',
+    waitlistLimit: '',
+    paymentWindowMinutes: '',
+    autoPromote: '',
   });
   
   // Pagination states
@@ -201,6 +205,10 @@ export default function AdminSessions() {
       if (massUpdateData.capacity) updateData.capacity = parseInt(massUpdateData.capacity);
       if (massUpdateData.bookingOpenHour !== '') updateData.bookingOpenHour = parseInt(massUpdateData.bookingOpenHour);
       if (massUpdateData.bookingOpenMinute !== '') updateData.bookingOpenMinute = parseInt(massUpdateData.bookingOpenMinute);
+      if (massUpdateData.waitlistEnabled !== '') updateData.waitlistEnabled = massUpdateData.waitlistEnabled === 'true';
+      if (massUpdateData.waitlistLimit !== '') updateData.waitlistLimit = massUpdateData.waitlistLimit ? parseInt(massUpdateData.waitlistLimit) : null;
+      if (massUpdateData.paymentWindowMinutes !== '') updateData.paymentWindowMinutes = parseInt(massUpdateData.paymentWindowMinutes);
+      if (massUpdateData.autoPromote !== '') updateData.autoPromote = massUpdateData.autoPromote === 'true';
 
       if (Object.keys(updateData).length === 0) {
         toast({ title: "No fields to update", variant: "destructive" });
@@ -229,6 +237,10 @@ export default function AdminSessions() {
         capacity: '',
         bookingOpenHour: '',
         bookingOpenMinute: '',
+        waitlistEnabled: '',
+        waitlistLimit: '',
+        paymentWindowMinutes: '',
+        autoPromote: '',
       });
       setSelectedSessions(new Set());
       setShowMassUpdateModal(false);
@@ -1071,6 +1083,72 @@ export default function AdminSessions() {
                       <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Waitlist Settings */}
+              <div className="border-t border-zinc-700 pt-4 mt-4">
+                <h4 className="text-lg font-medium text-white mb-4">Waitlist Settings</h4>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-zinc-300">Waitlist Enabled</Label>
+                    <Select 
+                      value={massUpdateData.waitlistEnabled}
+                      onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, waitlistEnabled: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                        <SelectValue placeholder="Leave empty to keep existing" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-800 border-zinc-700">
+                        <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                        <SelectItem value="true" className="text-white hover:bg-zinc-700">Enable waitlist</SelectItem>
+                        <SelectItem value="false" className="text-white hover:bg-zinc-700">Disable waitlist</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-zinc-300">Waitlist Limit</Label>
+                    <Input
+                      type="number"
+                      value={massUpdateData.waitlistLimit}
+                      onChange={(e) => setMassUpdateData(prev => ({ ...prev, waitlistLimit: e.target.value }))}
+                      placeholder="Leave empty to keep existing (blank = no limit)"
+                      className="bg-zinc-800 border-zinc-700 text-white"
+                      min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-zinc-300">Payment Window (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={massUpdateData.paymentWindowMinutes}
+                      onChange={(e) => setMassUpdateData(prev => ({ ...prev, paymentWindowMinutes: e.target.value }))}
+                      placeholder="Leave empty to keep existing (default: 60)"
+                      className="bg-zinc-800 border-zinc-700 text-white"
+                      min="5"
+                      max="1440"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-zinc-300">Auto-promote from Waitlist</Label>
+                    <Select 
+                      value={massUpdateData.autoPromote}
+                      onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, autoPromote: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                        <SelectValue placeholder="Leave empty to keep existing" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-800 border-zinc-700">
+                        <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                        <SelectItem value="true" className="text-white hover:bg-zinc-700">Enable auto-promote</SelectItem>
+                        <SelectItem value="false" className="text-white hover:bg-zinc-700">Disable auto-promote</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>

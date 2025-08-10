@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users } from 'lucide-react';
 import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
@@ -51,6 +51,10 @@ export default function AdminSessionDetail() {
     bookingOpenMinute: 0,
     hasAccessCode: false,
     accessCode: '',
+    waitlistEnabled: true,
+    waitlistLimit: '',
+    paymentWindowMinutes: 60,
+    autoPromote: true,
     isRecurring: false,
     recurringType: 'weekly' as 'weekly' | 'biweekly' | 'monthly',
     recurringEndDate: '',
@@ -79,6 +83,10 @@ export default function AdminSessionDetail() {
           bookingOpenMinute: data.bookingOpenMinute ?? 0,
           hasAccessCode: data.hasAccessCode || false,
           accessCode: data.accessCode || '',
+          waitlistEnabled: data.waitlistEnabled ?? true,
+          waitlistLimit: data.waitlistLimit || '',
+          paymentWindowMinutes: data.paymentWindowMinutes ?? 60,
+          autoPromote: data.autoPromote ?? true,
           isRecurring: false, // Single sessions don't have recurring data
           recurringType: 'weekly',
           recurringEndDate: '',
@@ -136,6 +144,11 @@ export default function AdminSessionDetail() {
         bookingOpenMinute: formData.bookingOpenMinute,
         hasAccessCode: Boolean(formData.hasAccessCode),
         accessCode: formData.hasAccessCode && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
+        // Waitlist settings
+        waitlistEnabled: Boolean(formData.waitlistEnabled),
+        waitlistLimit: formData.waitlistLimit && formData.waitlistLimit.trim() ? parseInt(formData.waitlistLimit) : null,
+        paymentWindowMinutes: formData.paymentWindowMinutes || 60,
+        autoPromote: Boolean(formData.autoPromote),
         // Include recurring data for new sessions
         ...(isNew && {
           isRecurring: formData.isRecurring,
@@ -584,6 +597,95 @@ export default function AdminSessionDetail() {
               </div>
             )}
           </div>
+          </div>
+        </div>
+
+        {/* Waitlist Settings Section */}
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+            <Users className="w-5 h-5 mr-2" />
+            Waitlist Settings
+          </h3>
+          <div className="bg-muted/50 rounded-lg p-4 mb-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              Configure waitlist functionality for when this session reaches capacity. Players can join the waitlist and receive time-limited offers when spots become available.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Switch
+                checked={formData.waitlistEnabled}
+                onCheckedChange={(checked) => setFormData({...formData, waitlistEnabled: checked})}
+                data-testid="switch-waitlist-enabled"
+              />
+              <Label className="text-foreground flex items-center">
+                {formData.waitlistEnabled ? (
+                  <>Enable waitlist for this session</>
+                ) : (
+                  <>Waitlist disabled - session will close when full</>
+                )}
+              </Label>
+            </div>
+
+            {formData.waitlistEnabled && (
+              <div className="space-y-4 pl-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="waitlistLimit" className="text-muted-foreground">
+                      Waitlist Limit
+                    </Label>
+                    <Input
+                      id="waitlistLimit"
+                      type="number"
+                      value={formData.waitlistLimit}
+                      onChange={(e) => setFormData({...formData, waitlistLimit: e.target.value})}
+                      className="bg-input border-border text-foreground"
+                      placeholder="No limit"
+                      min="1"
+                      data-testid="input-waitlist-limit"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave empty for unlimited waitlist
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="paymentWindowMinutes" className="text-muted-foreground">
+                      Payment Window (minutes)
+                    </Label>
+                    <Input
+                      id="paymentWindowMinutes"
+                      type="number"
+                      value={formData.paymentWindowMinutes}
+                      onChange={(e) => setFormData({...formData, paymentWindowMinutes: parseInt(e.target.value) || 60})}
+                      className="bg-input border-border text-foreground"
+                      placeholder="60"
+                      min="5"
+                      max="1440"
+                      data-testid="input-payment-window"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Time to complete payment when offered
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Switch
+                      checked={formData.autoPromote}
+                      onCheckedChange={(checked) => setFormData({...formData, autoPromote: checked})}
+                      data-testid="switch-auto-promote"
+                    />
+                    <div>
+                      <Label className="text-foreground">Auto-promote</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Automatically offer spots to next person when someone cancels
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
