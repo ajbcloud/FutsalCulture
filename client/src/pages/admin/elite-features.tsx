@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Palette, MessageSquare, Sparkles, Users, Phone, Mail } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import AdminLayout from '@/components/admin-layout';
+import { useHasFeature, FeatureGuard, UpgradePrompt } from '@/hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 
 interface ThemeSettings {
   id?: string;
@@ -41,6 +43,34 @@ interface FeatureRequest {
 export default function EliteFeatures() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
+  
+  // Redirect if user doesn't have Elite features access
+  if (!hasThemeCustomization) {
+    return (
+      <AdminLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-8 w-8 text-purple-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Elite Features
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Upgrade to Elite plan to access these exclusive features
+              </p>
+            </div>
+          </div>
+          
+          <UpgradePrompt
+            feature={FEATURE_KEYS.THEME_CUSTOMIZATION}
+            requiredPlan="elite"
+            description="Access theme customization, feature request queue, and priority support with the Elite plan."
+          />
+        </div>
+      </AdminLayout>
+    );
+  }
   
   // Theme Settings State
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
@@ -63,8 +93,14 @@ export default function EliteFeatures() {
 
   // Update theme settings when data is fetched
   React.useEffect(() => {
-    if (currentTheme) {
-      setThemeSettings(currentTheme);
+    if (currentTheme && typeof currentTheme === 'object') {
+      const theme = currentTheme as any;
+      setThemeSettings({
+        primaryButton: theme.primaryButton || '#2563eb',
+        secondaryButton: theme.secondaryButton || '#64748b',
+        background: theme.background || '#ffffff',
+        text: theme.text || '#1f2937'
+      });
     }
   }, [currentTheme]);
 

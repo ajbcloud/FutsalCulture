@@ -4,6 +4,8 @@ import { featureRequests, users, insertFeatureRequestSchema } from '../shared/sc
 import { eq, desc, and } from 'drizzle-orm';
 import { isAuthenticated } from './replitAuth';
 import { storage } from './storage';
+import { hasFeature } from '@shared/feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 
 const router = Router();
 
@@ -16,6 +18,12 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+    
+    // Check if tenant has theme customization feature (Elite plan)
+    const tenant = await storage.getTenant(tenantId);
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
+      return res.status(403).json({ error: 'Feature request queue requires Elite plan' });
     }
 
     const requests = await db
@@ -55,6 +63,12 @@ router.post('/', isAuthenticated, async (req: any, res: Response) => {
     
     if (!tenantId || !userId) {
       return res.status(400).json({ error: 'Tenant ID and User ID are required' });
+    }
+    
+    // Check if tenant has theme customization feature (Elite plan)
+    const tenant = await storage.getTenant(tenantId);
+    if (!tenant || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
+      return res.status(403).json({ error: 'Feature request queue requires Elite plan' });
     }
 
     // Validate the request body

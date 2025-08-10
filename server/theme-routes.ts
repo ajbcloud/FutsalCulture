@@ -4,6 +4,8 @@ import { themeSettings, insertThemeSettingsSchema } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { isAuthenticated } from './replitAuth';
 import { storage } from './storage';
+import { hasFeature } from '@shared/feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 
 const router = Router();
 
@@ -16,6 +18,12 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+    
+    // Check if tenant has theme customization feature
+    const tenant = await storage.getTenant(tenantId);
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
+      return res.status(403).json({ error: 'Theme customization requires Elite plan' });
     }
 
     const settings = await db
@@ -48,6 +56,12 @@ router.post('/', isAuthenticated, async (req: any, res: Response) => {
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+    
+    // Check if tenant has theme customization feature
+    const tenant = await storage.getTenant(tenantId);
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
+      return res.status(403).json({ error: 'Theme customization requires Elite plan' });
     }
 
     // Validate the request body
@@ -104,6 +118,12 @@ router.delete('/', isAuthenticated, async (req: any, res: Response) => {
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+    
+    // Check if tenant has theme customization feature
+    const tenant = await storage.getTenant(tenantId);
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
+      return res.status(403).json({ error: 'Theme customization requires Elite plan' });
     }
 
     await db

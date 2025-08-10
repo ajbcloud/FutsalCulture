@@ -28,6 +28,8 @@ import {
   Shirt,
   Sparkles
 } from "lucide-react";
+import { useHasFeature } from "@/hooks/use-feature-flags";
+import { FEATURE_KEYS } from "@shared/schema";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -41,7 +43,6 @@ const adminNavItems = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
-  { href: "/admin/elite-features", label: "Elite Features", icon: Sparkles },
 ];
 
 interface AdminLayoutProps {
@@ -53,6 +54,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,6 +117,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </Link>
                 );
               })}
+              
+              {/* Elite Features - Only show for Elite plan users */}
+              {hasThemeCustomization && (
+                <Link href="/admin/elite-features">
+                  <div 
+                    className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                      location.startsWith("/admin/elite-features")
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Sparkles className="w-5 h-5 mr-3" />
+                    Elite Features
+                  </div>
+                </Link>
+              )}
             </div>
           </nav>
         </div>
