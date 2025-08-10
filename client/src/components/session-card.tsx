@@ -37,6 +37,18 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
     enabled: isAuthenticated,
   });
 
+  // Fetch waitlist count for this session (for admin visibility)
+  const { data: waitlistCount } = useQuery({
+    queryKey: ["/api/admin/sessions", session.id, "waitlist-count"],
+    enabled: isAuthenticated && user?.role === 'admin',
+  });
+
+  // Fetch waitlist entries for this session (for admin click-through)
+  const { data: sessionWaitlist } = useQuery({
+    queryKey: ["/api/admin/sessions", session.id, "waitlist"],
+    enabled: isAuthenticated && user?.role === 'admin',
+  });
+
   // Waitlist mutations
   const joinWaitlistMutation = useMutation({
     mutationFn: async ({ sessionId, playerId, notifyOnJoin = true, notifyOnPositionChange = false }: {
@@ -214,6 +226,24 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
               style={{ width: `${Math.min(fillPercentage, 100)}%` }}
             />
           </div>
+          
+          {/* Admin waitlist visibility */}
+          {user?.role === 'admin' && session.waitlistEnabled && waitlistCount !== undefined && waitlistCount > 0 && (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Link href={`/admin/sessions/${session.id}/waitlist`}>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start p-0 h-auto text-blue-700 dark:text-blue-300 hover:bg-transparent"
+                  data-testid={`button-view-waitlist-${session.id}`}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  <span className="font-medium">
+                    {waitlistCount} {waitlistCount === 1 ? 'person' : 'people'} on waitlist
+                  </span>
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Waitlist status display */}

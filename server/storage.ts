@@ -94,6 +94,7 @@ export interface IStorage {
   updateWaitlistSettings(sessionId: string, settings: WaitlistSettings): Promise<FutsalSession>;
   getExpiredOffers(tenantId?: string): Promise<Waitlist[]>;
   reorderWaitlist(sessionId: string): Promise<void>;
+  cleanupExpiredWaitlists(): Promise<number>;
   
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
@@ -1890,6 +1891,23 @@ export class DatabaseStorage implements IStorage {
           .where(eq(waitlists.id, activeEntries[i].id));
       }
     });
+  }
+
+  async cleanupExpiredWaitlists(): Promise<number> {
+    // Clean up waitlist entries for sessions that ended more than 24 hours ago
+    const cleanupThreshold = new Date();
+    cleanupThreshold.setHours(cleanupThreshold.getHours() - 24);
+
+    const result = await db
+      .delete(waitlists)
+      .where(
+        sql`${waitlists.sessionId} IN (
+          SELECT id FROM ${futsalSessions} 
+          WHERE end_time < ${cleanupThreshold}
+        )`
+      );
+
+    return result.rowCount || 0;
   }
 }
 

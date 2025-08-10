@@ -909,6 +909,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-specific waitlist routes
+  app.get('/api/admin/sessions/:sessionId/waitlist-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user information and check admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const waitlistCount = await storage.getWaitlistCount(sessionId);
+      
+      res.json(waitlistCount);
+    } catch (error) {
+      console.error("Error fetching waitlist count:", error);
+      res.status(500).json({ message: "Failed to fetch waitlist count" });
+    }
+  });
+
+  app.get('/api/admin/sessions/:sessionId/waitlist', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get user information and check admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const waitlistEntries = await storage.getWaitlistBySession(sessionId, user.tenantId);
+      
+      res.json(waitlistEntries);
+    } catch (error) {
+      console.error("Error fetching waitlist for admin:", error);
+      res.status(500).json({ message: "Failed to fetch waitlist" });
+    }
+  });
+
   app.get('/api/waitlists', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

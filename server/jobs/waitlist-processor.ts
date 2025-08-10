@@ -39,9 +39,26 @@ export function startWaitlistProcessor() {
     }
   };
 
+  const cleanupExpiredWaitlists = async () => {
+    try {
+      // Clean up waitlist data for sessions that ended more than 24 hours ago
+      const cleanupCount = await storage.cleanupExpiredWaitlists();
+      
+      if (cleanupCount > 0) {
+        console.log(`Cleaned up ${cleanupCount} expired waitlist entries`);
+      }
+    } catch (error) {
+      console.error("Error cleaning up expired waitlists:", error);
+    }
+  };
+
   // Process immediately on startup
   processExpiredOffers();
+  cleanupExpiredWaitlists();
 
-  // Then process every 5 minutes
+  // Process expired offers every 5 minutes
   setInterval(processExpiredOffers, 5 * 60 * 1000);
+  
+  // Clean up expired waitlists every hour
+  setInterval(cleanupExpiredWaitlists, 60 * 60 * 1000);
 }

@@ -187,7 +187,7 @@ export default function MultiCheckout() {
                         </div>
                         <div className="flex items-center text-zinc-400 text-sm">
                           <Badge variant="outline" className="text-zinc-400 border-zinc-600">
-                            {session.ageGroup}
+                            {Array.isArray(session.ageGroups) ? session.ageGroups.join(', ') : session.ageGroups}
                           </Badge>
                         </div>
                         

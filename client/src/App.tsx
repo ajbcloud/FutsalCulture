@@ -26,6 +26,7 @@ import AdminIntegrations from "@/pages/admin/integrations";
 import AdminDiscountCodes from "@/pages/admin/discount-codes";
 import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
+import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
 import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
 import Profile from "@/pages/profile";
@@ -73,6 +74,7 @@ function Router() {
                 <Route path="/admin/dashboard" component={AdminDashboard} />
                 <Route path="/admin/sessions" component={AdminSessions} />
                 <Route path="/admin/sessions/new" component={AdminSessionDetail} />
+                <Route path="/admin/sessions/:id/waitlist" component={AdminSessionWaitlist} />
                 <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
                 <Route path="/admin/payments" component={AdminPayments} />
                 <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
