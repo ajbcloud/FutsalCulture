@@ -9,14 +9,6 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     label: 'Manual session creation', 
     description: 'Create individual training sessions' 
   },
-  parentPlayerBooking: { 
-    label: 'Parent and player session booking', 
-    description: 'Allow parents and players to book session spots' 
-  },
-  emailSmsNotifications: { 
-    label: 'Email & SMS notifications', 
-    description: 'Combined email and SMS notification system' 
-  },
   recurringSessions: { 
     label: 'Recurring sessions', 
     description: 'Set up weekly, bi-weekly, or monthly recurring sessions' 
@@ -76,5 +68,13 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
   playerDevelopment: { 
     label: 'Advanced player development system', 
     description: 'Comprehensive skill assessments, goal tracking, training plans, and progress analytics for individual player growth' 
+  },
+  basicNotifications: { 
+    label: 'Basic email & SMS notifications', 
+    description: 'Essential session reminders and booking confirmations via email and SMS' 
+  },
+  sessionBooking: { 
+    label: 'Parent & player session booking', 
+    description: 'Easy online booking system for parents and players to reserve training session spots' 
   },
 };
