@@ -9,6 +9,14 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     label: 'Manual session creation', 
     description: 'Create individual training sessions' 
   },
+  parentPlayerBooking: { 
+    label: 'Parent and player session booking', 
+    description: 'Allow parents and players to book session spots' 
+  },
+  emailSmsNotifications: { 
+    label: 'Email & SMS notifications', 
+    description: 'Combined email and SMS notification system' 
+  },
   recurringSessions: { 
     label: 'Recurring sessions', 
     description: 'Set up weekly, bi-weekly, or monthly recurring sessions' 

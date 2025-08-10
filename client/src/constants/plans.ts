@@ -1,6 +1,8 @@
 export type FeatureKey =
   | 'maxPlayers'
   | 'manualSessions'
+  | 'parentPlayerBooking'
+  | 'emailSmsNotifications'
   | 'recurringSessions'
   | 'csvImport'
   | 'payments'
@@ -25,6 +27,8 @@ export const PLANS = {
     features: {
       maxPlayers: 10,
       manualSessions: true,
+      parentPlayerBooking: true,
+      emailSmsNotifications: false,
       recurringSessions: false,
       csvImport: false,
       payments: false,
@@ -49,6 +53,8 @@ export const PLANS = {
     features: {
       maxPlayers: 150,
       manualSessions: true,
+      parentPlayerBooking: true,
+      emailSmsNotifications: true,
       recurringSessions: true,
       csvImport: false,
       payments: true,
@@ -73,6 +79,8 @@ export const PLANS = {
     features: {
       maxPlayers: 500,
       manualSessions: true,
+      parentPlayerBooking: true,
+      emailSmsNotifications: true,
       recurringSessions: true,
       csvImport: true,
       payments: true,
@@ -97,6 +105,8 @@ export const PLANS = {
     features: {
       maxPlayers: 'unlimited' as const,
       manualSessions: true,
+      parentPlayerBooking: true,
+      emailSmsNotifications: true,
       recurringSessions: true,
       csvImport: true,
       payments: true,
