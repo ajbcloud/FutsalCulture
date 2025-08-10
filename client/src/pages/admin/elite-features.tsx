@@ -18,12 +18,27 @@ import { FEATURE_KEYS } from '@shared/schema';
 
 interface ThemeSettings {
   id?: string;
-  primaryButton: string;
-  secondaryButton: string;
-  background: string;
-  text: string;
-  headingColor: string;
-  descriptionColor: string;
+  // Light mode colors
+  lightPrimaryButton: string;
+  lightSecondaryButton: string;
+  lightBackground: string;
+  lightText: string;
+  lightHeadingColor: string;
+  lightDescriptionColor: string;
+  // Dark mode colors
+  darkPrimaryButton: string;
+  darkSecondaryButton: string;
+  darkBackground: string;
+  darkText: string;
+  darkHeadingColor: string;
+  darkDescriptionColor: string;
+  // Legacy fields for backward compatibility
+  primaryButton?: string;
+  secondaryButton?: string;
+  background?: string;
+  text?: string;
+  headingColor?: string;
+  descriptionColor?: string;
 }
 
 interface FeatureRequest {
@@ -49,12 +64,20 @@ export default function EliteFeatures() {
   
   // Theme Settings State
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>({
-    primaryButton: '#2563eb',
-    secondaryButton: '#64748b',
-    background: '#ffffff',
-    text: '#1f2937',
-    headingColor: '#111827',
-    descriptionColor: '#6b7280'
+    // Light mode defaults
+    lightPrimaryButton: '#2563eb',
+    lightSecondaryButton: '#64748b',
+    lightBackground: '#ffffff',
+    lightText: '#111827',
+    lightHeadingColor: '#111827',
+    lightDescriptionColor: '#4b5563',
+    // Dark mode defaults
+    darkPrimaryButton: '#2563eb',
+    darkSecondaryButton: '#64748b',
+    darkBackground: '#0f172a',
+    darkText: '#f8fafc',
+    darkHeadingColor: '#f8fafc',
+    darkDescriptionColor: '#cbd5e1'
   });
 
   // Feature Request State
@@ -73,6 +96,21 @@ export default function EliteFeatures() {
     if (currentTheme && typeof currentTheme === 'object') {
       const theme = currentTheme as any;
       setThemeSettings({
+        // Light mode colors
+        lightPrimaryButton: theme.lightPrimaryButton || '#2563eb',
+        lightSecondaryButton: theme.lightSecondaryButton || '#64748b',
+        lightBackground: theme.lightBackground || '#ffffff',
+        lightText: theme.lightText || '#111827',
+        lightHeadingColor: theme.lightHeadingColor || '#111827',
+        lightDescriptionColor: theme.lightDescriptionColor || '#4b5563',
+        // Dark mode colors
+        darkPrimaryButton: theme.darkPrimaryButton || '#2563eb',
+        darkSecondaryButton: theme.darkSecondaryButton || '#64748b',
+        darkBackground: theme.darkBackground || '#0f172a',
+        darkText: theme.darkText || '#f8fafc',
+        darkHeadingColor: theme.darkHeadingColor || '#f8fafc',
+        darkDescriptionColor: theme.darkDescriptionColor || '#cbd5e1',
+        // Legacy fallbacks
         primaryButton: theme.primaryButton || '#2563eb',
         secondaryButton: theme.secondaryButton || '#64748b',
         background: theme.background || '#ffffff',
@@ -88,10 +126,13 @@ export default function EliteFeatures() {
     queryKey: ['/api/feature-requests']
   });
 
-  // Theme update mutation
-  const themeUpdateMutation = useMutation({
+  // Theme settings mutation
+  const themeSettingsMutation = useMutation({
     mutationFn: (settings: ThemeSettings) => 
-      apiRequest('POST', '/api/theme', settings),
+      apiRequest('/api/theme', {
+        method: 'PUT',
+        body: JSON.stringify(settings)
+      }),
     onSuccess: () => {
       toast({
         title: "Theme updated successfully",
@@ -130,20 +171,26 @@ export default function EliteFeatures() {
   });
 
   // Theme reset mutation
-  const themeResetMutation = useMutation({
-    mutationFn: () => apiRequest('DELETE', '/api/theme'),
+  const resetThemeMutation = useMutation({
+    mutationFn: () => apiRequest('/api/theme', { method: 'DELETE' }),
     onSuccess: () => {
       toast({
         title: "Theme reset successfully",
         description: "Theme has been reset to default settings."
       });
       setThemeSettings({
-        primaryButton: '#2563eb',
-        secondaryButton: '#64748b',
-        background: '#ffffff',
-        text: '#1f2937',
-        headingColor: '#111827',
-        descriptionColor: '#6b7280'
+        lightPrimaryButton: '#2563eb',
+        lightSecondaryButton: '#64748b',
+        lightBackground: '#ffffff',
+        lightText: '#111827',
+        lightHeadingColor: '#111827',
+        lightDescriptionColor: '#4b5563',
+        darkPrimaryButton: '#2563eb',
+        darkSecondaryButton: '#64748b',
+        darkBackground: '#0f172a',
+        darkText: '#f8fafc',
+        darkHeadingColor: '#f8fafc',
+        darkDescriptionColor: '#cbd5e1'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
     },
@@ -157,12 +204,12 @@ export default function EliteFeatures() {
     }
   });
 
-  const handleThemeUpdate = () => {
-    themeUpdateMutation.mutate(themeSettings);
+  const handleSaveTheme = () => {
+    themeSettingsMutation.mutate(themeSettings);
   };
 
-  const handleThemeReset = () => {
-    themeResetMutation.mutate();
+  const handleResetTheme = () => {
+    resetThemeMutation.mutate();
   };
 
   const handleFeatureRequest = () => {
@@ -292,282 +339,431 @@ export default function EliteFeatures() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="primaryButton">Primary Button Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="primaryButton"
-                        type="color"
-                        value={themeSettings.primaryButton}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          primaryButton: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.primaryButton}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          primaryButton: e.target.value
-                        }))}
-                        placeholder="#2563eb"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
+              <Tabs defaultValue="light" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="light">Light Mode</TabsTrigger>
+                  <TabsTrigger value="dark">Dark Mode</TabsTrigger>
+                </TabsList>
 
-                  <div>
-                    <Label htmlFor="secondaryButton">Secondary Button Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="secondaryButton"
-                        type="color"
-                        value={themeSettings.secondaryButton}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          secondaryButton: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.secondaryButton}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          secondaryButton: e.target.value
-                        }))}
-                        placeholder="#64748b"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="background">Background Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="background"
-                        type="color"
-                        value={themeSettings.background}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          background: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.background}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          background: e.target.value
-                        }))}
-                        placeholder="#ffffff"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="text">Text Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="text"
-                        type="color"
-                        value={themeSettings.text}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          text: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.text}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          text: e.target.value
-                        }))}
-                        placeholder="#1f2937"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="headingColor">Heading Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="headingColor"
-                        type="color"
-                        value={themeSettings.headingColor}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          headingColor: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.headingColor}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          headingColor: e.target.value
-                        }))}
-                        placeholder="#111827"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="descriptionColor">Description Color</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="descriptionColor"
-                        type="color"
-                        value={themeSettings.descriptionColor}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          descriptionColor: e.target.value
-                        }))}
-                        className="w-20 h-10 p-1 border rounded"
-                      />
-                      <Input
-                        value={themeSettings.descriptionColor}
-                        onChange={(e) => setThemeSettings(prev => ({
-                          ...prev,
-                          descriptionColor: e.target.value
-                        }))}
-                        placeholder="#6b7280"
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Theme Preview</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Light Mode Preview */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
-                        <span className="text-sm font-medium">Light Mode</span>
+                {/* Light Mode Settings */}
+                <TabsContent value="light" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="lightPrimaryButton">Primary Button Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightPrimaryButton"
+                          type="color"
+                          value={themeSettings.lightPrimaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightPrimaryButton: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightPrimaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightPrimaryButton: e.target.value
+                          }))}
+                          placeholder="#2563eb"
+                          className="flex-1"
+                        />
                       </div>
-                      <div 
-                        className="p-6 rounded-lg border space-y-4"
-                        style={{ 
-                          backgroundColor: themeSettings.background,
-                          color: themeSettings.text
-                        }}
-                      >
-                        <h4 className="font-semibold" style={{ color: themeSettings.headingColor }}>
-                          Sample Portal Content
-                        </h4>
-                        <p className="text-sm" style={{ color: themeSettings.descriptionColor }}>
-                          This is how your custom theme will look in light mode with heading and description colors.
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightSecondaryButton">Secondary Button Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightSecondaryButton"
+                          type="color"
+                          value={themeSettings.lightSecondaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightSecondaryButton: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightSecondaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightSecondaryButton: e.target.value
+                          }))}
+                          placeholder="#64748b"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightBackground">Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightBackground"
+                          type="color"
+                          value={themeSettings.lightBackground}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightBackground: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightBackground}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightBackground: e.target.value
+                          }))}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightText">Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightText"
+                          type="color"
+                          value={themeSettings.lightText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightText: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightHeadingColor">Heading Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightHeadingColor"
+                          type="color"
+                          value={themeSettings.lightHeadingColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightHeadingColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightHeadingColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightHeadingColor: e.target.value
+                          }))}
+                          placeholder="#111827"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lightDescriptionColor">Description Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="lightDescriptionColor"
+                          type="color"
+                          value={themeSettings.lightDescriptionColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightDescriptionColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.lightDescriptionColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            lightDescriptionColor: e.target.value
+                          }))}
+                          placeholder="#4b5563"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Dark Mode Settings */}
+                <TabsContent value="dark" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="darkPrimaryButton">Primary Button Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkPrimaryButton"
+                          type="color"
+                          value={themeSettings.darkPrimaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkPrimaryButton: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkPrimaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkPrimaryButton: e.target.value
+                          }))}
+                          placeholder="#2563eb"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkSecondaryButton">Secondary Button Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkSecondaryButton"
+                          type="color"
+                          value={themeSettings.darkSecondaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkSecondaryButton: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkSecondaryButton}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkSecondaryButton: e.target.value
+                          }))}
+                          placeholder="#64748b"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkBackground">Background Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkBackground"
+                          type="color"
+                          value={themeSettings.darkBackground}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkBackground: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkBackground}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkBackground: e.target.value
+                          }))}
+                          placeholder="#0f172a"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkText">Text Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkText"
+                          type="color"
+                          value={themeSettings.darkText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkText: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkText}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkText: e.target.value
+                          }))}
+                          placeholder="#f8fafc"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkHeadingColor">Heading Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkHeadingColor"
+                          type="color"
+                          value={themeSettings.darkHeadingColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkHeadingColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkHeadingColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkHeadingColor: e.target.value
+                          }))}
+                          placeholder="#f8fafc"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="darkDescriptionColor">Description Color</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="darkDescriptionColor"
+                          type="color"
+                          value={themeSettings.darkDescriptionColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkDescriptionColor: e.target.value
+                          }))}
+                          className="w-20 h-10 p-1 border rounded"
+                        />
+                        <Input
+                          value={themeSettings.darkDescriptionColor}
+                          onChange={(e) => setThemeSettings(prev => ({
+                            ...prev,
+                            darkDescriptionColor: e.target.value
+                          }))}
+                          placeholder="#cbd5e1"
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              
+              <div className="space-y-4 mt-6">
+                <h3 className="font-semibold">Theme Preview</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Light Mode Preview */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
+                      <span className="text-sm font-medium">Light Mode</span>
+                    </div>
+                    <div 
+                      className="p-6 rounded-lg border space-y-4"
+                      style={{ 
+                        backgroundColor: themeSettings.lightBackground,
+                        color: themeSettings.lightText
+                      }}
+                    >
+                      <h4 className="font-semibold" style={{ color: themeSettings.lightHeadingColor }}>
+                        Sample Portal Content
+                      </h4>
+                      <p className="text-sm" style={{ color: themeSettings.lightDescriptionColor }}>
+                        This is how your custom theme will look in light mode with heading and description colors.
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          className="px-4 py-2 rounded text-white text-sm"
+                          style={{ backgroundColor: themeSettings.lightPrimaryButton }}
+                        >
+                          Primary Button
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded text-white text-sm"
+                          style={{ backgroundColor: themeSettings.lightSecondaryButton }}
+                        >
+                          Secondary Button
+                        </button>
+                      </div>
+                      <div className="mt-4">
+                        <h5 className="font-medium mb-2" style={{ color: themeSettings.lightHeadingColor }}>
+                          Section Heading
+                        </h5>
+                        <p className="text-xs" style={{ color: themeSettings.lightDescriptionColor }}>
+                          This shows how descriptions and smaller text will appear with the custom colors.
                         </p>
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            className="px-4 py-2 rounded text-white text-sm"
-                            style={{ backgroundColor: themeSettings.primaryButton }}
-                          >
-                            Primary Button
-                          </button>
-                          <button
-                            className="px-4 py-2 rounded text-white text-sm"
-                            style={{ backgroundColor: themeSettings.secondaryButton }}
-                          >
-                            Secondary Button
-                          </button>
-                        </div>
-                        <div className="mt-4">
-                          <h5 className="font-medium mb-2" style={{ color: themeSettings.headingColor }}>
-                            Section Heading
-                          </h5>
-                          <p className="text-xs" style={{ color: themeSettings.descriptionColor }}>
-                            This shows how descriptions and smaller text will appear with the custom colors.
-                          </p>
-                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Dark Mode Preview */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gray-800 border-2 border-gray-600 rounded"></div>
-                        <span className="text-sm font-medium">Dark Mode</span>
+                  {/* Dark Mode Preview */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-800 border-2 border-gray-600 rounded"></div>
+                      <span className="text-sm font-medium">Dark Mode</span>
+                    </div>
+                    <div 
+                      className="p-6 rounded-lg border border-gray-700 space-y-4"
+                      style={{ 
+                        backgroundColor: themeSettings.darkBackground,
+                        color: themeSettings.darkText
+                      }}
+                    >
+                      <h4 className="font-semibold" style={{ color: themeSettings.darkHeadingColor }}>
+                        Sample Portal Content
+                      </h4>
+                      <p className="text-sm" style={{ color: themeSettings.darkDescriptionColor }}>
+                        This is how your custom theme will look in dark mode with proper text visibility.
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          className="px-4 py-2 rounded text-white text-sm"
+                          style={{ backgroundColor: themeSettings.darkPrimaryButton }}
+                        >
+                          Primary Button
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded text-white text-sm"
+                          style={{ backgroundColor: themeSettings.darkSecondaryButton }}
+                        >
+                          Secondary Button
+                        </button>
                       </div>
-                      <div 
-                        className="p-6 rounded-lg border space-y-4"
-                        style={{ 
-                          backgroundColor: 'hsl(222, 84%, 4%)', // Match our dark theme background
-                          color: 'hsl(210, 40%, 98%)', // Bright text for dark mode
-                          borderColor: 'hsl(217, 33%, 17%)' // Match dark border
-                        }}
-                      >
-                        <h4 className="font-semibold" style={{ 
-                          color: themeSettings.headingColor === '#111827' ? 'hsl(210, 40%, 98%)' : themeSettings.headingColor 
-                        }}>
-                          Sample Portal Content
-                        </h4>
-                        <p className="text-sm" style={{ 
-                          color: themeSettings.descriptionColor === '#6b7280' ? 'hsl(215, 20%, 85%)' : themeSettings.descriptionColor 
-                        }}>
-                          This is how your custom theme will look in dark mode with proper text visibility.
+                      <div className="mt-4">
+                        <h5 className="font-medium mb-2" style={{ color: themeSettings.darkHeadingColor }}>
+                          Section Heading
+                        </h5>
+                        <p className="text-xs" style={{ color: themeSettings.darkDescriptionColor }}>
+                          This shows how descriptions and smaller text will appear in dark mode.
                         </p>
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            className="px-4 py-2 rounded text-white text-sm"
-                            style={{ backgroundColor: themeSettings.primaryButton }}
-                          >
-                            Primary Button
-                          </button>
-                          <button
-                            className="px-4 py-2 rounded text-white text-sm"
-                            style={{ backgroundColor: themeSettings.secondaryButton }}
-                          >
-                            Secondary Button
-                          </button>
-                        </div>
-                        <div className="mt-4">
-                          <h5 className="font-medium mb-2" style={{ 
-                            color: themeSettings.headingColor === '#111827' ? 'hsl(210, 40%, 98%)' : themeSettings.headingColor 
-                          }}>
-                            Section Heading
-                          </h5>
-                          <p className="text-xs" style={{ 
-                            color: themeSettings.descriptionColor === '#6b7280' ? 'hsl(215, 20%, 85%)' : themeSettings.descriptionColor 
-                          }}>
-                            This shows how descriptions and smaller text will appear in dark mode.
-                          </p>
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <Separator />
-
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleThemeUpdate}
-                  disabled={themeUpdateMutation.isPending}
-                  data-testid="button-update-theme"
-                >
-                  {themeUpdateMutation.isPending ? 'Updating...' : 'Update Theme'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleThemeReset}
-                  disabled={themeResetMutation.isPending}
-                  data-testid="button-reset-theme"
-                >
-                  Reset to Default
-                </Button>
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    onClick={handleSaveTheme}
+                    disabled={themeSettingsMutation.isPending}
+                    className="flex-1"
+                  >
+                    {themeSettingsMutation.isPending ? 'Saving...' : 'Save Theme'}
+                  </Button>
+                  <Button
+                    onClick={handleResetTheme}
+                    disabled={resetThemeMutation.isPending}
+                    variant="outline"
+                  >
+                    {resetThemeMutation.isPending ? 'Resetting...' : 'Reset to Default'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -2,12 +2,27 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 interface CustomTheme {
-  primaryButton: string;
-  secondaryButton: string;
-  background: string;
-  text: string;
-  headingColor: string;
-  descriptionColor: string;
+  // Light mode colors
+  lightPrimaryButton: string;
+  lightSecondaryButton: string;
+  lightBackground: string;
+  lightText: string;
+  lightHeadingColor: string;
+  lightDescriptionColor: string;
+  // Dark mode colors
+  darkPrimaryButton: string;
+  darkSecondaryButton: string;
+  darkBackground: string;
+  darkText: string;
+  darkHeadingColor: string;
+  darkDescriptionColor: string;
+  // Legacy fallbacks
+  primaryButton?: string;
+  secondaryButton?: string;
+  background?: string;
+  text?: string;
+  headingColor?: string;
+  descriptionColor?: string;
 }
 
 interface CustomThemeContextType {
@@ -55,14 +70,29 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
         return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
       };
 
-      // Apply custom colors as CSS variables
-      root.style.setProperty('--primary', `hsl(${hexToHsl(theme.primaryButton)})`);
-      root.style.setProperty('--secondary', `hsl(${hexToHsl(theme.secondaryButton)})`);
-      root.style.setProperty('--background', `hsl(${hexToHsl(theme.background)})`);
-      root.style.setProperty('--foreground', `hsl(${hexToHsl(theme.text)})`);
+      // Apply light mode custom colors as CSS variables
+      root.style.setProperty('--custom-light-primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);
+      root.style.setProperty('--custom-light-secondary', `hsl(${hexToHsl(theme.lightSecondaryButton)})`);
+      root.style.setProperty('--custom-light-background', `hsl(${hexToHsl(theme.lightBackground)})`);
+      root.style.setProperty('--custom-light-foreground', `hsl(${hexToHsl(theme.lightText)})`);
+      root.style.setProperty('--custom-light-heading', `hsl(${hexToHsl(theme.lightHeadingColor)})`);
+      root.style.setProperty('--custom-light-description', `hsl(${hexToHsl(theme.lightDescriptionColor)})`);
       
-      // Also set button-specific colors for direct usage
-      root.style.setProperty('--custom-primary-button', theme.primaryButton);
+      // Apply dark mode custom colors as CSS variables
+      root.style.setProperty('--custom-dark-primary', `hsl(${hexToHsl(theme.darkPrimaryButton)})`);
+      root.style.setProperty('--custom-dark-secondary', `hsl(${hexToHsl(theme.darkSecondaryButton)})`);
+      root.style.setProperty('--custom-dark-background', `hsl(${hexToHsl(theme.darkBackground)})`);
+      root.style.setProperty('--custom-dark-foreground', `hsl(${hexToHsl(theme.darkText)})`);
+      root.style.setProperty('--custom-dark-heading', `hsl(${hexToHsl(theme.darkHeadingColor)})`);
+      root.style.setProperty('--custom-dark-description', `hsl(${hexToHsl(theme.darkDescriptionColor)})`);
+
+      // Override system theme with custom theme in both modes
+      root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);
+      root.style.setProperty('--secondary', `hsl(${hexToHsl(theme.lightSecondaryButton)})`);
+      
+      // Also set raw colors for components that need direct hex values
+      root.style.setProperty('--custom-primary-button-light', theme.lightPrimaryButton);
+      root.style.setProperty('--custom-primary-button-dark', theme.darkPrimaryButton);
       root.style.setProperty('--custom-secondary-button', theme.secondaryButton);
       
       // Set heading and description colors

@@ -370,12 +370,31 @@ export const featureFlags = pgTable("feature_flags", {
 export const themeSettings = pgTable("theme_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id).unique(),
-  primaryButton: varchar("primary_button").default("#2563eb"), // Default blue
-  secondaryButton: varchar("secondary_button").default("#64748b"), // Default gray
-  background: varchar("background").default("#ffffff"), // Default white
-  text: varchar("text").default("#1f2937"), // Default dark gray
-  headingColor: varchar("heading_color").default("#111827"), // Default dark gray for headings
-  descriptionColor: varchar("description_color").default("#6b7280"), // Default medium gray for descriptions
+  
+  // Light mode colors
+  lightPrimaryButton: varchar("light_primary_button").default("#2563eb"), // Default blue
+  lightSecondaryButton: varchar("light_secondary_button").default("#64748b"), // Default gray
+  lightBackground: varchar("light_background").default("#ffffff"), // Default white
+  lightText: varchar("light_text").default("#111827"), // Default dark text
+  lightHeadingColor: varchar("light_heading_color").default("#111827"), // Default dark for headings
+  lightDescriptionColor: varchar("light_description_color").default("#4b5563"), // Default medium gray
+  
+  // Dark mode colors
+  darkPrimaryButton: varchar("dark_primary_button").default("#2563eb"), // Default blue (same as light)
+  darkSecondaryButton: varchar("dark_secondary_button").default("#64748b"), // Default gray
+  darkBackground: varchar("dark_background").default("#0f172a"), // Default dark background
+  darkText: varchar("dark_text").default("#f8fafc"), // Default light text
+  darkHeadingColor: varchar("dark_heading_color").default("#f8fafc"), // Default light for headings
+  darkDescriptionColor: varchar("dark_description_color").default("#cbd5e1"), // Default light gray
+  
+  // Legacy fields for backward compatibility (deprecated)
+  primaryButton: varchar("primary_button").default("#2563eb"),
+  secondaryButton: varchar("secondary_button").default("#64748b"),
+  background: varchar("background").default("#ffffff"),
+  text: varchar("text").default("#1f2937"),
+  headingColor: varchar("heading_color").default("#111827"),
+  descriptionColor: varchar("description_color").default("#6b7280"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

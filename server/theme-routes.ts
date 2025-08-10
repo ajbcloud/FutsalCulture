@@ -34,12 +34,29 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
 
     // Return default theme if no custom settings exist
     const themeData = settings[0] || {
-      primaryButton: '#2563eb',   // Bright blue
-      secondaryButton: '#6b7280', // Light gray  
-      background: '#ffffff',      // White
-      text: '#111827',           // Dark text for contrast
-      headingColor: '#1f2937',   // Slightly lighter dark for headings
-      descriptionColor: '#6b7280' // Medium gray for descriptions
+      // Light mode defaults
+      lightPrimaryButton: '#2563eb',
+      lightSecondaryButton: '#64748b', 
+      lightBackground: '#ffffff',
+      lightText: '#111827',
+      lightHeadingColor: '#111827',
+      lightDescriptionColor: '#4b5563',
+      
+      // Dark mode defaults
+      darkPrimaryButton: '#2563eb',
+      darkSecondaryButton: '#64748b',
+      darkBackground: '#0f172a',
+      darkText: '#f8fafc',
+      darkHeadingColor: '#f8fafc',
+      darkDescriptionColor: '#cbd5e1',
+      
+      // Legacy fields for backward compatibility
+      primaryButton: '#2563eb',
+      secondaryButton: '#6b7280',
+      background: '#ffffff',
+      text: '#111827',
+      headingColor: '#1f2937',
+      descriptionColor: '#6b7280'
     };
 
     res.json(themeData);
@@ -85,19 +102,64 @@ router.post('/', isAuthenticated, async (req: any, res: Response) => {
       result = await db
         .update(themeSettings)
         .set({
-          primaryButton: validatedData.primaryButton,
-          secondaryButton: validatedData.secondaryButton,
-          background: validatedData.background,
-          text: validatedData.text,
+          // Light mode colors
+          lightPrimaryButton: validatedData.lightPrimaryButton,
+          lightSecondaryButton: validatedData.lightSecondaryButton,
+          lightBackground: validatedData.lightBackground,
+          lightText: validatedData.lightText,
+          lightHeadingColor: validatedData.lightHeadingColor,
+          lightDescriptionColor: validatedData.lightDescriptionColor,
+          
+          // Dark mode colors
+          darkPrimaryButton: validatedData.darkPrimaryButton,
+          darkSecondaryButton: validatedData.darkSecondaryButton,
+          darkBackground: validatedData.darkBackground,
+          darkText: validatedData.darkText,
+          darkHeadingColor: validatedData.darkHeadingColor,
+          darkDescriptionColor: validatedData.darkDescriptionColor,
+          
+          // Legacy fields for backward compatibility
+          primaryButton: validatedData.lightPrimaryButton, // Use light mode as legacy fallback
+          secondaryButton: validatedData.lightSecondaryButton,
+          background: validatedData.lightBackground,
+          text: validatedData.lightText,
+          headingColor: validatedData.lightHeadingColor,
+          descriptionColor: validatedData.lightDescriptionColor,
+          
           updatedAt: new Date()
         })
         .where(eq(themeSettings.tenantId, tenantId))
         .returning();
     } else {
-      // Insert new settings
+      // Create new settings
       result = await db
         .insert(themeSettings)
-        .values(validatedData)
+        .values({
+          tenantId,
+          // Light mode colors
+          lightPrimaryButton: validatedData.lightPrimaryButton,
+          lightSecondaryButton: validatedData.lightSecondaryButton,
+          lightBackground: validatedData.lightBackground,
+          lightText: validatedData.lightText,
+          lightHeadingColor: validatedData.lightHeadingColor,
+          lightDescriptionColor: validatedData.lightDescriptionColor,
+          
+          // Dark mode colors
+          darkPrimaryButton: validatedData.darkPrimaryButton,
+          darkSecondaryButton: validatedData.darkSecondaryButton,
+          darkBackground: validatedData.darkBackground,
+          darkText: validatedData.darkText,
+          darkHeadingColor: validatedData.darkHeadingColor,
+          darkDescriptionColor: validatedData.darkDescriptionColor,
+          
+          // Legacy fields for backward compatibility
+          primaryButton: validatedData.lightPrimaryButton,
+          secondaryButton: validatedData.lightSecondaryButton,
+          background: validatedData.lightBackground,
+          text: validatedData.lightText,
+          headingColor: validatedData.lightHeadingColor,
+          descriptionColor: validatedData.lightDescriptionColor
+        })
         .returning();
     }
 

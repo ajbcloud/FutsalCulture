@@ -47,6 +47,14 @@
   --brand-700: hsl(224, 76%, 48%);
   --brand-800: hsl(226, 71%, 40%);
   --brand-900: hsl(224, 64%, 33%);
+
+  /* Theme-aware custom colors - Light Mode defaults */
+  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));
+  --theme-secondary: var(--custom-light-secondary, hsl(210, 40%, 96%));
+  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));
+  --theme-foreground: var(--custom-light-foreground, hsl(222, 84%, 5%));
+  --theme-heading: var(--custom-light-heading, hsl(222, 84%, 5%));
+  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));
 }
 
 .dark {
@@ -69,6 +77,14 @@
   --destructive: hsl(0, 63%, 31%);
   --destructive-foreground: hsl(210, 40%, 98%);
   --ring: hsl(217, 91%, 60%);
+
+  /* Theme-aware custom colors - Dark Mode override */
+  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 60%));
+  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 17%));
+  --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));
+  --theme-foreground: var(--custom-dark-foreground, hsl(210, 40%, 98%));
+  --theme-heading: var(--custom-dark-heading, hsl(210, 40%, 98%));
+  --theme-description: var(--custom-dark-description, hsl(215, 20%, 85%));
 }
 
 @layer base {
