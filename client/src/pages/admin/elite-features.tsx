@@ -908,10 +908,6 @@ export default function EliteFeatures() {
               
               <div className="space-y-4 mt-6">
                 <h3 className="font-semibold">Theme Preview</h3>
-                <div className="text-xs text-gray-500 mb-2 space-y-1">
-                  <div>Debug Light: Heading={themeSettings.lightHeadingColor} | Text={themeSettings.lightText} | Description={themeSettings.lightDescriptionColor}</div>
-                  <div>Debug Dark: Heading={themeSettings.darkHeadingColor} | Text={themeSettings.darkText} | Description={themeSettings.darkDescriptionColor}</div>
-                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Light Mode Preview */}
                   <div className="space-y-2">
