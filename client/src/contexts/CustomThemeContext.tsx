@@ -42,6 +42,16 @@ interface CustomTheme {
   darkBorderColor?: string;
   darkNavActiveBg?: string;
   
+  // Additional properties for extended theme (missing from original interface)
+  lightInputBackground?: string;
+  lightSuccessColor?: string;
+  lightWarningColor?: string;
+  lightErrorColor?: string;
+  darkInputBackground?: string;
+  darkSuccessColor?: string;
+  darkWarningColor?: string;
+  darkErrorColor?: string;
+  
   // Legacy fallbacks
   primaryButton?: string;
   secondaryButton?: string;
@@ -134,13 +144,45 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       // Use primary button color for active navigation background
       root.style.setProperty('--custom-dark-nav-active-bg', `hsl(${hexToHsl(theme.darkPrimaryButton || '#2563eb')})`);
 
-      // Apply extended dark mode colors (numbered 10-15) - set as CSS variables for dark mode switching
-      if (theme.darkPageTitle) root.style.setProperty('--theme-dark-page-title', theme.darkPageTitle);
-      if (theme.darkCardBackground) root.style.setProperty('--theme-dark-card-background', theme.darkCardBackground);
-      if (theme.darkCardTitle) root.style.setProperty('--theme-dark-card-title', theme.darkCardTitle);
-      if (theme.darkFeatureTitle) root.style.setProperty('--theme-dark-feature-title', theme.darkFeatureTitle);
-      if (theme.darkFeatureDescription) root.style.setProperty('--theme-dark-feature-description', theme.darkFeatureDescription);
-      if (theme.darkIconColor) root.style.setProperty('--theme-dark-icon-color', theme.darkIconColor);
+      // Apply extended dark mode colors (numbered 10-15) as HSL - matching Growth plan defaults
+      root.style.setProperty('--custom-dark-page-title', `hsl(${hexToHsl(theme.darkPageTitle || '#ffffff')})`);
+      root.style.setProperty('--custom-dark-card-background', `hsl(${hexToHsl(theme.darkCardBackground || '#1e293b')})`);
+      root.style.setProperty('--custom-dark-card-title', `hsl(${hexToHsl(theme.darkCardTitle || '#ffffff')})`);
+      root.style.setProperty('--custom-dark-feature-title', `hsl(${hexToHsl(theme.darkFeatureTitle || '#ffffff')})`);
+      root.style.setProperty('--custom-dark-feature-description', `hsl(${hexToHsl(theme.darkFeatureDescription || '#cbd5e1')})`);
+      root.style.setProperty('--custom-dark-icon-color', `hsl(${hexToHsl(theme.darkIconColor || '#60a5fa')})`);
+      
+      // Apply extended light mode colors with fallbacks for missing properties
+      root.style.setProperty('--custom-light-accent-color', `hsl(${hexToHsl(theme.lightAccentColor || '#22c55e')})`);
+      root.style.setProperty('--custom-light-border-color', `hsl(${hexToHsl(theme.lightBorderColor || '#e2e8f0')})`);
+      root.style.setProperty('--custom-dark-accent-color', `hsl(${hexToHsl(theme.darkAccentColor || '#34d399')})`);
+      root.style.setProperty('--custom-dark-border-color', `hsl(${hexToHsl(theme.darkBorderColor || '#374151')})`);
+      
+      // Apply additional new properties from schema
+      root.style.setProperty('--custom-light-input-background', `hsl(${hexToHsl(theme.lightInputBackground || '#f8fafc')})`);
+      root.style.setProperty('--custom-light-success-color', `hsl(${hexToHsl(theme.lightSuccessColor || '#22c55e')})`);
+      root.style.setProperty('--custom-light-warning-color', `hsl(${hexToHsl(theme.lightWarningColor || '#f59e0b')})`);
+      root.style.setProperty('--custom-light-error-color', `hsl(${hexToHsl(theme.lightErrorColor || '#dc2626')})`);
+      
+      root.style.setProperty('--custom-dark-input-background', `hsl(${hexToHsl(theme.darkInputBackground || '#1e293b')})`);
+      root.style.setProperty('--custom-dark-success-color', `hsl(${hexToHsl(theme.darkSuccessColor || '#34d399')})`);
+      root.style.setProperty('--custom-dark-warning-color', `hsl(${hexToHsl(theme.darkWarningColor || '#fbbf24')})`);
+      root.style.setProperty('--custom-dark-error-color', `hsl(${hexToHsl(theme.darkErrorColor || '#f87171')})`);
+      
+      console.log('Applied theme colors:', {
+        light: {
+          primary: theme.lightPrimaryButton,
+          secondary: theme.lightSecondaryButton,
+          background: theme.lightBackground,
+          text: theme.lightText
+        },
+        dark: {
+          primary: theme.darkPrimaryButton,
+          secondary: theme.darkSecondaryButton, 
+          background: theme.darkBackground,
+          text: theme.darkText
+        }
+      });
 
       // Override system theme with custom theme in both modes
       root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);

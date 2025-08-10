@@ -70,22 +70,22 @@
   --ring: var(--focus);
   --radius: 0.5rem;
   
-  /* Theme customization overrides - Light mode (numbered 1-15) */
-  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));           /* 1. Primary Button */
-  --theme-secondary: var(--custom-light-secondary, hsl(214, 32%, 96%));       /* 2. Secondary Button */
-  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));       /* 3. Background */
-  --theme-foreground: var(--custom-light-foreground, hsl(220, 89%, 11%));     /* 4. Text Color */
-  --theme-heading: var(--custom-light-heading, hsl(220, 89%, 11%));           /* 5. Heading Color */
-  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));   /* 6. Description Color */
-  --theme-nav-title: var(--custom-light-nav-title, hsl(220, 89%, 11%));       /* 7. Nav Title */
-  --theme-nav-text: var(--custom-light-nav-text, hsl(215, 16%, 35%));         /* 8. Nav Text */
-  --theme-nav-active-text: var(--custom-light-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text */
-  --theme-page-title: var(--custom-light-page-title, hsl(220, 89%, 11%));     /* 10. Page Title */
-  --theme-card-background: var(--custom-light-card-background, hsl(0, 0%, 100%)); /* 11. Card Background */
-  --theme-card-title: var(--custom-light-card-title, hsl(220, 89%, 11%));     /* 12. Card Title */
-  --theme-feature-title: var(--custom-light-feature-title, hsl(220, 89%, 11%)); /* 13. Feature Title */
-  --theme-feature-description: var(--custom-light-feature-description, hsl(215, 16%, 35%)); /* 14. Feature Description */
-  --theme-icon-color: var(--custom-light-icon-color, hsl(217, 91%, 60%));     /* 15. Icon Color */
+  /* Theme customization overrides - Light mode (numbered 1-15) - Updated to match Growth plan defaults */
+  --theme-primary: var(--custom-light-primary, hsl(217, 91%, 60%));           /* 1. Primary Button - #3b82f6 */
+  --theme-secondary: var(--custom-light-secondary, hsl(214, 32%, 96%));       /* 2. Secondary Button - #f3f4f6 */
+  --theme-background: var(--custom-light-background, hsl(0, 0%, 100%));       /* 3. Background - #ffffff */
+  --theme-foreground: var(--custom-light-foreground, hsl(222, 84%, 5%));      /* 4. Text Color - #0f172a */
+  --theme-heading: var(--custom-light-heading, hsl(222, 84%, 5%));            /* 5. Heading Color - #0f172a */
+  --theme-description: var(--custom-light-description, hsl(215, 16%, 35%));   /* 6. Description Color - #64748b */
+  --theme-nav-title: var(--custom-light-nav-title, hsl(222, 84%, 5%));        /* 7. Nav Title - #0f172a */
+  --theme-nav-text: var(--custom-light-nav-text, hsl(215, 16%, 35%));         /* 8. Nav Text - #64748b */
+  --theme-nav-active-text: var(--custom-light-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text - #ffffff */
+  --theme-page-title: var(--custom-light-page-title, hsl(222, 84%, 5%));      /* 10. Page Title - #0f172a */
+  --theme-card-background: var(--custom-light-card-background, hsl(0, 0%, 100%)); /* 11. Card Background - #ffffff */
+  --theme-card-title: var(--custom-light-card-title, hsl(222, 84%, 5%));      /* 12. Card Title - #0f172a */
+  --theme-feature-title: var(--custom-light-feature-title, hsl(222, 84%, 5%)); /* 13. Feature Title - #0f172a */
+  --theme-feature-description: var(--custom-light-feature-description, hsl(215, 16%, 35%)); /* 14. Feature Description - #64748b */
+  --theme-icon-color: var(--custom-light-icon-color, hsl(217, 91%, 60%));     /* 15. Icon Color - #3b82f6 */
 }
 
 /* Dark mode semantic colors */
@@ -133,22 +133,22 @@
   --chart-2: hsl(142, 76%, 50%);       /* Green - lighter */
   --chart-3: hsl(38, 92%, 60%);        /* Orange - lighter */
   
-  /* Theme customization overrides - Dark mode (numbered 1-15) */
-  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 70%));           /* 1. Primary Button */
-  --theme-secondary: var(--custom-dark-secondary, hsl(217, 33%, 18%));       /* 2. Secondary Button */
-  --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));       /* 3. Background */
-  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));       /* 4. Text Color */
-  --theme-heading: var(--custom-dark-heading, hsl(0, 0%, 100%));             /* 5. Heading Color */
-  --theme-description: var(--custom-dark-description, hsl(210, 40%, 85%));   /* 6. Description Color */
-  --theme-nav-title: var(--custom-dark-nav-title, hsl(0, 0%, 100%));         /* 7. Nav Title */
-  --theme-nav-text: var(--custom-dark-nav-text, hsl(210, 40%, 85%));         /* 8. Nav Text */
-  --theme-nav-active-text: var(--custom-dark-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text */
-  --theme-page-title: var(--custom-dark-page-title, hsl(0, 0%, 100%));       /* 10. Page Title */
-  --theme-card-background: var(--custom-dark-card-background, hsl(217, 33%, 8%)); /* 11. Card Background */
-  --theme-card-title: var(--custom-dark-card-title, hsl(0, 0%, 100%));       /* 12. Card Title */
-  --theme-feature-title: var(--custom-dark-feature-title, hsl(0, 0%, 100%)); /* 13. Feature Title */
-  --theme-feature-description: var(--custom-dark-feature-description, hsl(210, 40%, 85%)); /* 14. Feature Description */
-  --theme-icon-color: var(--custom-dark-icon-color, hsl(217, 91%, 70%));     /* 15. Icon Color */
+  /* Theme customization overrides - Dark mode (numbered 1-15) - Updated to match Growth plan defaults */
+  --theme-primary: var(--custom-dark-primary, hsl(217, 91%, 70%));           /* 1. Primary Button - #60a5fa */
+  --theme-secondary: var(--custom-dark-secondary, hsl(215, 19%, 35%));       /* 2. Secondary Button - #475569 */
+  --theme-background: var(--custom-dark-background, hsl(222, 84%, 4%));       /* 3. Background - #0f1629 */
+  --theme-foreground: var(--custom-dark-foreground, hsl(0, 0%, 100%));       /* 4. Text Color - #ffffff */
+  --theme-heading: var(--custom-dark-heading, hsl(0, 0%, 100%));             /* 5. Heading Color - #ffffff */
+  --theme-description: var(--custom-dark-description, hsl(210, 40%, 85%));   /* 6. Description Color - #cbd5e1 */
+  --theme-nav-title: var(--custom-dark-nav-title, hsl(0, 0%, 100%));         /* 7. Nav Title - #ffffff */
+  --theme-nav-text: var(--custom-dark-nav-text, hsl(210, 40%, 85%));         /* 8. Nav Text - #cbd5e1 */
+  --theme-nav-active-text: var(--custom-dark-nav-active-text, hsl(0, 0%, 100%)); /* 9. Nav Active Text - #ffffff */
+  --theme-page-title: var(--custom-dark-page-title, hsl(0, 0%, 100%));       /* 10. Page Title - #ffffff */
+  --theme-card-background: var(--custom-dark-card-background, hsl(217, 33%, 17%)); /* 11. Card Background - #1e293b */
+  --theme-card-title: var(--custom-dark-card-title, hsl(0, 0%, 100%));       /* 12. Card Title - #ffffff */
+  --theme-feature-title: var(--custom-dark-feature-title, hsl(0, 0%, 100%)); /* 13. Feature Title - #ffffff */
+  --theme-feature-description: var(--custom-dark-feature-description, hsl(210, 40%, 85%)); /* 14. Feature Description - #cbd5e1 */
+  --theme-icon-color: var(--custom-dark-icon-color, hsl(217, 91%, 70%));     /* 15. Icon Color - #60a5fa */
 }
 
 /* Theme utility classes for numbered color system */
