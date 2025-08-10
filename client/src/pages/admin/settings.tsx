@@ -1378,7 +1378,7 @@ export default function AdminSettings() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
                               className="flex items-center gap-1 text-xs h-6 px-2"
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -1393,14 +1393,14 @@ export default function AdminSettings() {
                           <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
                           <div className="space-y-1">
                             <Button 
-                              onClick={() => window.open('https://buy.stripe.com/test_28o4jM9b24BQaqA6oo', '_blank')}
+                              onClick={() => window.open('https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00', '_blank')}
                               className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
                               size="sm"
                             >
                               Set Up Core Plan ($99/mo)
                             </Button>
                             <Button 
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
                               variant="outline"
                               className="text-xs h-6 px-3 w-full"
                               size="sm"
@@ -1470,7 +1470,7 @@ export default function AdminSettings() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
                               className="flex items-center gap-1 text-xs h-6 px-2"
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -1485,14 +1485,14 @@ export default function AdminSettings() {
                           <p className="text-xs text-muted-foreground mb-2">No active subscription</p>
                           <div className="space-y-1">
                             <Button 
-                              onClick={() => window.open('https://buy.stripe.com/test_28o4jM9b24BQaqA6oo', '_blank')}
+                              onClick={() => window.open('https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00', '_blank')}
                               className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-6 px-3 w-full"
                               size="sm"
                             >
                               Set Up Core Plan ($99/mo)
                             </Button>
                             <Button 
-                              onClick={() => window.open('https://billing.stripe.com/p/login/test_bIY15Tc4fz9IXlsLUuCZBZ', '_blank')}
+                              onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
                               variant="outline"
                               className="text-xs h-6 px-3 w-full"
                               size="sm"
