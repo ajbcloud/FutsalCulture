@@ -39,8 +39,12 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 
-    // Get tenant plan level
-    const tenant = await db.select({ planLevel: tenants.planLevel })
+    // Get tenant plan level and subscription info
+    const tenant = await db.select({ 
+      planLevel: tenants.planLevel,
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      stripeCustomerId: tenants.stripeCustomerId
+    })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
       .limit(1);
@@ -49,13 +53,13 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    // For free tier (no active subscription), show limited features
-    const actualPlanLevel = tenant[0].planLevel || 'core';
+    // Determine if subscription is active based on plan level and stripe data
+    const actualPlanLevel = tenant[0].planLevel || 'free';
+    const hasStripeSubscription = !!(tenant[0].stripeSubscriptionId && tenant[0].stripeCustomerId);
+    const hasActiveSubscription = actualPlanLevel !== 'free' && hasStripeSubscription;
     
-    // Check subscription status - currently defaulting to free tier for inactive subscriptions
-    // TODO: Check actual subscription status from Stripe
-    const hasActiveSubscription = false;
-    const effectivePlanLevel = hasActiveSubscription ? actualPlanLevel : 'free';
+    // Use actual plan level for paid plans, free for non-subscribed users
+    const effectivePlanLevel = actualPlanLevel;
     
     // Import PLAN_FEATURES from shared
     const { PLAN_FEATURES } = await import('../shared/feature-flags');

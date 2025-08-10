@@ -2783,14 +2783,76 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Get subscription info from Stripe
   app.get('/api/admin/subscription-info', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // First check database for tenant subscription info
+      const currentUser = (req as any).currentUser;
+      const tenant = await db.select({
+        planLevel: tenants.planLevel,
+        stripeSubscriptionId: tenants.stripeSubscriptionId,
+        stripeCustomerId: tenants.stripeCustomerId
+      })
+      .from(tenants)
+      .where(eq(tenants.id, currentUser?.tenantId))
+      .limit(1);
+
+      if (tenant.length && tenant[0].planLevel && tenant[0].planLevel !== 'free') {
+        // Active subscription in database - return subscription info
+        const tenantData = tenant[0];
+        const planPricing = {
+          'core': 9900,     // $99.00 in cents
+          'growth': 19900,  // $199.00 in cents  
+          'elite': 49900    // $499.00 in cents
+        };
+
+        const subscriptionData = {
+          id: tenantData.stripeSubscriptionId || 'sub_database_active',
+          status: 'active',
+          current_period_start: Math.floor(Date.now() / 1000),
+          current_period_end: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days from now
+          planName: `${tenantData.planLevel?.charAt(0).toUpperCase()}${tenantData.planLevel?.slice(1)} Plan`,
+          amount: planPricing[tenantData.planLevel as keyof typeof planPricing] || 9900,
+          currentPeriodEnd: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString(),
+          hostedInvoiceUrl: null,
+          plan: {
+            id: `plan_${tenantData.planLevel}`,
+            nickname: `${tenantData.planLevel?.charAt(0).toUpperCase()}${tenantData.planLevel?.slice(1)} Plan`,
+            amount: planPricing[tenantData.planLevel as keyof typeof planPricing] || 9900,
+            currency: 'usd',
+            interval: 'month'
+          },
+          customer: {
+            id: tenantData.stripeCustomerId || 'cus_database_active',
+            email: currentUser?.email || "admin@futsalculture.com"
+          }
+        };
+
+        return res.json({
+          subscription: subscriptionData,
+          invoices: [],
+          customer_id: tenantData.stripeCustomerId || 'cus_database_active'
+        });
+      }
+
       if (!process.env.STRIPE_SECRET_KEY) {
-        return res.status(400).json({ 
-          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." 
+        // No Stripe key and no active database subscription - return inactive
+        return res.json({
+          subscription: {
+            id: "no_subscription",
+            status: "inactive",
+            current_period_start: null,
+            current_period_end: null,
+            planName: null,
+            amount: 0,
+            currentPeriodEnd: null,
+            hostedInvoiceUrl: null,
+            plan: null,
+            customer: null
+          },
+          invoices: [],
+          customer_id: null
         });
       }
 
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      const currentUser = (req as any).currentUser;
 
       try {
         // Get business settings

@@ -1,0 +1,249 @@
+Prompt: Fix “Plan & Features” page (plans, features, and subscription UX)
+Goal
+Make the Plan & Features tab accurate, self‑explanatory, and fully driven by the tenant’s current plan + feature flags. Replace the two buttons with one “Manage Subscription” button, show a complete feature matrix with ✅/❌ and inline “Upgrade” CTAs, add the Free plan to the comparison, and highlight the tenant’s current plan.
+
+1) Unify subscription buttons
+On Settings → Plan & Features, replace “Set Up Core Plan ($99/mo)” and “Manage Billing Portal” with a single button:
+
+Label: Manage Subscription
+
+Behavior:
+
+If tenant is on Free plan (no billing customer), clicking opens our upgrade flow (pricing + checkout).
+
+If tenant has a paid plan, clicking deep-links to the billing portal (Stripe customer portal).
+
+Use the same component/utility we already use elsewhere for subscription portal links (Stripe). If not present, encapsulate it in a helper:
+
+POST /api/billing/portal → returns url
+
+POST /api/billing/checkout?plan=<plan_id> → returns url
+
+Show Subscription Status line: Active • Core, Active • Growth, Active • Elite, or Free.
+
+Pull from server (tenant plan + billing status).
+
+Add “Renews on <date>” if available from Stripe metadata.
+
+2) Source of truth for plans & features
+Create/extend a single constant mapping of plans → features. Store in a shared file, e.g. client/src/constants/plans.ts.
+
+ts
+Copy
+Edit
+export type FeatureKey =
+  | 'maxPlayers'
+  | 'manualSessions'
+  | 'recurringSessions'
+  | 'csvImport'
+  | 'payments'
+  | 'emailNotifications'
+  | 'smsNotifications'
+  | 'advancedAnalytics'
+  | 'autoPromotion'
+  | 'bulkOps'
+  | 'themeCustomization'
+  | 'apiAccess'
+  | 'whiteLabelEmail';
+
+export const PLANS = {
+  free: {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    features: {
+      maxPlayers: 10,
+      manualSessions: true,
+      recurringSessions: false,
+      csvImport: false,
+      payments: false,
+      emailNotifications: false,
+      smsNotifications: false,
+      advancedAnalytics: false,
+      autoPromotion: false,
+      bulkOps: false,
+      themeCustomization: false,
+      apiAccess: false,
+      whiteLabelEmail: false,
+    },
+  },
+  core: {
+    id: 'core',
+    name: 'Core',
+    price: 99,
+    features: {
+      maxPlayers: 150,
+      manualSessions: true,
+      recurringSessions: true,
+      csvImport: false,
+      payments: true,
+      emailNotifications: true,
+      smsNotifications: false,
+      advancedAnalytics: 'basic', // support “basic” vs “advanced”
+      autoPromotion: false,
+      bulkOps: false,
+      themeCustomization: false,
+      apiAccess: false,
+      whiteLabelEmail: false,
+    },
+  },
+  growth: {
+    id: 'growth',
+    name: 'Growth',
+    price: 199,
+    features: {
+      maxPlayers: 500,
+      manualSessions: true,
+      recurringSessions: true,
+      csvImport: true,
+      payments: true,
+      emailNotifications: true,
+      smsNotifications: true,
+      advancedAnalytics: 'advanced',
+      autoPromotion: true,
+      bulkOps: true,
+      themeCustomization: true,
+      apiAccess: false,
+      whiteLabelEmail: true,
+    },
+  },
+  elite: {
+    id: 'elite',
+    name: 'Elite',
+    price: 499,
+    features: {
+      maxPlayers: 'unlimited',
+      manualSessions: true,
+      recurringSessions: true,
+      csvImport: true,
+      payments: true,
+      emailNotifications: true,
+      smsNotifications: true,
+      advancedAnalytics: 'advanced',
+      autoPromotion: true,
+      bulkOps: true,
+      themeCustomization: true,
+      apiAccess: true,
+      whiteLabelEmail: true,
+    },
+  },
+} as const;
+Server should expose tenant’s current plan via /api/tenant/plan (plan id + any feature overrides). Use this endpoint to hydrate the UI.
+
+3) Feature availability section (accurate ✅/❌ + inline upgrades)
+Replace the current “Feature Availability” list with a feature matrix-style list built from PLANS and the tenant’s active plan.
+
+Show each feature as a row with:
+
+Feature label (e.g., “Payment processing”).
+
+Status icon:
+
+✅ if included on the active plan.
+
+❌ if not included.
+
+Inline “Upgrade” button (only when ❌) that opens the upgrade flow and preselects the cheapest plan that includes that feature.
+
+Use human labels and short descriptions for each FeatureKey. Create a mapping in client/src/constants/features.ts:
+
+ts
+Copy
+Edit
+export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: string}> = {
+  maxPlayers: { label: 'Player limit' },
+  manualSessions: { label: 'Manual session creation' },
+  recurringSessions: { label: 'Recurring sessions' },
+  csvImport: { label: 'CSV import (sessions/players)' },
+  payments: { label: 'Accept online payments' },
+  emailNotifications: { label: 'Email notifications' },
+  smsNotifications: { label: 'SMS notifications' },
+  advancedAnalytics: { label: 'Advanced analytics' },
+  autoPromotion: { label: 'Waitlist auto-promotion' },
+  bulkOps: { label: 'Bulk operations' },
+  themeCustomization: { label: 'Theme customization' },
+  apiAccess: { label: 'API access' },
+  whiteLabelEmail: { label: 'White-label email sending' },
+};
+For maxPlayers, show the actual number (e.g., “500 players max” vs “10 players max” vs “Unlimited”).
+
+4) Plan comparison card (include Free + mark current plan)
+At the bottom, render a four-column plan comparison: Free, Core ($99), Growth ($199), Elite ($499).
+
+Each card lists the most important features (use the constants above to populate).
+
+Add a “Current plan” badge (top-right chip) on the tenant’s plan.
+
+Add “Upgrade” buttons on plans above the current plan (opens checkout with selected plan id).
+
+If already on Elite, show “You’re on our most complete plan”.
+
+Make this section responsive (cards stack 1/2/4 per row at sm/md/lg).
+
+5) Data loading & backend checks
+Plan data must come from server (/api/tenant/plan) and include:
+
+planId (free|core|growth|elite)
+
+billingStatus (active|trialing|past_due|cancelled|none)
+
+renewalDate (if available)
+
+Optional featureOverrides (object). Merge overrides onto base plan for rendering.
+
+Ensure server enforcement (not just UI): any action behind a feature must be validated on the API (e.g., payments, analytics routes, bulk ops). If blocked, return 403 with plan_required error code.
+
+6) Empty/error states
+If plan cannot be fetched, show a non-blocking error toast and default to free UI (with CTA to contact support).
+
+If Stripe portal URL cannot be created, show an error toast and suggest retry.
+
+7) Visual & accessibility
+Use consistent iconography: ✅ for included, ❌ for locked.
+
+Add tooltips on each feature row with short descriptions (from FEATURE_LABELS).
+
+Maintain dark mode compatibility.
+
+Fully responsive.
+
+8) Files likely to touch
+client/src/pages/admin/settings/index.tsx (Plan & Features tab)
+
+client/src/components/billing/ManageSubscriptionButton.tsx (new or reused)
+
+client/src/constants/plans.ts, client/src/constants/features.ts (new)
+
+server/admin-routes.ts or server/billing-routes.ts for:
+
+GET /api/tenant/plan
+
+POST /api/billing/portal
+
+POST /api/billing/checkout?plan=<plan_id>
+
+Add/verify plan checks in feature-protected endpoints.
+
+9) QA items
+Tenant on Free sees:
+
+Status: Free
+
+Single Manage Subscription opens upgrade flow
+
+Feature rows with many ❌ and Upgrade buttons
+
+Comparison shows Free as Current plan
+
+Tenant on Core/Growth/Elite:
+
+Status: Active • <Plan>
+
+Manage Subscription opens Stripe portal
+
+Feature rows reflect plan correctly (no false positives)
+
+Comparison shows Current plan badge and correct Upgrade availability
+
+Mobile: matrix + comparison cards render cleanly.
+
