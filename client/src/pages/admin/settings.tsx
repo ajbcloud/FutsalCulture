@@ -921,7 +921,7 @@ export default function AdminSettings() {
                         <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <div className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">Preview:</div>
                           <div className="text-sm text-blue-700 dark:text-blue-300">
-                            {settings.waitlistJoinMessage
+                            {(settings.waitlistJoinMessage || "You've been added to the waitlist for {session}. You're #{position} in line.")
                               .replace('{session}', 'U12 Boys Training Session')
                               .replace('{position}', '3')
                               .replace('{location}', 'Main Field')
@@ -953,7 +953,7 @@ export default function AdminSettings() {
                             {(() => {
                               const now = new Date();
                               const expiresDate = new Date(now.getTime() + (settings.defaultWaitlistOfferTimeMinutes || 45) * 60 * 1000);
-                              return settings.waitlistPromotionMessage
+                              return (settings.waitlistPromotionMessage || "Great news! A spot opened up in {session}. You have until {expires} to complete your booking.")
                                 .replace('{session}', 'U12 Boys Training Session')
                                 .replace('{expires}', expiresDate.toLocaleString())
                                 .replace('{location}', 'Main Field')
