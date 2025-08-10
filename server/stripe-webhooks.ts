@@ -13,7 +13,7 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-09-30.acacia',
+  apiVersion: '2025-06-30.basil',
 });
 
 const router = express.Router();
@@ -59,20 +59,38 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           const tenantId = session.client_reference_id;
           const subscriptionId = session.subscription as string;
           
-          // Get subscription details to determine plan
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
-          
-          if (planLevel) {
-            await db.update(tenants)
-              .set({
-                planLevel: planLevel as any,
-                stripeSubscriptionId: subscriptionId,
-                stripeCustomerId: session.customer as string,
-              })
-              .where(eq(tenants.id, tenantId));
-              
-            console.log(`Updated tenant ${tenantId} to ${planLevel} plan via checkout`);
+          try {
+            // Get subscription details to determine plan
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
+            
+            if (planLevel) {
+              await db.update(tenants)
+                .set({
+                  planLevel: planLevel as any,
+                  stripeSubscriptionId: subscriptionId,
+                  stripeCustomerId: session.customer as string,
+                })
+                .where(eq(tenants.id, tenantId));
+                
+              console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via checkout`);
+            } else {
+              console.log(`⚠️  Could not determine plan level from price ID: ${subscription.items.data[0]?.price?.id}`);
+            }
+          } catch (error) {
+            console.error('Error processing checkout session:', error);
+            // For development, assume it's a core plan if we can't retrieve the subscription
+            if (process.env.NODE_ENV === 'development') {
+              await db.update(tenants)
+                .set({
+                  planLevel: 'core' as any,
+                  stripeSubscriptionId: subscriptionId,
+                  stripeCustomerId: session.customer as string,
+                })
+                .where(eq(tenants.id, tenantId));
+                
+              console.log(`🧪 DEV MODE: Updated tenant ${tenantId} to core plan`);
+            }
           }
         }
         break;

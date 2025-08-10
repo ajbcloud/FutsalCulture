@@ -24,6 +24,9 @@ import { setupSuperAdminRoutes } from './super-admin-routes';
 import { stripeWebhookRouter } from './stripe-webhooks';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
+  app.use('/api/stripe', stripeWebhookRouter);
+
   // Auth middleware
   await setupAuth(app);
 
@@ -1317,8 +1320,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const featureRoutes = await import('./feature-routes');
   app.use('/api', isAuthenticated, featureRoutes.default);
 
-  // Stripe webhook routes (must be before auth middleware since webhooks use their own verification)
-  app.use('/api/stripe', stripeWebhookRouter);
+  // Debug endpoint to test subscription update
+  app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User or tenant not found" });
+      }
+
+      // Update tenant to core plan for testing
+      const { tenants } = await import('@shared/schema');
+      await db.update(tenants)
+        .set({
+          planLevel: 'core',
+          stripeSubscriptionId: 'sub_test_debug_123',
+          stripeCustomerId: 'cus_test_debug_123',
+        })
+        .where(eq(tenants.id, user.tenantId));
+
+      console.log(`🧪 DEBUG: Updated tenant ${user.tenantId} to core plan`);
+      
+      res.json({ 
+        success: true, 
+        message: "Subscription updated to Core plan",
+        tenantId: user.tenantId,
+        newPlan: 'core'
+      });
+    } catch (error) {
+      console.error('Debug subscription update error:', error);
+      res.status(500).json({ message: "Failed to update subscription" });
+    }
+  });
+
+  // Stripe webhook routes moved to top of function
 
   const httpServer = createServer(app);
   return httpServer;
