@@ -276,12 +276,10 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             },
             venmo: {
               allowDesktop: true,
-              allowDesktopWebLogin: false, // Disable desktop web login
-              allowNewBrowserTab: false, // Prevent opening new tab, force app redirect on mobile
-              ...(isMobileDevice() && {
-                mobileWebFallBack: false, // On mobile, don't fall back to web, force app
-                paymentMethodUsage: 'single_use' // Optimize for single payment
-              })
+              allowDesktopWebLogin: false,
+              allowNewBrowserTab: false,
+              mobileWebFallBack: false,
+              paymentMethodUsage: 'single_use'
             },
             googlePay: {
               merchantId: 'BCR2DN4T2B6X3LXT', // Braintree sandbox merchant ID
@@ -308,12 +306,20 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             // Handle Venmo flow completion
             instance.on('paymentOptionSelected', (event: any) => {
               if (event.paymentOption === 'venmo') {
-                console.log('Venmo option selected - mobile will redirect to app');
+                console.log('Venmo option selected');
                 if (isMobileDevice()) {
-                  // On mobile, when Venmo is selected, it should immediately trigger app redirect
-                  console.log('Mobile device detected - Venmo should redirect to app automatically');
+                  console.log('Mobile device detected - Venmo should open app');
                 }
               }
+            });
+
+            // Handle Venmo payment method flow events
+            instance.on('venmoTokenizationStarted', () => {
+              console.log('Venmo tokenization started - should redirect to app');
+            });
+
+            instance.on('venmoTokenizationCanceled', () => {
+              console.log('Venmo tokenization canceled');
             });
             
             // Apply dark mode styles to Braintree Drop-in UI after a short delay to ensure DOM is ready
@@ -363,6 +369,11 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       // Log payment method type for debugging
       console.log('Payment method type:', type);
       console.log('Payment result:', result);
+
+      // Log Venmo payment completion
+      if (type === 'VenmoAccount') {
+        console.log('Venmo payment completed, processing nonce');
+      }
       
       const response = await apiRequest('POST', '/api/session-billing/process-payment', {
         signupId: signup.id,
