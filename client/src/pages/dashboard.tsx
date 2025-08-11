@@ -12,6 +12,7 @@ import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
 import WaitlistOffers from "@/components/waitlist-offers";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
+import { ParentSessionHistoryDropdown } from "@/components/parent-session-history-dropdown";
 
 
 import { Button } from "@/components/ui/button";
@@ -599,6 +600,21 @@ export default function Dashboard() {
                       ) : (
                         <p className="text-muted-foreground italic">No upcoming reservations.</p>
                       )}
+                    </div>
+                    
+                    {/* Session History Section */}
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold text-foreground">Session History</h4>
+                        <ParentSessionHistoryDropdown
+                          playerId={player.id}
+                          sessionCount={signups.filter(s => s.playerId === player.id && s.paid).length}
+                          playerName={`${player.firstName} ${player.lastName}`}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Click the session count to view detailed history of paid sessions
+                      </p>
                     </div>
                     
                     <PlayerPortalControls player={player} />
