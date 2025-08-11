@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -154,6 +154,25 @@ export default function EliteFeatures() {
   const { data: currentTheme, isLoading: themeLoading } = useQuery({
     queryKey: ['/api/theme']
   });
+  
+  // Check for dark mode from document class
+  const [isDark, setIsDark] = useState(false);
+  
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkTheme();
+    // Listen for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   // Update theme settings when data is fetched
   React.useEffect(() => {
@@ -415,7 +434,13 @@ export default function EliteFeatures() {
             <h1 
               className="text-3xl font-bold"
               style={{
-                color: 'var(--theme-page-title, rgb(17, 24, 39))'
+                color: `${
+                  currentTheme
+                    ? isDark 
+                      ? (currentTheme as any).darkPageTitle || '#ffffff'
+                      : (currentTheme as any).lightPageTitle || '#111827'
+                    : isDark ? '#ffffff' : '#111827'
+                } !important`
               }}
               data-testid="page-title-10"
             >
@@ -435,7 +460,15 @@ export default function EliteFeatures() {
         <CardHeader>
           <CardTitle 
             className="flex items-center gap-2"
-            style={{ color: 'var(--theme-card-title, rgb(17, 24, 39))' }}
+            style={{ 
+              color: `${
+                currentTheme
+                  ? isDark 
+                    ? (currentTheme as any).darkCardTitle || '#ffffff'
+                    : (currentTheme as any).lightCardTitle || '#111827'
+                  : isDark ? '#ffffff' : '#111827'
+              } !important` 
+            }}
             data-testid="card-title-12"
           >
             <Users className="h-5 w-5" />

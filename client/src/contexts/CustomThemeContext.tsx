@@ -213,6 +213,14 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
         }
       });
 
+      // Debug: Check what CSS variables are actually being set
+      console.log('CSS variables set:', {
+        '--theme-page-title': root.style.getPropertyValue('--theme-page-title'),
+        '--theme-page-title-dark': root.style.getPropertyValue('--theme-page-title-dark'),
+        '--theme-card-title': root.style.getPropertyValue('--theme-card-title'),
+        '--theme-card-title-dark': root.style.getPropertyValue('--theme-card-title-dark')
+      });
+
       // Override system theme with custom theme in both modes
       root.style.setProperty('--primary', `hsl(${hexToHsl(theme.lightPrimaryButton)})`);
       root.style.setProperty('--secondary', `hsl(${hexToHsl(theme.lightSecondaryButton)})`);
