@@ -281,9 +281,25 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
         console.error('Error verifying Stripe payment:', error);
       }
     } else if (provider === 'braintree' && paymentId) {
-      // For Braintree, you would verify the transaction with their API
-      // This is a placeholder - in production use Braintree SDK
-      paymentVerified = true; // Assume verified for testing
+      // Verify Braintree transaction
+      try {
+        const gateway = createBraintreeGateway(credentials);
+        const transaction = await gateway.transaction.find(paymentId);
+        
+        // Check if transaction is successful and settled
+        paymentVerified = transaction.status === 'settled' || 
+                         transaction.status === 'submitted_for_settlement' ||
+                         transaction.status === 'settling';
+        
+        console.log('Braintree transaction verification:', {
+          id: paymentId,
+          status: transaction.status,
+          verified: paymentVerified
+        });
+      } catch (error) {
+        console.error('Error verifying Braintree payment:', error);
+        paymentVerified = false;
+      }
     }
 
     if (!paymentVerified) {
@@ -408,19 +424,44 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
           return res.status(400).json({ message: 'Payment method nonce is required' });
         }
 
+        // Get player information for customer details
+        const player = await db.select()
+          .from(players)
+          .where(eq(players.id, playerId))
+          .limit(1);
+
+        if (!player.length) {
+          return res.status(400).json({ message: 'Player not found' });
+        }
+
+        const playerInfo = player[0];
+        const customerName = `${playerInfo.firstName} ${playerInfo.lastName}`.trim();
+
         const gateway = createBraintreeGateway(credentials);
         const result = await gateway.transaction.sale({
           amount: (amount / 100).toString(), // Convert cents to dollars
           paymentMethodNonce: paymentMethodNonce,
+          customer: {
+            firstName: playerInfo.firstName,
+            lastName: playerInfo.lastName,
+            email: playerInfo.email || undefined, // Only include if email exists
+          },
           options: {
             submitForSettlement: true
           }
         });
 
-        if (result.success) {
+        if (result.success && result.transaction) {
+          console.log('Braintree payment successful:', {
+            transactionId: result.transaction.id,
+            amount: result.transaction.amount,
+            status: result.transaction.status,
+            customer: customerName
+          });
+
           paymentResult = {
             success: true,
-            paymentId: result.transaction?.id || `bt_${Date.now()}`,
+            paymentId: result.transaction.id,
             provider: 'braintree'
           };
         } else {
