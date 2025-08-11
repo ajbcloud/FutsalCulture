@@ -19,7 +19,8 @@ import { FEATURE_KEYS } from "@shared/schema";
 import { Mail, Phone, Clock, MapPin, Sparkles, Crown, MessageSquare, History } from "lucide-react";
 import { Link } from "wouter";
 
-const helpSchema = z.object({
+// Base schema for all users
+const baseHelpSchema = z.object({
   firstName: z.string()
     .min(1, "First name is required")
     .min(2, "First name must be at least 2 characters")
@@ -45,8 +46,6 @@ const helpSchema = z.object({
     .max(100, "Subject must be less than 100 characters"),
   category: z.string()
     .min(1, "Category is required"),
-  priority: z.string()
-    .min(1, "Priority is required"),
   message: z.string()
     .min(1, "Message is required")
     .min(20, "Message must be at least 20 characters")
@@ -57,17 +56,27 @@ const helpSchema = z.object({
     .regex(/^\d+$/, "Please enter only the numeric answer"),
 });
 
-type HelpForm = z.infer<typeof helpSchema>;
+// Schema for admin/players (includes priority)
+const adminHelpSchema = baseHelpSchema.extend({
+  priority: z.string()
+    .min(1, "Priority is required"),
+});
+
+// Schema for parents (no priority field)
+const parentHelpSchema = baseHelpSchema;
+
+type HelpForm = z.infer<typeof adminHelpSchema>;
 
 export default function Help() {
   const businessName = useBusinessName();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const { hasFeature: hasFeatureRequests } = useHasFeature(FEATURE_KEYS.FEATURE_REQUESTS);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [captchaAnswer, setCaptchaAnswer] = useState("");
+  const [isParent, setIsParent] = useState(false);
   
   // Fetch admin settings for contact information
   const { data: settings } = useQuery({
@@ -98,13 +107,41 @@ export default function Help() {
     setCaptchaAnswer(answer.toString());
   };
   
-  // Generate captcha on component mount
+  // Generate captcha on component mount and determine user type
   useEffect(() => {
     generateCaptcha();
-  }, []);
+    
+    // Determine if user is a parent (not admin/assistant and not a player)
+    if (user) {
+      const checkUserType = async () => {
+        try {
+          // Check if user is admin/assistant
+          if (user.isAdmin || user.isAssistant) {
+            setIsParent(false);
+            return;
+          }
+          
+          // Check if user is a player
+          const playersResponse = await fetch("/api/players");
+          if (playersResponse.ok) {
+            const players = await playersResponse.json();
+            const isPlayerUser = players.some((player: any) => player.userId === user.id);
+            setIsParent(!isPlayerUser); // If not a player, then is a parent
+          } else {
+            setIsParent(true); // Default to parent if can't determine
+          }
+        } catch (error) {
+          console.error("Error determining user type:", error);
+          setIsParent(true); // Default to parent if error occurs
+        }
+      };
+      
+      checkUserType();
+    }
+  }, [user]);
   
   const form = useForm<HelpForm>({
-    resolver: zodResolver(helpSchema),
+    resolver: zodResolver(isParent ? parentHelpSchema : adminHelpSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -112,7 +149,7 @@ export default function Help() {
       phone: "",
       subject: "",
       category: "",
-      priority: "medium",
+      priority: isParent ? undefined : "medium",
       message: "",
       captcha: "",
     },
@@ -175,9 +212,14 @@ export default function Help() {
       }
     }
     
-    // Remove captcha for submission and add source
+    // Remove captcha for submission and add source, set default priority for parents
     const { captcha, ...submitData } = data;
-    submitHelpMutation.mutate({ ...submitData, source });
+    const finalData = {
+      ...submitData,
+      source,
+      priority: isParent ? "medium" : submitData.priority, // Default priority for parents
+    };
+    submitHelpMutation.mutate(finalData);
   };
 
   return (
@@ -331,7 +373,7 @@ export default function Help() {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={isParent ? "w-full" : "grid grid-cols-2 gap-4"}>
                       <FormField
                         control={form.control}
                         name="category"
@@ -350,7 +392,7 @@ export default function Help() {
                                 <SelectItem value="payment">Payment</SelectItem>
                                 <SelectItem value="technical">Technical</SelectItem>
                                 <SelectItem value="account">Account</SelectItem>
-                                {hasFeatureRequests && <SelectItem value="feature_request">Feature Request</SelectItem>}
+                                {hasFeatureRequests && !isParent && <SelectItem value="feature_request">Feature Request</SelectItem>}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -358,29 +400,31 @@ export default function Help() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="priority"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-foreground">Priority <span className="text-red-400">*</span></FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="bg-input border-border text-foreground">
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="bg-popover border-border">
-                                <SelectItem value="low">Low</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="urgent">Urgent</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {!isParent && (
+                        <FormField
+                          control={form.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-foreground">Priority <span className="text-red-400">*</span></FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-input border-border text-foreground">
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="bg-popover border-border">
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                  <SelectItem value="urgent">Urgent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
                     
                     <FormField
@@ -438,8 +482,8 @@ export default function Help() {
             </CardContent>
           </Card>
 
-          {/* Elite Priority Support - Only shown for Elite plan users */}
-          {hasPlayerDevelopment && (
+          {/* Elite Priority Support - Only shown for Elite plan users and non-parents */}
+          {hasPlayerDevelopment && !isParent && (
             <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-300/50 dark:border-purple-700/50">
               <CardHeader>
                 <CardTitle className="text-foreground text-xl flex items-center gap-2">
@@ -499,8 +543,8 @@ export default function Help() {
             </Card>
           )}
 
-          {/* Feature Request Section - Available for Core, Growth, and Elite */}
-          {hasFeatureRequests && (
+          {/* Feature Request Section - Available for Core, Growth, and Elite (but not parents) */}
+          {hasFeatureRequests && !isParent && (
             <Card className="bg-card border border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-xl flex items-center gap-2">
