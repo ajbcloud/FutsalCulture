@@ -1240,6 +1240,106 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Get player session history with transaction details
+  app.get('/api/admin/players/:id/session-history', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id: playerId } = req.params;
+      const { page = '1', limit = '20' } = req.query;
+      const user = req.user as any;
+      
+      if (!user.tenantId) {
+        return res.status(403).json({ message: "Access denied: no tenant context" });
+      }
+
+      const pageNum = parseInt(page as string, 10);
+      const limitNum = parseInt(limit as string, 20);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Verify player belongs to this tenant
+      const [player] = await db.select()
+        .from(players)
+        .where(and(eq(players.id, playerId), eq(players.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Get total count of sessions for this player
+      const [totalResult] = await db.select({ 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(signups)
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .where(and(
+        eq(signups.playerId, playerId),
+        eq(futsalSessions.tenantId, user.tenantId)
+      ));
+
+      const total = totalResult?.count || 0;
+
+      // Get paginated session history with payment details
+      const sessionHistory = await db.select({
+        id: signups.id,
+        sessionId: signups.sessionId,
+        sessionName: futsalSessions.title,
+        date: futsalSessions.startTime,
+        startTime: futsalSessions.startTime,
+        endTime: futsalSessions.endTime,
+        location: futsalSessions.location,
+        paid: signups.paid,
+        paymentId: signups.paymentId,
+        paymentProvider: signups.paymentProvider,
+        paymentIntentId: signups.paymentIntentId,
+        createdAt: signups.createdAt,
+        updatedAt: signups.updatedAt,
+      })
+      .from(signups)
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .where(and(
+        eq(signups.playerId, playerId),
+        eq(futsalSessions.tenantId, user.tenantId)
+      ))
+      .orderBy(desc(futsalSessions.startTime))
+      .limit(limitNum)
+      .offset(offset);
+
+      // Format the response data
+      const sessions = sessionHistory.map(session => ({
+        id: session.id,
+        sessionId: session.sessionId,
+        sessionName: session.sessionName || 'Training Session',
+        date: session.date,
+        time: `${new Date(session.startTime).toLocaleTimeString([], { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        })} - ${new Date(session.endTime).toLocaleTimeString([], { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        })}`,
+        location: session.location,
+        paid: session.paid || false,
+        paymentId: session.paymentId,
+        paymentProvider: session.paymentProvider,
+        paymentIntentId: session.paymentIntentId,
+        createdAt: session.createdAt,
+      }));
+
+      res.json({
+        sessions,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      });
+    } catch (error) {
+      console.error("Error fetching player session history:", error);
+      res.status(500).json({ message: "Failed to fetch session history" });
+    }
+  });
+
   // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {

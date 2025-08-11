@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { PlayerSessionHistoryDropdown } from '@/components/player-session-history-dropdown';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -491,7 +492,11 @@ export default function AdminPlayers() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {player.signupsCount || 0}
+                  <PlayerSessionHistoryDropdown
+                    playerId={player.id}
+                    sessionCount={player.signupsCount || 0}
+                    playerName={`${player.firstName} ${player.lastName}`}
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {player.lastActivity ? format(new Date(player.lastActivity), 'MMM d, yyyy') : 'Never'}
@@ -550,7 +555,11 @@ export default function AdminPlayers() {
                 
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Sessions:</span>
-                  <span className="text-foreground">{player.signupsCount || 0}</span>
+                  <PlayerSessionHistoryDropdown
+                    playerId={player.id}
+                    sessionCount={player.signupsCount || 0}
+                    playerName={`${player.firstName} ${player.lastName}`}
+                  />
                 </div>
 
                 {player.parentName && (
