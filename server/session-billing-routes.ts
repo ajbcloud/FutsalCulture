@@ -36,13 +36,21 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
     const gateway = createBraintreeGateway(credentials);
     
     // Generate client token with options to ensure payment method selection
-    const response = await gateway.clientToken.generate({
-      // Don't associate with any existing customer to force payment method selection
-      // This ensures Venmo users must choose their payment method each time
-      options: {
-        failOnDuplicatePaymentMethod: false,
-        makeDefault: false
-      }
+    const response = await new Promise<any>((resolve, reject) => {
+      gateway.clientToken.generate({
+        // Don't associate with any existing customer to force payment method selection
+        // This ensures Venmo users must choose their payment method each time
+        options: {
+          failOnDuplicatePaymentMethod: false,
+          makeDefault: false
+        }
+      }, (err: any, result: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
     });
     
     console.log('Braintree response received:', {
@@ -51,16 +59,20 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
       responseKeys: Object.keys(response || {}),
       clientTokenType: typeof response?.clientToken,
       clientTokenLength: response?.clientToken?.length,
-      responseSuccess: response?.success
+      responseSuccess: response?.success,
+      fullResponse: response
     });
     
-    if (!response?.clientToken) {
+    // Check for the actual token in the response
+    const token = response?.clientToken || response?.client_token;
+    
+    if (!token) {
       console.error('Braintree client token is missing from response:', response);
       throw new Error('Braintree client token not found in response');
     }
     
-    console.log('Braintree client token generated successfully');
-    return response.clientToken;
+    console.log('Braintree client token generated successfully, token preview:', token.substring(0, 50) + '...');
+    return token;
   } catch (error) {
     console.error('Error generating Braintree client token:', error);
     console.error('Error details:', {
