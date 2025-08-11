@@ -8,6 +8,7 @@ import { TimezoneProvider } from "@/contexts/TimezoneContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import { BusinessProvider } from "@/contexts/BusinessContext";
+import ErrorBoundary from "@/components/error-boundary";
 import Landing from "@/pages/landing";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
@@ -120,8 +121,10 @@ function App() {
           <AuthProvider>
             <TimezoneProvider>
               <TooltipProvider>
-                <Toaster />
-                <Router />
+                <ErrorBoundary>
+                  <Toaster />
+                  <Router />
+                </ErrorBoundary>
               </TooltipProvider>
             </TimezoneProvider>
           </AuthProvider>
