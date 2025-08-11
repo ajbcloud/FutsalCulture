@@ -165,9 +165,23 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
     };
   }, [isDropinReady, onError]);
 
-  const { data: paymentConfig } = useQuery<PaymentConfig>({
+  const { data: paymentConfig, error: paymentConfigError, isLoading: paymentConfigLoading } = useQuery<PaymentConfig>({
     queryKey: ['/api/session-billing/payment-config'],
   });
+
+  // Log payment config status for debugging
+  useEffect(() => {
+    console.log('Payment config status:', {
+      loading: paymentConfigLoading,
+      hasData: !!paymentConfig,
+      error: paymentConfigError,
+      config: paymentConfig
+    });
+    
+    if (paymentConfigError) {
+      console.error('Payment config error details:', paymentConfigError);
+    }
+  }, [paymentConfig, paymentConfigError, paymentConfigLoading]);
 
   // Helper function to detect mobile device
   const isMobileDevice = () => {

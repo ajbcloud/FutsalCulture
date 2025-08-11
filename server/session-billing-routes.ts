@@ -88,11 +88,22 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
 router.get('/session-billing/payment-config', async (req: any, res) => {
   try {
     console.log('Payment config request received');
-    console.log('User from req:', req.user?.claims?.sub);
+    console.log('Request headers:', {
+      authorization: req.headers.authorization,
+      cookie: req.headers.cookie?.substring(0, 100) + '...',
+      userAgent: req.headers['user-agent']
+    });
+    console.log('Session info:', {
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.(),
+      userFromReq: !!req.user,
+      userClaims: req.user?.claims,
+      userSub: req.user?.claims?.sub
+    });
     
     const userId = req.user?.claims?.sub;
     if (!userId) {
-      console.log('No user ID found');
+      console.log('No user ID found - authentication failed');
       return res.status(401).json({ message: 'Authentication required' });
     }
 
