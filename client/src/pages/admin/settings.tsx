@@ -1193,7 +1193,7 @@ export default function AdminSettings() {
                   </p>
                   {!hasSmsFeature ? (
                     <UpgradePrompt 
-                      feature={'smsNotifications'} 
+                      feature={FEATURE_KEYS.NOTIFICATIONS_SMS} 
                       className="mt-2"
                       targetPlan="growth"
                     />
@@ -1695,55 +1695,58 @@ export default function AdminSettings() {
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {/* Stripe */}
-                  <div className="border border-border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center">
-                        <CreditCard className="w-5 h-5 mr-2 text-purple-500" />
-                        <div>
-                          <h4 className="font-medium text-foreground">Stripe</h4>
-                          <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
+                  <FeatureGuard feature={FEATURE_KEYS.PAYMENTS}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <CreditCard className="w-5 h-5 mr-2 text-purple-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Stripe</h4>
+                            <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {integrations.find(i => i.provider === 'stripe')?.enabled && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Active
+                            </Badge>
+                          )}
+                          {activeProcessor?.provider === 'stripe' && (
+                            <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              Primary
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('stripe')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
                         {integrations.find(i => i.provider === 'stripe')?.enabled && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            Active
-                          </Badge>
-                        )}
-                        {activeProcessor?.provider === 'stripe' && (
-                          <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Primary
-                          </Badge>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('stripe')}
+                            disabled={testingIntegration === 'stripe'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'stripe' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('stripe')}
-                        className="flex-1"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
-                      {integrations.find(i => i.provider === 'stripe')?.enabled && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleTestIntegration('stripe')}
-                          disabled={testingIntegration === 'stripe'}
-                          className="px-3"
-                        >
-                          {testingIntegration === 'stripe' ? (
-                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                          ) : (
-                            <TestTube className="w-4 h-4" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  </FeatureGuard>
 
                   {/* Braintree */}
                   <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_BRAINTREE}>
@@ -1754,6 +1757,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Braintree</h4>
                             <p className="text-sm text-muted-foreground">Alternative payment processing</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1808,13 +1812,15 @@ export default function AdminSettings() {
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {/* SendGrid */}
-                  <div className="border border-border rounded-lg p-4">
+                  <FeatureGuard feature={FEATURE_KEYS.NOTIFICATIONS_EMAIL}>
+                    <div className="border border-border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
                         <Mail className="w-5 h-5 mr-2 text-blue-500" />
                         <div>
                           <h4 className="font-medium text-foreground">SendGrid</h4>
                           <p className="text-sm text-muted-foreground">Email delivery platform</p>
+                          <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
                         </div>
                       </div>
                       {integrations.find(i => i.provider === 'sendgrid')?.enabled && (
@@ -1850,6 +1856,7 @@ export default function AdminSettings() {
                       )}
                     </div>
                   </div>
+                  </FeatureGuard>
 
                   {/* Twilio */}
                   <FeatureGuard feature={FEATURE_KEYS.NOTIFICATIONS_SMS}>
@@ -1860,6 +1867,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Twilio</h4>
                             <p className="text-sm text-muted-foreground">SMS messaging service</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'twilio')?.enabled && (
@@ -1906,6 +1914,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Mailchimp</h4>
                             <p className="text-sm text-muted-foreground">Email marketing platform</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'mailchimp')?.enabled && (
@@ -1961,6 +1970,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Google Workspace</h4>
                             <p className="text-sm text-muted-foreground">Gmail, Calendar, and Drive</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'google')?.enabled && (
@@ -2007,6 +2017,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Microsoft 365</h4>
                             <p className="text-sm text-muted-foreground">Outlook, Teams, SharePoint</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'microsoft')?.enabled && (
@@ -2062,6 +2073,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">QuickBooks Online</h4>
                             <p className="text-sm text-muted-foreground">Accounting and financial management</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'quickbooks')?.enabled && (
