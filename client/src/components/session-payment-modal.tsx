@@ -342,7 +342,6 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
               allowNewBrowserTab: false,
               mobileWebFallBack: false,
               paymentMethodUsage: 'single_use',
-              displayName: 'Futsal Culture',
               ignoreHistoricalPaymentMethods: true // Force payment method selection
             },
             googlePay: {
