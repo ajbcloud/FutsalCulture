@@ -910,15 +910,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check if session is open for booking (8 AM rule)
+      // Check if session is open for booking based on constraints
       const now = new Date();
       const sessionDate = new Date(session.startTime);
-      const bookingOpenTime = new Date(sessionDate);
-      bookingOpenTime.setHours(8, 0, 0, 0);
       
-      if (now < bookingOpenTime) {
-        return res.status(400).json({ message: "Booking opens at 8:00 AM on session day" });
+      // Check if session has no time constraints
+      if (!session.noTimeConstraints) {
+        // Check for days before booking constraint
+        if (session.daysBeforeBooking && session.daysBeforeBooking > 0) {
+          const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
+          const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
+          
+          if (now < bookingOpenTime) {
+            const openDate = bookingOpenTime.toLocaleDateString();
+            const openTime = bookingOpenTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+            return res.status(400).json({ message: `Booking opens on ${openDate} at ${openTime}` });
+          }
+        } else {
+          // Default 8 AM rule
+          const isToday = sessionDate.toDateString() === now.toDateString();
+          if (!isToday) {
+            const sessionDay = sessionDate.toLocaleDateString();
+            return res.status(400).json({ message: `Booking opens at 8:00 AM on ${sessionDay}` });
+          }
+          
+          const bookingOpenTime = new Date(sessionDate);
+          const hour = session.bookingOpenHour ?? 8;
+          const minute = session.bookingOpenMinute ?? 0;
+          bookingOpenTime.setHours(hour, minute, 0, 0);
+          
+          if (now < bookingOpenTime) {
+            const openTime = bookingOpenTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+            return res.status(400).json({ message: `Booking opens at ${openTime} on session day` });
+          }
+        }
       }
+      // If noTimeConstraints is true, skip all time validation
       
       // Get current user to access tenantId
       const userId = req.user.claims.sub;

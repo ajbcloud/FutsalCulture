@@ -27,7 +27,22 @@ export function isSessionBookingOpen(session: any): boolean {
   // Sessions must not have started yet (basic rule)
   if (sessionDate <= now) return false;
   
-  // Check if session is on the same day as today
+  // If session status is full or closed, it's not bookable
+  if (session.status === "full" || session.status === "closed") return false;
+  
+  // Check for no time constraints - can book anytime
+  if (session.noTimeConstraints) {
+    return true;
+  }
+  
+  // Check for days before booking constraint
+  if (session.daysBeforeBooking && session.daysBeforeBooking > 0) {
+    const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
+    const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
+    return now >= bookingOpenTime;
+  }
+  
+  // Default 8 AM rule - check if session is on the same day as today
   const isToday = sessionDate.toDateString() === now.toDateString();
   
   // If it's today, check if we're past the booking open time (default 8 AM)
@@ -37,8 +52,7 @@ export function isSessionBookingOpen(session: any): boolean {
     const minute = session.bookingOpenMinute ?? 0;
     bookingOpenTime.setHours(hour, minute, 0, 0);
     
-    const isAfterBookingTime = now >= bookingOpenTime;
-    return isAfterBookingTime && session.status !== "full";
+    return now >= bookingOpenTime;
   }
   
   // For future days, sessions are not yet bookable (must wait until 8 AM on session day)
