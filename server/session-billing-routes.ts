@@ -530,4 +530,138 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
   }
 });
 
+// Process refund endpoint
+router.post('/session-billing/refund', async (req: any, res) => {
+  try {
+    const { signupId, reason } = req.body;
+
+    if (!signupId || !reason) {
+      return res.status(400).json({ message: 'Signup ID and refund reason are required' });
+    }
+
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Get user and tenant information
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    // Check if user is admin
+    if (!currentUser.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Get the signup record with payment information
+    const signup = await db.select()
+      .from(signups)
+      .where(and(
+        eq(signups.id, signupId),
+        eq(signups.tenantId, currentUser.tenantId)
+      ))
+      .limit(1);
+
+    if (!signup.length) {
+      return res.status(404).json({ message: 'Signup not found' });
+    }
+
+    const signupRecord = signup[0];
+
+    // Check if already refunded
+    if (signupRecord.refunded) {
+      return res.status(400).json({ message: 'Payment has already been refunded' });
+    }
+
+    // Check if payment exists
+    if (!signupRecord.paid || !signupRecord.paymentId || !signupRecord.paymentProvider) {
+      return res.status(400).json({ message: 'No valid payment found to refund' });
+    }
+
+    let refundResult = { success: false, refundId: null as string | null };
+
+    // Get payment processor credentials
+    const { provider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
+
+    if (signupRecord.paymentProvider === 'stripe') {
+      // Process Stripe refund
+      const stripe = new Stripe(credentials.secretKey, { apiVersion: '2025-07-30.basil' });
+      
+      try {
+        const refund = await stripe.refunds.create({
+          payment_intent: signupRecord.paymentId,
+          reason: 'requested_by_customer',
+          metadata: {
+            reason: reason,
+            refunded_by: userId,
+            tenant_id: currentUser.tenantId
+          }
+        });
+
+        if (refund.status === 'succeeded') {
+          refundResult = { success: true, refundId: refund.id };
+        }
+      } catch (stripeError: any) {
+        console.error('Stripe refund error:', stripeError);
+        return res.status(400).json({ message: stripeError.message || 'Stripe refund failed' });
+      }
+
+    } else if (signupRecord.paymentProvider === 'braintree') {
+      // Process Braintree refund
+      try {
+        const gateway = createBraintreeGateway(credentials);
+        const result = await gateway.transaction.refund(signupRecord.paymentId);
+
+        if (result.success && result.transaction) {
+          console.log('Braintree refund successful:', {
+            originalTransactionId: signupRecord.paymentId,
+            refundTransactionId: result.transaction.id,
+            amount: result.transaction.amount,
+            status: result.transaction.status
+          });
+
+          refundResult = { success: true, refundId: result.transaction.id };
+        } else {
+          console.error('Braintree refund error:', result.message);
+          return res.status(400).json({ message: result.message || 'Braintree refund failed' });
+        }
+      } catch (braintreeError: any) {
+        console.error('Braintree refund error:', braintreeError);
+        return res.status(400).json({ message: braintreeError.message || 'Braintree refund failed' });
+      }
+    } else {
+      return res.status(400).json({ message: 'Unsupported payment processor for refunds' });
+    }
+
+    if (refundResult.success) {
+      // Update signup record with refund information
+      await db.update(signups)
+        .set({
+          refunded: true,
+          refundReason: reason,
+          refundedAt: new Date(),
+          refundTransactionId: refundResult.refundId,
+          paid: false // Mark as unpaid since refunded
+        })
+        .where(eq(signups.id, signupId));
+
+      res.json({
+        success: true,
+        message: 'Refund processed successfully',
+        refundId: refundResult.refundId
+      });
+    } else {
+      res.status(400).json({ message: 'Refund processing failed' });
+    }
+
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    res.status(500).json({ message: 'Refund processing failed' });
+  }
+});
+
 export default router;

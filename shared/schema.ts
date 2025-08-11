@@ -181,6 +181,11 @@ export const signups = pgTable("signups", {
   discountCodeId: varchar("discount_code_id"),
   discountCodeApplied: varchar("discount_code_applied"), // The actual code used
   discountAmountCents: integer("discount_amount_cents"), // Amount discounted
+  // Refund tracking
+  refunded: boolean("refunded").default(false),
+  refundReason: text("refund_reason"),
+  refundedAt: timestamp("refunded_at"),
+  refundTransactionId: varchar("refund_transaction_id"),
   // Reservation system
   reservationExpiresAt: timestamp("reservation_expires_at"), // When temporary reservation expires
   createdAt: timestamp("created_at").defaultNow(),
