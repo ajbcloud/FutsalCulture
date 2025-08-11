@@ -146,10 +146,31 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   const isBookingOpen = () => {
     const now = new Date();
     const sessionDate = new Date(session.startTime);
-    const bookingOpenTime = new Date(sessionDate);
-    bookingOpenTime.setHours(8, 0, 0, 0);
     
-    return now >= bookingOpenTime && session.status !== "full" && session.status !== "closed";
+    // Check if session has already started or is closed/full
+    if (now >= sessionDate || session.status === "full" || session.status === "closed") {
+      return false;
+    }
+    
+    // If no time constraints, can book anytime before session starts
+    if (session.noTimeConstraints) {
+      return true;
+    }
+    
+    // If has days before booking constraint
+    if (session.daysBeforeBooking) {
+      const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
+      const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
+      return now >= bookingOpenTime;
+    }
+    
+    // Default: use booking open hour/minute (8 AM rule)
+    const bookingHour = session.bookingOpenHour ?? 8;
+    const bookingMinute = session.bookingOpenMinute ?? 0;
+    const bookingOpenTime = new Date(sessionDate);
+    bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
+    
+    return now >= bookingOpenTime;
   };
 
   const isFull = session.status === "full" || fillPercentage >= 100;

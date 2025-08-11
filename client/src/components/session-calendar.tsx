@@ -220,13 +220,25 @@ export default function SessionCalendar({
                   const sessionStarted = new Date() >= new Date(session.startTime);
                   const isSessionFuture = sessionDate > today;
                   
-                  // Use the proper booking time from session or default to 8 AM
-                  const bookingHour = session.bookingOpenHour ?? 8;
-                  const bookingMinute = session.bookingOpenMinute ?? 0;
-                  const bookingOpenTime = new Date(sessionDate);
-                  bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
+                  // Determine if booking is open based on session constraints
+                  let bookingOpen = false;
                   
-                  const bookingOpen = isSessionToday && today >= bookingOpenTime;
+                  if (session.noTimeConstraints) {
+                    // Can book anytime before session starts
+                    bookingOpen = !sessionStarted;
+                  } else if (session.daysBeforeBooking) {
+                    // Days before booking constraint
+                    const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
+                    const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
+                    bookingOpen = today >= bookingOpenTime && !sessionStarted;
+                  } else {
+                    // Default 8 AM rule for today only
+                    const bookingHour = session.bookingOpenHour ?? 8;
+                    const bookingMinute = session.bookingOpenMinute ?? 0;
+                    const bookingOpenTime = new Date(sessionDate);
+                    bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
+                    bookingOpen = isSessionToday && today >= bookingOpenTime;
+                  }
                   
                   let statusColor = 'bg-primary/20';
                   let statusText = session.status;
@@ -235,16 +247,13 @@ export default function SessionCalendar({
                   if (sessionStarted) {
                     statusColor = 'bg-muted/20';
                     statusText = 'closed';
-                  } else if (isSessionToday && session.status === 'full') {
+                  } else if (session.status === 'full') {
                     statusColor = 'bg-destructive/20';
                     statusText = 'full';
-                  } else if (isSessionToday && bookingOpen && session.status !== 'full') {
+                  } else if (bookingOpen && session.status !== 'full') {
                     statusColor = 'bg-green-600/20 hover:bg-green-600/30';
                     statusText = 'open';
-                  } else if (isSessionToday && !bookingOpen) {
-                    statusColor = 'bg-yellow-600/20';
-                    statusText = 'upcoming';
-                  } else if (isSessionFuture) {
+                  } else if (!bookingOpen && !sessionStarted) {
                     statusColor = 'bg-yellow-600/20';
                     statusText = 'upcoming';
                   }
