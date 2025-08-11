@@ -338,10 +338,11 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             },
             venmo: {
               allowDesktop: true,
-              allowDesktopWebLogin: true,
-              allowNewBrowserTab: true,
-              mobileWebFallBack: true,
-              paymentMethodUsage: 'single_use'
+              allowDesktopWebLogin: false,
+              allowNewBrowserTab: false,
+              mobileWebFallBack: false,
+              paymentMethodUsage: 'single_use',
+              displayName: 'Futsal Culture'
             },
             googlePay: {
               merchantId: 'BCR2DN4T2B6X3LXT', // Braintree sandbox merchant ID
@@ -377,11 +378,25 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
 
             // Handle Venmo payment method flow events
             instance.on('venmoTokenizationStarted', () => {
-              console.log('Venmo tokenization started - should redirect to app');
+              console.log('Venmo tokenization started - redirecting to app');
+              setIsProcessing(true);
+              
+              // Show mobile-specific guidance
+              if (isMobileDevice()) {
+                // Don't show error immediately, let Venmo app handle the flow
+                console.log('Mobile Venmo flow initiated - waiting for app to complete');
+              }
             });
 
             instance.on('venmoTokenizationCanceled', () => {
-              console.log('Venmo tokenization canceled');
+              console.log('Venmo tokenization canceled by user');
+              setIsProcessing(false);
+            });
+
+            // Handle successful Venmo authorization
+            instance.on('venmoTokenized', (payload: any) => {
+              console.log('Venmo tokenization completed:', payload);
+              setIsProcessing(false);
             });
             
             // Apply dark mode styles to Braintree Drop-in UI after a short delay to ensure DOM is ready
@@ -425,7 +440,13 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
     
     try {
       // For Venmo on mobile, the requestPaymentMethod will handle the app redirect automatically
-      const result = await dropinInstance.requestPaymentMethod();
+      // Add a timeout to prevent hanging on mobile redirects
+      const result = await Promise.race([
+        dropinInstance.requestPaymentMethod(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Payment timeout - please try again')), 30000)
+        )
+      ]) as any;
       
       // Check if result is valid
       if (!result || !result.nonce) {
@@ -465,8 +486,11 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       if (err.message?.includes('No payment method is available') || 
           err.message?.includes('User did not select a payment method')) {
         onError('Please select a payment method and try again');
-      } else if (err.message?.includes('User canceled')) {
+      } else if (err.message?.includes('User canceled') || 
+                 err.message?.includes('venmoTokenizationCanceled')) {
         onError('Payment was canceled');
+      } else if (err.message?.includes('Payment timeout')) {
+        onError('Venmo payment took too long - please try again');
       } else {
         onError(err.message || "Payment processing failed");
       }
@@ -507,7 +531,7 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         {isProcessing ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Processing Payment...
+            {isMobileDevice() ? 'Complete in Venmo app...' : 'Processing Payment...'}
           </>
         ) : (
           `Pay $${(session.priceCents / 100).toFixed(2)}`
