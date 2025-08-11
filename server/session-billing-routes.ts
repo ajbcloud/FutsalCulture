@@ -26,7 +26,17 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
   try {
     console.log('Generating Braintree client token...');
     const gateway = createBraintreeGateway(credentials);
-    const response = await gateway.clientToken.generate({});
+    
+    // Generate client token with options to ensure payment method selection
+    const response = await gateway.clientToken.generate({
+      // Don't associate with any existing customer to force payment method selection
+      // This ensures Venmo users must choose their payment method each time
+      options: {
+        failOnDuplicatePaymentMethod: false,
+        makeDefault: false
+      }
+    });
+    
     console.log('Braintree client token generated successfully');
     return response.clientToken;
   } catch (error) {
