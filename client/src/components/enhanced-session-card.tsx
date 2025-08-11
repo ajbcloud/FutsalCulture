@@ -6,24 +6,51 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FutsalSession } from "@shared/schema";
+import { FutsalSession, Signup, Player } from "@shared/schema";
 import { getSessionStatusColor, getSessionStatusText, isSessionBookingOpen, calculateAgeGroup } from "@shared/utils";
 import VenmoPrompt from "./venmo-prompt";
+import { ReservationCountdown } from "./reservation-countdown";
+import { SessionPaymentModal } from "./session-payment-modal";
 
 interface EnhancedSessionCardProps {
   session: FutsalSession;
   isReserved: boolean;
+  reservationSignup?: Signup & { player: Player };
   onReservationChange?: (sessionId: string, reserved: boolean) => void;
 }
 
 export default function EnhancedSessionCard({ 
   session, 
   isReserved,
+  reservationSignup,
   onReservationChange 
 }: EnhancedSessionCardProps) {
   const { toast } = useToast();
   const [venmoData, setVenmoData] = useState<any>(null);
   const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  const cancelSignupMutation = useMutation({
+    mutationFn: async (signupId: string) => {
+      await apiRequest("DELETE", `/api/signups/${signupId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+      onReservationChange?.(session.id, false);
+      toast({
+        title: "Success",
+        description: "Reservation cancelled successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel reservation",
+        variant: "destructive",
+      });
+    },
+  });
 
   const createReservationMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
@@ -110,6 +137,10 @@ export default function EnhancedSessionCard({
   const isBookingOpen = isSessionBookingOpen(session);
   const isDisabled = isReserved || isFull || createReservationMutation.isPending || !isBookingOpen;
 
+  // Check if this reservation has a pending payment
+  const hasPendingPayment = reservationSignup && !reservationSignup.paid && reservationSignup.reservationExpiresAt;
+  const reservationExpires = reservationSignup?.reservationExpiresAt ? new Date(reservationSignup.reservationExpiresAt) : null;
+
   const getButtonText = () => {
     if (createReservationMutation.isPending) return "Reserving...";
     if (isReserved) return "Reserved";
@@ -184,9 +215,56 @@ export default function EnhancedSessionCard({
             onClick={handleReserveSpot}
             disabled={isDisabled}
             className={`w-full h-12 sm:h-auto ${getButtonStyles()}`}
+            data-testid="button-reserve-spot"
           >
             {getButtonText()}
           </Button>
+
+          {/* Pending Payment Section */}
+          {hasPendingPayment && reservationSignup && (
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                    Pending Payment
+                  </Badge>
+                </div>
+                {reservationExpires && (
+                  <ReservationCountdown
+                    expiresAt={reservationExpires.toISOString()}
+                    onExpire={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+                      onReservationChange?.(session.id, false);
+                    }}
+                  />
+                )}
+              </div>
+              
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Complete your payment for <strong>{reservationSignup.player.firstName}</strong> to confirm the spot.
+              </p>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setPaymentModalOpen(true)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  data-testid="button-pay-now"
+                >
+                  Pay Now
+                </Button>
+                <Button
+                  onClick={() => cancelSignupMutation.mutate(reservationSignup.id)}
+                  disabled={cancelSignupMutation.isPending}
+                  variant="outline"
+                  className="flex-1 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  data-testid="button-cancel-reservation"
+                >
+                  {cancelSignupMutation.isPending ? "Cancelling..." : "Cancel"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
       
@@ -195,6 +273,27 @@ export default function EnhancedSessionCard({
         onClose={() => setShowVenmoPrompt(false)}
         signupData={venmoData}
       />
+
+      {/* Payment Modal */}
+      {paymentModalOpen && reservationSignup && (
+        <SessionPaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          session={{
+            id: session.id,
+            location: session.location,
+            startTime: new Date(session.startTime).toISOString(),
+            ageGroup: session.ageGroups?.join(', ') || 'All Ages',
+            priceCents: session.priceCents,
+            title: session.title
+          }}
+          player={reservationSignup.player}
+          signup={{
+            id: reservationSignup.id,
+            reservationExpiresAt: reservationSignup.reservationExpiresAt?.toISOString() || ""
+          }}
+        />
+      )}
     </Card>
   );
 }

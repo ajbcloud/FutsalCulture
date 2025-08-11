@@ -358,24 +358,35 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:grid-cols-3 lg:gap-6">
-              {todaySessions.map((session) => (
-                <EnhancedSessionCard 
-                  key={session.id} 
-                  session={session} 
-                  isReserved={reservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
-                  onReservationChange={(sessionId, reserved) => {
-                    if (reserved) {
-                      setLocalReservedSessions(prev => new Set(Array.from(prev).concat(sessionId)));
-                    } else {
-                      setLocalReservedSessions(prev => {
-                        const next = new Set(prev);
-                        next.delete(sessionId);
-                        return next;
-                      });
-                    }
-                  }}
-                />
-              ))}
+              {todaySessions.map((session) => {
+                // Find matching reservation/signup for this session
+                const reservationSignup = signups.find(signup => 
+                  signup.sessionId === session.id && 
+                  !signup.paid && 
+                  signup.reservationExpiresAt &&
+                  new Date(signup.reservationExpiresAt) > new Date()
+                );
+
+                return (
+                  <EnhancedSessionCard 
+                    key={session.id} 
+                    session={session} 
+                    isReserved={reservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
+                    reservationSignup={reservationSignup}
+                    onReservationChange={(sessionId, reserved) => {
+                      if (reserved) {
+                        setLocalReservedSessions(prev => new Set(Array.from(prev).concat(sessionId)));
+                      } else {
+                        setLocalReservedSessions(prev => {
+                          const next = new Set(prev);
+                          next.delete(sessionId);
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -505,7 +516,7 @@ export default function Dashboard() {
                                   {!reservation.paid && reservation.reservationExpiresAt && (
                                     <div className="mt-2">
                                       <ReservationCountdown 
-                                        expiresAt={reservation.reservationExpiresAt}
+                                        expiresAt={new Date(reservation.reservationExpiresAt).toISOString()}
                                         onExpired={() => {
                                           // Refresh signups when reservation expires
                                           queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
