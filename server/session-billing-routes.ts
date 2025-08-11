@@ -82,8 +82,13 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
       config.publishableKey = credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY;
     } else if (provider === 'braintree') {
       try {
-        config.clientToken = await generateBraintreeClientToken(credentials);
-        console.log('Braintree client token generated successfully');
+        const clientToken = await generateBraintreeClientToken(credentials);
+        console.log('Braintree client token generated successfully, length:', clientToken?.length);
+        config.clientToken = clientToken;
+        console.log('Config after setting client token:', { 
+          hasClientToken: !!config.clientToken,
+          clientTokenPreview: config.clientToken?.substring(0, 20) + '...'
+        });
       } catch (error) {
         console.error('Failed to generate Braintree client token:', error);
         return res.status(500).json({ message: 'Failed to initialize Braintree payment' });
@@ -93,8 +98,14 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
     console.log('Returning payment config:', { 
       provider: config.provider, 
       hasPublishableKey: !!config.publishableKey,
-      hasClientToken: !!config.clientToken 
+      hasClientToken: !!config.clientToken,
+      clientTokenLength: config.clientToken?.length
     });
+    
+    // Prevent caching of payment config since Braintree client tokens should be fresh
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     
     res.json(config);
   } catch (error) {
