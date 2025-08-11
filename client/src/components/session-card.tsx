@@ -40,13 +40,13 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   // Fetch waitlist count for this session (for admin visibility)
   const { data: waitlistCount } = useQuery({
     queryKey: ["/api/admin/sessions", session.id, "waitlist-count"],
-    enabled: isAuthenticated && user?.role === 'admin',
+    enabled: Boolean(isAuthenticated && user?.isAdmin),
   });
 
   // Fetch waitlist entries for this session (for admin click-through)
   const { data: sessionWaitlist } = useQuery({
     queryKey: ["/api/admin/sessions", session.id, "waitlist"],
-    enabled: isAuthenticated && user?.role === 'admin',
+    enabled: Boolean(isAuthenticated && user?.isAdmin),
   });
 
   // Waitlist mutations
@@ -57,17 +57,14 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
       notifyOnJoin?: boolean;
       notifyOnPositionChange?: boolean;
     }) => {
-      return apiRequest(`/api/sessions/${sessionId}/waitlist/join`, {
-        method: "POST",
-        body: { playerId, notifyOnJoin, notifyOnPositionChange },
-      });
+      return apiRequest("POST", `/api/sessions/${sessionId}/waitlist/join`, { playerId, notifyOnJoin, notifyOnPositionChange });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sessions", session.id] });
       toast({
         title: "Added to Waitlist",
-        description: `You're position ${data.position} on the waitlist`,
+        description: `You're position ${data?.position || 'unknown'} on the waitlist`,
       });
     },
     onError: (error: any) => {
@@ -81,10 +78,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
 
   const leaveWaitlistMutation = useMutation({
     mutationFn: async ({ sessionId, playerId }: { sessionId: string; playerId: string }) => {
-      return apiRequest(`/api/sessions/${sessionId}/waitlist/leave`, {
-        method: "DELETE",
-        body: { playerId },
-      });
+      return apiRequest("DELETE", `/api/sessions/${sessionId}/waitlist/leave`, { playerId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
@@ -114,15 +108,15 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   
   // Check if any of the user's players are on the waitlist for this session
   const getPlayerWaitlistStatus = (playerId: string) => {
-    if (!waitlistEntries) return null;
+    if (!Array.isArray(waitlistEntries)) return null;
     return waitlistEntries.find((entry: any) => 
       entry.sessionId === session.id && entry.playerId === playerId && entry.status === 'active'
     );
   };
 
-  const hasAnyPlayerOnWaitlist = players?.some((player: any) => 
+  const hasAnyPlayerOnWaitlist = Array.isArray(players) ? players.some((player: any) => 
     getPlayerWaitlistStatus(player.id)
-  );
+  ) : false;
   
   const getStatusBadge = () => {
     if (session.status === "full" || fillPercentage >= 100) {
@@ -249,7 +243,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           </div>
           
           {/* Admin waitlist visibility */}
-          {user?.role === 'admin' && session.waitlistEnabled && waitlistCount !== undefined && waitlistCount > 0 && (
+          {user?.isAdmin && session.waitlistEnabled && typeof waitlistCount === 'number' && waitlistCount > 0 && (
             <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
               <Link href={`/admin/sessions/${session.id}/waitlist`}>
                 <Button 
@@ -274,7 +268,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
               <Users className="w-4 h-4 mr-2" />
               <span className="font-medium">On Waitlist</span>
             </div>
-            {players?.map((player: any) => {
+            {Array.isArray(players) ? players.map((player: any) => {
               const waitlistStatus = getPlayerWaitlistStatus(player.id);
               if (!waitlistStatus) return null;
               return (
@@ -282,7 +276,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
                   {player.firstName} - Position #{waitlistStatus.position}
                 </div>
               );
-            })}
+            }) : null}
           </div>
         )}
 
@@ -322,13 +316,13 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
           </Button>
 
           {/* Waitlist controls for when session is full */}
-          {isFull && session.waitlistEnabled && isAuthenticated && players && !hasAnyPlayerOnWaitlist && (
+          {isFull && session.waitlistEnabled && isAuthenticated && Array.isArray(players) && !hasAnyPlayerOnWaitlist && (
             <Button
               variant="outline"
               className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-950"
               onClick={() => {
                 // For simplicity, join with the first player
-                if (players.length > 0) {
+                if (Array.isArray(players) && players.length > 0) {
                   joinWaitlistMutation.mutate({
                     sessionId: session.id,
                     playerId: players[0].id,
@@ -349,15 +343,17 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
               className="flex-1 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950"
               onClick={() => {
                 // Leave waitlist for all players on this session
-                players?.forEach((player: any) => {
-                  const waitlistStatus = getPlayerWaitlistStatus(player.id);
-                  if (waitlistStatus) {
-                    leaveWaitlistMutation.mutate({
-                      sessionId: session.id,
-                      playerId: player.id,
-                    });
-                  }
-                });
+                if (Array.isArray(players)) {
+                  players.forEach((player: any) => {
+                    const waitlistStatus = getPlayerWaitlistStatus(player.id);
+                    if (waitlistStatus) {
+                      leaveWaitlistMutation.mutate({
+                        sessionId: session.id,
+                        playerId: player.id,
+                      });
+                    }
+                  });
+                }
               }}
               disabled={leaveWaitlistMutation.isPending}
             >
