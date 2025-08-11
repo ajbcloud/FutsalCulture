@@ -1900,11 +1900,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWaitlistCount(sessionId: string): Promise<number> {
-    const [{ count }] = await db
+    const [result] = await db
       .select({ count: count() })
       .from(waitlists)
       .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')));
-    return count || 0;
+    return result?.count || 0;
   }
 
   async promoteFromWaitlist(sessionId: string, playerId?: string): Promise<Waitlist | null> {

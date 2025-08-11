@@ -47,6 +47,21 @@ export default function Home() {
     const now = new Date();
     const sessionDate = new Date(session.startTime);
     
+    // Debug logging for our specific session
+    if (session.id === "a9e03e7b-5622-4e6a-a06f-243b7ac7acc1") {
+      console.log("Debug session a9e03e7b:", {
+        id: session.id,
+        startTime: session.startTime,
+        sessionDate: sessionDate.toString(),
+        now: now.toString(),
+        noTimeConstraints: session.noTimeConstraints,
+        daysBeforeBooking: session.daysBeforeBooking,
+        status: session.status,
+        isPast: sessionDate < now,
+        isFullOrClosed: session.status === "full" || session.status === "closed"
+      });
+    }
+    
     // Don't show past sessions
     if (sessionDate < now) return false;
     
@@ -56,6 +71,7 @@ export default function Home() {
     // Check booking availability based on constraints
     if (session.noTimeConstraints) {
       // Can book anytime - show it
+      console.log("Session with no time constraints found:", session.id);
       return true;
     }
     
@@ -78,6 +94,11 @@ export default function Home() {
     
     return now >= bookingOpenTime;
   }).slice(0, 6); // Limit to 6 sessions to avoid overwhelming the UI
+  
+  // Debug logging
+  console.log("Total sessions:", sessions.length);
+  console.log("Available sessions:", availableSessions.length);
+  console.log("Available session IDs:", availableSessions.map(s => s.id));
 
   return (
     <div className="min-h-screen bg-[#18181b]">
@@ -124,7 +145,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold bg-[#ffffff00] text-[#ffffff]">Available Sessions</h2>
+              <h2 className="text-3xl font-bold bg-[#ffffff00] text-[#ffffff]">Available Sessions 📚</h2>
               <p className="text-gray-600 mt-2">Sessions you can book right now</p>
             </div>
           </div>

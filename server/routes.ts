@@ -91,6 +91,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         todaySessions: sessions.filter(s => new Date(s.startTime).toDateString() === new Date().toDateString()).length
       });
       
+      // Check if our specific session is included
+      const testSession = sessions.find(s => s.id === 'a9e03e7b-5622-4e6a-a06f-243b7ac7acc1');
+      if (testSession) {
+        console.log('Found test session:', { 
+          id: testSession.id, 
+          title: testSession.title, 
+          startTime: testSession.startTime,
+          noTimeConstraints: testSession.noTimeConstraints,
+          status: testSession.status 
+        });
+      } else {
+        console.log('Test session NOT found in results');
+      }
+      
       if (sessions.length > 0) {
         const sampleSession = sessions[0];
         console.log('Sample session data:', { 
