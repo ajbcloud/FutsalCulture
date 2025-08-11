@@ -24,6 +24,7 @@ import { Edit, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { Player, Signup, FutsalSession, NotificationPreferences } from "@shared/schema";
 import { calculateAgeGroup, isSessionEligibleForPlayer, isSessionBookingOpen, getSessionStatusColor, getSessionStatusText } from "@shared/utils";
+import { ReservationCountdown } from "@/components/reservation-countdown";
 import { AGE_GROUPS } from "@shared/constants";
 
 export default function Dashboard() {
@@ -35,7 +36,11 @@ export default function Dashboard() {
   const [localReservedSessions, setLocalReservedSessions] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPaymentSession, setSelectedPaymentSession] = useState<{ session: FutsalSession; player: Player } | null>(null);
+  const [selectedPaymentSession, setSelectedPaymentSession] = useState<{
+    session: FutsalSession;
+    player: Player;
+    signup: any;
+  } | null>(null);
 
   // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
@@ -496,6 +501,18 @@ export default function Dashboard() {
                                     {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
                                   </p>
                                   <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
+                                  
+                                  {!reservation.paid && reservation.reservationExpiresAt && (
+                                    <div className="mt-2">
+                                      <ReservationCountdown 
+                                        expiresAt={reservation.reservationExpiresAt}
+                                        onExpired={() => {
+                                          // Refresh signups when reservation expires
+                                          queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3">
                                   <span className={`px-2 py-1 rounded text-sm font-medium text-center sm:text-left ${
@@ -511,7 +528,8 @@ export default function Dashboard() {
                                       onClick={() => {
                                         setSelectedPaymentSession({
                                           session: reservation.session,
-                                          player: player
+                                          player: player,
+                                          signup: reservation
                                         });
                                         setPaymentModalOpen(true);
                                       }}
@@ -568,10 +586,17 @@ export default function Dashboard() {
             setSelectedPaymentSession(null);
           }}
           session={{
-            ...selectedPaymentSession.session,
-            ageGroup: selectedPaymentSession.session.ageGroups?.[0] || 'Unknown'
+            id: selectedPaymentSession.session.id,
+            location: selectedPaymentSession.session.location,
+            startTime: typeof selectedPaymentSession.session.startTime === 'string' 
+              ? selectedPaymentSession.session.startTime 
+              : selectedPaymentSession.session.startTime.toISOString(),
+            ageGroup: selectedPaymentSession.session.ageGroups?.[0] || 'Unknown',
+            priceCents: selectedPaymentSession.session.priceCents,
+            title: selectedPaymentSession.session.title
           }}
           player={selectedPaymentSession.player}
+          signup={selectedPaymentSession.signup}
         />
       )}
 

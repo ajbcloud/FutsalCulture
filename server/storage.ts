@@ -429,6 +429,7 @@ export class DatabaseStorage implements IStorage {
         sessionId: signups.sessionId,
         paid: signups.paid,
         paymentIntentId: signups.paymentIntentId,
+        reservationExpiresAt: signups.reservationExpiresAt,
         createdAt: signups.createdAt,
         // Player fields
         player: players,
@@ -480,6 +481,7 @@ export class DatabaseStorage implements IStorage {
         sessionId: signups.sessionId,
         paid: signups.paid,
         paymentIntentId: signups.paymentIntentId,
+        reservationExpiresAt: signups.reservationExpiresAt,
         createdAt: signups.createdAt,
         // Player fields
         player: players,

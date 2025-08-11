@@ -25,19 +25,23 @@ export default function EnhancedSessionCard({
   const [venmoData, setVenmoData] = useState<any>(null);
   const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
 
-  const createSignupMutation = useMutation({
+  const createReservationMutation = useMutation({
     mutationFn: async (data: { playerId: string; sessionId: string }) => {
-      const response = await apiRequest("POST", "/api/signups", data);
+      const response = await apiRequest("POST", "/api/signups", {
+        ...data,
+        reserveOnly: true // Create temporary reservation, not confirmed signup
+      });
       return await response.json();
     },
-    onSuccess: (signupData) => {
+    onSuccess: (reservationData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       onReservationChange?.(session.id, true);
       
-      // Show Venmo prompt with reservation details
-      setVenmoData(signupData);
-      setShowVenmoPrompt(true);
+      toast({
+        title: "Spot Reserved!",
+        description: `You have 1 hour to complete payment for ${reservationData.player?.firstName || 'your player'}.`,
+      });
     },
     onError: (error: any) => {
       toast({
@@ -80,7 +84,7 @@ export default function EnhancedSessionCard({
     // Use the first eligible player
     const selectedPlayer = eligiblePlayers[0];
     
-    createSignupMutation.mutate({
+    createReservationMutation.mutate({
       playerId: selectedPlayer.id,
       sessionId: session.id
     });
@@ -104,10 +108,10 @@ export default function EnhancedSessionCard({
     return "bg-green-400";
   };
   const isBookingOpen = isSessionBookingOpen(session);
-  const isDisabled = isReserved || isFull || createSignupMutation.isPending || !isBookingOpen;
+  const isDisabled = isReserved || isFull || createReservationMutation.isPending || !isBookingOpen;
 
   const getButtonText = () => {
-    if (createSignupMutation.isPending) return "Reserving...";
+    if (createReservationMutation.isPending) return "Reserving...";
     if (isReserved) return "Reserved";
     if (isFull) return "Full";
     if (!isBookingOpen) {

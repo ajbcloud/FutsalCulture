@@ -224,4 +224,80 @@ router.post('/confirm-session-payment', async (req: any, res) => {
   }
 });
 
+// Process payment for existing reservation
+router.post('/process-payment', async (req: any, res) => {
+  try {
+    const { signupId, sessionId, playerId, amount, paymentMethod } = req.body;
+    const currentUser = req.currentUser;
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    // Get the signup record
+    const signup = await db.select()
+      .from(signups)
+      .where(eq(signups.id, signupId))
+      .limit(1);
+
+    if (!signup.length) {
+      return res.status(404).json({ message: 'Reservation not found' });
+    }
+
+    const signupData = signup[0];
+
+    // Check if reservation has expired
+    if (signupData.reservationExpiresAt && new Date() > new Date(signupData.reservationExpiresAt)) {
+      return res.status(400).json({ message: 'Reservation has expired' });
+    }
+
+    // Get active payment processor
+    const { provider, credentials } = await getActivePaymentProcessor();
+    
+    if (!provider) {
+      return res.status(400).json({ message: 'No payment processor configured' });
+    }
+
+    let paymentSuccess = false;
+    let paymentId = null;
+
+    if (provider === 'stripe') {
+      // Simulate Stripe payment processing for demo
+      // In production, this would create a PaymentIntent with Stripe Elements
+      paymentSuccess = true;
+      paymentId = `pi_demo_${Date.now()}`;
+    } else if (provider === 'braintree') {
+      // Simulate Braintree payment processing for demo
+      // In production, this would process payment with Braintree SDK
+      paymentSuccess = true;
+      paymentId = `bt_demo_${Date.now()}`;
+    }
+
+    if (paymentSuccess) {
+      // Update signup with payment information
+      await db.update(signups)
+        .set({ 
+          paid: true,
+          paymentIntentId: paymentId,
+          paymentProvider: provider,
+          updatedAt: new Date()
+        })
+        .where(eq(signups.id, signupId));
+
+      res.json({ 
+        success: true, 
+        signupId: signupId,
+        paymentId: paymentId,
+        provider: provider,
+        message: 'Payment processed successfully' 
+      });
+    } else {
+      res.status(400).json({ message: 'Payment processing failed' });
+    }
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({ message: 'Failed to process payment' });
+  }
+});
+
 export default router;

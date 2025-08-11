@@ -611,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
-      const { playerId, sessionId, accessCode, fromWaitlistOffer, offerId } = req.body;
+      const { playerId, sessionId, accessCode, fromWaitlistOffer, offerId, reserveOnly } = req.body;
       
       // Special handling for waitlist offers
       if (fromWaitlistOffer && offerId) {
@@ -699,25 +699,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const currentUser = await storage.getUser(userId);
       
-      // Create signup with paid = false (reserved but payment pending)
+      // Calculate reservation expiry (1 hour from now) if this is a reservation
+      const reservationExpiresAt = reserveOnly ? new Date(Date.now() + 60 * 60 * 1000) : null;
+      
+      // Create signup with appropriate payment status
       const signup = await storage.createSignup({
         tenantId: currentUser?.tenantId || session.tenantId,
         playerId,
         sessionId,
-        paid: false,
+        paid: !reserveOnly, // If reserveOnly, mark as unpaid; otherwise paid
+        reservationExpiresAt,
       });
 
       // Get player and session details for response
       const player = await storage.getPlayer(playerId);
       
-      // Calculate reservation expiry (1 hour from now)
-      const reservationExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
-      
       res.json({
         ...signup,
-        reservationExpiresAt,
         player,
-        session
+        session,
+        message: reserveOnly ? "Spot reserved temporarily - payment required within 1 hour" : "Successfully signed up!"
       });
     } catch (error) {
       console.error("Error creating signup:", error);

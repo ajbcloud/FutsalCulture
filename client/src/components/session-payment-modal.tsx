@@ -16,15 +16,21 @@ interface SessionPaymentModalProps {
     location: string;
     startTime: string;
     ageGroup: string;
+    priceCents: number;
+    title: string;
   };
   player: {
     id: string;
     firstName: string;
     lastName: string;
   };
+  signup: {
+    id: string;
+    reservationExpiresAt: string;
+  };
 }
 
-export function SessionPaymentModal({ isOpen, onClose, session, player }: SessionPaymentModalProps) {
+export function SessionPaymentModal({ isOpen, onClose, session, player, signup }: SessionPaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardNumber, setCardNumber] = useState("");
   const [expiryMonth, setExpiryMonth] = useState("");
@@ -37,7 +43,13 @@ export function SessionPaymentModal({ isOpen, onClose, session, player }: Sessio
 
   const paymentMutation = useMutation({
     mutationFn: async (paymentData: any) => {
-      return await apiRequest('POST', `/api/session-billing/create-payment-intent`, paymentData);
+      return await apiRequest('POST', `/api/session-billing/process-payment`, {
+        signupId: signup.id,
+        sessionId: session.id,
+        playerId: player.id,
+        amount: session.priceCents,
+        paymentMethod: paymentData
+      });
     },
     onSuccess: (data) => {
       toast({
@@ -77,15 +89,11 @@ export function SessionPaymentModal({ isOpen, onClose, session, player }: Sessio
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     paymentMutation.mutate({
-      sessionId: session.id,
-      playerId: player.id,
-      paymentMethod: {
-        cardNumber,
-        expiryMonth,
-        expiryYear,
-        cvv,
-        cardholderName
-      }
+      cardNumber,
+      expiryMonth,
+      expiryYear,
+      cvv,
+      cardholderName
     });
   };
 
@@ -138,7 +146,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player }: Sessio
               <span className="text-sm font-medium">Player: {player.firstName} {player.lastName}</span>
               <div className="flex items-center gap-1 text-lg font-bold">
                 <DollarSign className="h-4 w-4" />
-                <span>25.00</span>
+                <span>{(session.priceCents / 100).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -222,7 +230,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player }: Sessio
               disabled={isProcessing}
               data-testid="button-complete-payment"
             >
-              {isProcessing ? "Processing..." : "Pay $25.00"}
+              {isProcessing ? "Processing..." : `Pay $${(session.priceCents / 100).toFixed(2)}`}
             </Button>
           </div>
         </div>
