@@ -115,6 +115,10 @@ export default function Help() {
     if (user) {
       const checkUserType = async () => {
         try {
+          // TEMPORARY: Force parent view for testing - remove this later
+          setIsParent(true);
+          return;
+          
           // Check if user is admin/assistant
           if (user.isAdmin || user.isAssistant) {
             setIsParent(false);
@@ -137,6 +141,9 @@ export default function Help() {
       };
       
       checkUserType();
+    } else {
+      // For non-authenticated users, show parent view
+      setIsParent(true);
     }
   }, [user]);
   
@@ -156,9 +163,12 @@ export default function Help() {
   });
 
   const submitHelpMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; subject: string; category: string; priority: string; message: string; source?: string }) => {
-      const response = await apiRequest("POST", "/api/help", data);
-      return response.json();
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; subject: string; category: string; priority?: string; message: string; source?: string }) => {
+      const response = await apiRequest("/api/help", {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
+      return response;
     },
     onSuccess: () => {
       setIsSubmitted(true);
