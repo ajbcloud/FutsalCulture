@@ -521,6 +521,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin session history endpoint for players
+  app.get('/api/admin/players/:id/session-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: playerId } = req.params;
+      const { page = '1', limit = '20' } = req.query;
+      const userId = req.user.claims.sub;
+      
+      const pageNum = parseInt(page as string, 10);
+      const limitNum = parseInt(limit as string, 20);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Get user information and verify admin access
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      if (!user?.tenantId) {
+        return res.status(403).json({ message: "Access denied: no tenant context" });
+      }
+
+      const { db } = await import('./db');
+      const { players, signups, futsalSessions } = await import('../shared/schema');
+      const { eq, and, desc, sql } = await import('drizzle-orm');
+      
+      // Verify player belongs to admin's tenant
+      const [player] = await db.select()
+        .from(players)
+        .where(and(
+          eq(players.id, playerId),
+          eq(players.tenantId, user.tenantId)
+        ))
+        .limit(1);
+
+      if (!player) {
+        return res.status(404).json({ message: "Player not found in your tenant" });
+      }
+
+      // Get total count of PAID sessions only for this player
+      const [totalResult] = await db.select({ 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(signups)
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .where(and(
+        eq(signups.playerId, playerId),
+        eq(futsalSessions.tenantId, user.tenantId),
+        eq(signups.paid, true) // Only paid sessions
+      ));
+
+      const total = totalResult?.count || 0;
+
+      // Get paginated session history with payment details (only paid sessions)
+      const sessionHistory = await db.select({
+        id: signups.id,
+        sessionId: signups.sessionId,
+        sessionName: futsalSessions.title,
+        date: futsalSessions.startTime,
+        time: futsalSessions.startTime,
+        location: futsalSessions.location,
+        paid: signups.paid,
+        paymentId: signups.paymentId,
+        paymentProvider: signups.paymentProvider,
+        createdAt: signups.createdAt,
+      })
+      .from(signups)
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .where(and(
+        eq(signups.playerId, playerId),
+        eq(futsalSessions.tenantId, user.tenantId),
+        eq(signups.paid, true) // Only paid sessions
+      ))
+      .orderBy(desc(futsalSessions.startTime))
+      .limit(limitNum)
+      .offset(offset);
+
+      const totalPages = Math.ceil(total / limitNum);
+
+      res.json({
+        sessions: sessionHistory.map(session => ({
+          ...session,
+          date: session.date.toISOString().split('T')[0], // Format date
+          time: session.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        })),
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages,
+      });
+    } catch (error) {
+      console.error("Error fetching admin player session history:", error);
+      res.status(500).json({ message: "Failed to fetch session history" });
+    }
+  });
+
   // Get session history for a specific player (parent/player portal view)
   app.get('/api/players/:id/session-history', isAuthenticated, async (req: any, res) => {
     try {
