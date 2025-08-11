@@ -632,6 +632,7 @@ router.post('/session-billing/refund', async (req: any, res) => {
 
     } else if (signupRecord.paymentProvider === 'braintree') {
       // Process Braintree refund
+      console.log('Processing Braintree refund for payment ID:', signupRecord.paymentId);
       try {
         const gateway = createBraintreeGateway(credentials);
         
