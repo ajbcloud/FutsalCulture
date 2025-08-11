@@ -148,6 +148,23 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
   const [isDropinReady, setIsDropinReady] = useState(false);
   const dropinContainerRef = useRef<HTMLDivElement>(null);
 
+  // Handle escape key to close payment form
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onError('Payment canceled by user');
+      }
+    };
+
+    if (isDropinReady) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isDropinReady, onError]);
+
   const { data: paymentConfig } = useQuery<PaymentConfig>({
     queryKey: ['/api/session-billing/payment-config'],
   });
@@ -254,6 +271,27 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       .braintree-large-button:hover {
         background-color: #374151 !important;
       }
+      
+      /* Fix for Venmo popup overlay issues */
+      .braintree-venmo-popup,
+      .braintree-venmo-modal {
+        z-index: 9999 !important;
+      }
+      
+      .braintree-venmo-popup .braintree-close {
+        display: block !important;
+        position: absolute !important;
+        top: 10px !important;
+        right: 10px !important;
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        border-radius: 3px !important;
+        cursor: pointer !important;
+        padding: 5px 10px !important;
+        font-size: 14px !important;
+        color: #333 !important;
+        z-index: 10000 !important;
+      }
     `;
     
     // Create style element and inject CSS
@@ -300,9 +338,9 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             },
             venmo: {
               allowDesktop: true,
-              allowDesktopWebLogin: false,
-              allowNewBrowserTab: false,
-              mobileWebFallBack: false,
+              allowDesktopWebLogin: true,
+              allowNewBrowserTab: true,
+              mobileWebFallBack: true,
               paymentMethodUsage: 'single_use'
             },
             googlePay: {
@@ -388,6 +426,12 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
     try {
       // For Venmo on mobile, the requestPaymentMethod will handle the app redirect automatically
       const result = await dropinInstance.requestPaymentMethod();
+      
+      // Check if result is valid
+      if (!result || !result.nonce) {
+        throw new Error('No payment method was selected or authorized');
+      }
+      
       const { nonce, type } = result;
       
       // Log payment method type for debugging
@@ -416,7 +460,16 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       }
     } catch (err: any) {
       console.error('Braintree payment error:', err);
-      onError(err.message || "Payment processing failed");
+      
+      // Handle specific Braintree errors
+      if (err.message?.includes('No payment method is available') || 
+          err.message?.includes('User did not select a payment method')) {
+        onError('Please select a payment method and try again');
+      } else if (err.message?.includes('User canceled')) {
+        onError('Payment was canceled');
+      } else {
+        onError(err.message || "Payment processing failed");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -430,10 +483,19 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         data-testid="braintree-dropin-container"
       />
       {!paymentConfig?.clientToken && (
-        <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+        <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-center space-y-4">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
           <p className="text-sm text-yellow-600 dark:text-yellow-400">
             Loading payment form...
           </p>
+          <Button 
+            variant="outline" 
+            onClick={() => onError('Payment canceled by user')}
+            className="mt-4"
+            size="sm"
+          >
+            Cancel
+          </Button>
         </div>
       )}
       <Button 
