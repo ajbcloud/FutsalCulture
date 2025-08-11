@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -144,21 +144,70 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
   onError: (error: string) => void;
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [dropinInstance, setDropinInstance] = useState<any>(null);
+  const [isDropinReady, setIsDropinReady] = useState(false);
+  const dropinContainerRef = useRef<HTMLDivElement>(null);
+
+  const { data: paymentConfig } = useQuery<PaymentConfig>({
+    queryKey: ['/api/session-billing/payment-config'],
+  });
+
+  useEffect(() => {
+    if (paymentConfig?.provider === 'braintree' && paymentConfig.clientToken && dropinContainerRef.current) {
+      // Dynamically import Braintree Drop-in
+      import('braintree-web-drop-in').then((dropInModule: any) => {
+        const dropIn = dropInModule.default || dropInModule;
+        dropIn.create({
+          authorization: paymentConfig.clientToken,
+          container: dropinContainerRef.current!,
+          card: {
+            cardholderName: {
+              required: false
+            }
+          },
+          paypal: {
+            flow: 'checkout',
+            amount: session.priceCents / 100,
+            currency: 'USD'
+          }
+        }).then((instance: any) => {
+          setDropinInstance(instance);
+          setIsDropinReady(true);
+        }).catch((error: any) => {
+          console.error('Error creating Braintree Drop-in:', error);
+          onError('Failed to initialize payment form');
+        });
+      }).catch((error: any) => {
+        console.error('Error loading Braintree Drop-in:', error);
+        onError('Failed to load payment processor');
+      });
+    }
+
+    return () => {
+      if (dropinInstance) {
+        dropinInstance.teardown();
+      }
+    };
+  }, [paymentConfig, session.priceCents, onError]);
 
   const handleSubmit = async () => {
+    if (!dropinInstance || !isDropinReady) {
+      onError('Payment form not ready');
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
-      // TODO: Implement Braintree Drop-in UI integration
-      // For now, this is a placeholder that simulates payment
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { nonce } = await dropinInstance.requestPaymentMethod();
       
       const response = await apiRequest('POST', '/api/session-billing/process-payment', {
         signupId: signup.id,
         sessionId: session.id,
         playerId: player.id,
         amount: session.priceCents,
-        provider: 'braintree'
+        provider: 'braintree',
+        paymentMethodNonce: nonce
       });
 
       if (response.ok) {
@@ -168,6 +217,7 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         onError(errorData.message || "Payment failed");
       }
     } catch (err: any) {
+      console.error('Braintree payment error:', err);
       onError(err.message || "Payment processing failed");
     } finally {
       setIsProcessing(false);
@@ -176,21 +226,28 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
 
   return (
     <div className="space-y-4">
-      <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Braintree payment integration will be implemented here
-        </p>
-      </div>
+      <div 
+        ref={dropinContainerRef}
+        className="min-h-[200px]"
+        data-testid="braintree-dropin-container"
+      />
+      {!paymentConfig?.clientToken && (
+        <div className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+          <p className="text-sm text-yellow-600 dark:text-yellow-400">
+            Loading payment form...
+          </p>
+        </div>
+      )}
       <Button 
         onClick={handleSubmit}
-        disabled={isProcessing} 
+        disabled={isProcessing || !isDropinReady} 
         className="w-full"
         data-testid="button-complete-braintree-payment"
       >
         {isProcessing ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Processing...
+            Processing Payment...
           </>
         ) : (
           `Pay $${(session.priceCents / 100).toFixed(2)}`

@@ -3,8 +3,30 @@ import { db } from './db';
 import { futsalSessions, signups, players, tenants, integrations } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
+import braintree from 'braintree';
 
 const router = Router();
+
+// Initialize Braintree Gateway
+const gateway = new braintree.BraintreeGateway({
+  environment: process.env.BRAINTREE_ENVIRONMENT === 'production' 
+    ? braintree.Environment.Production 
+    : braintree.Environment.Sandbox,
+  merchantId: process.env.BRAINTREE_MERCHANT_ID!,
+  publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
+  privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
+});
+
+// Function to generate Braintree client token
+async function generateBraintreeClientToken(): Promise<string> {
+  try {
+    const response = await gateway.clientToken.generate({});
+    return response.clientToken;
+  } catch (error) {
+    console.error('Error generating Braintree client token:', error);
+    throw new Error('Failed to generate Braintree client token');
+  }
+}
 
 // Get payment processor configuration endpoint
 router.get('/session-billing/payment-config', async (req: any, res) => {
@@ -43,7 +65,7 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
         publishableKey: credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY
       }),
       ...(provider === 'braintree' && {
-        clientToken: credentials?.clientToken // Would need to generate this from Braintree SDK
+        clientToken: await generateBraintreeClientToken()
       })
     };
 
@@ -329,9 +351,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
     
     if (activeProvider === 'stripe') {
       // Process Stripe payment
-      const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2025-06-30.basil',
-      });
+      const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!);
 
       try {
         // Create and confirm payment intent
@@ -362,13 +382,35 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
       }
       
     } else if (activeProvider === 'braintree') {
-      // TODO: Process Braintree payment
-      // For now, simulate successful payment
-      paymentResult = {
-        success: true,
-        paymentId: `bt_${Date.now()}`,
-        provider: 'braintree'
-      };
+      // Process Braintree payment
+      try {
+        const { paymentMethodNonce } = req.body;
+        if (!paymentMethodNonce) {
+          return res.status(400).json({ message: 'Payment method nonce is required' });
+        }
+
+        const result = await gateway.transaction.sale({
+          amount: (amount / 100).toString(), // Convert cents to dollars
+          paymentMethodNonce: paymentMethodNonce,
+          options: {
+            submitForSettlement: true
+          }
+        });
+
+        if (result.success) {
+          paymentResult = {
+            success: true,
+            paymentId: result.transaction?.id || `bt_${Date.now()}`,
+            provider: 'braintree'
+          };
+        } else {
+          console.error('Braintree payment error:', result.message);
+          return res.status(400).json({ message: result.message || 'Payment failed' });
+        }
+      } catch (braintreeError: any) {
+        console.error('Braintree payment error:', braintreeError);
+        return res.status(400).json({ message: braintreeError.message || 'Payment failed' });
+      }
     } else {
       return res.status(400).json({ message: 'Unsupported payment processor' });
     }
