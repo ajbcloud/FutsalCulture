@@ -57,6 +57,7 @@ Preferred communication style: Simple, everyday language.
 - **Feature Flag System**: Backend middleware and frontend hooks for plan-based feature restrictions and upgrade prompts.
 - **Theme Customization Removal**: Completely removed theme customization feature from Elite plan due to persistent technical issues with CSS variable application.
 - **Complete CSV Template System**: Session management CSV templates now include ALL 20 fields from the New Session form, with required fields marked by asterisks (*) in both template headers and form labels.
+- **Comprehensive Refunds/Voids System**: Complete in-app refunds and voids functionality for both Stripe and Braintree with parent self-cancellation, admin mass refunds, confirmation dialogs, payment tracking, and proper metadata storage.
 
 ### Business Logic
 - **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session.
