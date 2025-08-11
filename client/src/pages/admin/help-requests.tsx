@@ -431,38 +431,41 @@ export default function AdminHelpRequests() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <HelpCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
               Manage parent/player requests, submit personal requests, and track feature requests
             </p>
           </div>
         </div>
 
         <Tabs defaultValue="help-requests" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="help-requests" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Parent/Player Help Requests
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+            <TabsTrigger value="help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Parent/Player Help Requests</span>
+              <span className="sm:hidden">Help Requests</span>
             </TabsTrigger>
-            <TabsTrigger value="personal-requests" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Personal Requests to PlayHQ
+            <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Personal Requests to PlayHQ</span>
+              <span className="sm:hidden">PlayHQ</span>
             </TabsTrigger>
-            <TabsTrigger value="feature-requests" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Feature Requests
+            <TabsTrigger value="feature-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Feature Requests</span>
+              <span className="sm:hidden">Features</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Parent/Player Help Requests */}
-          <TabsContent value="help-requests" className="space-y-6">
+          <TabsContent value="help-requests" className="space-y-4 md:space-y-6 mt-4">
             {/* Filter Controls */}
-        <div className="bg-card p-4 rounded-lg border border-border">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card p-3 md:p-4 rounded-lg border border-border">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div>
               <Label className="text-muted-foreground text-sm">Filter by User</Label>
               <Input
@@ -568,7 +571,8 @@ export default function AdminHelpRequests() {
           )}
         </div>
 
-      <div className="bg-card rounded-lg overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-card rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-border">
@@ -706,13 +710,143 @@ export default function AdminHelpRequests() {
             ))}
             {paginatedRequests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {helpRequests.length === 0 ? 'No help requests found' : 'No help requests match the current filters'}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-3">
+        {paginatedRequests.length === 0 ? (
+          <div className="bg-card rounded-lg p-6 text-center text-muted-foreground">
+            {helpRequests.length === 0 ? 'No help requests found' : 'No help requests match the current filters'}
+          </div>
+        ) : (
+          paginatedRequests.map((request: any) => (
+            <Card key={request.id} className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  {/* Header with user info and badges */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {request.linkedUser ? (
+                          <button
+                            onClick={() => handleUserClick(request)}
+                            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline decoration-dotted flex items-center gap-1 transition-colors text-sm font-medium truncate"
+                            title={`Go to ${request.userType} details`}
+                          >
+                            {request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}
+                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                          </button>
+                        ) : (
+                          <span className="text-sm font-medium text-foreground truncate">
+                            {request.firstName && request.lastName ? `${request.firstName} ${request.lastName}` : 'Anonymous'}
+                          </span>
+                        )}
+                        {request.linkedUser && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-600 text-blue-600 dark:text-blue-400">
+                            {request.userType}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">{request.email}</div>
+                      {request.phone && <div className="text-xs text-muted-foreground">{request.phone}</div>}
+                    </div>
+                    <div className="flex flex-col gap-1 ml-2">
+                      <Badge 
+                        variant={
+                          request.status === 'resolved' || request.resolved ? 'success' : 
+                          request.status === 'replied' ? 'warning' : 
+                          'info'
+                        }
+                        className="text-xs"
+                      >
+                        {request.status || (request.resolved ? 'resolved' : 'open')}
+                      </Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          request.source === 'parent_portal' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-600 text-blue-600 dark:text-blue-400' :
+                          request.source === 'player_portal' ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-600 text-purple-600 dark:text-purple-400' :
+                          'bg-muted border-border text-muted-foreground'
+                        }`}
+                      >
+                        {request.source === 'parent_portal' ? 'Parent' :
+                         request.source === 'player_portal' ? 'Player' :
+                         'Main'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Subject and message */}
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-foreground">{request.subject}</div>
+                    <div className="text-xs text-muted-foreground line-clamp-2">
+                      {request.message}
+                    </div>
+                  </div>
+
+                  {/* Footer with date and actions */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setSelectedRequest(request)}
+                        className="h-8 px-2"
+                      >
+                        <Reply className="w-3 h-3" />
+                        <span className="ml-1 text-xs">Reply</span>
+                      </Button>
+                      {request.status !== 'resolved' && !request.resolved && (
+                        <Button 
+                          onClick={() => handleMarkResolved(request)}
+                          className="bg-green-600 hover:bg-green-700 h-8 px-2"
+                          size="sm"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          <span className="ml-1 text-xs">Resolve</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Reply History */}
+                  {request.replyHistory && request.replyHistory.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+                        {request.replyHistory.length} {request.replyHistory.length === 1 ? 'reply' : 'replies'} sent
+                      </p>
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        {request.replyHistory.slice(-2).map((reply: any, index: number) => (
+                          <div key={index} className="bg-accent p-2 rounded text-xs border-l-2 border-blue-500">
+                            <p className="text-foreground mb-1 line-clamp-2">{reply.message}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {format(new Date(reply.repliedAt), 'MMM d, h:mm a')}
+                            </p>
+                          </div>
+                        ))}
+                        {request.replyHistory.length > 2 && (
+                          <div className="text-xs text-muted-foreground text-center">
+                            +{request.replyHistory.length - 2} more replies
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Bottom Pagination */}
@@ -729,63 +863,65 @@ export default function AdminHelpRequests() {
 
       {/* Reply Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-        <DialogContent className="bg-card border-border max-w-2xl">
+        <DialogContent className="bg-card border-border max-w-2xl w-[95vw] md:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Reply to Help Request</DialogTitle>
+            <DialogTitle className="text-sm md:text-base text-foreground">Reply to Help Request</DialogTitle>
           </DialogHeader>
           
           {selectedRequest && (
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  From: {selectedRequest.firstName} {selectedRequest.lastName} ({selectedRequest.email}) | {format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}
+            <div className="space-y-3 md:space-y-4">
+              <div className="bg-muted p-3 md:p-4 rounded-lg">
+                <p className="text-xs md:text-sm text-muted-foreground mb-2">
+                  <span className="block md:inline">From: {selectedRequest.firstName} {selectedRequest.lastName}</span>
+                  <span className="block md:inline md:ml-2">({selectedRequest.email})</span>
+                  <span className="block md:inline md:ml-2">{format(new Date(selectedRequest.createdAt), 'MMM d, yyyy h:mm a')}</span>
                 </p>
                 {selectedRequest.phone && (
-                  <p className="text-sm text-muted-foreground mb-2">Phone: {selectedRequest.phone}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mb-2">Phone: {selectedRequest.phone}</p>
                 )}
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     <span className="font-medium">Subject:</span> {selectedRequest.subject}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     <span className="font-medium">Category:</span> {selectedRequest.category} | <span className="font-medium">Priority:</span> {selectedRequest.priority}
                   </p>
-                  <p className="text-foreground">{selectedRequest.message}</p>
+                  <p className="text-sm md:text-base text-foreground">{selectedRequest.message}</p>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="replyMessage" className="text-foreground">Your Reply</Label>
+                <Label htmlFor="replyMessage" className="text-sm md:text-base text-foreground">Your Reply</Label>
                 <Textarea
                   id="replyMessage"
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
                   placeholder="Type your reply here..."
-                  className="bg-input border-border text-foreground min-h-32"
+                  className="bg-input border-border text-foreground min-h-24 md:min-h-32 mt-1"
                   disabled={sending}
                 />
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-3">
                 <Button 
                   variant="outline" 
                   onClick={() => setSelectedRequest(null)}
                   disabled={sending}
-                  className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                  className="bg-red-600 hover:bg-red-700 text-white border-red-600 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={() => handleSendReply(false)}
                   disabled={sending || !replyMessage.trim()}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white text-sm"
                 >
                   {sending ? 'Sending...' : 'Reply'}
                 </Button>
                 <Button 
                   onClick={() => handleSendReply(true)}
                   disabled={sending || !replyMessage.trim()}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
                 >
                   {sending ? 'Sending...' : 'Reply & Mark Resolved'}
                 </Button>
@@ -797,9 +933,9 @@ export default function AdminHelpRequests() {
 
       {/* Resolution Dialog */}
       <Dialog open={!!resolvingRequest} onOpenChange={() => setResolvingRequest(null)}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border w-[95vw] md:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Resolve Help Request</DialogTitle>
+            <DialogTitle className="text-sm md:text-base text-foreground">Resolve Help Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
