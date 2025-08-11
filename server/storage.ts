@@ -381,8 +381,14 @@ export class DatabaseStorage implements IStorage {
       status: futsalSessions.status,
       bookingOpenHour: futsalSessions.bookingOpenHour,
       bookingOpenMinute: futsalSessions.bookingOpenMinute,
+      noTimeConstraints: futsalSessions.noTimeConstraints,
+      daysBeforeBooking: futsalSessions.daysBeforeBooking,
       hasAccessCode: futsalSessions.hasAccessCode,
       accessCode: futsalSessions.accessCode,
+      waitlistEnabled: futsalSessions.waitlistEnabled,
+      waitlistLimit: futsalSessions.waitlistLimit,
+      paymentWindowMinutes: futsalSessions.paymentWindowMinutes,
+      autoPromote: futsalSessions.autoPromote,
       createdAt: futsalSessions.createdAt,
     }).from(futsalSessions);
     
@@ -423,8 +429,14 @@ export class DatabaseStorage implements IStorage {
       status: futsalSessions.status,
       bookingOpenHour: futsalSessions.bookingOpenHour,
       bookingOpenMinute: futsalSessions.bookingOpenMinute,
+      noTimeConstraints: futsalSessions.noTimeConstraints,
+      daysBeforeBooking: futsalSessions.daysBeforeBooking,
       hasAccessCode: futsalSessions.hasAccessCode,
       accessCode: futsalSessions.accessCode,
+      waitlistEnabled: futsalSessions.waitlistEnabled,
+      waitlistLimit: futsalSessions.waitlistLimit,
+      paymentWindowMinutes: futsalSessions.paymentWindowMinutes,
+      autoPromote: futsalSessions.autoPromote,
       createdAt: futsalSessions.createdAt,
     }).from(futsalSessions).where(and(...conditions));
     return session;

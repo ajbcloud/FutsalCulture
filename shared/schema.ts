@@ -154,6 +154,9 @@ export const futsalSessions = pgTable("futsal_sessions", {
   status: sessionsEnum("status").notNull().default("upcoming"),
   bookingOpenHour: integer("booking_open_hour").default(8), // Hour when booking opens (0-23)
   bookingOpenMinute: integer("booking_open_minute").default(0), // Minute when booking opens (0-59)
+  // Advanced booking constraints
+  noTimeConstraints: boolean("no_time_constraints").default(false), // If true, can book anytime
+  daysBeforeBooking: integer("days_before_booking"), // Number of days before session date when booking opens
   // Access code protection
   hasAccessCode: boolean("has_access_code").default(false),
   accessCode: varchar("access_code"), // The actual code needed to book
