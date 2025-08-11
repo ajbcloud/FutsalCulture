@@ -37,7 +37,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
     ],
     'Integrations': [
       'calendarIntegration',
-      'apiIntegrations',
+      'additionalIntegrations',
       'apiAccess'
     ],
     'Support & Requests': [

@@ -40,7 +40,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'not_included' },
       paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
-      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'not_included' },
       featureRequests: { name: 'Feature Request Queue', status: 'not_included' },
     }
   },
@@ -68,7 +68,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
       paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
-      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'not_included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
     }
   },
@@ -96,7 +96,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
       paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe only', status: 'included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
-      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
     }
   },
@@ -124,7 +124,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
       paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe + QuickBooks + more', status: 'included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
-      apiIntegrations: { name: 'API Integrations', status: 'included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks, Braintree', status: 'included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Priority queue', status: 'included' },
     }
   }
