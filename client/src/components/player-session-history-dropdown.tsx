@@ -65,12 +65,8 @@ export function PlayerSessionHistoryDropdown({
 
   const formatTransactionId = (paymentId: string, provider?: string) => {
     if (!paymentId) return 'N/A';
-    if (provider === 'stripe') {
-      return `pi_${paymentId.substring(3, 15)}...`;
-    } else if (provider === 'braintree') {
-      return `bt_${paymentId.substring(0, 12)}...`;
-    }
-    return paymentId.substring(0, 15) + '...';
+    // Return the exact transaction ID from the payment provider
+    return paymentId;
   };
 
   return (

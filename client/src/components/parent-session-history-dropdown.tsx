@@ -137,9 +137,14 @@ export function ParentSessionHistoryDropdown({
                     </div>
                     
                     {session.paymentProvider && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <CreditCard className="w-3 h-3" />
                         <span className="capitalize">{session.paymentProvider}</span>
+                        {session.paymentId && (
+                          <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
+                            {session.paymentId}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
