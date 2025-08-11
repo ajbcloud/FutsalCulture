@@ -16,7 +16,8 @@ import { useBusinessName } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/schema";
-import { Mail, Phone, Clock, MapPin, Sparkles, Crown } from "lucide-react";
+import { Mail, Phone, Clock, MapPin, Sparkles, Crown, MessageSquare, History } from "lucide-react";
+import { Link } from "wouter";
 
 const helpSchema = z.object({
   firstName: z.string()
@@ -183,11 +184,24 @@ export default function Help() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Get Help</h1>
-          <p className="text-muted-foreground text-lg">
-            Need assistance with PlayHQ or your sports organization management? We're here to help!
-          </p>
+        <div className="flex items-center justify-between mb-12">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold mb-4">Get Help</h1>
+            <p className="text-muted-foreground text-lg">
+              Need assistance with PlayHQ or your sports organization management? We're here to help!
+            </p>
+          </div>
+          
+          {isAuthenticated && (
+            <div className="flex-shrink-0 ml-8">
+              <Link href="/my-help-requests">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  My Help Requests
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">

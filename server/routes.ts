@@ -1333,6 +1333,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const featureRequestRoutes = await import('./feature-request-routes');
   app.use('/api/feature-requests', isAuthenticated, featureRequestRoutes.default);
 
+  // User help request routes
+  const myHelpRequestRoutes = await import('./my-help-request-routes');
+  app.use('/api/help', isAuthenticated, myHelpRequestRoutes.default);
+
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {

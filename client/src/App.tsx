@@ -32,6 +32,7 @@ import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
 import AdminPlayerDevelopment from "@/pages/admin/player-development";
 import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
+import MyHelpRequests from "@/pages/my-help-requests";
 import Profile from "@/pages/profile";
 import MultiCheckout from "@/pages/multi-checkout";
 import SessionPayment from "@/pages/session-payment";
@@ -73,6 +74,7 @@ function Router() {
             <Route path="/player-invite/:token" component={PlayerInvite} />
             <Route path="/parent2-invite/:token" component={Parent2Invite} />
             <Route path="/help" component={Help} />
+            <Route path="/my-help-requests" component={MyHelpRequests} />
             {(user?.isAdmin || user?.isAssistant) && (
               <>
                 <Route path="/admin" component={AdminDashboard} />
