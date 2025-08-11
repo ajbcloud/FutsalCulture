@@ -179,13 +179,9 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
               cardholderName: {
                 required: false
               }
-            },
-            // Only enable PayPal, disable everything else for simpler interface
-            paypal: {
-              flow: 'checkout',
-              amount: (session.priceCents / 100).toString(),
-              currency: 'USD'
             }
+            // PayPal disabled - requires linked sandbox account
+            // Will show credit card options (Visa, Mastercard, AMEX, Discover) by default
           });
 
           if (isMounted) {
