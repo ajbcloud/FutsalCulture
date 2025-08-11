@@ -170,13 +170,21 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-dark-error-color', `hsl(${hexToHsl(theme.darkErrorColor || '#f87171')})`);
 
       // Set theme-aware CSS variables for elements to use (elements 10-15)
-      // Set light mode values first
+      // Set light mode values first - these will be overridden in dark mode by CSS
       root.style.setProperty('--theme-page-title', theme.lightPageTitle || '#111827');
       root.style.setProperty('--theme-card-background', theme.lightCardBackground || '#ffffff');
       root.style.setProperty('--theme-card-title', theme.lightCardTitle || '#111827');
       root.style.setProperty('--theme-feature-title', theme.lightFeatureTitle || '#111827');
       root.style.setProperty('--theme-feature-description', theme.lightFeatureDescription || '#64748b');
       root.style.setProperty('--theme-icon-color', theme.lightIconColor || '#6366f1');
+      
+      // Also set the dark mode values that CSS will use
+      root.style.setProperty('--theme-page-title-dark', theme.darkPageTitle || '#ffffff');
+      root.style.setProperty('--theme-card-background-dark', theme.darkCardBackground || '#1e293b');
+      root.style.setProperty('--theme-card-title-dark', theme.darkCardTitle || '#ffffff');
+      root.style.setProperty('--theme-feature-title-dark', theme.darkFeatureTitle || '#ffffff');
+      root.style.setProperty('--theme-feature-description-dark', theme.darkFeatureDescription || '#cbd5e1');
+      root.style.setProperty('--theme-icon-color-dark', theme.darkIconColor || '#60a5fa');
       
       console.log('Applied theme colors:', {
         light: {

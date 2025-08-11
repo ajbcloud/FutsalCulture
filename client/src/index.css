@@ -4,12 +4,12 @@
 
 /* Dark mode theme variable overrides for elements 10-15 */
 .dark {
-  --theme-page-title: var(--custom-dark-page-title, #ffffff);
-  --theme-card-background: var(--custom-dark-card-background, #1e293b);
-  --theme-card-title: var(--custom-dark-card-title, #ffffff);
-  --theme-feature-title: var(--custom-dark-feature-title, #ffffff);
-  --theme-feature-description: var(--custom-dark-feature-description, #cbd5e1);
-  --theme-icon-color: var(--custom-dark-icon-color, #60a5fa);
+  --theme-page-title: var(--theme-page-title-dark, #ffffff);
+  --theme-card-background: var(--theme-card-background-dark, #1e293b);
+  --theme-card-title: var(--theme-card-title-dark, #ffffff);
+  --theme-feature-title: var(--theme-feature-title-dark, #ffffff);
+  --theme-feature-description: var(--theme-feature-description-dark, #cbd5e1);
+  --theme-icon-color: var(--theme-icon-color-dark, #60a5fa);
 }
 
 /* Light mode semantic colors (default) */
