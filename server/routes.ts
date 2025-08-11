@@ -1541,7 +1541,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
       
-      const validatedData = insertSessionSchema.parse(req.body);
+      console.log('Full user object:', JSON.stringify(user, null, 2));
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
+      // Ensure we have a valid tenantId
+      const tenantId = user.tenantId || user.tenant_id || user.id;
+      if (!tenantId) {
+        console.error('No tenantId found for user:', user);
+        return res.status(400).json({ message: "User tenant information missing" });
+      }
+      
+      // Add tenantId to the request body and handle date conversion
+      const sessionData = {
+        ...req.body,
+        tenantId: tenantId,
+        // Convert string dates to Date objects - handle both formats
+        startTime: req.body.startTime ? (typeof req.body.startTime === 'string' ? new Date(req.body.startTime) : req.body.startTime) : undefined,
+        endTime: req.body.endTime ? (typeof req.body.endTime === 'string' ? new Date(req.body.endTime) : req.body.endTime) : undefined,
+        // Ensure required fields have defaults
+        priceCents: req.body.priceCents || 1000,
+        status: req.body.status || 'upcoming',
+        bookingOpenHour: req.body.bookingOpenHour ?? 8,
+        bookingOpenMinute: req.body.bookingOpenMinute ?? 0,
+        noTimeConstraints: req.body.noTimeConstraints ?? false,
+        daysBeforeBooking: req.body.daysBeforeBooking ?? 0,
+        hasAccessCode: req.body.hasAccessCode ?? false,
+        waitlistEnabled: req.body.waitlistEnabled ?? true,
+        paymentWindowMinutes: req.body.paymentWindowMinutes ?? 60,
+        autoPromote: req.body.autoPromote ?? true
+      };
+      
+      console.log('Session data before validation:', JSON.stringify(sessionData, null, 2));
+      
+      const validatedData = insertSessionSchema.parse(sessionData);
       const session = await storage.createSession(validatedData);
       res.json(session);
     } catch (error) {

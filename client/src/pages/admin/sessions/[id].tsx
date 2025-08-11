@@ -146,6 +146,9 @@ export default function AdminSessionDetail() {
         capacity: formData.capacity,
         bookingOpenHour: formData.bookingOpenHour,
         bookingOpenMinute: formData.bookingOpenMinute,
+        // New booking constraint fields
+        noTimeConstraints: Boolean(formData.noTimeConstraints),
+        daysBeforeBooking: formData.daysBeforeBooking || 0,
         hasAccessCode: Boolean(formData.hasAccessCode),
         accessCode: formData.hasAccessCode && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
         // Waitlist settings
