@@ -1199,6 +1199,7 @@ export const FEATURE_KEYS = {
   INTEGRATIONS_CALENDAR: 'integrations_calendar',
   INTEGRATIONS_MAILCHIMP: 'integrations_mailchimp',
   INTEGRATIONS_QUICKBOOKS: 'integrations_quickbooks',
+  INTEGRATIONS_BRAINTREE: 'integrations_braintree',
   INTEGRATIONS_ZAPIER: 'integrations_zapier',
   API_READ_ONLY: 'api_read_only',
   API_FULL_ACCESS: 'api_full_access',

@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots, tenants } from "@shared/schema";
 import { eq, sql, and, or, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
+import { loadTenantMiddleware } from "./feature-middleware";
+import { hasFeature } from "../shared/feature-flags";
 import Stripe from "stripe";
 
 // Helper function to calculate time ago
@@ -120,6 +122,18 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
         return { success: true };
       case 'microsoft':
         // Test Microsoft connection - placeholder for now
+        return { success: true };
+      case 'stripe':
+        // Test Stripe connection - placeholder for now
+        return { success: true };
+      case 'mailchimp':
+        // Test Mailchimp connection - placeholder for now
+        return { success: true };
+      case 'quickbooks':
+        // Test QuickBooks connection - placeholder for now
+        return { success: true };
+      case 'braintree':
+        // Test Braintree connection - placeholder for now
         return { success: true };
       default:
         return { success: false, error: 'Unsupported provider' };
@@ -1870,10 +1884,25 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  app.post('/api/admin/integrations', requireAdmin, async (req: Request, res: Response) => {
+  app.post('/api/admin/integrations', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { provider, credentials, enabled = true } = req.body;
       const adminUserId = (req as any).currentUser?.id;
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
 
       // Validate credentials based on provider
       const validationError = validateCredentials(provider, credentials);
@@ -1916,11 +1945,33 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  app.patch('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+  app.patch('/api/admin/integrations/:id', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { enabled } = req.body;
       const adminUserId = (req as any).currentUser?.id;
+
+      // Get the integration to check its provider
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
 
       const updated = await db.update(integrations)
         .set({
@@ -1942,9 +1993,31 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  app.delete('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+  app.delete('/api/admin/integrations/:id', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+
+      // Get the integration to check its provider before deletion
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
 
       const deleted = await db.delete(integrations)
         .where(eq(integrations.id, id))
@@ -1961,13 +2034,29 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  app.post('/api/admin/integrations/:id/test', requireAdmin, async (req: Request, res: Response) => {
+  app.post('/api/admin/integrations/:id/test', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
       const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
       if (!integration.length) {
         return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
       }
 
       const testResult = await testIntegration(integration[0]);

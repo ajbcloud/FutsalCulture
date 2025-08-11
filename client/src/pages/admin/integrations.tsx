@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { usePlanFeatures, useHasFeature } from '@/hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 import { 
   Settings2, 
   Mail, 
@@ -20,7 +22,8 @@ import {
   AlertCircle,
   TestTube,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Lock
 } from 'lucide-react';
 
 interface Integration {
@@ -148,6 +151,11 @@ export default function AdminIntegrations() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Feature flags
+  const { data: planData } = usePlanFeatures();
+  const { hasFeature: hasQuickBooks } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS);
+  const { hasFeature: hasBraintree } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_BRAINTREE);
 
   useEffect(() => {
     fetchIntegrations();
@@ -345,7 +353,12 @@ export default function AdminIntegrations() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(providerConfigs).map(([provider, config]) => {
+                {Object.entries(providerConfigs).filter(([provider, config]) => {
+                  // Filter integrations based on plan features
+                  if (provider === 'quickbooks' && !hasQuickBooks) return false;
+                  if (provider === 'braintree' && !hasBraintree) return false;
+                  return true;
+                }).map(([provider, config]) => {
                   const integration = integrations.find(i => i.provider === provider);
                   
                   return (
@@ -416,6 +429,55 @@ export default function AdminIntegrations() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Locked Integrations (for upgrade prompts) */}
+        {(!hasQuickBooks || !hasBraintree) && (
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Lock className="w-5 h-5 mr-2" />
+                Premium Integrations
+              </CardTitle>
+              <CardDescription className="text-zinc-400">
+                Upgrade your plan to unlock these advanced integrations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {!hasQuickBooks && providerConfigs.quickbooks && (
+                  <div className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center space-x-3">
+                      {providerConfigs.quickbooks.icon}
+                      <div>
+                        <div className="font-medium text-white">{providerConfigs.quickbooks.name}</div>
+                        <div className="text-sm text-zinc-400">{providerConfigs.quickbooks.description}</div>
+                        <Badge variant="secondary" className="mt-1">Elite Plan Required</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+                {!hasBraintree && providerConfigs.braintree && (
+                  <div className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center space-x-3">
+                      {providerConfigs.braintree.icon}
+                      <div>
+                        <div className="font-medium text-white">{providerConfigs.braintree.name}</div>
+                        <div className="text-sm text-zinc-400">{providerConfigs.braintree.description}</div>
+                        <Badge variant="secondary" className="mt-1">Growth Plan Required</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Configure Integration Dialog */}
         <Dialog open={!!configureDialog} onOpenChange={() => setConfigureDialog(null)}>
