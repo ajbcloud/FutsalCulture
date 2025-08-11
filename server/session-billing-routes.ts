@@ -638,6 +638,8 @@ router.post('/session-billing/refund', async (req: any, res) => {
         
         // First, try to get transaction details to ensure it exists and is refundable
         console.log('Checking transaction details for:', signupRecord.paymentId);
+        console.log('Using Braintree merchant ID:', credentials.merchantId);
+        console.log('Braintree environment:', credentials.environment);
         let transaction;
         try {
           transaction = await gateway.transaction.find(signupRecord.paymentId);
@@ -649,7 +651,9 @@ router.post('/session-billing/refund', async (req: any, res) => {
           });
         } catch (findError: any) {
           console.error('Error finding transaction:', findError);
-          return res.status(400).json({ message: `Transaction not found: ${findError.message}` });
+          return res.status(400).json({ 
+            message: `Transaction not found in merchant account ${credentials.merchantId}. This transaction may belong to a different Braintree merchant account.` 
+          });
         }
 
         // Check if transaction is already fully refunded
