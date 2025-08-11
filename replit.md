@@ -56,6 +56,7 @@ Preferred communication style: Simple, everyday language.
 - **3-Tier SaaS Pricing Structure**: Comprehensive plan-based feature access control with Core ($99/mo), Growth ($199/mo), and Elite ($499/mo) tiers.
 - **Feature Flag System**: Backend middleware and frontend hooks for plan-based feature restrictions and upgrade prompts.
 - **Theme Customization Removal**: Completely removed theme customization feature from Elite plan due to persistent technical issues with CSS variable application.
+- **Complete CSV Template System**: Session management CSV templates now include ALL 20 fields from the New Session form, with required fields marked by asterisks (*) in both template headers and form labels.
 
 ### Business Logic
 - **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session.
