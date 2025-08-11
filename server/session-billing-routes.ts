@@ -21,8 +21,8 @@ function createBraintreeGateway(credentials: any): braintree.BraintreeGateway {
   });
 }
 
-// Function to generate Braintree client token
-async function generateBraintreeClientToken(credentials: any): Promise<string> {
+// Function to generate Braintree client token with customer ID
+async function generateBraintreeClientToken(credentials: any, userId?: string): Promise<string> {
   try {
     console.log('Generating Braintree client token...');
     console.log('Braintree credentials check:', {
@@ -30,17 +30,71 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
       hasMerchantId: !!credentials?.merchantId,
       hasPublicKey: !!credentials?.publicKey,
       hasPrivateKey: !!credentials?.privateKey,
-      environment: credentials?.environment
+      environment: credentials?.environment,
+      userId: userId
     });
     
     const gateway = createBraintreeGateway(credentials);
     
-    // Generate client token without customer-specific options
+    let customerId: string | undefined;
+    
+    // If we have a user ID, create or find their Braintree customer
+    if (userId) {
+      try {
+        const { storage } = await import('./storage');
+        const user = await storage.getUser(userId);
+        
+        if (user?.email) {
+          // Try to find existing customer by email
+          const searchResponse = await new Promise<any>((resolve, reject) => {
+            gateway.customer.search((search: any) => {
+              search.email().is(user.email);
+            }, (err: any, response: any) => {
+              if (err) reject(err);
+              else resolve(response);
+            });
+          });
+          
+          if (searchResponse.success && searchResponse.customers.length > 0) {
+            customerId = searchResponse.customers[0].id;
+            console.log('Found existing Braintree customer:', customerId);
+          } else {
+            // Create new customer
+            const customerResponse = await new Promise<any>((resolve, reject) => {
+              gateway.customer.create({
+                email: user.email,
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+              }, (err: any, result: any) => {
+                if (err) reject(err);
+                else resolve(result);
+              });
+            });
+            
+            if (customerResponse.success) {
+              customerId = customerResponse.customer.id;
+              console.log('Created new Braintree customer:', customerId);
+            }
+          }
+        }
+      } catch (customerError) {
+        console.warn('Error managing Braintree customer:', customerError);
+        // Continue without customer ID if there's an error
+      }
+    }
+    
+    // Generate client token with optional customer ID
+    const tokenOptions: any = {};
+    if (customerId) {
+      tokenOptions.customerId = customerId;
+      tokenOptions.options = {
+        failOnDuplicatePaymentMethod: false,
+        makeDefault: false
+      };
+    }
+    
     const response = await new Promise<any>((resolve, reject) => {
-      gateway.clientToken.generate({
-        // Generate a basic client token without customer association
-        // This allows for fresh payment method selection each time
-      }, (err: any, result: any) => {
+      gateway.clientToken.generate(tokenOptions, (err: any, result: any) => {
         if (err) {
           reject(err);
         } else {
@@ -128,7 +182,7 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
       config.publishableKey = credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY;
     } else if (provider === 'braintree') {
       try {
-        const clientToken = await generateBraintreeClientToken(credentials);
+        const clientToken = await generateBraintreeClientToken(credentials, userId);
         console.log('Braintree client token generated successfully, length:', clientToken?.length);
         config.clientToken = clientToken;
         console.log('Config after setting client token:', { 
