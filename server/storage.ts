@@ -256,32 +256,27 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(players.tenantId, tenantId));
     }
     
-    // Get players with session counts
-    const playersWithCounts = await db.select({
-      id: players.id,
-      tenantId: players.tenantId,
-      firstName: players.firstName,
-      lastName: players.lastName,
-      email: players.email,
-      phoneNumber: players.phoneNumber,
-      birthYear: players.birthYear,
-      gender: players.gender,
-      parentId: players.parentId,
-      parent2Id: players.parent2Id,
-      canAccessPortal: players.canAccessPortal,
-      canBookAndPay: players.canBookAndPay,
-      createdAt: players.createdAt,
-      updatedAt: players.updatedAt,
-      sessionCount: sql<number>`(
-        SELECT COUNT(*)::int 
-        FROM ${signups} 
-        WHERE ${signups.playerId} = ${players.id} 
-        AND ${signups.paid} = true
-      )`,
-    })
-    .from(players)
-    .where(and(...conditions))
-    .orderBy(desc(players.createdAt));
+    // Get players with session counts using a simpler approach
+    const playersList = await db.select()
+      .from(players)
+      .where(and(...conditions))
+      .orderBy(desc(players.createdAt));
+
+    // Add session counts manually
+    const playersWithCounts: PlayerWithSessionCount[] = [];
+    for (const player of playersList) {
+      const [countResult] = await db.select({ count: sql<number>`count(*)::int` })
+        .from(signups)
+        .where(and(
+          eq(signups.playerId, player.id),
+          eq(signups.paid, true)
+        ));
+      
+      playersWithCounts.push({
+        ...player,
+        sessionCount: countResult?.count || 0
+      });
+    }
 
     return playersWithCounts;
   }

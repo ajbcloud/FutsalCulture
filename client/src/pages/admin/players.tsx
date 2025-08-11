@@ -17,7 +17,7 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
-import { Upload, Download, Edit, Users, UserCheck, Activity, Target } from 'lucide-react';
+import { Upload, Download, Edit, Users, UserCheck, Activity, Target, ChevronUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -57,6 +57,10 @@ export default function AdminPlayers() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  
+  // Sorting states
+  const [sortField, setSortField] = useState<string>('lastName');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   const { toast } = useToast();
   const [location] = useLocation();
@@ -147,15 +151,42 @@ export default function AdminPlayers() {
         player.lastName.toLowerCase().includes(filters.search.toLowerCase()) ||
         `${player.firstName} ${player.lastName}`.toLowerCase().includes(filters.search.toLowerCase());
       
-
-      
       return matchesAgeGroup && matchesGender && matchesPortalAccess && matchesSoccerClub && matchesSearch;
     });
     
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      let valueA: any = a[sortField];
+      let valueB: any = b[sortField];
 
-    setFilteredPlayers(filtered);
+      // Handle special cases for sorting
+      if (sortField === 'age') {
+        valueA = new Date().getFullYear() - a.birthYear;
+        valueB = new Date().getFullYear() - b.birthYear;
+      } else if (sortField === 'parentName') {
+        valueA = a.parentName || '';
+        valueB = b.parentName || '';
+      } else if (sortField === 'signupCount') {
+        valueA = a.signupCount || 0;
+        valueB = b.signupCount || 0;
+      } else if (sortField === 'firstName' || sortField === 'lastName') {
+        valueA = (valueA || '').toLowerCase();
+        valueB = (valueB || '').toLowerCase();
+      }
+
+      if (valueA === null || valueA === undefined) valueA = '';
+      if (valueB === null || valueB === undefined) valueB = '';
+
+      if (sortDirection === 'asc') {
+        return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+      } else {
+        return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+      }
+    });
+
+    setFilteredPlayers(sorted);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [players, filters]);
+  }, [players, filters, sortField, sortDirection]);
 
   // Apply pagination whenever filtered players or pagination settings change
   useEffect(() => {
@@ -172,6 +203,29 @@ export default function AdminPlayers() {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page when changing items per page
   };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children }: { field: string, children: React.ReactNode }) => (
+    <TableHead 
+      className="text-muted-foreground cursor-pointer hover:bg-muted/30 select-none"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -433,14 +487,14 @@ export default function AdminPlayers() {
         <Table>
           <TableHeader>
             <TableRow className="border-border">
-              <TableHead className="text-muted-foreground">Player Name</TableHead>
-              <TableHead className="text-muted-foreground">Age</TableHead>
-              <TableHead className="text-muted-foreground">Gender</TableHead>
+              <SortableHeader field="lastName">Player Name</SortableHeader>
+              <SortableHeader field="age">Age</SortableHeader>
+              <SortableHeader field="gender">Gender</SortableHeader>
               <TableHead className="text-muted-foreground">Soccer Club</TableHead>
-              <TableHead className="text-muted-foreground">Parent 1</TableHead>
+              <SortableHeader field="parentName">Parent 1</SortableHeader>
               <TableHead className="text-muted-foreground">Parent 2</TableHead>
               <TableHead className="text-muted-foreground">Portal Access</TableHead>
-              <TableHead className="text-muted-foreground">Sessions</TableHead>
+              <SortableHeader field="signupCount">Sessions</SortableHeader>
               <TableHead className="text-muted-foreground">Last Activity</TableHead>
             </TableRow>
           </TableHeader>
@@ -494,7 +548,7 @@ export default function AdminPlayers() {
                 <TableCell className="text-muted-foreground">
                   <PlayerSessionHistoryDropdown
                     playerId={player.id}
-                    sessionCount={player.signupsCount || 0}
+                    sessionCount={player.signupCount || 0}
                     playerName={`${player.firstName} ${player.lastName}`}
                   />
                 </TableCell>
@@ -557,7 +611,7 @@ export default function AdminPlayers() {
                   <span className="text-muted-foreground">Sessions:</span>
                   <PlayerSessionHistoryDropdown
                     playerId={player.id}
-                    sessionCount={player.signupsCount || 0}
+                    sessionCount={player.signupCount || 0}
                     playerName={`${player.firstName} ${player.lastName}`}
                   />
                 </div>
