@@ -37,7 +37,8 @@ export default function AdminPayments() {
     ageGroup: '',
     gender: '',
     search: '',
-    dateRange: ''
+    dateRange: '',
+    transactionId: ''
   });
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -145,9 +146,13 @@ export default function AdminPayments() {
           `${player.firstName} ${player.lastName}`.toLowerCase().includes(filters.search.toLowerCase()) ||
           (payment.parent && payment.parent.firstName && payment.parent.firstName.toLowerCase().includes(filters.search.toLowerCase())) ||
           (payment.parent && payment.parent.lastName && payment.parent.lastName.toLowerCase().includes(filters.search.toLowerCase())) ||
-          (payment.parent && `${payment.parent.firstName} ${payment.parent.lastName}`.toLowerCase().includes(filters.search.toLowerCase()));
+          (payment.parent && `${payment.parent.firstName} ${payment.parent.lastName}`.toLowerCase().includes(filters.search.toLowerCase())) ||
+          (payment.transactionId && payment.transactionId.toLowerCase().includes(filters.search.toLowerCase()));
+
+        const matchesTransactionId = !filters.transactionId || 
+          (payment.transactionId && payment.transactionId.toLowerCase().includes(filters.transactionId.toLowerCase()));
         
-        return matchesStatus && matchesAgeGroup && matchesGender && matchesSearch;
+        return matchesStatus && matchesAgeGroup && matchesGender && matchesSearch && matchesTransactionId;
       });
     };
 
@@ -416,7 +421,7 @@ export default function AdminPayments() {
 
       {/* Filter Controls */}
       <div className="bg-card rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <Label className="text-muted-foreground">Search</Label>
             <Input
@@ -469,6 +474,16 @@ export default function AdminPayments() {
                 <SelectItem value="girls">Girls</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label className="text-muted-foreground">Transaction ID</Label>
+            <Input
+              placeholder="Search by transaction ID..."
+              value={filters.transactionId}
+              onChange={(e) => setFilters(prev => ({ ...prev, transactionId: e.target.value }))}
+              className="bg-input border-border text-foreground font-mono text-sm"
+            />
           </div>
         </div>
       </div>
@@ -573,6 +588,7 @@ export default function AdminPayments() {
               <TableHead className="text-muted-foreground">Parent</TableHead>
               <TableHead className="text-muted-foreground">Session</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-muted-foreground">Transaction ID</TableHead>
               <TableHead className="text-muted-foreground">Reserved At</TableHead>
               <TableHead className="text-muted-foreground">Amount</TableHead>
               <TableHead className="text-muted-foreground">Notes/Actions</TableHead>
@@ -603,6 +619,20 @@ export default function AdminPayments() {
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(payment.status)}
+                </TableCell>
+                <TableCell className="text-muted-foreground font-mono text-xs">
+                  {payment.transactionId ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs bg-zinc-800 px-2 py-1 rounded border">
+                        {payment.paymentProvider === 'stripe' ? 'Stripe' : payment.paymentProvider === 'braintree' ? 'Braintree' : 'Unknown'}
+                      </span>
+                      <span className="truncate max-w-[120px]" title={payment.transactionId}>
+                        {payment.transactionId}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-zinc-500">-</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {format(new Date(payment.createdAt), 'MMM d, yyyy h:mm a')}

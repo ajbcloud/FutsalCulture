@@ -865,6 +865,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin route for all payments with status filtering
+  app.get('/api/admin/payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const { status } = req.query;
+      const user = req.user;
+      
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      let payments = [];
+      
+      if (status === 'pending') {
+        payments = await storage.getPendingPaymentSignups(user.tenantId);
+      } else if (status === 'paid') {
+        payments = await storage.getPaidPaymentSignups(user.tenantId);
+      } else {
+        // Get both pending and paid
+        const [pending, paid] = await Promise.all([
+          storage.getPendingPaymentSignups(user.tenantId),
+          storage.getPaidPaymentSignups(user.tenantId)
+        ]);
+        payments = [...pending, ...paid];
+      }
+      
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching admin payments:", error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
   app.post('/api/admin/send-reminder/:signupId', isAuthenticated, async (req: any, res) => {
     try {
       const { signupId } = req.params;
@@ -898,6 +930,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error confirming payment:", error);
       res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
+  // Admin payment confirmation route (compatible with frontend API)
+  app.post('/api/admin/payments/:signupId/mark-paid', isAuthenticated, async (req: any, res) => {
+    try {
+      const { signupId } = req.params;
+      const signup = await storage.updateSignupPaymentStatus(signupId, true);
+      
+      if (!signup) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+
+      res.json({ success: true, signup });
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
+  // Admin payment refund route
+  app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {
+    try {
+      const { paymentId } = req.params;
+      const { reason } = req.body;
+      const user = req.user;
+      
+      // Process refund (placeholder - would integrate with actual payment system)
+      const refund = await storage.processRefund(paymentId, reason, user.id);
+      
+      res.json({ success: true, refund });
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ message: "Failed to process refund" });
     }
   });
 

@@ -551,16 +551,20 @@ export class DatabaseStorage implements IStorage {
     await db.update(signups).set({ paid: true }).where(eq(signups.id, signupId));
   }
 
-  async getPendingPaymentSignups(): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User }>> {
+  async getPendingPaymentSignups(tenantId?: string): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User }>> {
     const results = await db
       .select({
         // Signup fields
         id: signups.id,
+        tenantId: signups.tenantId,
         playerId: signups.playerId,
         sessionId: signups.sessionId,
         paid: signups.paid,
         paymentIntentId: signups.paymentIntentId,
+        paymentId: signups.paymentId,
+        paymentProvider: signups.paymentProvider,
         createdAt: signups.createdAt,
+        updatedAt: signups.updatedAt,
         // Player fields
         player: players,
         // Session fields
@@ -572,10 +576,87 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(players, eq(signups.playerId, players.id))
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .innerJoin(users, eq(players.parentId, users.id))
-      .where(eq(signups.paid, false))
+      .where(
+        tenantId 
+          ? and(eq(signups.paid, false), eq(signups.tenantId, tenantId))
+          : eq(signups.paid, false)
+      )
       .orderBy(desc(signups.createdAt));
     
     return results as Array<Signup & { player: Player; session: FutsalSession; parent: User }>;
+  }
+
+  async getPaidPaymentSignups(tenantId?: string): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User; transactionId?: string; paymentProvider?: string }>> {
+    const results = await db
+      .select({
+        // Signup fields including transaction details
+        id: signups.id,
+        tenantId: signups.tenantId,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentIntentId: signups.paymentIntentId,
+        paymentId: signups.paymentId,
+        paymentProvider: signups.paymentProvider,
+        createdAt: signups.createdAt,
+        updatedAt: signups.updatedAt,
+        // Player fields
+        player: players,
+        // Session fields
+        session: futsalSessions,
+        // Parent fields
+        parent: users,
+        // Payment record fields (for refund information)
+        paymentStatus: payments.status,
+        refundedAt: payments.refundedAt,
+        refundReason: payments.refundReason,
+      })
+      .from(signups)
+      .innerJoin(players, eq(signups.playerId, players.id))
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .innerJoin(users, eq(players.parentId, users.id))
+      .leftJoin(payments, eq(payments.signupId, signups.id))
+      .where(
+        tenantId 
+          ? and(eq(signups.paid, true), eq(signups.tenantId, tenantId))
+          : eq(signups.paid, true)
+      )
+      .orderBy(desc(signups.createdAt));
+    
+    return results.map(result => ({
+      ...result,
+      transactionId: result.paymentId,
+      // Add refund status to help with frontend display
+      status: result.refundedAt ? 'refunded' : 'paid',
+    })) as Array<Signup & { player: Player; session: FutsalSession; parent: User; transactionId?: string; paymentProvider?: string }>;
+  }
+
+  async processRefund(paymentId: string, reason: string, adminUserId: string): Promise<any> {
+    return await db.transaction(async (tx) => {
+      // Find the payment record
+      const [payment] = await tx
+        .select()
+        .from(payments)
+        .where(eq(payments.signupId, paymentId));
+
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      // Update payment record with refund information
+      const [updatedPayment] = await tx
+        .update(payments)
+        .set({
+          status: 'refunded',
+          refundedAt: new Date(),
+          refundReason: reason,
+          refundedBy: adminUserId,
+        })
+        .where(eq(payments.signupId, paymentId))
+        .returning();
+
+      return updatedPayment;
+    });
   }
 
   async getSignupWithDetails(signupId: string): Promise<(Signup & { player: Player; session: FutsalSession; parent: User }) | undefined> {
