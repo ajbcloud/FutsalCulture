@@ -25,6 +25,14 @@ function createBraintreeGateway(credentials: any): braintree.BraintreeGateway {
 async function generateBraintreeClientToken(credentials: any): Promise<string> {
   try {
     console.log('Generating Braintree client token...');
+    console.log('Credentials check:', { 
+      hasCredentials: !!credentials,
+      hasMerchantId: !!credentials?.merchantId,
+      hasPublicKey: !!credentials?.publicKey,
+      hasPrivateKey: !!credentials?.privateKey,
+      environment: credentials?.environment
+    });
+    
     const gateway = createBraintreeGateway(credentials);
     
     // Generate client token with options to ensure payment method selection
@@ -36,6 +44,17 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
         makeDefault: false
       }
     });
+    
+    console.log('Braintree response:', { 
+      success: response.success,
+      hasClientToken: !!response.clientToken,
+      clientTokenLength: response.clientToken?.length || 0,
+      errorMessage: response.message
+    });
+    
+    if (!response.success || !response.clientToken) {
+      throw new Error(`Braintree client token generation failed: ${response.message}`);
+    }
     
     console.log('Braintree client token generated successfully');
     return response.clientToken;
@@ -82,9 +101,13 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
       config.publishableKey = credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY;
     } else if (provider === 'braintree') {
       try {
-        config.clientToken = await generateBraintreeClientToken(credentials);
+        console.log('Generating Braintree client token...');
+        const clientToken = await generateBraintreeClientToken(credentials);
+        console.log('Braintree client token generated:', !!clientToken);
+        config.clientToken = clientToken;
       } catch (error) {
-        console.error('Failed to generate Braintree client token, falling back to Stripe');
+        console.error('Failed to generate Braintree client token:', error);
+        console.error('Falling back to Stripe');
         // Fall back to Stripe if Braintree fails
         config = {
           provider: 'stripe',
