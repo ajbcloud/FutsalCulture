@@ -153,43 +153,68 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
   });
 
   useEffect(() => {
-    if (paymentConfig?.provider === 'braintree' && paymentConfig.clientToken && dropinContainerRef.current) {
-      // Dynamically import Braintree Drop-in
-      import('braintree-web-drop-in').then((dropInModule: any) => {
-        const dropIn = dropInModule.default || dropInModule;
-        dropIn.create({
-          authorization: paymentConfig.clientToken,
-          container: dropinContainerRef.current!,
-          card: {
-            cardholderName: {
-              required: false
-            }
-          }
-          // Note: PayPal disabled for sandbox testing - requires linked PayPal sandbox account
-          // paypal: {
-          //   flow: 'checkout',
-          //   amount: session.priceCents / 100,
-          //   currency: 'USD'
-          // }
-        }).then((instance: any) => {
-          setDropinInstance(instance);
-          setIsDropinReady(true);
-        }).catch((error: any) => {
-          console.error('Error creating Braintree Drop-in:', error);
-          onError('Failed to initialize payment form');
-        });
-      }).catch((error: any) => {
-        console.error('Error loading Braintree Drop-in:', error);
-        onError('Failed to load payment processor');
-      });
-    }
+    let isMounted = true;
 
-    return () => {
-      if (dropinInstance) {
-        dropinInstance.teardown();
+    const initializeBraintree = async () => {
+      if (paymentConfig?.provider === 'braintree' && paymentConfig.clientToken && dropinContainerRef.current) {
+        // Clear container first
+        if (dropinContainerRef.current) {
+          dropinContainerRef.current.innerHTML = '';
+        }
+
+        try {
+          // Dynamically import Braintree Drop-in
+          const dropInModule = await import('braintree-web-drop-in');
+          const dropIn = dropInModule.default || dropInModule;
+          
+          // Check if component is still mounted and container exists
+          if (!isMounted || !dropinContainerRef.current) {
+            return;
+          }
+
+          const instance = await dropIn.create({
+            authorization: paymentConfig.clientToken,
+            container: dropinContainerRef.current,
+            card: {
+              cardholderName: {
+                required: false
+              }
+            }
+            // Note: PayPal disabled for sandbox testing - requires linked PayPal sandbox account
+            // paypal: {
+            //   flow: 'checkout',
+            //   amount: session.priceCents / 100,
+            //   currency: 'USD'
+            // }
+          });
+
+          if (isMounted) {
+            setDropinInstance(instance);
+            setIsDropinReady(true);
+          } else {
+            // Component unmounted during async operation
+            instance.teardown();
+          }
+        } catch (error: any) {
+          console.error('Error creating Braintree Drop-in:', error);
+          if (isMounted) {
+            onError('Failed to initialize payment form');
+          }
+        }
       }
     };
-  }, [paymentConfig, session.priceCents, onError]);
+
+    initializeBraintree();
+
+    return () => {
+      isMounted = false;
+      if (dropinInstance) {
+        dropinInstance.teardown().catch(console.error);
+        setDropinInstance(null);
+        setIsDropinReady(false);
+      }
+    };
+  }, [paymentConfig?.clientToken]);
 
   const handleSubmit = async () => {
     if (!dropinInstance || !isDropinReady) {
