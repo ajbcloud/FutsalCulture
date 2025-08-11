@@ -174,6 +174,25 @@ export default function EliteFeatures() {
     return () => observer.disconnect();
   }, []);
 
+  // Debug CSS variables when currentTheme changes
+  useEffect(() => {
+    if (currentTheme) {
+      setTimeout(() => {
+        const rootStyles = getComputedStyle(document.documentElement);
+        console.log('🎨 CSS Variables Debug:', {
+          '--theme-page-title': rootStyles.getPropertyValue('--theme-page-title').trim(),
+          '--theme-page-title-dark': rootStyles.getPropertyValue('--theme-page-title-dark').trim(),
+          '--theme-card-title': rootStyles.getPropertyValue('--theme-card-title').trim(),
+          '--theme-card-title-dark': rootStyles.getPropertyValue('--theme-card-title-dark').trim(),
+          'isDark': isDark,
+          'documentClass': document.documentElement.className,
+          'currentTheme.lightPageTitle': (currentTheme as any).lightPageTitle,
+          'currentTheme.darkPageTitle': (currentTheme as any).darkPageTitle,
+        });
+      }, 100);
+    }
+  }, [currentTheme, isDark]);
+
   // Update theme settings when data is fetched
   React.useEffect(() => {
     if (currentTheme && typeof currentTheme === 'object') {
@@ -434,13 +453,7 @@ export default function EliteFeatures() {
             <h1 
               className="text-3xl font-bold"
               style={{
-                color: `${
-                  currentTheme
-                    ? isDark 
-                      ? (currentTheme as any).darkPageTitle || '#ffffff'
-                      : (currentTheme as any).lightPageTitle || '#111827'
-                    : isDark ? '#ffffff' : '#111827'
-                } !important`
+                color: 'var(--theme-page-title) !important'
               }}
               data-testid="page-title-10"
             >
@@ -461,13 +474,7 @@ export default function EliteFeatures() {
           <CardTitle 
             className="flex items-center gap-2"
             style={{ 
-              color: `${
-                currentTheme
-                  ? isDark 
-                    ? (currentTheme as any).darkCardTitle || '#ffffff'
-                    : (currentTheme as any).lightCardTitle || '#111827'
-                  : isDark ? '#ffffff' : '#111827'
-              } !important` 
+              color: 'var(--theme-card-title) !important'
             }}
             data-testid="card-title-12"
           >
