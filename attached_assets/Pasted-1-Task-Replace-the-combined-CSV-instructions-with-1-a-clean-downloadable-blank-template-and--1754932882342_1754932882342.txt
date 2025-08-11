@@ -1,0 +1,403 @@
+1. Task: Replace the “combined CSV + instructions” with (1) a clean downloadable blank template and (2) a separate CSV Import Guide. Keep the manual “Create Session” screen as the source of truth for field names and supported options.
+Goals
+Blank template (CSV) only: headers + one commented example row (or a separate “sample.csv”). No long prose inside the file.
+
+CSV Import Guide (markdown drawer / modal in the app + md file in repo) with:
+
+Column‑by‑column definitions
+
+Allowed values / formats (copied from the manual create form)
+
+Validation rules & common errors
+
+Examples that match our DB schema and the UI options
+
+Updated import flow UI with: Download Template, Download Sample, How to format link (opens guide), Upload → Preview → Confirm steps.
+
+Parser/validator updated to these columns and rules (backed by Drizzle/DB). Show row‑level errors before allowing import.
+
+Where to change
+Client
+
+client/src/pages/admin/sessions/index.tsx (or current Sessions page)
+
+Update Import modal: add three buttons Download Template, Download Sample, How to format.
+
+Stepper: Upload → Preview (row table with errors/warnings and counts) → Confirm (summary).
+
+Link the guide in a right‑side drawer or modal.
+
+client/src/components/import/ (new)
+
+SessionsImportModal.tsx (UI)
+
+TemplateButtons.tsx
+
+HowToDrawer.tsx (renders markdown)
+
+public/downloads/ (new)
+
+sessions_template.csv (blank template)
+
+sessions_sample.csv (3–5 rows good data)
+
+docs/csv/ (new)
+
+sessions-import.md (markdown guide rendered in the drawer)
+
+Server
+
+server/admin-routes.ts (Sessions CSV import endpoint):
+
+Accept the new headers; validate; return rich preview (per‑row errors/warnings) and a dry‑run flag.
+
+Support idempotency via a hash of (title,start_time,location,tenant) to avoid duplicate inserts on retry.
+
+server/lib/csv/sessions.ts (new)
+
+Parse + validate + map to DB insert structs.
+
+Keep everything tenant‑scoped (tenant from auth/session).
+
+CSV Template (headers) — keep it minimal, consistent with the manual “Create Session” form
+Create public/downloads/sessions_template.csv with ONLY a header row (no prose):
+
+lua
+Copy
+Edit
+title,location,start_time,end_time,age_groups,genders,capacity,booking_open_time,has_access_code,access_code,waitlist_enabled,waitlist_limit,waitlist_offer_minutes,waitlist_auto_promote,price_cents,status,recurring,recurring_rule
+Create public/downloads/sessions_sample.csv with 3–5 realistic rows (one‑off + recurring). Example rows:
+
+lua
+Copy
+Edit
+title,location,start_time,end_time,age_groups,genders,capacity,booking_open_time,has_access_code,access_code,waitlist_enabled,waitlist_limit,waitlist_offer_minutes,waitlist_auto_promote,price_cents,status,recurring,recurring_rule
+U12 Skills Clinic,Sports Hub,2025-08-29T14:00:00-04:00,2025-08-29T15:30:00-04:00,"U10;U12",Mixed,12,08:00,false,,true,5,60,true,2500,open,false,
+U15 Finishing,Turf City,2025-08-30T17:00:00-04:00,2025-08-30T18:30:00-04:00,"U15",Boys,14,08:00,true,PRIVATE15,true,,45,true,3000,open,false,
+Saturday Academy,Memorial Park,2025-09-07T09:00:00-04:00,2025-09-07T10:30:00-04:00,"U9;U10;U11",Girls,20,07:00,false,,true,10,90,true,2000,open,true,"FREQ=WEEKLY;BYDAY=SU;COUNT=8"
+Notes about these columns (used by parser & guide):
+
+title (string, required)
+
+location (string, required) — must match an existing location name for tenant; if not found, create the location (same name) and link to session.
+
+start_time, end_time (ISO 8601 with timezone, required) — we will parse with Date/luxon.
+
+age_groups (string, required) — U9;U10;U11;U12;U13;U14;U15;U16;U17;U18 separated by ;.
+
+genders (string, required) — one of: Boys, Girls, Mixed.
+
+capacity (int, required)
+
+booking_open_time (HH:mm 24‑hour, optional; default 08:00 tenant default) — maps to booking_open_hour + booking_open_minute.
+
+has_access_code (boolean: true/false, optional; default false)
+
+access_code (string, optional; required when has_access_code=true).
+
+waitlist_enabled (boolean, optional; default per tenant/system settings)
+
+waitlist_limit (int or blank for no limit; ignored if waitlist_enabled=false)
+
+waitlist_offer_minutes (int; default tenant setting; ignored if waitlist disabled)
+
+waitlist_auto_promote (boolean; default false)
+
+price_cents (int; optional; default 0)
+
+status (string; open|closed; default open)
+
+recurring (boolean; default false)
+
+recurring_rule (string; optional) — RFC5545 RRULE, e.g., FREQ=WEEKLY;BYDAY=SU;COUNT=8. If present and recurring=true, generate occurrences (respecting session capacity, waitlist settings, etc.).
+
+CSV Import Guide (markdown)
+Create docs/csv/sessions-import.md and render it in the How to format drawer.
+
+Include these sections:
+
+1) Overview
+Use the blank template for your tenant.
+
+All times must be ISO 8601 with timezone (e.g., 2025-08-29T14:00:00-04:00).
+
+Age & gender options must match the admin “Create Session” screen.
+
+2) Columns & Accepted Values
+title (required): text up to 120 chars.
+
+location (required): existing location by name; if not found, the importer will create it.
+
+start_time / end_time (required): ISO 8601 with TZ. end_time must be after start_time.
+
+age_groups (required): one or more from U9…U18, separated by ;.
+
+genders (required): Boys | Girls | Mixed.
+
+capacity (required): positive integer.
+
+booking_open_time (optional): HH:mm 24‑hour (06:00–19:00). Defaults to tenant/system default if blank.
+
+has_access_code (optional): true|false.
+
+access_code (required if has_access_code=true): 3–32 chars.
+
+waitlist_enabled (optional): true|false.
+
+waitlist_limit (optional): integer; blank = no limit.
+
+waitlist_offer_minutes (optional): integer minutes (e.g., 60).
+
+waitlist_auto_promote (optional): true|false.
+
+price_cents (optional): integer amount in cents.
+
+status (optional): open|closed (defaults to open).
+
+recurring (optional): true|false.
+
+recurring_rule (required if recurring=true): RRULE string, e.g., FREQ=WEEKLY;BYDAY=SU;COUNT=8.
+
+3) Recurrence Quick Reference
+Supported RRULE parts: FREQ, BYDAY, UNTIL, COUNT, (optional INTERVAL).
+
+We do not generate sessions in the past.
+
+Example: FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6 (6 weeks on Mondays & Wednesdays).
+
+4) Validation Rules
+Duplicate detection (idempotency): (title, start_time, location, tenant) must be unique within an import run.
+
+Dates must be parseable and with timezone.
+
+genders must be one of the listed values.
+
+age_groups must be subset of allowed list; trim whitespace.
+
+If any row has errors, block import and offer a Download Errors CSV with row numbers and messages.
+
+Warnings (non‑critical) may still allow import (e.g., booking time defaulted).
+
+5) Import Flow
+Upload CSV → server parses and returns preview JSON { rows: […], errors: […], warnings: […] }.
+
+Preview step shows row table with inline errors; allow “Download errors”.
+
+Confirm inserts in one transaction; return counts of created sessions and generated recurrences.
+
+6) Examples
+Repeat the three sample rows and explain why they pass.
+
+7) Common Errors
+Missing timezone → “Add timezone offset (e.g., -04:00).”
+
+access_code missing while has_access_code=true.
+
+Invalid age_groups token (e.g., “U19”).
+
+RRULE present but recurring=false.
+
+Parser & Validation (server)
+Add server/lib/csv/sessions.ts with:
+
+Header validation against the exact list above.
+
+Type coercion & strict checks.
+
+RRULE parsing (use rrule or a small helper).
+
+Location resolution: try tenant.locations.findByName; create if not found.
+
+Booking open time split into hour/minute integers (bounded 06:00–19:00).
+
+Waitlist settings mapped to DB columns:
+
+waitlist_enabled → waitlist_enabled
+
+waitlist_limit → waitlist_limit
+
+waitlist_offer_minutes → waitlist_offer_minutes
+
+waitlist_auto_promote → waitlist_auto_promote
+
+Status mapped to enum open|closed.
+
+Idempotency: compute a stable key; skip duplicates within the same import.
+
+Update the sessions table insert (Drizzle) accordingly. Use existing columns you already have, e.g.:
+
+start_time, end_time, capacity, location, age_groups (array or text), genders, booking_open_hour, booking_open_minute, has_access_code, access_code, price_cents, status, tenant, waitlist_*, recurrence_meta as needed.
+
+UI/UX details
+In Sessions → Import modal:
+
+Left actions: Download Template, Download Sample.
+
+Right action: How to format CSV → opens drawer rendering docs/csv/sessions-import.md.
+
+After upload, show a table with columns and per‑cell error badges; summary chips: “12 rows • 3 errors • 2 warnings”.
+
+Disable Import until error count = 0.
+
+After success, toast “Created 18 sessions (8 recurring occurrences generated).”
+
+Do not change the existing manual Create Session page.
+
+Regression checks
+Import a subset of rows → ensure capacity/progress bars update in Sessions list.
+
+Locations: verify new names are created once and reused.
+
+Waitlist defaults: when CSV leaves waitlist fields blank, tenant/system defaults apply.
+
+Multi‑tenant: the import respects the current tenant; no cross‑tenant leakage.
+
+Nice‑to‑have (optional if quick)
+Error CSV download: same rows plus an errors column with messages.
+
+Save mapping for column headers (if we later accept alternative header names).
+
+
+2. Task: Rich CSV upload error reporting with a 20‑second sticky popup
+Goals
+When a CSV import fails (validation or server error), show a prominent error popup that:
+
+Lists what’s wrong (row, column, bad value, human message).
+
+Persists for 20 seconds (auto‑dismiss) and is manually dismissible.
+
+Provides “View all errors” (opens full list in a modal/drawer) and “Download errors CSV”.
+
+Links to “How to format CSV” guide.
+
+Server returns structured errors so the UI can render specifics.
+
+Server changes
+File: server/admin-routes.ts (CSV import endpoint)
+Return 400 JSON on validation failure with this shape:
+
+ts
+Copy
+Edit
+// 400 body
+{
+  "summary": {
+    "rows": 27,
+    "errors": 5,
+    "warnings": 3
+  },
+  "errors": [
+    {
+      "row": 4,                        // 1-based row in the CSV (including header consideration)
+      "column": "start_time",
+      "value": "2025-08-29 14:00",     // bad value
+      "code": "invalid_datetime_tz",   // short machine code
+      "message": "Use ISO 8601 with timezone, e.g. 2025-08-29T14:00:00-04:00",
+      "hint": "See 'How to format CSV' > Columns & Accepted Values"
+    },
+    {
+      "row": 7,
+      "column": "age_groups",
+      "value": "U19",
+      "code": "invalid_age_group",
+      "message": "Allowed values: U9–U18 separated by semicolons."
+    }
+  ],
+  "warnings": [
+    { "row": 2, "column": "booking_open_time", "message": "Blank value defaulted to tenant setting (08:00)." }
+  ]
+}
+Ensure parser fills row accurately, trims values, and aggregates errors.
+
+Add helper to export the same data as CSV when requested: text/csv with columns: row,column,value,code,message.
+
+Client changes
+Files:
+
+client/src/pages/admin/sessions/index.tsx
+
+client/src/components/import/SessionsImportModal.tsx (or equivalent)
+
+client/src/components/ui/toast.tsx (or shadcn/ui toast)
+
+Popup behavior
+On fetch('/api/admin/sessions/import') failure:
+
+Parse JSON body; if not JSON, show generic error and log response.text().
+
+Show error toast/banner with:
+
+Title: Import failed
+
+Subtitle: ${summary.errors} errors, ${summary.warnings ?? 0} warnings
+
+First 2–3 error lines: Row {row} • {column} • {message}
+
+Duration: 20000 ms (20 seconds)
+
+Buttons:
+
+View all errors → opens modal/drawer listing all errors in a paged table
+
+Download errors CSV → hits /api/admin/sessions/import/errors.csv?token=… (or generates client‑side CSV from body)
+
+How to format CSV → opens our drawer with docs/csv/sessions-import.md
+
+Keep the toast dismissible via close icon; do not block the page.
+
+Persist last error payload in sessionStorage (sessionsImport:lastErrors) so the user can reopen the details if the toast expires.
+
+Toast configuration (example with shadcn/ui)
+ts
+Copy
+Edit
+toast.error(
+  <div className="space-y-2">
+    <div className="font-semibold">Import failed</div>
+    <div className="text-sm text-muted-foreground">
+      {summary.errors} errors{summary.warnings ? `, ${summary.warnings} warnings` : ''}
+    </div>
+    <ul className="list-disc pl-5 text-sm">
+      {errors.slice(0,3).map(e => (
+        <li key={`${e.row}-${e.column}`}>
+          Row {e.row} • <span className="font-mono">{e.column}</span> — {e.message}
+        </li>
+      ))}
+    </ul>
+    <div className="flex gap-2 pt-2">
+      <Button size="sm" onClick={openErrorsModal}>View all errors</Button>
+      <Button size="sm" variant="secondary" onClick={downloadErrorsCsv}>Download errors CSV</Button>
+      <Button size="sm" variant="ghost" onClick={openHowTo}>How to format CSV</Button>
+    </div>
+  </div>,
+  { duration: 20000 }  // 20 seconds
+);
+Errors modal
+Table columns: Row, Column, Value (truncate with tooltip), Message.
+
+Filters by column name; copy‑to‑clipboard per row.
+
+Button: Download errors CSV (uses same generator).
+
+Accessibility
+role="alert" on toast container.
+
+Ensure focus goes to the toast when it appears; close returns focus to the Upload button.
+
+Acceptance criteria
+Upload a CSV with several mistakes:
+
+Popup shows within 300ms, remains visible for 20s, and is dismissible.
+
+It lists at least the first 3 issues, with row + column + message.
+
+View all errors shows a full list with copy/download.
+
+Download errors CSV produces a valid CSV with all error rows.
+
+How to format CSV opens the guide drawer.
+
+Fix the CSV and re‑upload: import succeeds; the previous error state is cleared.
+
+Works across tenants; no leakage of error data between users.
+

@@ -14,7 +14,9 @@ router.get('/payment-config', async (req: any, res) => {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    const { provider, credentials } = await getActivePaymentProcessor();
+    const { provider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
+    
+    console.log('Payment processor config:', { provider, hasCredentials: !!credentials });
     
     if (!provider) {
       return res.status(400).json({ message: 'No payment processor configured' });
@@ -31,6 +33,7 @@ router.get('/payment-config', async (req: any, res) => {
       })
     };
 
+    console.log('Returning payment config:', { provider: config.provider, hasPublishableKey: !!config.publishableKey });
     res.json(config);
   } catch (error) {
     console.error('Error getting payment config:', error);
@@ -39,18 +42,27 @@ router.get('/payment-config', async (req: any, res) => {
 });
 
 // Helper function to get active payment processor
-async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
+async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
   try {
+    console.log('Checking for active payment processors...');
+    
     // Check for enabled payment processors (Stripe or Braintree)
+    // Look for tenant-specific integrations first, then global ones
     const activeProcessor = await db.select()
       .from(integrations)
       .where(and(
         eq(integrations.enabled, true),
-        sql`${integrations.provider} IN ('stripe', 'braintree')`
+        sql`${integrations.provider} IN ('stripe', 'braintree')`,
+        // Allow both tenant-specific and global integrations (tenant_id is null)
+        tenantId ? sql`(${integrations.tenantId} IS NULL OR ${integrations.tenantId} = ${tenantId})` : sql`${integrations.tenantId} IS NULL`
       ))
+      .orderBy(sql`CASE WHEN ${integrations.tenantId} IS NOT NULL THEN 0 ELSE 1 END`) // Prefer tenant-specific
       .limit(1);
 
+    console.log('Found active processors:', activeProcessor.length);
+
     if (activeProcessor.length > 0) {
+      console.log('Using configured processor:', activeProcessor[0].provider);
       return {
         provider: activeProcessor[0].provider as 'stripe' | 'braintree',
         credentials: activeProcessor[0].credentials
@@ -58,7 +70,8 @@ async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'brai
     }
 
     // Fallback to environment-based Stripe if available
-    if (process.env.STRIPE_SECRET_KEY) {
+    if (process.env.STRIPE_SECRET_KEY && process.env.VITE_STRIPE_PUBLIC_KEY) {
+      console.log('Using environment-based Stripe configuration');
       return {
         provider: 'stripe',
         credentials: {
@@ -68,6 +81,7 @@ async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'brai
       };
     }
 
+    console.log('No payment processor found');
     return { provider: null, credentials: null };
   } catch (error) {
     console.error('Error getting active payment processor:', error);
@@ -271,7 +285,7 @@ router.post('/process-payment', async (req: any, res) => {
     }
 
     // Get active payment processor config
-    const { provider: activeProvider, credentials } = await getActivePaymentProcessor();
+    const { provider: activeProvider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
     
     if (!activeProvider) {
       return res.status(400).json({ message: 'No payment processor configured' });
