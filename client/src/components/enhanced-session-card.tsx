@@ -232,7 +232,17 @@ export default function EnhancedSessionCard({
                 {reservationExpires && (
                   <ReservationCountdown
                     expiresAt={reservationExpires.toISOString()}
-                    onExpire={() => {
+                    onExpired={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+                      onReservationChange?.(session.id, false);
+                    }}
+                  />
+                )}
+                {!reservationExpires && reservationSignup.reservationExpiresAt && (
+                  <ReservationCountdown
+                    expiresAt={new Date(reservationSignup.reservationExpiresAt).toISOString()}
+                    onExpired={() => {
                       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
                       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
                       onReservationChange?.(session.id, false);
