@@ -25,8 +25,15 @@ import { stripeWebhookRouter } from './stripe-webhooks';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
+  // Payment webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
+  
+  const { braintreeWebhookRouter } = await import('./braintree-webhooks');
+  app.use('/api/braintree', braintreeWebhookRouter);
+
+  // Payment admin routes (for refunds/voids)
+  const paymentAdminRouter = (await import('./payment-admin-routes')).default;
+  app.use('/api', isAuthenticated, paymentAdminRouter);
 
   // Auth middleware
   await setupAuth(app);
@@ -59,6 +66,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Player session history endpoint
+  app.get('/api/admin/players/:playerId/sessions-with-payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const { playerId } = req.params;
+      const currentUser = req.user;
+
+      if (!currentUser || !currentUser.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { signups, futsalSessions, payments, refunds } = await import('../shared/schema');
+      const { and, eq, desc } = await import('drizzle-orm');
+
+      // Get player's sessions with payment information
+      const sessionsWithPayments = await db
+        .select({
+          session: {
+            id: futsalSessions.id,
+            title: futsalSessions.title,
+            date: futsalSessions.date,
+            endTime: futsalSessions.endTime,
+            location: futsalSessions.location,
+            locationName: futsalSessions.locationName,
+            capacity: futsalSessions.capacity,
+            priceCents: futsalSessions.priceCents,
+          },
+          signupId: signups.id,
+          signupPaid: signups.paid,
+          signupPaymentId: signups.paymentId,
+        })
+        .from(signups)
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .where(and(
+          eq(signups.playerId, playerId),
+          eq(signups.tenantId, currentUser.tenantId)
+        ))
+        .orderBy(desc(futsalSessions.date));
+
+      // Get payment information for each signup
+      const sessionsWithPaymentDetails = await Promise.all(
+        sessionsWithPayments.map(async (item) => {
+          let payment = null;
+
+          if (item.signupPaid && item.signupPaymentId) {
+            // Try to find payment record by signup ID first
+            const paymentRecord = await db
+              .select()
+              .from(payments)
+              .where(eq(payments.signupId, item.signupId))
+              .limit(1);
+
+            if (paymentRecord.length > 0) {
+              payment = paymentRecord[0];
+
+              // Get refund records for this payment
+              const refundRecords = await db
+                .select()
+                .from(refunds)
+                .where(eq(refunds.paymentId, payment.id))
+                .orderBy(desc(refunds.createdAt));
+
+              payment.refunds = refundRecords;
+            }
+          }
+
+          return {
+            session: item.session,
+            payment: payment
+          };
+        })
+      );
+
+      res.json(sessionsWithPaymentDetails);
+    } catch (error) {
+      console.error('Error fetching player session history:', error);
+      res.status(500).json({ message: 'Failed to fetch session history' });
     }
   });
 

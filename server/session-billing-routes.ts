@@ -293,6 +293,7 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
     } else if (provider === 'braintree' && paymentId) {
       // Verify Braintree transaction
       try {
+        const { credentials } = await getActivePaymentProcessor();
         const gateway = createBraintreeGateway(credentials);
         const transaction = await gateway.transaction.find(paymentId);
         
@@ -316,6 +317,109 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
       return res.status(400).json({ message: 'Payment verification failed' });
     }
 
+    // Get session info for payment amount
+    const session = await db.select()
+      .from(futsalSessions)
+      .where(eq(futsalSessions.id, sessionId))
+      .limit(1);
+
+    if (!session.length) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const sessionInfo = session[0];
+
+    // Get player and parent info for payment record
+    const player = await db.select()
+      .from(players)
+      .where(eq(players.id, playerId))
+      .limit(1);
+
+    if (!player.length) {
+      return res.status(404).json({ message: 'Player not found' });
+    }
+
+    const playerInfo = player[0];
+
+    // Create comprehensive payment record with enhanced metadata
+    let paymentStatus: any = 'pending';
+    let processorPaymentId = paymentId;
+    let capturedAt: Date | null = null;
+    let paymentMeta: any = {};
+
+    if (provider === 'stripe' && paymentVerified) {
+      paymentStatus = 'paid';
+      capturedAt = new Date();
+      
+      try {
+        const { credentials } = await getActivePaymentProcessor();
+        const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY);
+        const stripeSession = await stripe.checkout.sessions.retrieve(paymentId);
+        
+        paymentMeta = {
+          stripeSession: stripeSession,
+          paymentIntentId: stripeSession.payment_intent,
+          customerId: stripeSession.customer,
+          paymentMethodTypes: stripeSession.payment_method_types
+        };
+        
+        // Use payment intent ID if available
+        if (stripeSession.payment_intent) {
+          processorPaymentId = stripeSession.payment_intent as string;
+        }
+      } catch (error) {
+        console.error('Error getting Stripe session details:', error);
+      }
+    } else if (provider === 'braintree' && paymentVerified) {
+      try {
+        const { credentials } = await getActivePaymentProcessor();
+        const gateway = createBraintreeGateway(credentials);
+        const transaction = await gateway.transaction.find(paymentId);
+        
+        paymentStatus = transaction.status === 'settled' ? 'settled' : 
+                      transaction.status === 'submitted_for_settlement' ? 'submitted_for_settlement' :
+                      transaction.status === 'settling' ? 'settling' : 'authorized';
+        
+        if (transaction.status === 'settled' || transaction.status === 'submitted_for_settlement') {
+          capturedAt = new Date();
+        }
+        
+        paymentMeta = {
+          braintreeTransaction: {
+            id: transaction.id,
+            status: transaction.status,
+            amount: transaction.amount,
+            currency: transaction.currencyIsoCode,
+            paymentInstrumentType: transaction.paymentInstrumentType,
+            processorResponseCode: transaction.processorResponseCode,
+            processorResponseText: transaction.processorResponseText
+          },
+          customerId: transaction.customer?.id,
+          paymentMethodToken: transaction.paymentInstrumentToken
+        };
+      } catch (error) {
+        console.error('Error getting Braintree transaction details:', error);
+      }
+    }
+
+    // Create enhanced payment record
+    const [paymentRecord] = await db.insert(payments).values({
+      tenantId: currentUser.tenantId,
+      signupId: null, // Will be updated after signup creation
+      sessionId: sessionId,
+      playerId: playerId,
+      parentId: playerInfo.parentId,
+      processor: provider as 'stripe' | 'braintree',
+      processorPaymentId: processorPaymentId,
+      processorCustomerId: paymentMeta.customerId || null,
+      amountCents: sessionInfo.priceCents,
+      currency: 'usd',
+      status: paymentStatus,
+      capturedAt: capturedAt,
+      refundAmountCents: 0,
+      meta: paymentMeta
+    }).returning();
+
     // Check if signup already exists
     const existingSignup = await db.select()
       .from(signups)
@@ -334,9 +438,15 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
         })
         .where(eq(signups.id, existingSignup[0].id));
 
+      // Update payment record with signup ID
+      await db.update(payments)
+        .set({ signupId: existingSignup[0].id })
+        .where(eq(payments.id, paymentRecord.id));
+
       return res.json({ 
         success: true, 
         signupId: existingSignup[0].id,
+        paymentId: paymentRecord.id,
         message: 'Payment confirmed and signup updated' 
       });
     } else {
@@ -349,9 +459,15 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
         paymentIntentId: paymentId
       }).returning();
 
+      // Update payment record with signup ID
+      await db.update(payments)
+        .set({ signupId: newSignup[0].id })
+        .where(eq(payments.id, paymentRecord.id));
+
       return res.json({ 
         success: true, 
         signupId: newSignup[0].id,
+        paymentId: paymentRecord.id,
         message: 'Signup created with payment confirmed' 
       });
     }
@@ -487,6 +603,93 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
     }
 
     if (paymentResult.success) {
+      // Get session info for payment amount
+      const session = await db.select()
+        .from(futsalSessions)
+        .where(eq(futsalSessions.id, sessionId))
+        .limit(1);
+
+      if (!session.length) {
+        return res.status(400).json({ message: 'Session not found' });
+      }
+
+      const sessionInfo = session[0];
+      const playerInfo = player[0]; // player was fetched earlier
+
+      // Create comprehensive payment record
+      let paymentStatus: any = 'pending';
+      let capturedAt: Date | null = null;
+      let paymentMeta: any = {};
+      let processorCustomerId: string | null = null;
+
+      if (activeProvider === 'stripe') {
+        paymentStatus = 'paid';
+        capturedAt = new Date();
+        
+        try {
+          const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!);
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentResult.paymentId);
+          
+          paymentMeta = {
+            paymentIntent: paymentIntent,
+            paymentMethodTypes: paymentIntent.payment_method_types,
+            charges: paymentIntent.charges?.data || []
+          };
+          
+          processorCustomerId = paymentIntent.customer as string || null;
+        } catch (error) {
+          console.error('Error getting Stripe payment intent details:', error);
+        }
+      } else if (activeProvider === 'braintree') {
+        try {
+          const gateway = createBraintreeGateway(credentials);
+          const transaction = await gateway.transaction.find(paymentResult.paymentId);
+          
+          paymentStatus = transaction.status === 'settled' ? 'settled' : 
+                        transaction.status === 'submitted_for_settlement' ? 'submitted_for_settlement' :
+                        transaction.status === 'settling' ? 'settling' : 'authorized';
+          
+          if (transaction.status === 'settled' || transaction.status === 'submitted_for_settlement') {
+            capturedAt = new Date();
+          }
+          
+          paymentMeta = {
+            braintreeTransaction: {
+              id: transaction.id,
+              status: transaction.status,
+              amount: transaction.amount,
+              currency: transaction.currencyIsoCode,
+              paymentInstrumentType: transaction.paymentInstrumentType,
+              processorResponseCode: transaction.processorResponseCode,
+              processorResponseText: transaction.processorResponseText
+            },
+            paymentMethodToken: transaction.paymentInstrumentToken
+          };
+          
+          processorCustomerId = transaction.customer?.id || null;
+        } catch (error) {
+          console.error('Error getting Braintree transaction details:', error);
+        }
+      }
+
+      // Create enhanced payment record
+      const [paymentRecord] = await db.insert(payments).values({
+        tenantId: currentUser.tenantId,
+        signupId: signupId,
+        sessionId: sessionId,
+        playerId: playerId,
+        parentId: playerInfo.parentId,
+        processor: activeProvider as 'stripe' | 'braintree',
+        processorPaymentId: paymentResult.paymentId,
+        processorCustomerId: processorCustomerId,
+        amountCents: amount,
+        currency: 'usd',
+        status: paymentStatus,
+        capturedAt: capturedAt,
+        refundAmountCents: 0,
+        meta: paymentMeta
+      }).returning();
+
       // Update signup as paid
       await db.update(signups)
         .set({ 
@@ -500,7 +703,8 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
       res.json({ 
         success: true, 
         message: 'Payment processed successfully',
-        paymentId: paymentResult.paymentId
+        paymentId: paymentResult.paymentId,
+        paymentRecordId: paymentRecord.id
       });
     } else {
       res.status(400).json({ message: 'Payment processing failed' });
