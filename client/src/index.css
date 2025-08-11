@@ -8,9 +8,13 @@
   stroke: #16a34a !important;
 }
 
-/* Force category headers to be blue */
+/* Force category headers to be blue in both light and dark modes */
 .category-header {
   color: #3b82f6 !important;
+}
+
+.dark .category-header {
+  color: #60a5fa !important;
 }
 
 
