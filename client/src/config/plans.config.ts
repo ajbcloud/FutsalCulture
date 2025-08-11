@@ -108,7 +108,7 @@ export const plans: PlanConfig[] = [
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
       parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
-      payments: { name: 'Accept Online Payments', description: 'Multiple payment integrations (Stripe, QuickBooks, more)', status: 'included' },
+      payments: { name: 'Accept Online Payments', description: 'Multiple payment integrations (Braintree, QuickBooks, more)', status: 'included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'included' },
       analytics: { name: 'Analytics', description: 'AI-powered forecasting', status: 'included' },
