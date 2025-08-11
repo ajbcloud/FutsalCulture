@@ -225,12 +225,13 @@ export default function AdminHelpRequests() {
     }
   });
 
-  const handlePersonalRequest = (data: PersonalRequest) => {
-    personalRequestMutation.mutate(data);
-  };
-
+  // Handle feature request form submission
   const handleFeatureRequest = (data: FeatureRequestForm) => {
     featureRequestMutation.mutate(data);
+  };
+
+  const handlePersonalRequest = (data: PersonalRequest) => {
+    personalRequestMutation.mutate(data);
   };
 
   const getStatusColor = (status: string) => {
