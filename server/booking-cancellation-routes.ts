@@ -92,7 +92,7 @@ router.post('/cancel-booking', async (req: any, res) => {
           const paymentService = new PaymentService();
           refundResult = await paymentService.refundPayment(
             paymentRecord.id,
-            undefined, // Full refund
+            paymentRecord.amountCents.toString(), // Full refund amount as string
             reason || 'Booking cancelled by customer'
           );
 
@@ -116,7 +116,7 @@ router.post('/cancel-booking', async (req: any, res) => {
       success: true,
       message: 'Booking cancelled successfully',
       refundProcessed: !!refundResult,
-      refundAmount: refundResult?.amount_cents || 0
+      refundAmount: refundResult?.amountCents || 0
     });
 
   } catch (error) {
