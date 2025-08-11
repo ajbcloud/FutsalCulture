@@ -69,7 +69,7 @@ export const plans: PlanConfig[] = [
       paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
       additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'not_included' },
-      featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
+      featureRequests: { name: 'Feature Request Queue', description: 'Basic queue', status: 'included' },
     }
   },
   {
