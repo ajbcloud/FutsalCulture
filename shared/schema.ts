@@ -370,74 +370,7 @@ export const featureFlags = pgTable("feature_flags", {
   uniqueIndex("feature_flags_plan_feature_idx").on(table.planLevel, table.featureKey),
 ]);
 
-// Theme settings table for Elite plan custom colors and themes
-export const themeSettings = pgTable("theme_settings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id).unique(),
-  
-  // Light mode colors - updated to match standard application theme
-  lightPrimaryButton: varchar("light_primary_button").default("#3b82f6"), // hsl(217, 91%, 60%) - Primary brand
-  lightSecondaryButton: varchar("light_secondary_button").default("#f3f4f6"), // hsl(214, 32%, 96%) - Input background  
-  lightBackground: varchar("light_background").default("#ffffff"), // hsl(0, 0%, 100%) - Main background
-  lightText: varchar("light_text").default("#0f172a"), // hsl(222, 84%, 5%) - Primary text
-  lightHeadingColor: varchar("light_heading_color").default("#0f172a"), // hsl(222, 84%, 5%) - Primary text for headings
-  lightDescriptionColor: varchar("light_description_color").default("#64748b"), // hsl(215, 16%, 35%) - Secondary text
-  lightNavTitle: varchar("light_nav_title").default("#0f172a"), // Primary text for nav title
-  lightNavText: varchar("light_nav_text").default("#64748b"), // Secondary text for nav
-  lightNavActiveText: varchar("light_nav_active_text").default("#ffffff"), // White text on active nav items
-  
-  // Extended light mode colors for granular control  
-  lightPageTitle: varchar("light_page_title").default("#0f172a"), // Primary text for page titles
-  lightCardBackground: varchar("light_card_background").default("#ffffff"), // White card backgrounds
-  lightCardTitle: varchar("light_card_title").default("#0f172a"), // Primary text for card titles
-  lightFeatureTitle: varchar("light_feature_title").default("#0f172a"), // Primary text for features
-  lightFeatureDescription: varchar("light_feature_description").default("#64748b"), // Secondary text for descriptions
-  lightIconColor: varchar("light_icon_color").default("#3b82f6"), // Primary brand color for icons
-  lightAccentColor: varchar("light_accent_color").default("#22c55e"), // Success/accent color
-  lightBorderColor: varchar("light_border_color").default("#e2e8f0"), // Default borders
-  lightInputBackground: varchar("light_input_background").default("#f8fafc"), // Input backgrounds
-  lightSuccessColor: varchar("light_success_color").default("#22c55e"), // Success states
-  lightWarningColor: varchar("light_warning_color").default("#f59e0b"), // Warning states
-  lightErrorColor: varchar("light_error_color").default("#dc2626"), // Error states
-  
-  // Dark mode colors - updated to match standard application dark theme
-  darkPrimaryButton: varchar("dark_primary_button").default("#60a5fa"), // hsl(217, 91%, 70%) - Lighter brand for contrast
-  darkSecondaryButton: varchar("dark_secondary_button").default("#475569"), // Dark secondary button
-  darkBackground: varchar("dark_background").default("#0f1629"), // hsl(222, 84%, 4%) - Main dark background
-  darkText: varchar("dark_text").default("#ffffff"), // Pure white text
-  darkHeadingColor: varchar("dark_heading_color").default("#ffffff"), // White headings in dark mode
-  darkDescriptionColor: varchar("dark_description_color").default("#cbd5e1"), // hsl(210, 40%, 85%) - Light gray descriptions
-  darkNavTitle: varchar("dark_nav_title").default("#ffffff"), // White nav title
-  darkNavText: varchar("dark_nav_text").default("#cbd5e1"), // Light gray nav text
-  darkNavActiveText: varchar("dark_nav_active_text").default("#ffffff"), // White active nav text
-  
-  // Extended dark mode colors for granular control
-  darkPageTitle: varchar("dark_page_title").default("#ffffff"), // White page titles
-  darkCardBackground: varchar("dark_card_background").default("#1e293b"), // hsl(217, 33%, 8%) - Elevated surfaces
-  darkCardTitle: varchar("dark_card_title").default("#ffffff"), // White card titles
-  darkFeatureTitle: varchar("dark_feature_title").default("#ffffff"), // White feature titles
-  darkFeatureDescription: varchar("dark_feature_description").default("#cbd5e1"), // Light gray feature descriptions
-  darkIconColor: varchar("dark_icon_color").default("#60a5fa"), // Lighter brand color for icons
-  darkAccentColor: varchar("dark_accent_color").default("#34d399"), // Success/accent color for dark mode
-  darkBorderColor: varchar("dark_border_color").default("#374151"), // hsl(217, 33%, 25%) - Dark borders
-  darkInputBackground: varchar("dark_input_background").default("#1e293b"), // Dark input backgrounds
-  darkSuccessColor: varchar("dark_success_color").default("#34d399"), // Success states for dark mode
-  darkWarningColor: varchar("dark_warning_color").default("#fbbf24"), // Warning states for dark mode
-  darkErrorColor: varchar("dark_error_color").default("#f87171"), // Error states for dark mode
-  
-  // Legacy fields for backward compatibility (deprecated)
-  primaryButton: varchar("primary_button").default("#2563eb"),
-  secondaryButton: varchar("secondary_button").default("#64748b"),
-  background: varchar("background").default("#ffffff"),
-  text: varchar("text").default("#1f2937"),
-  headingColor: varchar("heading_color").default("#111827"),
-  descriptionColor: varchar("description_color").default("#6b7280"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("theme_settings_tenant_id_idx").on(table.tenantId),
-]);
+
 
 // Feature request status enum
 export const featureRequestStatusEnum = pgEnum("feature_request_status", [
@@ -695,7 +628,7 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   integrations: many(integrations),
   discountCodes: many(discountCodes),
   serviceBilling: many(serviceBilling),
-  themeSettings: one(themeSettings),
+
   featureRequests: many(featureRequests),
   // Player Development relations
   devSkillCategories: many(devSkillCategories),
@@ -800,12 +733,7 @@ export const waitlistsRelations = relations(waitlists, ({ one }) => ({
   }),
 }));
 
-export const themeSettingsRelations = relations(themeSettings, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [themeSettings.tenantId],
-    references: [tenants.id],
-  }),
-}));
+
 
 export const featureRequestsRelations = relations(featureRequests, ({ one }) => ({
   tenant: one(tenants, {
@@ -1102,14 +1030,7 @@ export const insertIntegrationSchema = createInsertSchema(integrations).omit({
   updatedAt: true,
 });
 
-export const insertThemeSettingsSchema = createInsertSchema(themeSettings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
 
-export type ThemeSettingsInsert = z.infer<typeof insertThemeSettingsSchema>;
-export type ThemeSettingsSelect = typeof themeSettings.$inferSelect;
 
 export const insertFeatureRequestSchema = createInsertSchema(featureRequests).omit({
   id: true,
@@ -1257,7 +1178,6 @@ export const FEATURE_KEYS = {
   SESSION_MANAGEMENT: 'session_management',
   LOCATION_LINKS: 'location_links', 
   PARENT_PORTAL: 'parent_portal',
-  THEME_CUSTOMIZATION: 'theme_customization',
   WAITLIST_MANUAL: 'waitlist_manual',
   WAITLIST_AUTO_PROMOTE: 'waitlist_auto_promote',
   NOTIFICATIONS_EMAIL: 'notifications_email',

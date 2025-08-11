@@ -6,7 +6,6 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,  // Manual creation only
     [FEATURE_KEYS.LOCATION_LINKS]: false,
     [FEATURE_KEYS.PARENT_PORTAL]: true,
-    [FEATURE_KEYS.THEME_CUSTOMIZATION]: false,
     [FEATURE_KEYS.WAITLIST_MANUAL]: false,  // Disabled for free
     [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: false,
     [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: false,  // Disabled for free
@@ -31,7 +30,6 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
     [FEATURE_KEYS.LOCATION_LINKS]: true,
     [FEATURE_KEYS.PARENT_PORTAL]: true,
-    [FEATURE_KEYS.THEME_CUSTOMIZATION]: false,
     [FEATURE_KEYS.WAITLIST_MANUAL]: true,
     [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: false,
     [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: true,
@@ -56,7 +54,6 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
     [FEATURE_KEYS.LOCATION_LINKS]: true,
     [FEATURE_KEYS.PARENT_PORTAL]: true,
-    [FEATURE_KEYS.THEME_CUSTOMIZATION]: false,
     [FEATURE_KEYS.WAITLIST_MANUAL]: true,
     [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: true,
     [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: true,
@@ -81,7 +78,6 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
     [FEATURE_KEYS.LOCATION_LINKS]: true,
     [FEATURE_KEYS.PARENT_PORTAL]: true,
-    [FEATURE_KEYS.THEME_CUSTOMIZATION]: true,
     [FEATURE_KEYS.WAITLIST_MANUAL]: true,
     [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: true,
     [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: true,
@@ -156,7 +152,6 @@ export const FEATURE_CATEGORIES = {
     FEATURE_KEYS.PARENT_PORTAL,
   ],
   'Advanced Features': [
-    FEATURE_KEYS.THEME_CUSTOMIZATION,
     FEATURE_KEYS.WAITLIST_AUTO_PROMOTE,
     FEATURE_KEYS.ANALYTICS_ADVANCED,
   ],
@@ -231,7 +226,6 @@ export const FEATURE_NAMES: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SESSION_MANAGEMENT]: 'Session Management',
   [FEATURE_KEYS.LOCATION_LINKS]: 'Google Maps Integration',
   [FEATURE_KEYS.PARENT_PORTAL]: 'Parent Portal',
-  [FEATURE_KEYS.THEME_CUSTOMIZATION]: 'Custom Branding & Themes',
   [FEATURE_KEYS.WAITLIST_MANUAL]: 'Manual Waitlist Management',
   [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: 'Automated Waitlist Promotion',
   [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: 'Email Notifications',
@@ -250,6 +244,7 @@ export const FEATURE_NAMES: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SUPPORT_STANDARD]: 'Standard Support',
   [FEATURE_KEYS.SUPPORT_PRIORITY]: 'Priority Support',
   [FEATURE_KEYS.BULK_OPERATIONS]: 'Bulk Operations',
+  [FEATURE_KEYS.PLAYER_DEVELOPMENT]: 'Player Development System',
 };
 
 // Feature descriptions for tooltips/help text
@@ -257,7 +252,6 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SESSION_MANAGEMENT]: 'Create and manage training sessions with capacity tracking',
   [FEATURE_KEYS.LOCATION_LINKS]: 'Clickable Google Maps links for all session locations',
   [FEATURE_KEYS.PARENT_PORTAL]: 'Dedicated portal for parents to manage their children\'s bookings',
-  [FEATURE_KEYS.THEME_CUSTOMIZATION]: 'Custom colors, logos, and branding throughout the platform',
   [FEATURE_KEYS.WAITLIST_MANUAL]: 'Manual promotion of players from session waitlists',
   [FEATURE_KEYS.WAITLIST_AUTO_PROMOTE]: 'Automatic waitlist promotion with payment windows',
   [FEATURE_KEYS.NOTIFICATIONS_EMAIL]: 'Automated email notifications for bookings and updates',
@@ -276,4 +270,5 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SUPPORT_STANDARD]: '48-hour email support response time',
   [FEATURE_KEYS.SUPPORT_PRIORITY]: '24-hour priority support with dedicated account manager',
   [FEATURE_KEYS.BULK_OPERATIONS]: 'Mass upload sessions and players via CSV imports',
+  [FEATURE_KEYS.PLAYER_DEVELOPMENT]: 'Comprehensive player tracking with assessments, goals, and training plans',
 };

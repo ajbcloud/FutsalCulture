@@ -55,6 +55,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Waitlist System**: Complete waitlist functionality when sessions reach capacity, including automated promotion, payment windows, and position management.
 - **3-Tier SaaS Pricing Structure**: Comprehensive plan-based feature access control with Core ($99/mo), Growth ($199/mo), and Elite ($499/mo) tiers.
 - **Feature Flag System**: Backend middleware and frontend hooks for plan-based feature restrictions and upgrade prompts.
+- **Theme Customization Removal**: Completely removed theme customization feature from Elite plan due to persistent technical issues with CSS variable application.
 
 ### Business Logic
 - **8 AM Rule**: Sessions open for booking at 8 AM on the day of the session.
@@ -90,7 +91,7 @@ Preferred communication style: Simple, everyday language.
 ### Pricing Tiers
 - **Core Plan ($99/mo)**: 150 players max, basic session management, email notifications, basic analytics
 - **Growth Plan ($199/mo)**: 500 players max, payment processing, SMS notifications, auto-promotion, advanced features  
-- **Elite Plan ($499/mo)**: Unlimited players, advanced analytics, theme customization, bulk operations, complete feature set
+- **Elite Plan ($499/mo)**: Unlimited players, advanced analytics, player development system, bulk operations, priority support
 
 ### Feature Flag System
 - **Backend**: Middleware-based feature checking with tenant-scoped plan validation
