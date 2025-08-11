@@ -263,6 +263,13 @@ export default function Dashboard() {
       .map(signup => signup.sessionId)
   );
 
+  // Remove any locally cleared sessions from the reserved set
+  const actualReservedSessionIds = new Set(
+    Array.from(reservedSessionIds).filter(sessionId => 
+      !localReservedSessions.has(`cleared-${sessionId}`)
+    )
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -377,15 +384,21 @@ export default function Dashboard() {
                   <EnhancedSessionCard 
                     key={session.id} 
                     session={session} 
-                    isReserved={reservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
+                    isReserved={actualReservedSessionIds.has(session.id) || localReservedSessions.has(session.id)}
                     reservationSignup={reservationSignup}
                     onReservationChange={(sessionId, reserved) => {
                       if (reserved) {
-                        setLocalReservedSessions(prev => new Set(Array.from(prev).concat(sessionId)));
+                        setLocalReservedSessions(prev => {
+                          const next = new Set(prev);
+                          next.add(sessionId);
+                          next.delete(`cleared-${sessionId}`); // Remove any previous clear marker
+                          return next;
+                        });
                       } else {
                         setLocalReservedSessions(prev => {
                           const next = new Set(prev);
                           next.delete(sessionId);
+                          next.add(`cleared-${sessionId}`); // Mark as cleared to override server state
                           return next;
                         });
                       }

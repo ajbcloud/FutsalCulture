@@ -35,9 +35,20 @@ export default function EnhancedSessionCard({
       await apiRequest("DELETE", `/api/signups/${signupId}`);
     },
     onSuccess: () => {
+      // Force refresh all relevant queries
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sessions", "includePast"] });
+      
+      // Clear local reservation state immediately
       onReservationChange?.(session.id, false);
+      
+      // Force a small delay to ensure server data is consistent
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["/api/signups"] });
+        queryClient.refetchQueries({ queryKey: ["/api/sessions", "includePast"] });
+      }, 100);
+      
       toast({
         title: "Success",
         description: "Reservation cancelled successfully",
