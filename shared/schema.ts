@@ -214,73 +214,24 @@ export const waitlists = pgTable("waitlists", {
   uniqueIndex("waitlists_session_player_unique_idx").on(table.sessionId, table.playerId),
 ]);
 
-// Enhanced payment processor and status enums
-export const paymentProcessorEnum = pgEnum("payment_processor", ["stripe", "braintree"]);
-export const paymentStatusEnum = pgEnum("payment_status", [
-  "authorized", "submitted_for_settlement", "settling", "settled", 
-  "voided", "refunded", "partial_refunded", "failed", "pending", "paid"
-]);
+// Payments table
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "refunded"]);
 
-// Enhanced Payments table for comprehensive refund/void support
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  playerId: varchar("player_id").notNull().references(() => players.id),
-  parentId: varchar("parent_id").references(() => users.id), // nullable for player-initiated payments
-  sessionId: varchar("session_id").notNull().references(() => futsalSessions.id),
-  signupId: varchar("signup_id").references(() => signups.id), // nullable for direct payments
-  
-  // Payment processor details
-  processor: paymentProcessorEnum("processor").notNull(),
-  processorPaymentId: text("processor_payment_id").notNull(), // Braintree transaction.id or Stripe payment_intent/charge id
-  processorCustomerId: text("processor_customer_id"), // BT customer id / Stripe customer id
-  
-  // Amount and currency
+  signupId: varchar("signup_id").notNull(),
+  paymentIntentId: varchar("payment_intent_id"),
   amountCents: integer("amount_cents").notNull(),
-  currency: text("currency").notNull().default("USD"),
-  
-  // Status tracking
-  status: paymentStatusEnum("status").notNull().default("pending"),
-  capturedAt: timestamp("captured_at"),
-  voided_at: timestamp("voided_at"),
+  status: paymentStatusEnum("status").default("paid"),
+  paidAt: timestamp("paid_at"),
   refundedAt: timestamp("refunded_at"),
-  refundAmountCents: integer("refund_amount_cents").notNull().default(0),
-  
-  // Legacy fields for backward compatibility
-  paymentIntentId: varchar("payment_intent_id"), // Deprecated, use processorPaymentId
-  paidAt: timestamp("paid_at"), // Deprecated, use capturedAt
-  refundReason: text("refund_reason"), // Deprecated, use refunds table
-  refundedBy: varchar("refunded_by"), // Deprecated, use refunds table
-  adminNotes: text("admin_notes"),
-  
-  // Gateway response metadata
-  meta: jsonb("meta").$type<Record<string, any>>().default({}),
-  
+  refundReason: text("refund_reason"),
+  refundedBy: varchar("refunded_by"), // admin user ID who performed the refund
+  adminNotes: text("admin_notes"), // admin notes on payment actions
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("payments_tenant_id_idx").on(table.tenantId),
-  index("payments_player_session_idx").on(table.playerId, table.sessionId),
-  index("payments_processor_id_idx").on(table.processor, table.processorPaymentId),
-]);
-
-// Refunds table for tracking refund operations
-export const refundStatusEnum = pgEnum("refund_status", ["pending", "succeeded", "failed"]);
-
-export const refunds = pgTable("refunds", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  paymentId: varchar("payment_id").notNull().references(() => payments.id),
-  processorRefundId: text("processor_refund_id").notNull(), // Braintree refund transaction id or Stripe refund id
-  amountCents: integer("amount_cents").notNull(),
-  reason: text("reason"),
-  initiatedByUserId: varchar("initiated_by_user_id").notNull().references(() => users.id),
-  status: refundStatusEnum("status").notNull().default("pending"),
-  processorResponse: jsonb("processor_response").$type<Record<string, any>>().default({}),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("refunds_payment_id_idx").on(table.paymentId),
-  index("refunds_processor_id_idx").on(table.processorRefundId),
 ]);
 
 // Help requests table
@@ -1041,13 +992,6 @@ export const insertSignupSchema = createInsertSchema(signups).omit({
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
-});
-
-export const insertRefundSchema = createInsertSchema(refunds).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
@@ -1297,8 +1241,6 @@ export type Signup = typeof signups.$inferSelect;
 export type InsertSignup = z.infer<typeof insertSignupSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
-export type Refund = typeof refunds.$inferSelect;
-export type InsertRefund = z.infer<typeof insertRefundSchema>;
 export type HelpRequest = typeof helpRequests.$inferSelect;
 export type InsertHelpRequest = z.infer<typeof insertHelpRequestSchema>;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;

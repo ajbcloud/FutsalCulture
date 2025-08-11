@@ -1,7 +1,7 @@
 import express from 'express';
 import Stripe from 'stripe';
 import { db } from './db';
-import { tenants, payments } from '../shared/schema';
+import { tenants } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -13,7 +13,7 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-07-30.basil',
+  apiVersion: '2025-06-30.basil',
 });
 
 const router = express.Router();
@@ -98,38 +98,15 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('Payment succeeded for invoice:', invoice.id);
+        if (invoice.subscription) {
+          console.log('Payment succeeded for subscription:', invoice.subscription);
+        }
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('Payment failed for invoice:', invoice.id);
-        break;
-      }
-
-      // Handle payment intent updates for session payments
-      case 'payment_intent.succeeded':
-      case 'payment_intent.payment_failed':
-      case 'payment_intent.canceled': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        await handlePaymentIntentUpdate(paymentIntent, event.type);
-        break;
-      }
-
-      // Handle charge updates
-      case 'charge.succeeded':
-      case 'charge.failed':
-      case 'charge.dispute.created': {
-        const charge = event.data.object as Stripe.Charge;
-        await handleChargeUpdate(charge, event.type);
-        break;
-      }
-
-      // Handle refund events
-      case 'charge.refunded': {
-        const charge = event.data.object as Stripe.Charge;
-        await handleRefundUpdate(charge);
+        console.log('Payment failed for subscription:', invoice.subscription);
         break;
       }
 
@@ -198,153 +175,6 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     .where(eq(tenants.id, tenant[0].id));
 
   console.log(`Reset tenant ${tenant[0].id} to core plan after cancellation`);
-}
-
-// Handle payment intent updates
-async function handlePaymentIntentUpdate(paymentIntent: Stripe.PaymentIntent, eventType: string) {
-  try {
-    const payment = await db.select()
-      .from(payments)
-      .where(eq(payments.processorPaymentId, paymentIntent.id))
-      .limit(1);
-
-    if (!payment.length) {
-      console.log(`No payment record found for PaymentIntent: ${paymentIntent.id}`);
-      return;
-    }
-
-    const paymentRecord = payment[0];
-    let newStatus = paymentRecord.status;
-    let updateData: any = {
-      updatedAt: new Date(),
-      meta: {
-        ...paymentRecord.meta,
-        webhookUpdate: {
-          eventType: eventType,
-          timestamp: new Date(),
-          paymentIntent: paymentIntent
-        }
-      }
-    };
-
-    switch (eventType) {
-      case 'payment_intent.succeeded':
-        newStatus = 'paid';
-        updateData.capturedAt = new Date();
-        break;
-      case 'payment_intent.payment_failed':
-        newStatus = 'failed';
-        break;
-      case 'payment_intent.canceled':
-        newStatus = 'voided';
-        updateData.voided_at = new Date();
-        break;
-    }
-
-    updateData.status = newStatus;
-
-    await db.update(payments)
-      .set(updateData)
-      .where(eq(payments.id, paymentRecord.id));
-
-    console.log(`Updated payment ${paymentRecord.id} status to ${newStatus} via PaymentIntent webhook`);
-  } catch (error) {
-    console.error('Error handling PaymentIntent update:', error);
-  }
-}
-
-// Handle charge updates
-async function handleChargeUpdate(charge: Stripe.Charge, eventType: string) {
-  try {
-    const payment = await db.select()
-      .from(payments)
-      .where(eq(payments.processorPaymentId, charge.id))
-      .limit(1);
-
-    if (!payment.length) {
-      console.log(`No payment record found for Charge: ${charge.id}`);
-      return;
-    }
-
-    const paymentRecord = payment[0];
-    let newStatus = paymentRecord.status;
-    let updateData: any = {
-      updatedAt: new Date(),
-      meta: {
-        ...paymentRecord.meta,
-        webhookUpdate: {
-          eventType: eventType,
-          timestamp: new Date(),
-          charge: charge
-        }
-      }
-    };
-
-    switch (eventType) {
-      case 'charge.succeeded':
-        newStatus = 'paid';
-        updateData.capturedAt = new Date();
-        break;
-      case 'charge.failed':
-        newStatus = 'failed';
-        break;
-      case 'charge.dispute.created':
-        console.log(`Dispute created for charge ${charge.id}`);
-        break;
-    }
-
-    updateData.status = newStatus;
-
-    await db.update(payments)
-      .set(updateData)
-      .where(eq(payments.id, paymentRecord.id));
-
-    console.log(`Updated payment ${paymentRecord.id} status to ${newStatus} via Charge webhook`);
-  } catch (error) {
-    console.error('Error handling Charge update:', error);
-  }
-}
-
-// Handle refund updates
-async function handleRefundUpdate(charge: Stripe.Charge) {
-  try {
-    const payment = await db.select()
-      .from(payments)
-      .where(eq(payments.processorPaymentId, charge.id))
-      .limit(1);
-
-    if (!payment.length) {
-      console.log(`No payment record found for Charge: ${charge.id}`);
-      return;
-    }
-
-    const paymentRecord = payment[0];
-    const refundAmountCents = charge.amount_refunded || 0;
-    const isFullRefund = refundAmountCents >= paymentRecord.amountCents;
-
-    const updateData: any = {
-      status: isFullRefund ? 'refunded' : 'partial_refunded',
-      refundAmountCents: refundAmountCents,
-      refundedAt: new Date(),
-      updatedAt: new Date(),
-      meta: {
-        ...paymentRecord.meta,
-        webhookRefundUpdate: {
-          timestamp: new Date(),
-          refunds: charge.refunds?.data || [],
-          amountRefunded: refundAmountCents
-        }
-      }
-    };
-
-    await db.update(payments)
-      .set(updateData)
-      .where(eq(payments.id, paymentRecord.id));
-
-    console.log(`Updated payment ${paymentRecord.id} refund amount to ${refundAmountCents} cents`);
-  } catch (error) {
-    console.error('Error handling refund update:', error);
-  }
 }
 
 function getPlanLevelFromPrice(priceId?: string): string | null {

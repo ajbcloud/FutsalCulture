@@ -17,14 +17,13 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../hooks/use-toast';
-import { Upload, Download, Edit, Users, UserCheck, Activity, Target, CreditCard } from 'lucide-react';
+import { Upload, Download, Edit, Users, UserCheck, Activity, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link, useLocation } from 'wouter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { PlayerSessionHistory } from '@/components/player-session-history';
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -35,8 +34,6 @@ export default function AdminPlayers() {
   const [importing, setImporting] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -225,11 +222,6 @@ export default function AdminPlayers() {
       phoneNumber: player.phoneNumber || ''
     });
     setShowEditModal(true);
-  };
-
-  const openHistoryModal = (player: any) => {
-    setSelectedPlayer(player);
-    setShowHistoryModal(true);
   };
 
   const handleUpdatePlayer = async () => {
@@ -449,7 +441,6 @@ export default function AdminPlayers() {
               <TableHead className="text-muted-foreground">Portal Access</TableHead>
               <TableHead className="text-muted-foreground">Sessions</TableHead>
               <TableHead className="text-muted-foreground">Last Activity</TableHead>
-              <TableHead className="text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -504,28 +495,6 @@ export default function AdminPlayers() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {player.lastActivity ? format(new Date(player.lastActivity), 'MMM d, yyyy') : 'Never'}
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditPlayer(player)}
-                      className="text-xs px-2 py-1 h-7"
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openHistoryModal(player)}
-                      className="text-xs px-2 py-1 h-7"
-                    >
-                      <CreditCard className="w-3 h-3 mr-1" />
-                      History
-                    </Button>
-                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -614,7 +583,7 @@ export default function AdminPlayers() {
                 </div>
               </div>
 
-              <div className="flex justify-end mt-3 space-x-2">
+              <div className="flex justify-end mt-3">
                 <Button
                   size="sm"
                   variant="outline"
@@ -623,15 +592,6 @@ export default function AdminPlayers() {
                 >
                   <Edit className="w-3 h-3 mr-1" />
                   Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openHistoryModal(player)}
-                  className="text-xs px-3 py-1 h-7"
-                >
-                  <CreditCard className="w-3 h-3 mr-1" />
-                  History
                 </Button>
               </div>
             </div>
@@ -837,24 +797,6 @@ export default function AdminPlayers() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Session History Modal */}
-      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="bg-card border-border max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-white">
-              Session History & Payment Management
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedPlayer && (
-            <PlayerSessionHistory
-              playerId={selectedPlayer.id}
-              playerName={`${selectedPlayer.firstName} ${selectedPlayer.lastName}`}
-            />
-          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>
