@@ -522,7 +522,9 @@ export default function Dashboard() {
                                   {!reservation.paid && reservation.reservationExpiresAt && (
                                     <div className="mt-2">
                                       <ReservationCountdown 
-                                        expiresAt={new Date(reservation.reservationExpiresAt).toISOString()}
+                                        expiresAt={typeof reservation.reservationExpiresAt === 'string' 
+                                          ? reservation.reservationExpiresAt 
+                                          : new Date(reservation.reservationExpiresAt).toISOString()}
                                         onExpired={() => {
                                           // Refresh signups when reservation expires
                                           queryClient.invalidateQueries({ queryKey: ['/api/signups'] });

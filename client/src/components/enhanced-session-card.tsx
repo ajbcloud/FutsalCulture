@@ -236,7 +236,9 @@ export default function EnhancedSessionCard({
                 )}
                 {!reservationExpires && reservationSignup.reservationExpiresAt && (
                   <ReservationCountdown
-                    expiresAt={new Date(reservationSignup.reservationExpiresAt).toISOString()}
+                    expiresAt={typeof reservationSignup.reservationExpiresAt === 'string' 
+                      ? reservationSignup.reservationExpiresAt 
+                      : new Date(reservationSignup.reservationExpiresAt).toISOString()}
                     onExpired={() => {
                       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
                       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
