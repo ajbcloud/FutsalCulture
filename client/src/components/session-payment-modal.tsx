@@ -230,6 +230,30 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         filter: brightness(0) invert(0.8) !important;
         opacity: 1 !important;
       }
+      
+      /* Fix toggle text visibility */
+      .braintree-toggle {
+        color: #f9fafb !important;
+      }
+      
+      .braintree-toggle__label {
+        color: #f9fafb !important;
+      }
+      
+      .braintree-toggle__switch {
+        background-color: #374151 !important;
+        border-color: #6b7280 !important;
+      }
+      
+      .braintree-large-button {
+        background-color: #1f2937 !important;
+        color: #f9fafb !important;
+        border-color: #374151 !important;
+      }
+      
+      .braintree-large-button:hover {
+        background-color: #374151 !important;
+      }
     `;
     
     // Create style element and inject CSS

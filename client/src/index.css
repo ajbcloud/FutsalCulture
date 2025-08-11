@@ -71,6 +71,30 @@
   opacity: 1 !important;
 }
 
+/* Fix "Choose another way to pay" text visibility in dark mode */
+.dark .braintree-toggle {
+  color: #f9fafb !important;
+}
+
+.dark .braintree-toggle__label {
+  color: #f9fafb !important;
+}
+
+.dark .braintree-toggle__switch {
+  background-color: #374151 !important;
+  border-color: #6b7280 !important;
+}
+
+.dark .braintree-large-button {
+  background-color: #1f2937 !important;
+  color: #f9fafb !important;
+  border-color: #374151 !important;
+}
+
+.dark .braintree-large-button:hover {
+  background-color: #374151 !important;
+}
+
 /* Force feature grid checkmarks to be green */
 .feature-grid-check {
   color: #16a34a !important;
