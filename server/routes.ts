@@ -23,6 +23,7 @@ import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { stripeWebhookRouter } from './stripe-webhooks';
 
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
@@ -1323,6 +1324,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup billing routes
   const billingRoutes = await import('./billing-routes');
   app.use('/api', isAuthenticated, billingRoutes.default);
+  
+  // Setup session billing routes for payment processing
+  const sessionBillingRoutes = await import('./session-billing-routes');
+  app.use('/api', isAuthenticated, sessionBillingRoutes.default);
 
   // Setup tenant routes
   const tenantRoutes = await import('./tenant-routes');

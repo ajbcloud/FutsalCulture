@@ -175,11 +175,14 @@ export const signups = pgTable("signups", {
   sessionId: varchar("session_id").notNull(),
   paid: boolean("paid").default(false),
   paymentIntentId: varchar("payment_intent_id"),
+  paymentId: varchar("payment_id"), // For both Stripe and Braintree payment IDs
+  paymentProvider: varchar("payment_provider"), // 'stripe' or 'braintree'
   // Discount code tracking
   discountCodeId: varchar("discount_code_id"),
   discountCodeApplied: varchar("discount_code_applied"), // The actual code used
   discountAmountCents: integer("discount_amount_cents"), // Amount discounted
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("signups_tenant_id_idx").on(table.tenantId),
 ]);

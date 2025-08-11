@@ -11,6 +11,7 @@ import PlayerForm from "@/components/player-form";
 import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
 import WaitlistOffers from "@/components/waitlist-offers";
+import { SessionPaymentModal } from "@/components/session-payment-modal";
 
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,8 @@ export default function Dashboard() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [localReservedSessions, setLocalReservedSessions] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPaymentSession, setSelectedPaymentSession] = useState<{ session: FutsalSession; player: Player } | null>(null);
 
   // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
@@ -500,6 +503,25 @@ export default function Dashboard() {
                                   }`}>
                                     {reservation.paid ? 'Paid' : 'Pending Payment'}
                                   </span>
+                                  
+                                  {!reservation.paid && (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedPaymentSession({
+                                          session: reservation.session,
+                                          player: player
+                                        });
+                                        setPaymentModalOpen(true);
+                                      }}
+                                      className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
+                                      data-testid="button-pay-now"
+                                    >
+                                      Pay Now
+                                    </Button>
+                                  )}
+                                  
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -537,7 +559,18 @@ export default function Dashboard() {
         </div>
       </section>
 
-
+      {/* Payment Modal */}
+      {selectedPaymentSession && (
+        <SessionPaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setSelectedPaymentSession(null);
+          }}
+          session={selectedPaymentSession.session}
+          player={selectedPaymentSession.player}
+        />
+      )}
 
     </div>
   );
