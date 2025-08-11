@@ -14,7 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, Phone, Clock, MapPin } from "lucide-react";
+import { useHasFeature } from "@/hooks/use-feature-flags";
+import { FEATURE_KEYS } from "@shared/schema";
+import { Mail, Phone, Clock, MapPin, Sparkles, Crown } from "lucide-react";
 
 const helpSchema = z.object({
   firstName: z.string()
@@ -60,6 +62,7 @@ export default function Help() {
   const businessName = useBusinessName();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
+  const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [captchaAnswer, setCaptchaAnswer] = useState("");
@@ -418,6 +421,67 @@ export default function Help() {
               )}
             </CardContent>
           </Card>
+
+          {/* Elite Priority Support - Only shown for Elite plan users */}
+          {hasPlayerDevelopment && (
+            <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-300/50 dark:border-purple-700/50">
+              <CardHeader>
+                <CardTitle className="text-foreground text-xl flex items-center gap-2">
+                  <Crown className="w-6 h-6 text-purple-500" />
+                  Elite Priority Support
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-purple-200/50 dark:border-purple-700/50">
+                  <h4 className="text-foreground font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    Your Elite Benefits
+                  </h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Priority response: 4-hour guaranteed response time during business hours
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Dedicated Elite support queue with specialized agents
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Screen sharing and video support available upon request
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Direct phone support during business hours
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Feature request priority and implementation updates
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200/50 dark:border-amber-700/50">
+                  <h4 className="text-foreground font-semibold mb-2">📞 Elite Direct Line</h4>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    For urgent issues, Elite users can call our direct support line:
+                  </p>
+                  <p className="text-lg font-mono text-foreground bg-white/70 dark:bg-gray-800/70 px-3 py-1 rounded border">
+                    (833) ELITE-HQ
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Available Monday-Friday, 9:00 AM - 6:00 PM EST
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    When submitting requests through the form above, they'll automatically be routed to our Elite support queue for faster processing.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contact Information */}
           <div className="space-y-6">

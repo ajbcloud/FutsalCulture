@@ -43,7 +43,6 @@ const adminNavItems = [
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
-  { href: "/admin/elite-features", label: "Elite Features", icon: Sparkles, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -129,22 +128,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 );
               })}
               
-              {/* Elite Features - Only show for Elite plan users */}
-              {hasThemeCustomization && (
-                <Link href="/admin/elite-features">
-                  <div 
-                    className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                      location.startsWith("/admin/elite-features")
-                        ? 'bg-primary text-primary-foreground admin-nav-active' 
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Sparkles className="w-5 h-5 mr-3" />
-                    <span className={`admin-nav-text ${location.startsWith("/admin/elite-features") ? 'theme-nav-active-text' : 'theme-nav-text'}`}>Elite Features</span>
-                  </div>
-                </Link>
-              )}
+
             </div>
           </nav>
         </div>

@@ -92,7 +92,7 @@ function Router() {
                 <Route path="/admin/help-requests" component={AdminHelpRequests} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/admin/integrations" component={AdminIntegrations} />
-                <Route path="/admin/elite-features" component={AdminEliteFeatures} />
+
                 <Route path="/admin/payment" component={AdminPayment} />
               </>
             )}
