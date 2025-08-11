@@ -164,12 +164,13 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             cardholderName: {
               required: false
             }
-          },
-          paypal: {
-            flow: 'checkout',
-            amount: session.priceCents / 100,
-            currency: 'USD'
           }
+          // Note: PayPal disabled for sandbox testing - requires linked PayPal sandbox account
+          // paypal: {
+          //   flow: 'checkout',
+          //   amount: session.priceCents / 100,
+          //   currency: 'USD'
+          // }
         }).then((instance: any) => {
           setDropinInstance(instance);
           setIsDropinReady(true);
