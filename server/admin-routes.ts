@@ -1910,8 +1910,37 @@ export function setupAdminRoutes(app: any) {
         return res.status(400).json({ message: validationError });
       }
 
+      // Handle payment processor mutual exclusivity (Stripe vs Braintree)
+      if ((provider === 'stripe' || provider === 'braintree') && enabled) {
+        const otherProvider = provider === 'stripe' ? 'braintree' : 'stripe';
+        const otherProcessorIntegration = await db.select()
+          .from(integrations)
+          .where(and(
+            eq(integrations.provider, otherProvider),
+            eq(integrations.enabled, true)
+          ))
+          .limit(1);
+
+        if (otherProcessorIntegration.length > 0) {
+          // Disable the other payment processor
+          await db.update(integrations)
+            .set({
+              enabled: false,
+              updatedAt: new Date(),
+              configuredBy: adminUserId,
+            })
+            .where(eq(integrations.provider, otherProvider));
+          
+          // Add a note about the automatic switch
+          console.log(`Automatically disabled ${otherProvider} integration when enabling ${provider}`);
+        }
+      }
+
       // Check if integration already exists
-      const existing = await db.select().from(integrations).where(eq(integrations.provider, provider)).limit(1);
+      const existing = await db.select()
+        .from(integrations)
+        .where(eq(integrations.provider, provider))
+        .limit(1);
       
       if (existing.length > 0) {
         // Update existing integration

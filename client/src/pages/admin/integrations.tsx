@@ -215,12 +215,18 @@ export default function AdminIntegrations() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to save integration');
+        throw new Error(error.message || error.error || 'Failed to save integration');
       }
+
+      // Check if this is a payment processor that might have disabled another
+      const isPaymentProcessor = configureDialog === 'stripe' || configureDialog === 'braintree';
+      const message = isPaymentProcessor 
+        ? `${configureDialog} integration saved successfully. Other payment processors have been automatically disabled.`
+        : "Integration saved successfully";
 
       toast({
         title: "Success",
-        description: "Integration saved successfully",
+        description: message,
       });
       
       setConfigureDialog(null);
