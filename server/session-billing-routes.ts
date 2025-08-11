@@ -25,6 +25,14 @@ function createBraintreeGateway(credentials: any): braintree.BraintreeGateway {
 async function generateBraintreeClientToken(credentials: any): Promise<string> {
   try {
     console.log('Generating Braintree client token...');
+    console.log('Braintree credentials check:', {
+      hasEnvironment: !!credentials?.environment,
+      hasMerchantId: !!credentials?.merchantId,
+      hasPublicKey: !!credentials?.publicKey,
+      hasPrivateKey: !!credentials?.privateKey,
+      environment: credentials?.environment
+    });
+    
     const gateway = createBraintreeGateway(credentials);
     
     // Generate client token with options to ensure payment method selection
@@ -37,11 +45,30 @@ async function generateBraintreeClientToken(credentials: any): Promise<string> {
       }
     });
     
+    console.log('Braintree response received:', {
+      hasResponse: !!response,
+      hasClientToken: !!response?.clientToken,
+      responseKeys: Object.keys(response || {}),
+      clientTokenType: typeof response?.clientToken,
+      clientTokenLength: response?.clientToken?.length,
+      responseSuccess: response?.success
+    });
+    
+    if (!response?.clientToken) {
+      console.error('Braintree client token is missing from response:', response);
+      throw new Error('Braintree client token not found in response');
+    }
+    
     console.log('Braintree client token generated successfully');
     return response.clientToken;
   } catch (error) {
     console.error('Error generating Braintree client token:', error);
-    throw new Error('Failed to generate Braintree client token');
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    throw new Error('Failed to generate Braintree client token: ' + error.message);
   }
 }
 
