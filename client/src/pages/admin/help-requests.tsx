@@ -148,7 +148,7 @@ export default function AdminHelpRequests() {
       phone: "",
       subject: "",
       category: "",
-      priority: "medium",
+      priority: hasPlayerDevelopment ? "high" : "medium",
       message: "",
     },
   });
@@ -176,8 +176,11 @@ export default function AdminHelpRequests() {
   // Personal request to PlayHQ mutation
   const personalRequestMutation = useMutation({
     mutationFn: async (data: PersonalRequest) => {
+      // Set priority based on user's subscription level
+      const priority = hasPlayerDevelopment ? "high" : data.priority || "medium";
       return apiRequest('/api/help', 'POST', { 
         ...data, 
+        priority,
         source: "admin_portal" 
       });
     },
@@ -1191,7 +1194,7 @@ export default function AdminHelpRequests() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={personalRequestForm.control}
                         name="category"
@@ -1216,35 +1219,14 @@ export default function AdminHelpRequests() {
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={personalRequestForm.control}
-                        name="priority"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Priority</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="low">Low</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="urgent">Urgent</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       <div className="flex items-end">
-                        {hasPlayerDevelopment && (
-                          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        {hasPlayerDevelopment ? (
+                          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 h-10">
                             <Crown className="h-4 w-4" />
                             Elite Priority Support
                           </div>
+                        ) : (
+                          <div className="h-10"> {/* Empty space to maintain layout */} </div>
                         )}
                       </div>
                     </div>
