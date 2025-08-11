@@ -10,12 +10,13 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2 } from 'lucide-react';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
 import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
 import { FeatureGrid } from '../../components/billing/FeatureGrid';
@@ -76,6 +77,20 @@ interface Integration {
   testStatus?: 'success' | 'failure' | 'pending';
   createdAt: string;
   updatedAt: string;
+}
+
+interface ProviderConfig {
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  category: 'email' | 'sms' | 'calendar' | 'storage' | 'payment' | 'accounting';
+  fields: Array<{
+    key: string;
+    label: string;
+    type: 'text' | 'password' | 'email' | 'url';
+    placeholder?: string;
+    required: boolean;
+  }>;
 }
 
 interface SubscriptionInfo {
@@ -311,6 +326,11 @@ export default function AdminSettings() {
     waitlistPromotionMessage: "Great news! A spot opened up in {session}. You have until {expires} to complete your booking."
   });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [configureDialog, setConfigureDialog] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [savingIntegration, setSavingIntegration] = useState(false);
+  const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
+  const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newLocation, setNewLocation] = useState('');
@@ -332,10 +352,10 @@ export default function AdminSettings() {
 
   // Feature flag hooks
   const { data: planFeatures } = usePlanFeatures();
-  const { hasFeature: hasSmsFeature } = useHasFeature('smsNotifications');
-  const { hasFeature: hasPaymentsFeature } = useHasFeature('payments');
-  const { hasFeature: hasAdvancedAnalytics } = useHasFeature('analytics');
-  const { hasFeature: hasAutoPromotion } = useHasFeature('waitlist');
+  const { hasFeature: hasSmsFeature } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
+  const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
+  const { hasFeature: hasAdvancedAnalytics } = useHasFeature(FEATURE_KEYS.ANALYTICS_ADVANCED);
+  const { hasFeature: hasAutoPromotion } = useHasFeature(FEATURE_KEYS.WAITLIST_AUTO_PROMOTE);
   const planLimits = usePlanLimits();
 
   // Check if Twilio integration is enabled
@@ -360,6 +380,7 @@ export default function AdminSettings() {
 
     fetchSettings();
     fetchIntegrations();
+    fetchActiveProcessor();
   }, [toast]);
 
   const fetchSettings = async () => {
@@ -403,6 +424,99 @@ export default function AdminSettings() {
     }
   };
 
+  const providerConfigs: Record<string, ProviderConfig> = {
+    twilio: {
+      name: 'Twilio',
+      icon: <MessageSquare className="w-4 h-4" />,
+      description: 'SMS messaging and phone verification',
+      category: 'sms',
+      fields: [
+        { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
+        { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
+        { key: 'fromNumber', label: 'From Number', type: 'text', placeholder: '+1234567890', required: true },
+      ],
+    },
+    sendgrid: {
+      name: 'SendGrid',
+      icon: <Mail className="w-4 h-4" />,
+      description: 'Email delivery and marketing platform',
+      category: 'email',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+        { key: 'verifiedSender', label: 'Verified Sender Email', type: 'email', required: true },
+      ],
+    },
+    google: {
+      name: 'Google Workspace',
+      icon: <Calendar className="w-4 h-4" />,
+      description: 'Gmail, Calendar, and Drive integration',
+      category: 'calendar',
+      fields: [
+        { key: 'clientId', label: 'Client ID', type: 'text', required: true },
+        { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+        { key: 'redirectUri', label: 'Redirect URI', type: 'url', required: true },
+      ],
+    },
+    microsoft: {
+      name: 'Microsoft 365',
+      icon: <Cloud className="w-4 h-4" />,
+      description: 'Outlook, Teams, and SharePoint integration',
+      category: 'calendar',
+      fields: [
+        { key: 'tenantId', label: 'Tenant ID', type: 'text', required: true },
+        { key: 'clientId', label: 'Client ID', type: 'text', required: true },
+        { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+      ],
+    },
+    stripe: {
+      name: 'Stripe',
+      icon: <CreditCard className="w-4 h-4" />,
+      description: 'Payment processing and subscription management',
+      category: 'payment',
+      fields: [
+        { key: 'publishableKey', label: 'Publishable Key', type: 'text', placeholder: 'pk_test_...', required: true },
+        { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', required: true },
+        { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', required: false },
+      ],
+    },
+    mailchimp: {
+      name: 'Mailchimp',
+      icon: <Mail className="w-4 h-4" />,
+      description: 'Email marketing and newsletter management for parent communications',
+      category: 'email',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your Mailchimp API key', required: true },
+        { key: 'audienceId', label: 'Audience ID', type: 'text', placeholder: 'Your default audience/list ID', required: true },
+        { key: 'serverPrefix', label: 'Server Prefix', type: 'text', placeholder: 'us1, us2, etc. (from your API key)', required: true },
+      ],
+    },
+    quickbooks: {
+      name: 'QuickBooks Online',
+      icon: <DollarSign className="w-4 h-4" />,
+      description: 'Accounting and financial management for revenue tracking and invoicing',
+      category: 'accounting',
+      fields: [
+        { key: 'clientId', label: 'Client ID', type: 'text', placeholder: 'Your QuickBooks app Client ID', required: true },
+        { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'Your QuickBooks app Client Secret', required: true },
+        { key: 'redirectUri', label: 'Redirect URI', type: 'url', placeholder: 'https://yourapp.com/auth/quickbooks/callback', required: true },
+        { key: 'companyId', label: 'Company ID', type: 'text', placeholder: 'QuickBooks Company ID (obtained after OAuth)', required: false },
+        { key: 'sandbox', label: 'Sandbox Mode', type: 'text', placeholder: 'true or false', required: false },
+      ],
+    },
+    braintree: {
+      name: 'Braintree',
+      icon: <CreditCard className="w-4 h-4" />,
+      description: 'Alternative payment processing with advanced fraud protection and global support',
+      category: 'payment',
+      fields: [
+        { key: 'merchantId', label: 'Merchant ID', type: 'text', placeholder: 'Your Braintree Merchant ID', required: true },
+        { key: 'publicKey', label: 'Public Key', type: 'text', placeholder: 'Your Braintree Public Key', required: true },
+        { key: 'privateKey', label: 'Private Key', type: 'password', placeholder: 'Your Braintree Private Key', required: true },
+        { key: 'environment', label: 'Environment', type: 'text', placeholder: 'sandbox or production', required: true },
+      ],
+    },
+  };
+
   const fetchIntegrations = async () => {
     try {
       const response = await fetch('/api/admin/integrations');
@@ -411,6 +525,109 @@ export default function AdminSettings() {
       setIntegrations(data);
     } catch (error) {
       console.error('Error fetching integrations:', error);
+    }
+  };
+
+  const fetchActiveProcessor = async () => {
+    try {
+      const response = await fetch('/api/billing/active-processor');
+      if (response.ok) {
+        const data = await response.json();
+        setActiveProcessor(data);
+      }
+    } catch (error) {
+      console.error('Error fetching active processor:', error);
+    }
+  };
+
+  const handleConfigureIntegration = async (provider: string) => {
+    try {
+      const existing = integrations.find(i => i.provider === provider);
+      if (existing) {
+        const response = await fetch(`/api/admin/integrations/${existing.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCredentials(data.credentials || {});
+        }
+      } else {
+        setCredentials({});
+      }
+      setConfigureDialog(provider);
+    } catch (error) {
+      console.error('Error loading integration:', error);
+    }
+  };
+
+  const handleSaveIntegration = async () => {
+    if (!configureDialog) return;
+    
+    setSavingIntegration(true);
+    try {
+      const response = await fetch('/api/admin/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: configureDialog,
+          credentials,
+          enabled: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.error || 'Failed to save integration');
+      }
+
+      const isPaymentProcessor = configureDialog === 'stripe' || configureDialog === 'braintree';
+      const message = isPaymentProcessor 
+        ? `${configureDialog} integration saved successfully. Other payment processors have been automatically disabled.`
+        : "Integration saved successfully";
+
+      toast({
+        title: "Success",
+        description: message,
+      });
+      
+      setConfigureDialog(null);
+      setCredentials({});
+      fetchIntegrations();
+      fetchActiveProcessor();
+    } catch (error) {
+      console.error('Error saving integration:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save integration",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingIntegration(false);
+    }
+  };
+
+  const handleToggleIntegration = async (integration: Integration) => {
+    try {
+      const response = await fetch(`/api/admin/integrations/${integration.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !integration.enabled }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update integration');
+
+      toast({
+        title: "Success",
+        description: `Integration ${integration.enabled ? 'disabled' : 'enabled'}`,
+      });
+      
+      fetchIntegrations();
+      fetchActiveProcessor();
+    } catch (error) {
+      console.error('Error toggling integration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update integration",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1094,7 +1311,7 @@ export default function AdminSettings() {
                       </p>
                       {!hasAutoPromotion && (
                         <UpgradePrompt 
-                          feature={'waitlist'} 
+                          feature={FEATURE_KEYS.WAITLIST_AUTO_PROMOTE} 
                           className="mt-2"
                           targetPlan="growth"
                         />
@@ -1431,45 +1648,365 @@ export default function AdminSettings() {
                 Third-party Integrations
               </CardTitle>
               <p className="text-muted-foreground text-sm">
-                Manage external service integrations for email, SMS, payments, and accounting
+                Configure external service integrations for email, SMS, payments, and accounting
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-foreground">Integration Management</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Configure Stripe, SendGrid, Mailchimp, QuickBooks, and other service integrations
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    {integrations.slice(0, 3).map((integration) => (
-                      <div
-                        key={integration.id}
-                        className={`px-2 py-1 rounded text-xs ${
-                          integration.enabled 
-                            ? 'bg-green-900 text-green-300' 
-                            : 'bg-muted text-muted-foreground'
-                        }`}
+            <CardContent className="space-y-6">
+              {/* Payment Processors */}
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Payment Processing
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Stripe */}
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center">
+                        <CreditCard className="w-5 h-5 mr-2 text-purple-500" />
+                        <div>
+                          <h4 className="font-medium text-foreground">Stripe</h4>
+                          <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {integrations.find(i => i.provider === 'stripe')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                        {activeProcessor?.provider === 'stripe' && (
+                          <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Primary
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleConfigureIntegration('stripe')}
+                      className="w-full"
+                    >
+                      <Settings2 className="w-4 h-4 mr-2" />
+                      Configure
+                    </Button>
+                  </div>
+
+                  {/* Braintree */}
+                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_BRAINTREE}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <CreditCard className="w-5 h-5 mr-2 text-blue-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Braintree</h4>
+                            <p className="text-sm text-muted-foreground">Alternative payment processing</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {integrations.find(i => i.provider === 'braintree')?.enabled && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Active
+                            </Badge>
+                          )}
+                          {activeProcessor?.provider === 'braintree' && (
+                            <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              Primary
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('braintree')}
+                        className="w-full"
                       >
-                        {integration.provider}
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                  </FeatureGuard>
+                </div>
+              </div>
+
+              {/* Communication */}
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Communications
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* SendGrid */}
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center">
+                        <Mail className="w-5 h-5 mr-2 text-blue-500" />
+                        <div>
+                          <h4 className="font-medium text-foreground">SendGrid</h4>
+                          <p className="text-sm text-muted-foreground">Email delivery platform</p>
+                        </div>
                       </div>
-                    ))}
-                    {integrations.length > 3 && (
-                      <div className="px-2 py-1 rounded text-xs bg-muted text-muted-foreground">
-                        +{integrations.length - 3} more
+                      {integrations.find(i => i.provider === 'sendgrid')?.enabled && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleConfigureIntegration('sendgrid')}
+                      className="w-full"
+                    >
+                      <Settings2 className="w-4 h-4 mr-2" />
+                      Configure
+                    </Button>
+                  </div>
+
+                  {/* Twilio */}
+                  <FeatureGuard feature={FEATURE_KEYS.NOTIFICATIONS_SMS}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <MessageSquare className="w-5 h-5 mr-2 text-red-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Twilio</h4>
+                            <p className="text-sm text-muted-foreground">SMS messaging service</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'twilio')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
                       </div>
-                    )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('twilio')}
+                        className="w-full"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                  </FeatureGuard>
+
+                  {/* Mailchimp */}
+                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_MAILCHIMP}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <Mail className="w-5 h-5 mr-2 text-yellow-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Mailchimp</h4>
+                            <p className="text-sm text-muted-foreground">Email marketing platform</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'mailchimp')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('mailchimp')}
+                        className="w-full"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                  </FeatureGuard>
+                </div>
+              </div>
+
+              {/* Calendar & Productivity */}
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <Calendar className="w-5 h-5 mr-2" />
+                  Calendar & Productivity
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Google Workspace */}
+                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_CALENDAR}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="w-5 h-5 mr-2 text-red-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Google Workspace</h4>
+                            <p className="text-sm text-muted-foreground">Gmail, Calendar, and Drive</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'google')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('google')}
+                        className="w-full"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                  </FeatureGuard>
+
+                  {/* Microsoft 365 */}
+                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_CALENDAR}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <Cloud className="w-5 h-5 mr-2 text-blue-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Microsoft 365</h4>
+                            <p className="text-sm text-muted-foreground">Outlook, Teams, SharePoint</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'microsoft')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('microsoft')}
+                        className="w-full"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
+                  </FeatureGuard>
+                </div>
+              </div>
+
+              {/* Accounting */}
+              <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS}>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                    <DollarSign className="w-5 h-5 mr-2" />
+                    Accounting & Finance
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {/* QuickBooks */}
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <DollarSign className="w-5 h-5 mr-2 text-green-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">QuickBooks Online</h4>
+                            <p className="text-sm text-muted-foreground">Accounting and financial management</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'quickbooks')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('quickbooks')}
+                        className="w-full"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <Link href="/admin/integrations">
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    Manage All
-                    <ExternalLink className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
+              </FeatureGuard>
             </CardContent>
           </Card>
+
+          {/* Integration Configuration Dialog */}
+          <Dialog open={!!configureDialog} onOpenChange={(open) => !open && setConfigureDialog(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  Configure {configureDialog && providerConfigs[configureDialog]?.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {configureDialog && providerConfigs[configureDialog]?.description}
+                </DialogDescription>
+              </DialogHeader>
+
+              {configureDialog && (
+                <div className="space-y-4">
+                  {providerConfigs[configureDialog]?.fields.map((field) => (
+                    <div key={field.key}>
+                      <Label htmlFor={field.key} className="text-foreground">
+                        {field.label}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      <Input
+                        id={field.key}
+                        type={field.type}
+                        value={credentials[field.key] || ''}
+                        onChange={(e) => setCredentials(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        placeholder={field.placeholder}
+                        className="mt-1"
+                        required={field.required}
+                      />
+                    </div>
+                  ))}
+
+                  {configureDialog === 'stripe' && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-5 h-5 text-blue-500 mr-2 mt-0.5" />
+                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                          <p className="font-medium mb-1">Payment Processor Notice</p>
+                          <p>Enabling Stripe will automatically disable other payment processors. Only one payment processor can be active at a time.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {configureDialog === 'braintree' && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-5 h-5 text-blue-500 mr-2 mt-0.5" />
+                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                          <p className="font-medium mb-1">Payment Processor Notice</p>
+                          <p>Enabling Braintree will automatically disable other payment processors. Only one payment processor can be active at a time.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setConfigureDialog(null)}
+                  disabled={savingIntegration}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveIntegration}
+                  disabled={savingIntegration}
+                >
+                  {savingIntegration ? 'Saving...' : 'Save Integration'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         </Tabs>
       </AdminLayout>
