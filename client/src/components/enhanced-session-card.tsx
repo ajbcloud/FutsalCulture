@@ -138,7 +138,7 @@ export default function EnhancedSessionCard({
   const isDisabled = isReserved || isFull || createReservationMutation.isPending || !isBookingOpen;
 
   // Check if this reservation has a pending payment
-  const hasPendingPayment = reservationSignup && !reservationSignup.paid && reservationSignup.reservationExpiresAt;
+  const hasPendingPayment = reservationSignup && !reservationSignup.paid;
   const reservationExpires = reservationSignup?.reservationExpiresAt ? new Date(reservationSignup.reservationExpiresAt) : null;
 
   const getButtonText = () => {
@@ -242,7 +242,7 @@ export default function EnhancedSessionCard({
               </div>
               
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Complete your payment for <strong>{reservationSignup.player.firstName}</strong> to confirm the spot.
+                Complete your payment for <strong>{reservationSignup.player?.firstName || 'the player'}</strong> to confirm the spot.
               </p>
               
               <div className="flex gap-2">

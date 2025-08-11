@@ -228,6 +228,8 @@ export default function Dashboard() {
     new Date(signup.session.startTime) > new Date()
   );
 
+
+
   // Filter today's sessions - only show sessions eligible for parent's players AND not yet started
   const todaySessions = sessions.filter(session => {
     const sessionDate = new Date(session.startTime);
@@ -362,10 +364,14 @@ export default function Dashboard() {
                 // Find matching reservation/signup for this session
                 const reservationSignup = signups.find(signup => 
                   signup.sessionId === session.id && 
-                  !signup.paid && 
-                  signup.reservationExpiresAt &&
-                  new Date(signup.reservationExpiresAt) > new Date()
+                  !signup.paid && (
+                    // Either has valid expiration time or no expiration (legacy reservations)
+                    !signup.reservationExpiresAt || 
+                    new Date(signup.reservationExpiresAt) > new Date()
+                  )
                 );
+
+
 
                 return (
                   <EnhancedSessionCard 
