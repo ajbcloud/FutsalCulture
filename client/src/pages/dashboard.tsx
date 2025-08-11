@@ -532,11 +532,11 @@ export default function Dashboard() {
                                   )}
                                 </div>
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3">
-                                  <span className={`px-2 py-1 rounded text-sm font-medium text-center sm:text-left ${
-                                    reservation.paid ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'
-                                  }`}>
-                                    {reservation.paid ? 'Paid' : 'Pending Payment'}
-                                  </span>
+                                  {reservation.paid && (
+                                    <span className="px-2 py-1 rounded text-sm font-medium text-center sm:text-left bg-green-500 text-black">
+                                      Paid
+                                    </span>
+                                  )}
                                   
                                   {!reservation.paid && (
                                     <Button

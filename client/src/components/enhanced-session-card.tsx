@@ -224,11 +224,6 @@ export default function EnhancedSessionCard({
           {hasPendingPayment && reservationSignup && (
             <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-                    Pending Payment
-                  </Badge>
-                </div>
                 {reservationExpires && (
                   <ReservationCountdown
                     expiresAt={reservationExpires.toISOString()}
