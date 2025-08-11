@@ -479,12 +479,12 @@ export default function AdminHelpRequests() {
             </TabsTrigger>
             <TabsTrigger value="my-help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">My Help Requests</span>
+              <span className="hidden sm:inline">My Requests</span>
               <span className="sm:hidden">My Requests</span>
             </TabsTrigger>
             <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Personal Requests to PlayHQ</span>
+              <span className="hidden sm:inline">PlayHQ</span>
               <span className="sm:hidden">PlayHQ</span>
             </TabsTrigger>
             <TabsTrigger value="feature-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
@@ -1019,16 +1019,42 @@ export default function AdminHelpRequests() {
       </Dialog>
           </TabsContent>
 
-          {/* Tab 2: My Help Requests */}
+          {/* Tab 2: My Requests - Empty placeholder */}
           <TabsContent value="my-help-requests" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  My Help Requests
+                  My Requests
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  View and track your submitted help requests to PlayHQ support.
+                  View and track your general help requests.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No requests found</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You haven't submitted any general help requests yet.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 3: PlayHQ - Personal Requests & View Past Requests */}
+          <TabsContent value="personal-requests" className="space-y-6">
+            
+            {/* Section 1: View Past Requests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  My PlayHQ Requests
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  View and track your submitted requests to PlayHQ support.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1039,9 +1065,9 @@ export default function AdminHelpRequests() {
                 ) : !myHelpRequests || myHelpRequests.length === 0 ? (
                   <div className="text-center py-8">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">No help requests found</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-2">No PlayHQ requests found</h3>
                     <p className="text-sm text-muted-foreground">
-                      You haven't submitted any help requests yet. Use the "Personal Requests to PlayHQ" tab to submit a new request.
+                      You haven't submitted any requests to PlayHQ yet. Use the form below to submit a new request.
                     </p>
                   </div>
                 ) : (
@@ -1127,15 +1153,13 @@ export default function AdminHelpRequests() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Tab 3: Personal Requests to PlayHQ */}
-          <TabsContent value="personal-requests" className="space-y-6">
+            {/* Section 2: Submit New Request */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="h-5 w-5" />
-                  Submit Personal Request to PlayHQ
+                  Submit New Request to PlayHQ
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Send a direct message to PlayHQ support for personal assistance with your account or business needs.
