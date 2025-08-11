@@ -255,7 +255,12 @@ export default function EnhancedSessionCard({
                   Pay Now
                 </Button>
                 <Button
-                  onClick={() => cancelSignupMutation.mutate(reservationSignup.id)}
+                  onClick={() => cancelSignupMutation.mutate(reservationSignup.id, {
+                    onSuccess: () => {
+                      // Invalidate sessions cache to refresh spot counts
+                      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+                    }
+                  })}
                   disabled={cancelSignupMutation.isPending}
                   variant="outline"
                   className="flex-1 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"

@@ -550,7 +550,12 @@ export default function Dashboard() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => {
-                                        cancelSignupMutation.mutate(reservation.id);
+                                        cancelSignupMutation.mutate(reservation.id, {
+                                          onSuccess: () => {
+                                            // Invalidate sessions cache to refresh spot counts
+                                            queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+                                          }
+                                        });
                                       }}
                                       disabled={cancelSignupMutation.isPending}
                                       className="w-full border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 sm:w-auto"
