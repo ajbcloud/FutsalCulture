@@ -14,7 +14,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle, Reply, ExternalLink, HelpCircle, Sparkles, Crown, Mail, Phone, Clock, MapPin } from 'lucide-react';
+import { MessageSquare, CheckCircle, Reply, ExternalLink, HelpCircle, Sparkles, Crown, Mail, Phone, Clock, MapPin, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
@@ -176,12 +176,9 @@ export default function AdminHelpRequests() {
   // Personal request to PlayHQ mutation
   const personalRequestMutation = useMutation({
     mutationFn: async (data: PersonalRequest) => {
-      return apiRequest('/api/help', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          ...data, 
-          source: "admin_portal" 
-        })
+      return apiRequest('/api/help', 'POST', { 
+        ...data, 
+        source: "admin_portal" 
       });
     },
     onSuccess: () => {
@@ -203,10 +200,7 @@ export default function AdminHelpRequests() {
   // Feature request mutation
   const featureRequestMutation = useMutation({
     mutationFn: async (request: FeatureRequestForm) => {
-      return apiRequest('/api/feature-requests', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
+      return apiRequest('/api/feature-requests', 'POST', request);
     },
     onSuccess: () => {
       toast({
@@ -465,22 +459,17 @@ export default function AdminHelpRequests() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
-              Manage parent/player requests, submit personal requests, and track feature requests
+              Manage parent/player requests, communicate with PlayHQ, and track feature requests
             </p>
           </div>
         </div>
 
         <Tabs defaultValue="help-requests" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 h-auto">
             <TabsTrigger value="help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Parent/Player Help Requests</span>
               <span className="sm:hidden">Help Requests</span>
-            </TabsTrigger>
-            <TabsTrigger value="my-help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
-              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">My Requests</span>
-              <span className="sm:hidden">My Requests</span>
             </TabsTrigger>
             <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1019,31 +1008,7 @@ export default function AdminHelpRequests() {
       </Dialog>
           </TabsContent>
 
-          {/* Tab 2: My Requests - Empty placeholder */}
-          <TabsContent value="my-help-requests" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  My Requests
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  View and track your general help requests.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No requests found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    You haven't submitted any general help requests yet.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab 3: PlayHQ - Personal Requests & View Past Requests */}
+          {/* Tab 2: PlayHQ - Personal Requests & View Past Requests */}
           <TabsContent value="personal-requests" className="space-y-6">
             
             {/* Section 1: View Past Requests */}
