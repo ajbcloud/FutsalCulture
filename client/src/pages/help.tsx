@@ -115,10 +115,6 @@ export default function Help() {
     if (user) {
       const checkUserType = async () => {
         try {
-          // TEMPORARY: Force parent view for testing - remove this later
-          setIsParent(true);
-          return;
-          
           // Check if user is admin/assistant
           if (user.isAdmin || user.isAssistant) {
             setIsParent(false);
@@ -492,121 +488,7 @@ export default function Help() {
             </CardContent>
           </Card>
 
-          {/* Elite Priority Support - Only shown for Elite plan users and non-parents */}
-          {hasPlayerDevelopment && !isParent && (
-            <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-300/50 dark:border-purple-700/50">
-              <CardHeader>
-                <CardTitle className="text-foreground text-xl flex items-center gap-2">
-                  <Crown className="w-6 h-6 text-purple-500" />
-                  Elite Priority Support
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-lg border border-purple-200/50 dark:border-purple-700/50">
-                  <h4 className="text-foreground font-semibold mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-500" />
-                    Your Elite Benefits
-                  </h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Priority response: 4-hour guaranteed response time during business hours
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Dedicated Elite support queue with specialized agents
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Screen sharing and video support available upon request
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Direct phone support during business hours
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      High-priority feature requests with fastest review time
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200/50 dark:border-amber-700/50">
-                  <h4 className="text-foreground font-semibold mb-2">📞 Elite Direct Line</h4>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    For urgent issues, Elite users can call our direct support line:
-                  </p>
-                  <p className="text-lg font-mono text-foreground bg-white/70 dark:bg-gray-800/70 px-3 py-1 rounded border">
-                    (833) ELITE-HQ
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Available Monday-Friday, 9:00 AM - 6:00 PM EST
-                  </p>
-                </div>
 
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    When submitting requests through the form above, they'll automatically be routed to our Elite support queue for faster processing.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Feature Request Section - Available for Core, Growth, and Elite (but not parents) */}
-          {hasFeatureRequests && !isParent && (
-            <Card className="bg-card border border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground text-xl flex items-center gap-2">
-                  <Sparkles className="w-6 h-6 text-blue-500" />
-                  Feature Request Queue
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
-                  <h4 className="text-foreground font-semibold mb-2">🚀 Request New Features</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Have an idea to improve the platform? Submit feature requests that our development team will review and potentially implement.
-                  </p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-muted-foreground">
-                        <span className="font-medium text-green-600">Core Plan:</span> Standard review priority (typically 2-4 weeks)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-muted-foreground">
-                        <span className="font-medium text-blue-600">Growth Plan:</span> Medium priority review (typically 1-2 weeks)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span className="text-muted-foreground">
-                        <span className="font-medium text-purple-600">Elite Plan:</span> High priority review (typically 3-7 days)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200/50 dark:border-amber-700/50">
-                  <h4 className="text-foreground font-semibold mb-2">💡 How It Works</h4>
-                  <ol className="space-y-1 text-sm text-muted-foreground">
-                    <li>1. Submit your feature idea using the contact form above (select "Feature Request")</li>
-                    <li>2. Our team reviews and prioritizes based on your subscription level</li>
-                    <li>3. Approved features enter development queue with status updates</li>
-                    <li>4. You'll be notified when your requested feature goes live</li>
-                  </ol>
-                </div>
-                
-                <div className="text-center text-sm text-muted-foreground">
-                  All feature requests require Super Admin review with a minimum 1-week evaluation period.
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Contact Information */}
           <div className="space-y-6">
