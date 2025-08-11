@@ -78,7 +78,7 @@ export function PlayerSessionHistoryDropdown({
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="h-auto p-1 text-muted-foreground hover:text-blue-400 hover:bg-transparent"
+          className="h-auto p-1 text-blue-400 hover:text-blue-300 hover:bg-transparent underline cursor-pointer font-inherit"
           data-testid={`button-session-history-${playerId}`}
         >
           {sessionCount}

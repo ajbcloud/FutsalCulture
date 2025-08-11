@@ -72,7 +72,7 @@ export function ParentSessionHistoryDropdown({
         <Button
           variant="ghost"
           size="sm"
-          className="h-auto p-1 text-sm hover:bg-muted/50 text-primary hover:text-primary"
+          className="h-auto p-1 text-sm hover:bg-transparent text-blue-400 hover:text-blue-300 underline cursor-pointer font-inherit"
           data-testid={`button-session-history-${playerId}`}
         >
           {sessionCount} session{sessionCount !== 1 ? 's' : ''}
