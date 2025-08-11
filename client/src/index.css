@@ -2,6 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Braintree Drop-in Dark Mode Styles */
+.dark .braintree-option {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #f9fafb !important;
+}
+
+.dark .braintree-option:hover {
+  background-color: #374151 !important;
+}
+
+.dark .braintree-option__label {
+  color: #f9fafb !important;
+}
+
+.dark .braintree-option__logo {
+  filter: brightness(0) invert(1) !important;
+}
+
+.dark .braintree-sheet {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+.dark .braintree-form__label {
+  color: #d1d5db !important;
+}
+
+.dark .braintree-form__field {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+
+.dark .braintree-form__field:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 1px #3b82f6 !important;
+}
+
+.dark .braintree-form__field--valid {
+  border-color: #10b981 !important;
+}
+
+.dark .braintree-form__field-error {
+  color: #ef4444 !important;
+}
+
+.dark .braintree-methods {
+  background-color: #111827 !important;
+}
+
+/* Keep branded logos in their original colors */
+.dark .braintree-option--venmo .braintree-option__logo,
+.dark .braintree-option--googlepay .braintree-option__logo {
+  filter: none !important;
+}
+
+/* Card option specific styling */
+.dark .braintree-option--card .braintree-option__logo {
+  filter: brightness(0) invert(0.7) !important;
+}
+
 /* Force feature grid checkmarks to be green */
 .feature-grid-check {
   color: #16a34a !important;

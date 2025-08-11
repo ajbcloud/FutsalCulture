@@ -152,6 +152,91 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
     queryKey: ['/api/session-billing/payment-config'],
   });
 
+  // Function to apply dark mode styles to Braintree Drop-in UI
+  const applyDarkModeStyles = (container: HTMLElement) => {
+    // Check if dark mode is enabled by checking the document element
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    
+    if (!isDarkMode) return;
+    
+    const styles = `
+      /* Braintree Drop-in dark mode overrides */
+      .braintree-option {
+        background-color: #1f2937 !important;
+        border-color: #374151 !important;
+        color: #f9fafb !important;
+      }
+      
+      .braintree-option:hover {
+        background-color: #374151 !important;
+      }
+      
+      .braintree-option__label {
+        color: #f9fafb !important;
+      }
+      
+      .braintree-option__logo {
+        filter: brightness(0) invert(1);
+      }
+      
+      .braintree-sheet {
+        background-color: #1f2937 !important;
+        border-color: #374151 !important;
+      }
+      
+      .braintree-form__label {
+        color: #d1d5db !important;
+      }
+      
+      .braintree-form__field {
+        background-color: #374151 !important;
+        border-color: #4b5563 !important;
+        color: #f9fafb !important;
+      }
+      
+      .braintree-form__field:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 1px #3b82f6 !important;
+      }
+      
+      .braintree-form__field--valid {
+        border-color: #10b981 !important;
+      }
+      
+      .braintree-form__field-error {
+        color: #ef4444 !important;
+      }
+      
+      .braintree-methods {
+        background-color: #111827 !important;
+      }
+      
+      /* Venmo and Google Pay specific styling */
+      .braintree-option--venmo .braintree-option__logo,
+      .braintree-option--googlepay .braintree-option__logo {
+        filter: none !important;
+      }
+      
+      /* Card option specific styling */
+      .braintree-option--card .braintree-option__logo {
+        filter: brightness(0) invert(0.7) !important;
+      }
+    `;
+    
+    // Create style element and inject CSS
+    const styleElement = document.createElement('style');
+    styleElement.textContent = styles;
+    styleElement.id = 'braintree-dark-mode-styles';
+    
+    // Remove any existing styles first
+    const existingStyles = document.getElementById('braintree-dark-mode-styles');
+    if (existingStyles) {
+      existingStyles.remove();
+    }
+    
+    document.head.appendChild(styleElement);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -196,6 +281,13 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
           if (isMounted) {
             setDropinInstance(instance);
             setIsDropinReady(true);
+            
+            // Apply dark mode styles to Braintree Drop-in UI after a short delay to ensure DOM is ready
+            setTimeout(() => {
+              if (dropinContainerRef.current) {
+                applyDarkModeStyles(dropinContainerRef.current);
+              }
+            }, 100);
           } else {
             // Component unmounted during async operation
             instance.teardown();
@@ -259,7 +351,7 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
     <div className="space-y-4">
       <div 
         ref={dropinContainerRef}
-        className="min-h-[200px]"
+        className="min-h-[200px] braintree-container"
         data-testid="braintree-dropin-container"
       />
       {!paymentConfig?.clientToken && (
