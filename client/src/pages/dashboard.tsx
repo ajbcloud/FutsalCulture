@@ -511,72 +511,69 @@ export default function Dashboard() {
                         <div className="space-y-3">
                           {playerUpcomingReservations.map(reservation => (
                             <div key={reservation.id} className="bg-muted border border-border rounded p-3">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
-                                <div className="flex-1">
-                                  <p className="font-medium text-foreground">{reservation.session.title}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
-                                  
-                                  {!reservation.paid && reservation.reservationExpiresAt && (
-                                    <div className="mt-2">
-                                      <ReservationCountdown 
-                                        expiresAt={typeof reservation.reservationExpiresAt === 'string' 
-                                          ? reservation.reservationExpiresAt 
-                                          : new Date(reservation.reservationExpiresAt).toISOString()}
-                                        onExpired={() => {
-                                          // Refresh signups when reservation expires
-                                          queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+                              <div className="flex flex-col gap-3">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-foreground">{reservation.session.title}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
+                                  </div>
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3 flex-shrink-0">
+                                    {reservation.paid && (
+                                      <span className="px-2 py-1 rounded text-sm font-medium text-center sm:text-left bg-green-500 text-black">
+                                        Paid
+                                      </span>
+                                    )}
+                                    
+                                    {!reservation.paid && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedPaymentSession({
+                                            session: reservation.session,
+                                            player: player,
+                                            signup: reservation
+                                          });
+                                          setPaymentModalOpen(true);
                                         }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3">
-                                  {reservation.paid && (
-                                    <span className="px-2 py-1 rounded text-sm font-medium text-center sm:text-left bg-green-500 text-black">
-                                      Paid
-                                    </span>
-                                  )}
-                                  
-                                  {!reservation.paid && (
+                                        className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
+                                        data-testid="button-pay-now"
+                                      >
+                                        Pay Now
+                                      </Button>
+                                    )}
+                                    
                                     <Button
-                                      variant="default"
+                                      variant="outline"
                                       size="sm"
                                       onClick={() => {
-                                        setSelectedPaymentSession({
-                                          session: reservation.session,
-                                          player: player,
-                                          signup: reservation
-                                        });
-                                        setPaymentModalOpen(true);
+                                        cancelSignupMutation.mutate(reservation.id);
                                       }}
-                                      className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
-                                      data-testid="button-pay-now"
+                                      disabled={cancelSignupMutation.isPending}
+                                      className="w-full border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 sm:w-auto"
+                                      data-testid="button-cancel-reservation"
                                     >
-                                      Pay Now
+                                      {cancelSignupMutation.isPending ? "Cancelling..." : "Cancel"}
                                     </Button>
-                                  )}
-                                  
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      cancelSignupMutation.mutate(reservation.id);
-                                      // Update local state to re-enable reserve button
-                                      setLocalReservedSessions(prev => {
-                                        const next = new Set(prev);
-                                        next.delete(reservation.sessionId);
-                                        return next;
-                                      });
-                                    }}
-                                    disabled={cancelSignupMutation.isPending}
-                                    className="w-full border-red-600 text-red-400 hover:bg-red-600 hover:text-white sm:w-auto"
-                                  >
-                                    Cancel
-                                  </Button>
+                                  </div>
                                 </div>
+                                
+                                {!reservation.paid && reservation.reservationExpiresAt && (
+                                  <div className="w-full">
+                                    <ReservationCountdown 
+                                      expiresAt={typeof reservation.reservationExpiresAt === 'string' 
+                                        ? reservation.reservationExpiresAt 
+                                        : new Date(reservation.reservationExpiresAt).toISOString()}
+                                      onExpired={() => {
+                                        // Refresh signups when reservation expires
+                                        queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+                                      }}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}

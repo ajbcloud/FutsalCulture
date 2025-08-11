@@ -62,16 +62,16 @@ export function ReservationCountdown({ expiresAt, onExpired }: ReservationCountd
   }
 
   return (
-    <div className="space-y-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+    <div className="space-y-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md w-full">
       <div className={`flex items-center gap-2 text-sm font-semibold ${
         timeLeft < 300000 ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-300'
       }`}>
-        <Clock className={`h-4 w-4 ${timeLeft < 300000 ? 'animate-pulse' : ''}`} />
-        <span>Payment due in {formatTime(timeLeft)}</span>
+        <Clock className={`h-4 w-4 flex-shrink-0 ${timeLeft < 300000 ? 'animate-pulse' : ''}`} />
+        <span className="truncate">Payment due in {formatTime(timeLeft)}</span>
       </div>
       <Progress 
         value={progressPercentage} 
-        className="h-3 bg-amber-100 dark:bg-amber-800"
+        className="h-3 bg-amber-100 dark:bg-amber-800 w-full"
         style={{
           '--progress-foreground': timeLeft < 300000 ? 'rgb(239 68 68)' : timeLeft < 900000 ? 'rgb(245 158 11)' : 'rgb(34 197 94)'
         } as React.CSSProperties}

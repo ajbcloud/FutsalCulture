@@ -224,21 +224,15 @@ export default function EnhancedSessionCard({
           {hasPendingPayment && reservationSignup && (
             <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
-                {reservationExpires && (
+                {(reservationExpires || reservationSignup.reservationExpiresAt) && (
                   <ReservationCountdown
-                    expiresAt={reservationExpires.toISOString()}
-                    onExpired={() => {
-                      queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
-                      queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
-                      onReservationChange?.(session.id, false);
-                    }}
-                  />
-                )}
-                {!reservationExpires && reservationSignup.reservationExpiresAt && (
-                  <ReservationCountdown
-                    expiresAt={typeof reservationSignup.reservationExpiresAt === 'string' 
-                      ? reservationSignup.reservationExpiresAt 
-                      : new Date(reservationSignup.reservationExpiresAt).toISOString()}
+                    expiresAt={
+                      reservationExpires 
+                        ? reservationExpires.toISOString()
+                        : typeof reservationSignup.reservationExpiresAt === 'string' 
+                          ? reservationSignup.reservationExpiresAt 
+                          : new Date(reservationSignup.reservationExpiresAt).toISOString()
+                    }
                     onExpired={() => {
                       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
                       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
