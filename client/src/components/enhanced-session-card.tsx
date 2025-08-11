@@ -296,7 +296,9 @@ export default function EnhancedSessionCard({
           player={reservationSignup.player}
           signup={{
             id: reservationSignup.id,
-            reservationExpiresAt: reservationSignup.reservationExpiresAt?.toISOString() || ""
+            reservationExpiresAt: typeof reservationSignup.reservationExpiresAt === 'string' 
+              ? reservationSignup.reservationExpiresAt 
+              : reservationSignup.reservationExpiresAt?.toISOString() || ""
           }}
         />
       )}
