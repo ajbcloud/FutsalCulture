@@ -179,13 +179,13 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
               cardholderName: {
                 required: false
               }
+            },
+            // Only enable PayPal, disable everything else for simpler interface
+            paypal: {
+              flow: 'checkout',
+              amount: (session.priceCents / 100).toString(),
+              currency: 'USD'
             }
-            // Note: PayPal disabled for sandbox testing - requires linked PayPal sandbox account
-            // paypal: {
-            //   flow: 'checkout',
-            //   amount: session.priceCents / 100,
-            //   currency: 'USD'
-            // }
           });
 
           if (isMounted) {
