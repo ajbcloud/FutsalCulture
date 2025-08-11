@@ -3773,4 +3773,119 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       });
     }
   });
+
+  // Mass refund API endpoint for session cancellations
+  app.post('/api/admin/sessions/:sessionId/mass-refund', async (req: any, res) => {
+    try {
+      const currentUser = req.user;
+      if (!currentUser?.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { sessionId } = req.params;
+      const { reason } = req.body;
+
+      if (!reason?.trim()) {
+        return res.status(400).json({ message: 'Cancellation reason is required' });
+      }
+
+      // Get all paid signups for this session
+      const signupsWithPayments = await db
+        .select({
+          signup: signups,
+          payment: payments,
+          player: players
+        })
+        .from(signups)
+        .leftJoin(payments, eq(payments.signupId, signups.id))
+        .leftJoin(players, eq(players.id, signups.playerId))
+        .where(and(
+          eq(signups.sessionId, sessionId),
+          eq(signups.tenantId, currentUser.tenantId),
+          eq(signups.paid, true)
+        ));
+
+      const refundResults = [];
+      let totalRefundAmount = 0;
+      let successfulRefunds = 0;
+      let failedRefunds = 0;
+
+      // Process refunds for all paid signups
+      for (const record of signupsWithPayments) {
+        try {
+          if (record.payment) {
+            const { PaymentService } = await import('./payment-service');
+            const paymentService = new PaymentService();
+            
+            const refundResult = await paymentService.refundPayment(
+              record.payment.id,
+              record.payment.amountCents, // Full refund amount
+              `Session cancelled: ${reason}`
+            );
+
+            if (refundResult.success) {
+              totalRefundAmount += refundResult.amountCents;
+              successfulRefunds++;
+              
+              refundResults.push({
+                playerId: record.signup.playerId,
+                playerName: `${record.player?.firstName || ''} ${record.player?.lastName || ''}`.trim(),
+                amount: refundResult.amountCents,
+                status: 'success'
+              });
+            } else {
+              failedRefunds++;
+              refundResults.push({
+                playerId: record.signup.playerId,
+                playerName: `${record.player?.firstName || ''} ${record.player?.lastName || ''}`.trim(),
+                amount: record.payment.amountCents || 0,
+                status: 'failed',
+                error: refundResult.error?.message || 'Unknown error'
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error refunding payment for signup ${record.signup.id}:`, error);
+          failedRefunds++;
+          refundResults.push({
+            playerId: record.signup.playerId,
+            playerName: `${record.player?.firstName || ''} ${record.player?.lastName || ''}`.trim(),
+            amount: record.payment?.amountCents || 0,
+            status: 'failed',
+            error: 'Processing error'
+          });
+        }
+      }
+
+      // Remove all signups for the session after processing refunds
+      await db
+        .delete(signups)
+        .where(and(
+          eq(signups.sessionId, sessionId),
+          eq(signups.tenantId, currentUser.tenantId)
+        ));
+
+      // Update session status to cancelled/closed
+      await db
+        .update(futsalSessions)
+        .set({ status: 'closed' })
+        .where(eq(futsalSessions.id, sessionId));
+
+      console.log(`Mass refund completed for session ${sessionId}: ${successfulRefunds} successful, ${failedRefunds} failed`);
+
+      res.json({
+        totalRefunds: signupsWithPayments.length,
+        totalAmount: totalRefundAmount,
+        successfulRefunds,
+        failedRefunds,
+        refundDetails: refundResults
+      });
+
+    } catch (error) {
+      console.error('Error processing mass refund:', error);
+      res.status(500).json({ 
+        message: 'Failed to process mass refund. Please try again or contact support.' 
+      });
+    }
+  });
 }

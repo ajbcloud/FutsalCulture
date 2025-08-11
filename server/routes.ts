@@ -1464,6 +1464,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe webhook routes moved to top of function
 
+  // Booking cancellation routes
+  const bookingCancellationRouter = (await import('./booking-cancellation-routes')).default;
+  app.use('/api', isAuthenticated, bookingCancellationRouter);
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -26,6 +26,7 @@ import { AGE_GROUPS } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import LocationLink from '@/components/LocationLink';
 import { useQuery } from '@tanstack/react-query';
+import { MassRefundDialog } from '@/components/mass-refund-dialog';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -34,6 +35,8 @@ export default function AdminSessions() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
+  const [showMassRefundModal, setShowMassRefundModal] = useState(false);
+  const [selectedSessionForRefund, setSelectedSessionForRefund] = useState<any>(null);
 
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [massUpdating, setMassUpdating] = useState(false);
@@ -523,6 +526,18 @@ export default function AdminSessions() {
                     <Button 
                       variant="outline" 
                       size="sm" 
+                      onClick={() => {
+                        setSelectedSessionForRefund(session);
+                        setShowMassRefundModal(true);
+                      }}
+                      className="text-orange-400 hover:text-orange-300"
+                      title="Mass refund all bookings"
+                    >
+                      💸
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
                       onClick={() => handleDelete(session.id)}
                       className="text-red-400 hover:text-red-300"
                     >
@@ -755,6 +770,18 @@ export default function AdminSessions() {
                     <Edit className="w-3 h-3" />
                   </Button>
                 </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setSelectedSessionForRefund(session);
+                    setShowMassRefundModal(true);
+                  }}
+                  className="text-orange-400 hover:text-orange-300 text-xs px-2 py-1 h-7"
+                  title="Mass refund"
+                >
+                  💸
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -1197,6 +1224,18 @@ export default function AdminSessions() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mass Refund Dialog */}
+      <MassRefundDialog
+        isOpen={showMassRefundModal}
+        onClose={() => {
+          setShowMassRefundModal(false);
+          setSelectedSessionForRefund(null);
+        }}
+        sessionId={selectedSessionForRefund?.id}
+        sessionTitle={selectedSessionForRefund?.title}
+        sessionDate={selectedSessionForRefund?.startTime}
+      />
     </AdminLayout>
   );
 }

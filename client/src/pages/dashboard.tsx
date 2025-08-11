@@ -12,6 +12,7 @@ import SessionCard from "@/components/session-card";
 import EnhancedSessionCard from "@/components/enhanced-session-card";
 import WaitlistOffers from "@/components/waitlist-offers";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
+import { CancelBookingButton } from "@/components/cancel-booking-button";
 
 
 import { Button } from "@/components/ui/button";
@@ -559,23 +560,19 @@ export default function Dashboard() {
                                       </Button>
                                     )}
                                     
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        cancelSignupMutation.mutate(reservation.id, {
-                                          onSuccess: () => {
-                                            // Invalidate sessions cache to refresh spot counts
-                                            queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-                                          }
-                                        });
+                                    <CancelBookingButton
+                                      sessionId={reservation.sessionId}
+                                      playerId={reservation.playerId}
+                                      sessionTitle={reservation.session.title}
+                                      sessionDate={reservation.session.startTime.toString()}
+                                      paymentAmount={reservation.paid ? (reservation.session.priceCents || 1000) : 0}
+                                      hasPayment={reservation.paid || false}
+                                      onCancelled={() => {
+                                        // Invalidate both signups and sessions cache
+                                        queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
                                       }}
-                                      disabled={cancelSignupMutation.isPending}
-                                      className="w-full border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 sm:w-auto"
-                                      data-testid="button-cancel-reservation"
-                                    >
-                                      {cancelSignupMutation.isPending ? "Cancelling..." : "Cancel"}
-                                    </Button>
+                                    />
                                   </div>
                                 </div>
                                 
