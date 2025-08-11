@@ -57,7 +57,7 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
     'payments', 
     'advancedAnalytics',
     'autoPromotion',
-    'themeCustomization',
+    'featureRequests',
     'playerDevelopment'
   ] as const;
 
@@ -109,6 +109,11 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
                     displayText = feature === 'elite' ? 'AI-powered analytics & forecasting' :
                                 feature === 'advanced' ? 'Advanced analytics' : 
                                 feature === 'basic' ? 'Basic analytics' : 'Analytics';
+                    hasFeature = !!feature;
+                  } else if (featureKey === 'featureRequests') {
+                    displayText = feature === 'high' ? 'High priority feature requests' :
+                                feature === 'medium' ? 'Medium priority feature requests' :
+                                feature === 'low' ? 'Standard priority feature requests' : 'Feature requests';
                     hasFeature = !!feature;
                   }
 

@@ -63,6 +63,7 @@ export default function Help() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
+  const { hasFeature: hasFeatureRequests } = useHasFeature(FEATURE_KEYS.FEATURE_REQUESTS);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [captchaQuestion, setCaptchaQuestion] = useState("");
   const [captchaAnswer, setCaptchaAnswer] = useState("");
@@ -335,6 +336,7 @@ export default function Help() {
                                 <SelectItem value="payment">Payment</SelectItem>
                                 <SelectItem value="technical">Technical</SelectItem>
                                 <SelectItem value="account">Account</SelectItem>
+                                {hasFeatureRequests && <SelectItem value="feature_request">Feature Request</SelectItem>}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -456,7 +458,7 @@ export default function Help() {
                     </li>
                     <li className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      Feature request priority and implementation updates
+                      High-priority feature requests with fastest review time
                     </li>
                   </ul>
                 </div>
@@ -478,6 +480,61 @@ export default function Help() {
                   <p className="text-sm text-muted-foreground">
                     When submitting requests through the form above, they'll automatically be routed to our Elite support queue for faster processing.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Feature Request Section - Available for Core, Growth, and Elite */}
+          {hasFeatureRequests && (
+            <Card className="bg-card border border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground text-xl flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-blue-500" />
+                  Feature Request Queue
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
+                  <h4 className="text-foreground font-semibold mb-2">🚀 Request New Features</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Have an idea to improve the platform? Submit feature requests that our development team will review and potentially implement.
+                  </p>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-muted-foreground">
+                        <span className="font-medium text-green-600">Core Plan:</span> Standard review priority (typically 2-4 weeks)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-muted-foreground">
+                        <span className="font-medium text-blue-600">Growth Plan:</span> Medium priority review (typically 1-2 weeks)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-muted-foreground">
+                        <span className="font-medium text-purple-600">Elite Plan:</span> High priority review (typically 3-7 days)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-amber-50/50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200/50 dark:border-amber-700/50">
+                  <h4 className="text-foreground font-semibold mb-2">💡 How It Works</h4>
+                  <ol className="space-y-1 text-sm text-muted-foreground">
+                    <li>1. Submit your feature idea using the contact form above (select "Feature Request")</li>
+                    <li>2. Our team reviews and prioritizes based on your subscription level</li>
+                    <li>3. Approved features enter development queue with status updates</li>
+                    <li>4. You'll be notified when your requested feature goes live</li>
+                  </ol>
+                </div>
+                
+                <div className="text-center text-sm text-muted-foreground">
+                  All feature requests require Super Admin review with a minimum 1-week evaluation period.
                 </div>
               </CardContent>
             </Card>

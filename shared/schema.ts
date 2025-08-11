@@ -377,21 +377,32 @@ export const featureRequestStatusEnum = pgEnum("feature_request_status", [
   "received", "under_review", "approved", "in_development", "released"
 ]);
 
-// Feature requests table for Elite plan custom feature request queue
+// Feature request priority enum based on subscription level
+export const featureRequestPriorityEnum = pgEnum("feature_request_priority", [
+  "low", "medium", "high", "critical"
+]);
+
+// Feature requests table - now available to all subscription levels with prioritization
 export const featureRequests = pgTable("feature_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   title: varchar("title").notNull(),
   description: text("description").notNull(),
   status: featureRequestStatusEnum("status").notNull().default("received"),
+  priority: featureRequestPriorityEnum("priority").notNull().default("medium"), // Auto-assigned based on plan
+  planLevel: planLevelEnum("plan_level").notNull(), // Track plan level when submitted
   submittedBy: varchar("submitted_by").notNull().references(() => users.id),
   reviewedBy: varchar("reviewed_by"), // Super admin who reviewed
   statusNotes: text("status_notes"), // Notes about status changes
+  estimatedReviewWeeks: integer("estimated_review_weeks").default(1), // Minimum 1 week review time
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"), // When super admin first reviewed
 }, (table) => [
   index("feature_requests_tenant_id_idx").on(table.tenantId),
   index("feature_requests_status_idx").on(table.status),
+  index("feature_requests_priority_idx").on(table.priority),
+  index("feature_requests_plan_level_idx").on(table.planLevel),
 ]);
 
 // Player Development Tables (Elite-only feature)
@@ -1197,6 +1208,7 @@ export const FEATURE_KEYS = {
   SUPPORT_PRIORITY: 'support_priority',
   BULK_OPERATIONS: 'bulk_operations',
   PLAYER_DEVELOPMENT: 'player_development',
+  FEATURE_REQUESTS: 'feature_requests', // Available to all plans with priority differences
 } as const;
 
 export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];

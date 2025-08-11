@@ -25,6 +25,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
     [FEATURE_KEYS.BULK_OPERATIONS]: false,  // Disabled for free
     [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
+    [FEATURE_KEYS.FEATURE_REQUESTS]: false,  // Disabled for free
   },
   core: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -49,6 +50,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
     [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
+    [FEATURE_KEYS.FEATURE_REQUESTS]: true,  // Available with low priority
   },
   growth: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -73,6 +75,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
     [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
+    [FEATURE_KEYS.FEATURE_REQUESTS]: true,  // Available with medium priority
   },
   elite: {
     [FEATURE_KEYS.SESSION_MANAGEMENT]: true,
@@ -97,6 +100,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SUPPORT_PRIORITY]: true,
     [FEATURE_KEYS.BULK_OPERATIONS]: true,
     [FEATURE_KEYS.PLAYER_DEVELOPMENT]: true,  // Elite-only feature
+    [FEATURE_KEYS.FEATURE_REQUESTS]: true,  // Available with high priority
   },
 };
 
@@ -245,6 +249,7 @@ export const FEATURE_NAMES: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SUPPORT_PRIORITY]: 'Priority Support',
   [FEATURE_KEYS.BULK_OPERATIONS]: 'Bulk Operations',
   [FEATURE_KEYS.PLAYER_DEVELOPMENT]: 'Player Development System',
+  [FEATURE_KEYS.FEATURE_REQUESTS]: 'Feature Request Queue',
 };
 
 // Feature descriptions for tooltips/help text
@@ -271,4 +276,5 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   [FEATURE_KEYS.SUPPORT_PRIORITY]: '24-hour priority support with dedicated account manager',
   [FEATURE_KEYS.BULK_OPERATIONS]: 'Mass upload sessions and players via CSV imports',
   [FEATURE_KEYS.PLAYER_DEVELOPMENT]: 'Comprehensive player tracking with assessments, goals, and training plans',
+  [FEATURE_KEYS.FEATURE_REQUESTS]: 'Submit feature requests with prioritized review based on your subscription level',
 };

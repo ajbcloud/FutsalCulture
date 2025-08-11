@@ -12,8 +12,7 @@ export type FeatureKey =
   | 'revenueAnalytics'
   | 'autoPromotion'
   | 'bulkOps'
-  | 'themeCustomization'
-  | 'customFeatureQueue'
+  | 'featureRequests'
   | 'prioritySupport'
   | 'apiAccess'
   | 'whiteLabelEmail'
@@ -38,8 +37,7 @@ export const PLANS = {
       revenueAnalytics: false,
       autoPromotion: false,
       bulkOps: false,
-      themeCustomization: false,
-      customFeatureQueue: false,
+      featureRequests: false,
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
@@ -64,8 +62,7 @@ export const PLANS = {
       revenueAnalytics: false, // Basic analytics only, no revenue tracking
       autoPromotion: false,
       bulkOps: false,
-      themeCustomization: false,
-      customFeatureQueue: false,
+      featureRequests: 'low' as const, // Core plan gets low priority feature requests
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
@@ -90,8 +87,7 @@ export const PLANS = {
       revenueAnalytics: true, // Revenue analytics available since they can accept payments
       autoPromotion: true,
       bulkOps: true,
-      themeCustomization: false, // Now Elite-only
-      customFeatureQueue: false,
+      featureRequests: 'medium' as const, // Growth plan gets medium priority feature requests
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: true,
@@ -116,8 +112,7 @@ export const PLANS = {
       revenueAnalytics: true, // Full revenue analytics available
       autoPromotion: true,
       bulkOps: true,
-      themeCustomization: true, // Elite-only feature
-      customFeatureQueue: true, // NEW Elite feature
+      featureRequests: 'high' as const, // Elite plan gets high priority feature requests
       prioritySupport: true, // NEW Elite feature
       apiAccess: true,
       whiteLabelEmail: true,

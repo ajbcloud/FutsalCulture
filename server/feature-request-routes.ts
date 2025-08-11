@@ -20,10 +20,10 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
       return res.status(400).json({ error: 'Tenant ID is required' });
     }
     
-    // Check if tenant has theme customization feature (Elite plan)
+    // Check if tenant has feature request access (available to Core, Growth, and Elite plans)
     const tenant = await storage.getTenant(tenantId);
-    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
-      return res.status(403).json({ error: 'Feature request queue requires Elite plan' });
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.FEATURE_REQUESTS)) {
+      return res.status(403).json({ error: 'Feature request queue requires a paid subscription plan' });
     }
 
     const requests = await db
@@ -65,17 +65,29 @@ router.post('/', isAuthenticated, async (req: any, res: Response) => {
       return res.status(400).json({ error: 'Tenant ID and User ID are required' });
     }
     
-    // Check if tenant has theme customization feature (Elite plan)
+    // Check if tenant has feature request access (available to Core, Growth, and Elite plans)
     const tenant = await storage.getTenant(tenantId);
-    if (!tenant || !hasFeature(tenant.planLevel, FEATURE_KEYS.THEME_CUSTOMIZATION)) {
-      return res.status(403).json({ error: 'Feature request queue requires Elite plan' });
+    if (!tenant || !tenant.planLevel || !hasFeature(tenant.planLevel, FEATURE_KEYS.FEATURE_REQUESTS)) {
+      return res.status(403).json({ error: 'Feature request queue requires a paid subscription plan' });
+    }
+
+    // Determine priority based on plan level
+    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+    if (tenant.planLevel === 'core') {
+      priority = 'low';
+    } else if (tenant.planLevel === 'growth') {
+      priority = 'medium';
+    } else if (tenant.planLevel === 'elite') {
+      priority = 'high';
     }
 
     // Validate the request body
     const validatedData = insertFeatureRequestSchema.parse({
       ...req.body,
       tenantId,
-      submittedBy: userId
+      submittedBy: userId,
+      priority,
+      planLevel: tenant.planLevel,
     });
 
     const result = await db

@@ -53,13 +53,9 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     label: 'Bulk operations', 
     description: 'Perform actions on multiple items at once' 
   },
-  themeCustomization: { 
-    label: 'Custom colors & themes', 
-    description: 'Customize colors and branding for Player and Parent portals' 
-  },
-  customFeatureQueue: { 
-    label: 'Custom feature request queue', 
-    description: 'Submit feature requests directly to our development team' 
+  featureRequests: { 
+    label: 'Feature request queue', 
+    description: 'Submit feature requests with priority based on subscription level' 
   },
   prioritySupport: { 
     label: 'Phone & email priority support', 
