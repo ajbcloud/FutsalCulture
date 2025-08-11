@@ -6,6 +6,38 @@ import Stripe from 'stripe';
 
 const router = Router();
 
+// Get payment processor configuration endpoint
+router.get('/payment-config', async (req: any, res) => {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const { provider, credentials } = await getActivePaymentProcessor();
+    
+    if (!provider) {
+      return res.status(400).json({ message: 'No payment processor configured' });
+    }
+
+    // Return only the necessary client-side configuration
+    const config = {
+      provider,
+      ...(provider === 'stripe' && {
+        publishableKey: credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY
+      }),
+      ...(provider === 'braintree' && {
+        clientToken: credentials?.clientToken // Would need to generate this from Braintree SDK
+      })
+    };
+
+    res.json(config);
+  } catch (error) {
+    console.error('Error getting payment config:', error);
+    res.status(500).json({ message: 'Failed to get payment configuration' });
+  }
+});
+
 // Helper function to get active payment processor
 async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
   try {
@@ -224,79 +256,103 @@ router.post('/confirm-session-payment', async (req: any, res) => {
   }
 });
 
-// Process payment for existing reservation
+// Process payment endpoint for both Stripe and Braintree
 router.post('/process-payment', async (req: any, res) => {
   try {
-    const { signupId, sessionId, playerId, amount, paymentMethod } = req.body;
+    const { signupId, sessionId, playerId, amount, paymentMethodId, provider } = req.body;
     const currentUser = req.currentUser;
     
     if (!currentUser?.tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    // Get the signup record
-    const signup = await db.select()
-      .from(signups)
-      .where(eq(signups.id, signupId))
-      .limit(1);
-
-    if (!signup.length) {
-      return res.status(404).json({ message: 'Reservation not found' });
+    if (!signupId || !sessionId || !playerId || !amount) {
+      return res.status(400).json({ message: 'Missing required payment data' });
     }
 
-    const signupData = signup[0];
-
-    // Check if reservation has expired
-    if (signupData.reservationExpiresAt && new Date() > new Date(signupData.reservationExpiresAt)) {
-      return res.status(400).json({ message: 'Reservation has expired' });
-    }
-
-    // Get active payment processor
-    const { provider, credentials } = await getActivePaymentProcessor();
+    // Get active payment processor config
+    const { provider: activeProvider, credentials } = await getActivePaymentProcessor();
     
-    if (!provider) {
+    if (!activeProvider) {
       return res.status(400).json({ message: 'No payment processor configured' });
     }
 
-    let paymentSuccess = false;
-    let paymentId = null;
-
-    if (provider === 'stripe') {
-      // Simulate Stripe payment processing for demo
-      // In production, this would create a PaymentIntent with Stripe Elements
-      paymentSuccess = true;
-      paymentId = `pi_demo_${Date.now()}`;
-    } else if (provider === 'braintree') {
-      // Simulate Braintree payment processing for demo
-      // In production, this would process payment with Braintree SDK
-      paymentSuccess = true;
-      paymentId = `bt_demo_${Date.now()}`;
+    // Validate the provider matches the request
+    if (provider && provider !== activeProvider) {
+      return res.status(400).json({ message: `Payment processor mismatch. Expected ${activeProvider}, got ${provider}` });
     }
 
-    if (paymentSuccess) {
-      // Update signup with payment information
+    let paymentResult;
+    
+    if (activeProvider === 'stripe') {
+      // Process Stripe payment
+      const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2025-06-30.basil',
+      });
+
+      try {
+        // Create and confirm payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(amount), // amount is already in cents
+          currency: 'usd',
+          payment_method: paymentMethodId,
+          confirmation_method: 'manual',
+          confirm: true,
+          return_url: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5000'}/parent/dashboard`,
+        });
+
+        if (paymentIntent.status === 'succeeded') {
+          paymentResult = {
+            success: true,
+            paymentId: paymentIntent.id,
+            provider: 'stripe'
+          };
+        } else {
+          return res.status(400).json({ 
+            message: 'Payment requires additional action',
+            client_secret: paymentIntent.client_secret
+          });
+        }
+      } catch (stripeError: any) {
+        console.error('Stripe payment error:', stripeError);
+        return res.status(400).json({ message: stripeError.message || 'Payment failed' });
+      }
+      
+    } else if (activeProvider === 'braintree') {
+      // TODO: Process Braintree payment
+      // For now, simulate successful payment
+      paymentResult = {
+        success: true,
+        paymentId: `bt_${Date.now()}`,
+        provider: 'braintree'
+      };
+    } else {
+      return res.status(400).json({ message: 'Unsupported payment processor' });
+    }
+
+    if (paymentResult.success) {
+      // Update signup as paid
       await db.update(signups)
         .set({ 
-          paid: true,
-          paymentIntentId: paymentId,
-          paymentProvider: provider,
-          updatedAt: new Date()
+          paid: true, 
+          paymentId: paymentResult.paymentId,
+          paymentProvider: paymentResult.provider,
+          reservationExpiresAt: null // Clear reservation since payment is complete
         })
         .where(eq(signups.id, signupId));
 
       res.json({ 
         success: true, 
-        signupId: signupId,
-        paymentId: paymentId,
-        provider: provider,
-        message: 'Payment processed successfully' 
+        message: 'Payment processed successfully',
+        paymentId: paymentResult.paymentId
       });
     } else {
       res.status(400).json({ message: 'Payment processing failed' });
     }
+
   } catch (error) {
     console.error('Error processing payment:', error);
-    res.status(500).json({ message: 'Failed to process payment' });
+    res.status(500).json({ message: 'Payment processing failed' });
   }
 });
 

@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, DollarSign, Calendar, MapPin, Clock } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 interface SessionPaymentModalProps {
   isOpen: boolean;
@@ -30,70 +32,199 @@ interface SessionPaymentModalProps {
   };
 }
 
-export function SessionPaymentModal({ isOpen, onClose, session, player, signup }: SessionPaymentModalProps) {
+// Stripe Form Component
+function StripePaymentForm({ session, player, signup, onSuccess, onError }: {
+  session: any;
+  player: any;
+  signup: any;
+  onSuccess: () => void;
+  onError: (error: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryMonth, setExpiryMonth] = useState("");
-  const [expiryYear, setExpiryYear] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [cardholderName, setCardholderName] = useState("");
-  
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const paymentMutation = useMutation({
-    mutationFn: async (paymentData: any) => {
-      return await apiRequest('POST', `/api/session-billing/process-payment`, {
-        signupId: signup.id,
-        sessionId: session.id,
-        playerId: player.id,
-        amount: session.priceCents,
-        paymentMethod: paymentData
-      });
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Payment successful!",
-        description: `${player.firstName} has been enrolled in the session.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Payment failed",
-        description: error.message || "Please try again or contact support.",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      setIsProcessing(false);
-    },
-  });
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-  const handlePayment = async () => {
-    if (!cardNumber || !expiryMonth || !expiryYear || !cvv || !cardholderName) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all payment details.",
-        variant: "destructive",
-      });
+    if (!stripe || !elements) {
       return;
     }
 
     setIsProcessing(true);
 
-    // For demo purposes, simulate payment processing
-    // In production, this would integrate with Stripe Elements or Braintree Drop-in UI
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const card = elements.getElement(CardElement);
+    if (!card) {
+      onError("Card element not found");
+      setIsProcessing(false);
+      return;
+    }
 
-    paymentMutation.mutate({
-      cardNumber,
-      expiryMonth,
-      expiryYear,
-      cvv,
-      cardholderName
+    // Create payment method
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: 'card',
+      card,
+      billing_details: {
+        name: `${player.firstName} ${player.lastName}`,
+      },
+    });
+
+    if (error) {
+      onError(error.message || "Payment failed");
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // Process payment through backend
+      const response = await apiRequest('POST', '/api/session-billing/process-payment', {
+        signupId: signup.id,
+        sessionId: session.id,
+        playerId: player.id,
+        amount: session.priceCents,
+        paymentMethodId: paymentMethod.id,
+        provider: 'stripe'
+      });
+
+      if (response.ok) {
+        onSuccess();
+      } else {
+        const errorData = await response.json();
+        onError(errorData.message || "Payment failed");
+      }
+    } catch (err: any) {
+      onError(err.message || "Payment processing failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="p-4 border rounded-lg">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                  color: '#aab7c4',
+                },
+              },
+            },
+          }}
+        />
+      </div>
+      <Button 
+        type="submit" 
+        disabled={!stripe || isProcessing} 
+        className="w-full"
+        data-testid="button-complete-stripe-payment"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          `Pay $${(session.priceCents / 100).toFixed(2)}`
+        )}
+      </Button>
+    </form>
+  );
+}
+
+// Braintree Form Component (placeholder)
+function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
+  session: any;
+  player: any;
+  signup: any;
+  onSuccess: () => void;
+  onError: (error: string) => void;
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsProcessing(true);
+    
+    try {
+      // TODO: Implement Braintree Drop-in UI integration
+      // For now, this is a placeholder that simulates payment
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const response = await apiRequest('POST', '/api/session-billing/process-payment', {
+        signupId: signup.id,
+        sessionId: session.id,
+        playerId: player.id,
+        amount: session.priceCents,
+        provider: 'braintree'
+      });
+
+      if (response.ok) {
+        onSuccess();
+      } else {
+        const errorData = await response.json();
+        onError(errorData.message || "Payment failed");
+      }
+    } catch (err: any) {
+      onError(err.message || "Payment processing failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Braintree payment integration will be implemented here
+        </p>
+      </div>
+      <Button 
+        onClick={handleSubmit}
+        disabled={isProcessing} 
+        className="w-full"
+        data-testid="button-complete-braintree-payment"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          `Pay $${(session.priceCents / 100).toFixed(2)}`
+        )}
+      </Button>
+    </div>
+  );
+}
+
+export function SessionPaymentModal({ isOpen, onClose, session, player, signup }: SessionPaymentModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Get payment configuration
+  const { data: paymentConfig, isLoading: configLoading, error: configError } = useQuery({
+    queryKey: ['/api/session-billing/payment-config'],
+    enabled: isOpen,
+  });
+
+  const handlePaymentSuccess = () => {
+    toast({
+      title: "Payment successful!",
+      description: `${player.firstName} has been enrolled in the session.`,
+    });
+    queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+    onClose();
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment failed",
+      description: error || "Please try again or contact support.",
+      variant: "destructive",
     });
   };
 
@@ -153,84 +284,61 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
 
           {/* Payment Form */}
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="cardholderName">Cardholder Name</Label>
-              <Input
-                id="cardholderName"
-                placeholder="John Doe"
-                value={cardholderName}
-                onChange={(e) => setCardholderName(e.target.value)}
-                data-testid="input-cardholder-name"
+            {configLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="ml-2">Loading payment options...</span>
+              </div>
+            ) : configError ? (
+              <div className="text-center py-8">
+                <p className="text-red-600 dark:text-red-400">
+                  Payment configuration error. Please contact support.
+                </p>
+              </div>
+            ) : paymentConfig?.provider === 'stripe' ? (
+              paymentConfig.publishableKey ? (
+                <Elements stripe={loadStripe(paymentConfig.publishableKey)}>
+                  <StripePaymentForm
+                    session={session}
+                    player={player}
+                    signup={signup}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                </Elements>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-red-600 dark:text-red-400">
+                    Stripe configuration incomplete. Please contact support.
+                  </p>
+                </div>
+              )
+            ) : paymentConfig?.provider === 'braintree' ? (
+              <BraintreePaymentForm
+                session={session}
+                player={player}
+                signup={signup}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
               />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardNumber">Card Number</Label>
-              <Input
-                id="cardNumber"
-                placeholder="1234 5678 9012 3456"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                maxLength={19}
-                data-testid="input-card-number"
-              />
-            </div>
-            
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="expiryMonth">MM</Label>
-                <Input
-                  id="expiryMonth"
-                  placeholder="12"
-                  value={expiryMonth}
-                  onChange={(e) => setExpiryMonth(e.target.value)}
-                  maxLength={2}
-                  data-testid="input-expiry-month"
-                />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-yellow-600 dark:text-yellow-400">
+                  No payment processor configured. Please contact support.
+                </p>
               </div>
-              <div>
-                <Label htmlFor="expiryYear">YY</Label>
-                <Input
-                  id="expiryYear"
-                  placeholder="28"
-                  value={expiryYear}
-                  onChange={(e) => setExpiryYear(e.target.value)}
-                  maxLength={2}
-                  data-testid="input-expiry-year"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cvv">CVV</Label>
-                <Input
-                  id="cvv"
-                  placeholder="123"
-                  value={cvv}
-                  onChange={(e) => setCvv(e.target.value)}
-                  maxLength={4}
-                  data-testid="input-cvv"
-                />
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Payment Actions */}
-          <div className="flex gap-3">
+          {/* Cancel Button */}
+          <div className="flex justify-center">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1"
-              disabled={isProcessing}
+              className="min-w-[120px]"
               data-testid="button-cancel-payment"
             >
               Cancel
-            </Button>
-            <Button
-              onClick={handlePayment}
-              className="flex-1"
-              disabled={isProcessing}
-              data-testid="button-complete-payment"
-            >
-              {isProcessing ? "Processing..." : `Pay $${(session.priceCents / 100).toFixed(2)}`}
             </Button>
           </div>
         </div>
