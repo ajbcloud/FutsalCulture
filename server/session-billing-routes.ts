@@ -8,19 +8,43 @@ import braintree from 'braintree';
 const router = Router();
 
 // Initialize Braintree Gateway
-const gateway = new braintree.BraintreeGateway({
-  environment: process.env.BRAINTREE_ENVIRONMENT === 'production' 
+let gateway: braintree.BraintreeGateway;
+
+try {
+  console.log('Initializing Braintree Gateway...');
+  console.log('Environment value:', process.env.BRAINTREE_ENVIRONMENT);
+  console.log('Merchant ID available:', !!process.env.BRAINTREE_MERCHANT_ID);
+  console.log('Public Key available:', !!process.env.BRAINTREE_PUBLIC_KEY);
+  console.log('Private Key available:', !!process.env.BRAINTREE_PRIVATE_KEY);
+  
+  // Determine environment - default to sandbox if not explicitly production
+  const environment = process.env.BRAINTREE_ENVIRONMENT?.toLowerCase() === 'production' 
     ? braintree.Environment.Production 
-    : braintree.Environment.Sandbox,
-  merchantId: process.env.BRAINTREE_MERCHANT_ID!,
-  publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
-  privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
-});
+    : braintree.Environment.Sandbox;
+    
+  console.log('Using Braintree environment:', environment === braintree.Environment.Production ? 'Production' : 'Sandbox');
+  
+  gateway = new braintree.BraintreeGateway({
+    environment: environment,
+    merchantId: process.env.BRAINTREE_MERCHANT_ID!,
+    publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
+    privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
+  });
+  console.log('Braintree Gateway initialized successfully');
+} catch (error) {
+  console.error('Error initializing Braintree Gateway:', error);
+}
 
 // Function to generate Braintree client token
 async function generateBraintreeClientToken(): Promise<string> {
   try {
+    if (!gateway) {
+      throw new Error('Braintree Gateway not initialized');
+    }
+    
+    console.log('Generating Braintree client token...');
     const response = await gateway.clientToken.generate({});
+    console.log('Braintree client token generated successfully');
     return response.clientToken;
   } catch (error) {
     console.error('Error generating Braintree client token:', error);
