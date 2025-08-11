@@ -163,23 +163,53 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
 
     if (activeProcessor.length > 0) {
       console.log('Using configured processor:', activeProcessor[0].provider);
+      const rawCredentials = activeProcessor[0].credentials;
+      console.log('Raw credentials type:', typeof rawCredentials);
+      
+      // Parse credentials if they're stored as JSON string
+      let parsedCredentials = rawCredentials;
+      if (typeof rawCredentials === 'string') {
+        try {
+          parsedCredentials = JSON.parse(rawCredentials);
+          console.log('Parsed credentials from JSON string');
+        } catch (e) {
+          console.error('Failed to parse credentials JSON:', e);
+          parsedCredentials = rawCredentials;
+        }
+      }
+      
+      console.log('Final credentials structure:', {
+        hasEnvironment: !!parsedCredentials?.environment,
+        hasMerchantId: !!parsedCredentials?.merchantId,
+        hasPublicKey: !!parsedCredentials?.publicKey,
+        hasPrivateKey: !!parsedCredentials?.privateKey,
+        environment: parsedCredentials?.environment
+      });
+      
       return {
         provider: activeProcessor[0].provider as 'stripe' | 'braintree',
-        credentials: activeProcessor[0].credentials
+        credentials: parsedCredentials
       };
     }
 
     // Fallback to environment-based Braintree if available
     if (process.env.BRAINTREE_MERCHANT_ID && process.env.BRAINTREE_PUBLIC_KEY && process.env.BRAINTREE_PRIVATE_KEY) {
       console.log('Using environment-based Braintree configuration');
+      const envCredentials = {
+        merchantId: process.env.BRAINTREE_MERCHANT_ID,
+        publicKey: process.env.BRAINTREE_PUBLIC_KEY,
+        privateKey: process.env.BRAINTREE_PRIVATE_KEY,
+        environment: process.env.BRAINTREE_ENVIRONMENT || 'sandbox'
+      };
+      console.log('Environment Braintree config:', {
+        merchantId: envCredentials.merchantId,
+        publicKey: envCredentials.publicKey?.substring(0, 8) + '...',
+        hasPrivateKey: !!envCredentials.privateKey,
+        environment: envCredentials.environment
+      });
       return {
         provider: 'braintree',
-        credentials: {
-          environment: process.env.BRAINTREE_ENVIRONMENT || 'sandbox',
-          merchantId: process.env.BRAINTREE_MERCHANT_ID,
-          publicKey: process.env.BRAINTREE_PUBLIC_KEY,
-          privateKey: process.env.BRAINTREE_PRIVATE_KEY
-        }
+        credentials: envCredentials
       };
     }
 
