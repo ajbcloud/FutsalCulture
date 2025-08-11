@@ -125,8 +125,8 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
               {Object.entries(featureCategories).map(([categoryName, features]) => (
                 <React.Fragment key={categoryName}>
                   <tr>
-                    <td colSpan={plans.length + 1} className="p-3 bg-muted/30">
-                      <div className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                    <td colSpan={plans.length + 1} className="p-4 bg-muted/30">
+                      <div className="font-semibold text-base text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                         {categoryName}
                       </div>
                     </td>
@@ -150,7 +150,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                             <td key={plan.id} className="p-3 text-center">
                               {isIncluded ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <Check className="h-4 w-4 text-emerald-500" />
+                                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                                   {featureValue !== 'Yes' && (
                                     <div className="text-xs text-muted-foreground max-w-20 text-center">
                                       {featureValue}
