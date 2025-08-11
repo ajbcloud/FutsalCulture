@@ -11,8 +11,10 @@ import {
 } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle, Reply, ExternalLink } from 'lucide-react';
+import { MessageSquare, CheckCircle, Reply, ExternalLink, HelpCircle, Sparkles, Crown, Mail, Phone, Clock, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
@@ -20,6 +22,72 @@ import { Input } from '../../components/ui/input';
 import { useToast } from '../../hooks/use-toast';
 import { Pagination } from '@/components/pagination';
 import { useLocation } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { apiRequest } from '@/lib/queryClient';
+import { useHasFeature } from '@/hooks/use-feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
+
+// Schemas for the forms
+const personalRequestSchema = z.object({
+  firstName: z.string()
+    .min(1, "First name is required")
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be less than 50 characters"),
+  lastName: z.string()
+    .min(1, "Last name is required")
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be less than 50 characters"),
+  email: z.string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .max(100, "Email must be less than 100 characters"),
+  phone: z.string().optional(),
+  subject: z.string()
+    .min(1, "Subject is required")
+    .min(5, "Subject must be at least 5 characters")
+    .max(100, "Subject must be less than 100 characters"),
+  category: z.string().min(1, "Category is required"),
+  priority: z.string().min(1, "Priority is required"),
+  message: z.string()
+    .min(1, "Message is required")
+    .min(20, "Message must be at least 20 characters")
+    .max(1000, "Message must be less than 1000 characters"),
+});
+
+const featureRequestSchema = z.object({
+  title: z.string()
+    .min(1, "Title is required")
+    .min(5, "Title must be at least 5 characters")
+    .max(100, "Title must be less than 100 characters"),
+  description: z.string()
+    .min(1, "Description is required")
+    .min(20, "Description must be at least 20 characters")
+    .max(1000, "Description must be less than 1000 characters"),
+});
+
+type PersonalRequest = z.infer<typeof personalRequestSchema>;
+type FeatureRequestForm = z.infer<typeof featureRequestSchema>;
+
+interface FeatureRequest {
+  id: string;
+  title: string;
+  description: string;
+  status: 'received' | 'under_review' | 'approved' | 'in_development' | 'released';
+  statusNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  submittedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
 
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
@@ -46,6 +114,119 @@ export default function AdminHelpRequests() {
   
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
+
+  // Personal request form
+  const personalRequestForm = useForm<PersonalRequest>({
+    resolver: zodResolver(personalRequestSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      subject: "",
+      category: "",
+      priority: "medium",
+      message: "",
+    },
+  });
+
+  // Feature request form
+  const featureRequestForm = useForm<FeatureRequestForm>({
+    resolver: zodResolver(featureRequestSchema),
+    defaultValues: {
+      title: '',
+      description: ''
+    },
+  });
+
+  // Fetch feature requests
+  const { data: featureRequests, isLoading: requestsLoading } = useQuery<FeatureRequest[]>({
+    queryKey: ['/api/feature-requests']
+  });
+
+  // Personal request to PlayHQ mutation
+  const personalRequestMutation = useMutation({
+    mutationFn: async (data: PersonalRequest) => {
+      return apiRequest('/api/help', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          ...data, 
+          source: "admin_portal" 
+        })
+      });
+    },
+    onSuccess: () => {
+      personalRequestForm.reset();
+      toast({
+        title: "Message sent successfully!",
+        description: "Your request has been submitted to PlayHQ support.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Feature request mutation
+  const featureRequestMutation = useMutation({
+    mutationFn: async (request: FeatureRequestForm) => {
+      return apiRequest('/api/feature-requests', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Feature request submitted",
+        description: "Your request has been submitted to our development team."
+      });
+      featureRequestForm.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/feature-requests'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error submitting request",
+        description: error.message || "Failed to submit feature request.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handlePersonalRequest = (data: PersonalRequest) => {
+    personalRequestMutation.mutate(data);
+  };
+
+  const handleFeatureRequest = (data: FeatureRequestForm) => {
+    featureRequestMutation.mutate(data);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'received': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'under_review': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'in_development': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'released': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'received': return 'Received';
+      case 'under_review': return 'Under Review';
+      case 'approved': return 'Approved';
+      case 'in_development': return 'In Development';
+      case 'released': return 'Released';
+      default: return status;
+    }
+  };
 
   // Handle clicking on linked users
   const handleUserClick = (request: any) => {
@@ -250,10 +431,36 @@ export default function AdminHelpRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">Help Requests</h1>
-        
-        {/* Filter Controls */}
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <HelpCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Manage parent/player requests, submit personal requests, and track feature requests
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="help-requests" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="help-requests" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Parent/Player Help Requests
+            </TabsTrigger>
+            <TabsTrigger value="personal-requests" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Personal Requests to PlayHQ
+            </TabsTrigger>
+            <TabsTrigger value="feature-requests" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Feature Requests
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab 1: Parent/Player Help Requests */}
+          <TabsContent value="help-requests" className="space-y-6">
+            {/* Filter Controls */}
         <div className="bg-card p-4 rounded-lg border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -641,6 +848,326 @@ export default function AdminHelpRequests() {
           </div>
         </DialogContent>
       </Dialog>
+          </TabsContent>
+
+          {/* Tab 2: Personal Requests to PlayHQ */}
+          <TabsContent value="personal-requests" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Submit Personal Request to PlayHQ
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Send a direct message to PlayHQ support for personal assistance with your account or business needs.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Form {...personalRequestForm}>
+                  <form onSubmit={personalRequestForm.handleSubmit(handlePersonalRequest)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your first name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your last name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="your.email@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="(555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="technical">Technical Issue</SelectItem>
+                                <SelectItem value="billing">Billing Question</SelectItem>
+                                <SelectItem value="feature">Feature Request</SelectItem>
+                                <SelectItem value="account">Account Support</SelectItem>
+                                <SelectItem value="general">General Inquiry</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={personalRequestForm.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Priority</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex items-end">
+                        {hasPlayerDevelopment && (
+                          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            <Crown className="h-4 w-4" />
+                            Elite Priority Support
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <FormField
+                      control={personalRequestForm.control}
+                      name="subject"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subject</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Brief description of your request" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={personalRequestForm.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Message</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Please provide detailed information about your request..."
+                              rows={6}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={personalRequestMutation.isPending}
+                        className="min-w-[120px]"
+                      >
+                        {personalRequestMutation.isPending ? "Sending..." : "Send Request"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+
+                {hasPlayerDevelopment && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">Elite Priority Support</h3>
+                        <div className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span>4-hour response guarantee</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>Direct phone line: 1-800-PLAYHQ-1</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <span>Escalated to senior support team</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 3: Feature Requests */}
+          <TabsContent value="feature-requests" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Submit New Feature Request */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Submit Feature Request
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Suggest new features or improvements for the platform.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <Form {...featureRequestForm}>
+                    <form onSubmit={featureRequestForm.handleSubmit(handleFeatureRequest)} className="space-y-4">
+                      <FormField
+                        control={featureRequestForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Feature Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Brief title for your feature request" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={featureRequestForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Describe the feature, why it would be useful, and how it should work..."
+                                rows={6}
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-end">
+                        <Button 
+                          type="submit" 
+                          disabled={featureRequestMutation.isPending}
+                          className="min-w-[120px]"
+                        >
+                          {featureRequestMutation.isPending ? "Submitting..." : "Submit Request"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              {/* Your Feature Requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Feature Requests</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Track the status of your submitted feature requests.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {requestsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    </div>
+                  ) : featureRequests && featureRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {featureRequests.map((request) => (
+                        <div key={request.id} className="border border-border rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-medium text-foreground">{request.title}</h3>
+                            <Badge className={getStatusColor(request.status)}>
+                              {getStatusText(request.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                            {request.description}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Submitted {format(new Date(request.createdAt), 'MMM d, yyyy')}</span>
+                            {request.statusNotes && (
+                              <span className="text-blue-600 dark:text-blue-400">Notes available</span>
+                            )}
+                          </div>
+                          {request.statusNotes && (
+                            <div className="mt-2 p-2 bg-muted rounded text-xs">
+                              <span className="font-medium">Status Notes:</span> {request.statusNotes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No feature requests submitted yet.</p>
+                      <p className="text-sm">Submit your first request to get started!</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );

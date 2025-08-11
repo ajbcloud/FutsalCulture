@@ -28,7 +28,7 @@ import AdminDiscountCodes from "@/pages/admin/discount-codes";
 import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
 import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
-import AdminEliteFeatures from "@/pages/admin/elite-features";
+
 import AdminPlayerDevelopment from "@/pages/admin/player-development";
 import SuperAdmin from "@/pages/super-admin";
 import Help from "@/pages/help";
