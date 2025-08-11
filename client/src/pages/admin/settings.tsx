@@ -1703,7 +1703,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Stripe</h4>
                             <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
-                            <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
