@@ -182,7 +182,8 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       }
       
       .braintree-option__logo {
-        filter: brightness(0) invert(1);
+        filter: brightness(0.9);
+        opacity: 1;
       }
       
       .braintree-sheet {
@@ -217,15 +218,17 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         background-color: #111827 !important;
       }
       
-      /* Venmo and Google Pay specific styling */
+      /* Venmo and Google Pay specific styling - keep original branding */
       .braintree-option--venmo .braintree-option__logo,
       .braintree-option--googlepay .braintree-option__logo {
         filter: none !important;
+        opacity: 1 !important;
       }
       
-      /* Card option specific styling */
+      /* Card option specific styling - invert for visibility */
       .braintree-option--card .braintree-option__logo {
-        filter: brightness(0) invert(0.7) !important;
+        filter: brightness(0) invert(0.8) !important;
+        opacity: 1 !important;
       }
     `;
     

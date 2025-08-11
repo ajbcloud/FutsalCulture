@@ -18,7 +18,8 @@
 }
 
 .dark .braintree-option__logo {
-  filter: brightness(0) invert(1) !important;
+  /* Default: keep logos visible with slight brightness adjustment */
+  filter: brightness(0.9) !important;
 }
 
 .dark .braintree-sheet {
@@ -53,15 +54,21 @@
   background-color: #111827 !important;
 }
 
-/* Keep branded logos in their original colors */
-.dark .braintree-option--venmo .braintree-option__logo,
-.dark .braintree-option--googlepay .braintree-option__logo {
+/* Keep branded logos in their original colors and ensure visibility */
+.dark .braintree-option--venmo .braintree-option__logo {
   filter: none !important;
+  opacity: 1 !important;
 }
 
-/* Card option specific styling */
+.dark .braintree-option--googlepay .braintree-option__logo {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Card option specific styling - make it more visible in dark mode */
 .dark .braintree-option--card .braintree-option__logo {
-  filter: brightness(0) invert(0.7) !important;
+  filter: brightness(0) invert(0.8) !important;
+  opacity: 1 !important;
 }
 
 /* Force feature grid checkmarks to be green */
