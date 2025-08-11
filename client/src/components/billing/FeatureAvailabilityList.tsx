@@ -80,9 +80,9 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
     'Payment & Billing': ['payments', 'revenueAnalytics'] as FeatureKey[],
     'Communication': ['emailSmsNotifications', 'emailNotifications', 'smsNotifications', 'whiteLabelEmail'] as FeatureKey[],
     'Analytics & Automation': ['advancedAnalytics', 'autoPromotion'] as FeatureKey[],
-    'Advanced Tools': ['csvImport', 'bulkOps', 'themeCustomization', 'apiAccess'] as FeatureKey[],
+    'Advanced Tools': ['csvImport', 'bulkOps', 'apiAccess'] as FeatureKey[],
     'Player Development': ['playerDevelopment'] as FeatureKey[],
-    'Premium Support': ['customFeatureQueue', 'prioritySupport'] as FeatureKey[]
+    'Premium Support': ['featureRequests', 'prioritySupport'] as FeatureKey[]
   };
 
   return (
@@ -108,6 +108,12 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
                     const value = getFeatureValue(featureKey);
                     const requiredPlan = getRequiredPlan(featureKey);
                     const isLoading = upgradeLoading === featureKey;
+
+                    // Skip features that don't have labels defined
+                    if (!featureInfo) {
+                      console.warn(`Feature label missing for: ${featureKey}`);
+                      return null;
+                    }
 
                     return (
                       <div key={featureKey} className="flex items-center justify-between p-3 rounded-lg border bg-card">
