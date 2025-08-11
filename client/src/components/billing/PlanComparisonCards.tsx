@@ -12,6 +12,60 @@ interface PlanComparisonCardsProps {
   currentPlan: string;
 }
 
+// Get features to display for a plan, including inheritance note and new/upgraded features only
+const getDisplayFeatures = (planId: string) => {
+  const plan = getPlan(planId);
+  if (!plan) return [];
+
+  const displayFeatures: Array<{name: string, description?: string, isInheritanceNote?: boolean}> = [];
+  const planOrder = ['free', 'core', 'growth', 'elite'];
+  
+  // Add inheritance note for non-free plans
+  if (planId !== 'free') {
+    const previousPlanNames = {
+      'core': 'Free',
+      'growth': 'Core', 
+      'elite': 'Growth'
+    };
+    displayFeatures.push({
+      name: `Includes everything in ${previousPlanNames[planId as keyof typeof previousPlanNames]}, plus...`,
+      isInheritanceNote: true
+    });
+  }
+
+  // Get features that are new or upgraded in this tier
+  const currentFeatures = Object.entries(plan.features).filter(([_, feature]) => feature.status === 'included');
+  
+  if (planId === 'free') {
+    // For free plan, show all features
+    currentFeatures.forEach(([featureKey, feature]) => {
+      displayFeatures.push({
+        name: feature.name,
+        description: feature.description
+      });
+    });
+  } else {
+    // For paid plans, only show new/upgraded features
+    const previousPlanIndex = planOrder.indexOf(planId) - 1;
+    const previousPlan = previousPlanIndex >= 0 ? getPlan(planOrder[previousPlanIndex]) : null;
+    
+    currentFeatures.forEach(([featureKey, feature]) => {
+      const previousFeature = previousPlan?.features[featureKey];
+      
+      // Show if it's a new feature or an upgraded one
+      if (!previousFeature || previousFeature.status !== 'included' || 
+          (feature.description && feature.description !== previousFeature.description)) {
+        displayFeatures.push({
+          name: feature.name,
+          description: feature.description
+        });
+      }
+    });
+  }
+
+  return displayFeatures;
+};
+
 export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
@@ -83,21 +137,21 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
 
             <CardContent>
               <div className="space-y-3 mb-6">
-                {Object.entries(plan.features).map(([featureKey, feature]) => 
-                  feature.status === 'included' && (
-                    <div key={featureKey} className="flex items-start gap-2">
-                      <span className="mt-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      </span>
-                      <div className="text-sm">
-                        <div className="font-medium text-foreground">{feature.name}</div>
-                        {feature.description && (
-                          <div className="text-xs text-neutral-500 dark:text-neutral-400">{feature.description}</div>
-                        )}
+                {getDisplayFeatures(plan.id).map((displayFeature, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <span className="mt-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    </span>
+                    <div className="text-sm">
+                      <div className={`font-medium ${displayFeature.isInheritanceNote ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                        {displayFeature.name}
                       </div>
+                      {displayFeature.description && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{displayFeature.description}</div>
+                      )}
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
 
               <div className="pt-4 border-t">

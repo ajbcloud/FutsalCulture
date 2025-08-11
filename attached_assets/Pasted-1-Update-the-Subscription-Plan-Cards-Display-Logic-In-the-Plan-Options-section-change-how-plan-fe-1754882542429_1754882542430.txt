@@ -1,0 +1,85 @@
+1. Update the Subscription Plan Cards Display Logic
+
+In the Plan Options section, change how plan features are displayed:
+
+Keep the Free plan listing all of its features as it does now.
+
+For each plan after Free:
+
+Add a first bullet point at the top of its feature list that reads:
+
+Core: “Includes everything in Free, plus…”
+
+Growth: “Includes everything in Core, plus…”
+
+Elite: “Includes everything in Growth, plus…”
+
+Style this first bullet so it is slightly muted or italic to indicate it’s an informational line, not a standard feature.
+
+Remove any features from higher-tier lists that are exact duplicates of features already included in the tier directly before it.
+
+If a feature changes or upgrades between tiers (for example: “Basic Analytics” in Core → “Advanced Analytics” in Growth), replace it in the higher tier’s list with the upgraded label, not an X for the old one.
+
+Keep the existing green check mark styles and descriptions for listed features, but avoid showing red Xs in higher tiers if the feature is replaced with a better one.
+
+The pricing card data should still be driven from the single plans.config.ts file, but the rendering logic should:
+
+Compare each tier’s features with the tier before it.
+
+Output only the new or upgraded features for that tier.
+
+Always prepend the “Includes everything in [previous tier]” bullet.
+
+Ensure all changes maintain light/dark mode support and mobile responsiveness.
+
+2. Replace the Feature Availability Section
+
+Remove the current “Feature Availability” list view entirely.
+
+Replace it with the feature grid design we previously created, where:
+
+Features are listed as rows.
+
+Plans (Free, Core, Growth, Elite) are columns.
+
+Each cell clearly indicates availability:
+
+Green check for included.
+
+Empty/grey dash for not included.
+
+Text variation for upgraded features (e.g., “Advanced” vs “Basic”).
+
+Integrations, communications, analytics, and other grouped categories are clearly sectioned with headers.
+
+The feature grid must reflect the exact feature distribution rules we finalized:
+
+Email available in Core and higher, SMS only in Growth and Elite.
+
+CSV export in Core+, CSV import in Growth+.
+
+No waitlist in Free.
+
+Integrations: Core has only calendar integrations, Growth adds Stripe, Elite adds API + multiple payment integrations.
+
+Growth’s payments limited to Stripe only, Elite supports multiple payment providers.
+
+Access codes & discount codes start in Core.
+
+Feature request queue: Core & Growth get standard, Elite gets priority.
+
+Support levels: Core = basic, Growth = standard, Elite = high priority phone/email.
+
+Advanced Player Development is Elite only.
+
+Match the grid’s style to the rest of the admin interface and make sure it works in both light and dark mode.
+
+The grid should pull from the same plans.config.ts data so there is only one source of truth.
+
+3. QA and Testing
+
+Test in both light and dark mode for readability and visual pop.
+
+Confirm that plan cards and feature grid show the correct features and upgrades per tier.
+
+Confirm that no duplicate features appear unnecessarily and that upgraded features are displayed with their correct new labels.

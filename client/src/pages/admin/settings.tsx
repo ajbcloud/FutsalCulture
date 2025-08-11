@@ -18,13 +18,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
 import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
 import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
-import { FeatureAvailabilityList } from '../../components/billing/FeatureAvailabilityList';
+import { FeatureGrid } from '../../components/billing/FeatureGrid';
 import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
 import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
-import { FEATURE_KEYS } from '@shared/schema';
+// Remove unused import
 
 interface LocationData {
   name: string;
@@ -268,8 +268,8 @@ function PlanAndFeaturesContent() {
         </CardContent>
       </Card>
 
-      {/* Feature Availability */}
-      <FeatureAvailabilityList currentPlan={currentPlan as any} />
+      {/* Feature Grid */}
+      <FeatureGrid currentPlan={currentPlan} />
     </div>
   );
 }
@@ -332,11 +332,10 @@ export default function AdminSettings() {
 
   // Feature flag hooks
   const { data: planFeatures } = usePlanFeatures();
-  const { hasFeature: hasSmsFeature } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
-  const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
-  const { hasFeature: hasAdvancedAnalytics } = useHasFeature(FEATURE_KEYS.ANALYTICS_ADVANCED);
-  const { hasFeature: hasAutoPromotion } = useHasFeature(FEATURE_KEYS.WAITLIST_AUTO_PROMOTE);
-  const { hasFeature: hasThemeCustomization } = useHasFeature(FEATURE_KEYS.THEME_CUSTOMIZATION);
+  const { hasFeature: hasSmsFeature } = useHasFeature('smsNotifications');
+  const { hasFeature: hasPaymentsFeature } = useHasFeature('payments');
+  const { hasFeature: hasAdvancedAnalytics } = useHasFeature('analytics');
+  const { hasFeature: hasAutoPromotion } = useHasFeature('waitlist');
   const planLimits = usePlanLimits();
 
   // Check if Twilio integration is enabled
@@ -1095,7 +1094,7 @@ export default function AdminSettings() {
                       </p>
                       {!hasAutoPromotion && (
                         <UpgradePrompt 
-                          feature={FEATURE_KEYS.WAITLIST_AUTO_PROMOTE} 
+                          feature={'waitlist'} 
                           className="mt-2"
                           targetPlan="growth"
                         />

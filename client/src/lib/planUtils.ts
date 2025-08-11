@@ -1,5 +1,7 @@
 import { plans, type PlanConfig } from '@/config/plans.config';
 
+export { plans };
+
 export function getPlan(planId: string): PlanConfig | undefined {
   return plans.find(p => p.id === planId);
 }
