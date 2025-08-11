@@ -1695,7 +1695,7 @@ export default function AdminSettings() {
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {/* Stripe */}
-                  <FeatureGuard feature={FEATURE_KEYS.PAYMENTS}>
+                  <FeatureGuard feature={FEATURE_KEYS.PAYMENTS_ENABLED}>
                     <div className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
@@ -2045,6 +2045,53 @@ export default function AdminSettings() {
                             className="px-3"
                           >
                             {testingIntegration === 'microsoft' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </FeatureGuard>
+
+                  {/* Zapier */}
+                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_ZAPIER}>
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <Zap className="w-5 h-5 mr-2 text-orange-500" />
+                          <div>
+                            <h4 className="font-medium text-foreground">Zapier</h4>
+                            <p className="text-sm text-muted-foreground">Workflow automation platform</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
+                          </div>
+                        </div>
+                        {integrations.find(i => i.provider === 'zapier')?.enabled && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('zapier')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'zapier')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('zapier')}
+                            disabled={testingIntegration === 'zapier'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'zapier' ? (
                               <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                             ) : (
                               <TestTube className="w-4 h-4" />
