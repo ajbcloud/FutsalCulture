@@ -7,42 +7,25 @@ import braintree from 'braintree';
 
 const router = Router();
 
-// Initialize Braintree Gateway
-let gateway: braintree.BraintreeGateway;
-
-try {
-  console.log('Initializing Braintree Gateway...');
-  console.log('Environment value:', process.env.BRAINTREE_ENVIRONMENT);
-  console.log('Merchant ID available:', !!process.env.BRAINTREE_MERCHANT_ID);
-  console.log('Public Key available:', !!process.env.BRAINTREE_PUBLIC_KEY);
-  console.log('Private Key available:', !!process.env.BRAINTREE_PRIVATE_KEY);
-  
-  // Determine environment - default to sandbox if not explicitly production
-  const environment = process.env.BRAINTREE_ENVIRONMENT?.toLowerCase() === 'production' 
+// Function to create Braintree Gateway with given credentials
+function createBraintreeGateway(credentials: any): braintree.BraintreeGateway {
+  const environment = credentials.environment?.toLowerCase() === 'production' 
     ? braintree.Environment.Production 
     : braintree.Environment.Sandbox;
     
-  console.log('Using Braintree environment:', environment === braintree.Environment.Production ? 'Production' : 'Sandbox');
-  
-  gateway = new braintree.BraintreeGateway({
+  return new braintree.BraintreeGateway({
     environment: environment,
-    merchantId: process.env.BRAINTREE_MERCHANT_ID!,
-    publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
-    privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
+    merchantId: credentials.merchantId,
+    publicKey: credentials.publicKey,
+    privateKey: credentials.privateKey,
   });
-  console.log('Braintree Gateway initialized successfully');
-} catch (error) {
-  console.error('Error initializing Braintree Gateway:', error);
 }
 
 // Function to generate Braintree client token
-async function generateBraintreeClientToken(): Promise<string> {
+async function generateBraintreeClientToken(credentials: any): Promise<string> {
   try {
-    if (!gateway) {
-      throw new Error('Braintree Gateway not initialized');
-    }
-    
     console.log('Generating Braintree client token...');
+    const gateway = createBraintreeGateway(credentials);
     const response = await gateway.clientToken.generate({});
     console.log('Braintree client token generated successfully');
     return response.clientToken;
@@ -83,17 +66,29 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
     }
 
     // Return only the necessary client-side configuration
-    const config = {
-      provider,
-      ...(provider === 'stripe' && {
-        publishableKey: credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY
-      }),
-      ...(provider === 'braintree' && {
-        clientToken: await generateBraintreeClientToken()
-      })
-    };
+    let config: any = { provider };
+    
+    if (provider === 'stripe') {
+      config.publishableKey = credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY;
+    } else if (provider === 'braintree') {
+      try {
+        config.clientToken = await generateBraintreeClientToken(credentials);
+      } catch (error) {
+        console.error('Failed to generate Braintree client token, falling back to Stripe');
+        // Fall back to Stripe if Braintree fails
+        config = {
+          provider: 'stripe',
+          publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
+        };
+      }
+    }
 
-    console.log('Returning payment config:', { provider: config.provider, hasPublishableKey: !!config.publishableKey });
+    console.log('Returning payment config:', { 
+      provider: config.provider, 
+      hasPublishableKey: !!config.publishableKey,
+      hasClientToken: !!config.clientToken 
+    });
+    
     res.json(config);
   } catch (error) {
     console.error('Error getting payment config:', error);
@@ -413,6 +408,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
           return res.status(400).json({ message: 'Payment method nonce is required' });
         }
 
+        const gateway = createBraintreeGateway(credentials);
         const result = await gateway.transaction.sale({
           amount: (amount / 100).toString(), // Convert cents to dollars
           paymentMethodNonce: paymentMethodNonce,
