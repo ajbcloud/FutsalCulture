@@ -1,0 +1,5 @@
+title*,location*,start_time*,end_time*,age_groups*,genders*,capacity*,booking_open_time,price_cents,has_access_code,access_code,waitlist_enabled,waitlist_limit,waitlist_offer_minutes,waitlist_auto_promote,status,recurring,recurring_rule,notes,coach_instructions
+U12 Skills Development,Sports Hub,2025-08-29T14:00:00-04:00,2025-08-29T15:30:00-04:00,U12,Mixed,16,08:00,2500,false,,true,5,60,true,upcoming,false,,,Focus on passing and first touch
+U10 Fun Games,Turf City,2025-08-30T16:00:00-04:00,2025-08-30T17:00:00-04:00,U10,Boys,12,08:00,2000,false,,false,,,false,upcoming,false,,,Small-sided games and basic skills
+Weekly U14 Training,Sports Hub,2025-09-02T18:00:00-04:00,2025-09-02T19:30:00-04:00,U14,Mixed,18,08:00,3000,true,U14CODE,true,8,90,true,upcoming,true,FREQ=WEEKLY;BYDAY=MO;COUNT=8,Recurring weekly session,Technical skills and tactical understanding
+Girls Only Session,Jurong East,2025-08-31T10:00:00-04:00,2025-08-31T11:30:00-04:00,U13;U14;U15,Girls,14,08:00,2800,false,,true,6,75,false,upcoming,false,,,Empowerment through sport

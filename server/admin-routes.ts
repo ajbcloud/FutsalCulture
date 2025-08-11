@@ -2460,129 +2460,231 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     res.send(csvContent);
   });
 
+  // CSV Template Download Endpoints
+  app.get('/api/admin/downloads/sessions-template', requireAdmin, (req: Request, res: Response) => {
+    try {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
+      res.sendFile('sessions_template.csv', { root: './public/downloads' });
+    } catch (error) {
+      console.error('Error downloading sessions template:', error);
+      res.status(500).json({ message: 'Failed to download template' });
+    }
+  });
+
+  app.get('/api/admin/downloads/sessions-sample', requireAdmin, (req: Request, res: Response) => {
+    try {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sessions_sample.csv"');
+      res.sendFile('sessions_sample.csv', { root: './public/downloads' });
+    } catch (error) {
+      console.error('Error downloading sessions sample:', error);
+      res.status(500).json({ message: 'Failed to download sample' });
+    }
+  });
+
   // CSV Import Endpoints
   app.post('/api/admin/imports/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const { csvData } = req.body;
+      const { csvData, dryRun = true } = req.body;
       const tenantId = (req as any).currentUser?.tenantId;
       const adminUserId = (req as any).currentUser?.id;
       
       if (!csvData || typeof csvData !== 'string') {
-        return res.status(400).json({ message: "CSV data is required" });
+        return res.status(400).json({ 
+          summary: { rows: 0, errors: 1, warnings: 0 },
+          errors: [{ row: 1, column: 'file', value: '', code: 'missing_data', message: 'CSV data is required' }],
+          warnings: [],
+          validRows: []
+        });
       }
       
-      // Parse CSV data
-      const lines = csvData.trim().split('\n');
-      if (lines.length < 2) {
-        return res.status(400).json({ message: "CSV must contain header and at least one data row" });
+      // Use our new parser for validation
+      const { parseSessionsCSV } = await import('./lib/csv/sessions');
+      const validation = parseSessionsCSV(csvData);
+      
+      // If there are errors, return them immediately
+      if (validation.errors.length > 0) {
+        return res.status(400).json(validation);
       }
       
-      const header = lines[0].split(',').map(h => h.trim());
-      const dataLines = lines.slice(1);
-      
-      // Validate required columns
-      const requiredColumns = ['title', 'location', 'ageGroup', 'gender', 'startTime', 'endTime', 'capacity'];
-      for (const col of requiredColumns) {
-        if (!header.includes(col)) {
-          return res.status(400).json({ message: `Missing required column: ${col}` });
-        }
+      // If this is a dry run (preview), return the validation results
+      if (dryRun) {
+        return res.json({
+          ...validation,
+          preview: true,
+          message: `Preview: ${validation.validRows.length} sessions ready to import`
+        });
       }
       
-      // Get current available locations from settings
-      const settings = await db.select()
-        .from(systemSettings)
-        .where(eq(systemSettings.tenantId, tenantId));
-      
-      const locationsSetting = settings.find(s => s.key === 'availableLocations');
-      let availableLocations = ['Turf City', 'Sports Hub', 'Jurong East']; // Default fallback
-      
-      if (locationsSetting?.value) {
-        try {
-          availableLocations = JSON.parse(locationsSetting.value);
-        } catch (e) {
-          // If parsing fails, treat as comma-separated string
-          availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
-        }
-      }
-      
-      const errors: string[] = [];
+      // Actual import: create sessions in the database
       const importedSessions: any[] = [];
       const newLocations = new Set<string>();
       
-      // Process each row
-      for (let i = 0; i < dataLines.length; i++) {
-        const row = dataLines[i].split(',').map(cell => cell.trim());
-        const rowData: any = {};
-        
-        // Map row data to column headers
-        for (let j = 0; j < header.length; j++) {
-          if (j < row.length) {
-            rowData[header[j]] = row[j];
-          }
-        }
-        
+      for (const parsedRow of validation.validRows) {
         try {
-          // Validate and process session data
+          // Check if location exists, create if needed
+          const settings = await db.select()
+            .from(systemSettings)
+            .where(eq(systemSettings.tenantId, tenantId));
+          
+          const locationsSetting = settings.find(s => s.key === 'availableLocations');
+          let availableLocations: any[] = [];
+          
+          if (locationsSetting?.value) {
+            try {
+              availableLocations = JSON.parse(locationsSetting.value);
+            } catch (e) {
+              availableLocations = [];
+            }
+          }
+          
+          // Check if location exists
+          const locationExists = availableLocations.some(
+            (loc: any) => (typeof loc === 'string' ? loc : loc.name) === parsedRow.location
+          );
+          
+          if (!locationExists) {
+            // Add new location
+            const newLocation = {
+              name: parsedRow.location,
+              addressLine1: parsedRow.location,
+              city: "Singapore",
+              country: "SG"
+            };
+            availableLocations.push(newLocation);
+            newLocations.add(parsedRow.location);
+            
+            // Update locations in settings
+            await db.insert(systemSettings)
+              .values({
+                tenantId,
+                key: 'availableLocations',
+                value: JSON.stringify(availableLocations),
+                updatedBy: adminUserId,
+                updatedAt: new Date(),
+              })
+              .onConflictDoUpdate({
+                target: [systemSettings.tenantId, systemSettings.key],
+                set: {
+                  value: JSON.stringify(availableLocations),
+                  updatedBy: adminUserId,
+                  updatedAt: new Date(),
+                },
+              });
+          }
+          
+          // Create session data for database
           const sessionData = {
             tenantId,
-            title: rowData.title,
-            location: rowData.location,
-            ageGroups: rowData.ageGroup ? [rowData.ageGroup] : [],
-            genders: rowData.gender ? [rowData.gender] : [],
-            startTime: new Date(rowData.startTime),
-            endTime: new Date(rowData.endTime),
-            capacity: parseInt(rowData.capacity) || 12,
-            priceCents: rowData.priceCents ? parseInt(rowData.priceCents) : 1000
+            title: parsedRow.title,
+            location: parsedRow.location,
+            ageGroups: parsedRow.ageGroups,
+            genders: [parsedRow.genders],
+            startTime: parsedRow.startTime,
+            endTime: parsedRow.endTime,
+            capacity: parsedRow.capacity,
+            priceCents: parsedRow.priceCents || 0,
+            bookingOpenHour: parsedRow.bookingOpenHour || 8,
+            bookingOpenMinute: parsedRow.bookingOpenMinute || 0,
+            hasAccessCode: parsedRow.hasAccessCode,
+            accessCode: parsedRow.accessCode || null,
+            waitlistEnabled: parsedRow.waitlistEnabled,
+            waitlistLimit: parsedRow.waitlistLimit,
+            waitlistOfferMinutes: parsedRow.waitlistOfferMinutes,
+            waitlistAutoPromote: parsedRow.waitlistAutoPromote,
+            status: parsedRow.status,
+            isRecurring: parsedRow.recurring,
+            recurringRule: parsedRow.recurringRule || null,
+            createdBy: adminUserId,
+            createdAt: new Date(),
           };
           
-          // Check if location is new
-          if (sessionData.location && !availableLocations.includes(sessionData.location)) {
-            newLocations.add(sessionData.location);
+          // Insert session into database
+          const insertedSessions = await db.insert(futsalSessions).values(sessionData).returning();
+          importedSessions.push(...insertedSessions);
+          
+          // Handle recurring sessions if enabled
+          if (parsedRow.recurring && parsedRow.recurringRule) {
+            // Basic RRULE parsing for common patterns
+            const rule = parsedRow.recurringRule;
+            let additionalSessions: any[] = [];
+            
+            if (rule.includes('FREQ=WEEKLY')) {
+              const countMatch = rule.match(/COUNT=(\d+)/);
+              const count = countMatch ? parseInt(countMatch[1]) : 4;
+              
+              for (let i = 1; i < count; i++) {
+                const weekOffset = i * 7 * 24 * 60 * 60 * 1000;
+                const newStartTime = new Date(parsedRow.startTime.getTime() + weekOffset);
+                const newEndTime = new Date(parsedRow.endTime.getTime() + weekOffset);
+                
+                // Skip sessions in the past
+                if (newStartTime > new Date()) {
+                  const recurringSessionData = {
+                    ...sessionData,
+                    startTime: newStartTime,
+                    endTime: newEndTime,
+                    isRecurring: false, // Individual occurrences are not recurring
+                    recurringRule: null,
+                  };
+                  
+                  const recurringInserted = await db.insert(futsalSessions)
+                    .values(recurringSessionData)
+                    .returning();
+                  additionalSessions.push(...recurringInserted);
+                }
+              }
+            }
+            
+            importedSessions.push(...additionalSessions);
           }
           
-          // Insert session into database
-          await db.insert(futsalSessions).values(sessionData);
-          importedSessions.push(sessionData);
-          
         } catch (error: any) {
-          errors.push(`Row ${i + 2}: ${error.message}`);
+          console.error(`Error creating session from parsed row:`, error);
+          // This shouldn't happen since we already validated, but handle gracefully
         }
-      }
-      
-      // Auto-add new locations to settings if any were found
-      if (newLocations.size > 0) {
-        const updatedLocations = [...availableLocations, ...Array.from(newLocations)];
-        
-        await db.insert(systemSettings)
-          .values({
-            tenantId,
-            key: 'availableLocations',
-            value: JSON.stringify(updatedLocations),
-            updatedBy: adminUserId,
-            updatedAt: new Date(),
-          })
-          .onConflictDoUpdate({
-            target: [systemSettings.tenantId, systemSettings.key],
-            set: {
-              value: JSON.stringify(updatedLocations),
-              updatedBy: adminUserId,
-              updatedAt: new Date(),
-            },
-          });
-        
-        console.log(`Auto-added new locations: ${Array.from(newLocations).join(', ')}`);
       }
       
       res.json({ 
-        imported: importedSessions.length, 
-        errors,
-        newLocationsAdded: Array.from(newLocations),
-        message: `Successfully imported ${importedSessions.length} sessions${newLocations.size > 0 ? `. Added ${newLocations.size} new locations.` : ''}` 
+        summary: {
+          imported: importedSessions.length,
+          newLocations: newLocations.size,
+          recurring: importedSessions.filter(s => s.isRecurring).length
+        },
+        message: `Successfully imported ${importedSessions.length} sessions${newLocations.size > 0 ? `. Added ${newLocations.size} new locations.` : ''}`,
+        newLocationsAdded: Array.from(newLocations)
       });
       
     } catch (error) {
       console.error("Error importing sessions:", error);
-      res.status(500).json({ message: "Failed to import sessions" });
+      res.status(500).json({ 
+        summary: { rows: 0, errors: 1, warnings: 0 },
+        errors: [{ row: 1, column: 'server', value: '', code: 'server_error', message: 'Internal server error during import' }],
+        warnings: [],
+        validRows: []
+      });
+    }
+  });
+
+  // CSV Error Download Endpoint
+  app.post('/api/admin/imports/sessions/errors', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { errors } = req.body;
+      
+      if (!errors || !Array.isArray(errors)) {
+        return res.status(400).json({ message: 'Errors array is required' });
+      }
+      
+      const { generateErrorsCSV } = await import('./lib/csv/sessions');
+      const errorsCsv = generateErrorsCSV(errors);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sessions_import_errors.csv"');
+      res.send(errorsCsv);
+    } catch (error) {
+      console.error('Error generating errors CSV:', error);
+      res.status(500).json({ message: 'Failed to generate errors CSV' });
     }
   });
 

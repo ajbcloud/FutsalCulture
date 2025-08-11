@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
 import { Plus, Edit, Trash2, Upload, Download, Settings } from 'lucide-react';
+import { SessionsImportModal } from '@/components/import/SessionsImportModal';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,7 @@ export default function AdminSessions() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
-  const [importing, setImporting] = useState(false);
+
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [massUpdating, setMassUpdating] = useState(false);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
@@ -257,40 +258,15 @@ export default function AdminSessions() {
     setMassUpdating(false);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.csv')) {
-      toast({ title: "Please select a CSV file", variant: "destructive" });
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('/api/admin/imports/sessions', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
-        toast({ title: `Successfully imported ${result.imported} sessions` });
-        setShowImportModal(false);
-        // Refresh sessions list
-        adminSessions.list().then(setSessions);
-      } else {
-        toast({ title: result.message || "Import failed", variant: "destructive" });
-      }
-    } catch (error) {
-      console.error('Import error:', error);
-      toast({ title: "Import failed", variant: "destructive" });
-    }
-    setImporting(false);
+  const handleImportComplete = () => {
+    // Refresh sessions list after successful import
+    adminSessions.list().then(data => {
+      setSessions(data);
+      setFilteredSessions(data);
+    }).catch(err => {
+      console.error('Error refreshing sessions after import:', err);
+    });
+    setShowImportModal(false);
   };
 
   if (loading) {
@@ -866,47 +842,11 @@ export default function AdminSessions() {
       )}
 
       {/* Import Modal */}
-      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
-          <DialogHeader>
-            <DialogTitle className="text-white">Import Sessions from CSV</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="csvFile" className="text-zinc-300">
-                Select CSV File
-              </Label>
-              <Input
-                id="csvFile"
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                disabled={importing}
-                className="bg-zinc-800 border-zinc-700 text-white"
-              />
-            </div>
-            
-            <div className="text-sm text-zinc-400">
-              <p>CSV should include headers: title, location, ageGroup, gender, startTime, endTime, capacity, priceCents</p>
-              <Button 
-                variant="link" 
-                onClick={() => window.open('/api/admin/template/sessions', '_blank')}
-                className="p-0 h-auto text-blue-400 hover:text-blue-300"
-              >
-                Download template
-              </Button>
-            </div>
-
-            {importing && (
-              <div className="flex items-center space-x-2 text-zinc-300">
-                <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                <span>Importing sessions...</span>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SessionsImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={handleImportComplete}
+      />
 
       {/* Mass Update Modal */}
       <Dialog open={showMassUpdateModal} onOpenChange={setShowMassUpdateModal}>
