@@ -1,0 +1,417 @@
+We’ve finalized our pricing and features. Use a single source of truth for plans/features and update all UI + checks to read from it. Do not hardcode features in components. Implement the UI rendering rules below (no red X when a higher tier has a better version; show best‑available label and upsell only to the next tier). Then verify both light/dark modes.
+
+1) Single source of truth
+Create client/src/config/plans.config.ts using the object provided (plan ids: free, core, growth, elite; player limits; feature keys with status: 'included' | 'not_included' and optional description).
+
+Import this config anywhere pricing/feature checks are needed. Remove any old scattered constants.
+
+2) Shared helpers
+Create client/src/lib/planUtils.ts:
+
+ts
+Copy
+Edit
+import { plans, type PlanConfig } from '@/config/plans.config';
+
+export function getPlan(planId: string): PlanConfig | undefined {
+  return plans.find(p => p.id === planId);
+}
+
+export function isFeatureIncluded(planId: string, featureKey: string): boolean {
+  const plan = getPlan(planId);
+  const f = plan?.features?.[featureKey];
+  return f?.status === 'included';
+}
+
+export function featureLabel(planId: string, featureKey: string): {name: string; description?: string; included: boolean} {
+  const plan = getPlan(planId);
+  const f = plan?.features?.[featureKey];
+  return { name: f?.name ?? featureKey, description: f?.description, included: f?.status === 'included' };
+}
+
+export function upgradeTargetFor(featureKey: string): 'core'|'growth'|'elite'|null {
+  // Return the cheapest plan that includes this feature
+  const order: Array<'free'|'core'|'growth'|'elite'> = ['free','core','growth','elite'];
+  for (const pid of order) {
+    const p = getPlan(pid);
+    if (p?.features?.[featureKey]?.status === 'included') return pid as any;
+  }
+  return null;
+}
+3) Pricing page — plan cards
+File: client/src/pages/pricing/index.tsx (or your pricing page).
+
+For each plan, iterate features from the config and render:
+
+A green check (✓) when included, with description if present (e.g., “Recurring + Bulk”).
+
+Do not show lower‑tier items as “missing.” Only show the features that the plan includes.
+
+Mark the current plan card with a “Current Plan” badge if the viewer is logged in and belongs to a tenant.
+
+Example card row UI:
+
+tsx
+Copy
+Edit
+{Object.entries(plan.features).map(([key, f]) =>
+  f.status === 'included' && (
+    <li key={key} className="flex items-start gap-2">
+      <span className="mt-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
+        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+      </span>
+      <div className="text-sm">
+        <div className="font-medium">{f.name}</div>
+        {f.description && <div className="text-xs text-neutral-500 dark:text-neutral-400">{f.description}</div>}
+      </div>
+    </li>
+  )
+)}
+4) Admin → Settings → Plan & Features (Feature Availability)
+File: client/src/pages/admin/settings/PlanAndFeatures.tsx.
+
+Fetch tenant plan via /api/tenant/plan (returns planId).
+
+Render a matrix of all relevant features (ordered groups: Core, Payments, Comms, Analytics, Waitlist, Data Tools, Ops, Codes, API, Support, Dev, Integrations, Requests).
+
+For each feature key:
+
+If included on current plan → show green ✓ and the best label (name + description).
+
+If not included → show red ✕ plus a small Upgrade button that picks the lowest plan with that feature:
+
+tsx
+Copy
+Edit
+const target = upgradeTargetFor(key);
+{!included && target && (
+  <button onClick={() => openUpgrade(target)} className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">
+    Upgrade to {getPlan(target)?.name}
+  </button>
+)}
+Replace any old logic that listed “Manual only” as ✕ on higher plans. Higher plans should show their upgraded capability (e.g., “Recurring + Bulk”) as ✓, and not list the lower tier at all.
+
+5) Manage Subscription
+On Plan & Features page header, replace multiple buttons with one Manage Subscription button:
+
+If plan is free → open pricing/checkout for upgrade.
+
+Else → open Stripe customer portal. Expose /api/billing/portal and /api/billing/checkout?plan=....
+
+6) Backend enforcement
+Add a server‑side helper that maps feature enablement from the same planId (e.g., getTenantPlan(tenantId) → load plan config server‑side).
+
+Protect routes:
+
+Payments endpoints require payments included.
+
+SMS endpoints require smsNotifications.
+
+CSV import requires csvImport; export requires csvExport.
+
+Waitlist auto‑promote requires Growth+ (or waitlist description === 'Auto-promote').
+
+API routes require apiAccess.
+
+Return 403 { code: 'plan_required', feature: '...' } when blocked.
+
+7) Integrations visibility
+In Settings → Integrations:
+
+Core: Calendar only (Stripe/Twilio/SendGrid tiles are visible but disabled with “Upgrade to Growth” CTA).
+
+Growth: Calendar + Stripe + SendGrid + Twilio enabled; API tile disabled with “Upgrade to Elite”.
+
+Elite: All enabled (Stripe + QuickBooks + more, Email/SMS gateways, API).
+
+Drive tile states from plans.config.ts using the same helper isFeatureIncluded.
+
+8) Light/Dark polish
+Ensure icon colors:
+
+Included: text-emerald-500 (or the pill style in example)
+
+Not included: text-rose-500
+
+Secondary text: text-neutral-500 dark:text-neutral-400
+
+Ensure contrast AA in both modes.
+
+9) QA checklist
+Pricing page shows each plan’s included capabilities only (no misleading X’s for lower tiers).
+
+Feature Availability shows ✓ for included, ✕ + Upgrade button for locked features.
+
+CSV export available Core+; import Growth+.
+
+Email notifications Core+; SMS Growth+.
+
+Free has no waitlist; Core has manual only; Growth/Elite have auto‑promote.
+
+Payments: Growth = Stripe only; Elite = multiple payment integrations.
+
+Integrations page tiles reflect plan capabilities; CTAs route to upgrade or Stripe portal.
+
+10) Files to touch
+client/src/config/plans.config.ts
+
+client/src/lib/planUtils.ts
+
+client/src/pages/pricing/index.tsx
+
+client/src/pages/admin/settings/PlanAndFeatures.tsx
+
+client/src/pages/admin/settings/Integrations.tsx
+
+server/routes/* (feature gates)
+
+server/services/planAccess.ts (optional central guard)
+
+Deliverable: Pricing and Plan & Features screens fully driven by plans.config.ts, correct per‑plan features, clean upgrade prompts, enforced server‑side feature gates, and polished light/dark presentation.
+
+Updated Plan Feature Matrix
+Category	Feature	Free	Core ($99)	Growth ($199)	Elite ($499)
+Core	Player limit	10	150	500	Unlimited
+Session management	Manual only	Recurring	Recurring + Bulk	Recurring + Bulk
+Parent/Player booking	✓	✓	✓	✓
+Payments	Accept online payments	–	–	Stripe only	Multiple payment integrations (Stripe, QuickBooks, more)
+Comms	Email notifications	–	✓	✓	✓
+SMS notifications	–	–	✓	✓
+Analytics	Reporting & dashboards	–	Basic	Advanced	AI-powered forecasting
+Waitlist	Waitlist core	–	Manual only	Auto-promote	Auto-promote
+Data Tools	CSV export	–	✓	✓	✓
+CSV import	–	–	✓	✓
+Ops	Bulk operations	–	–	✓	✓
+Codes	Access codes	–	✓	✓	✓
+Discount codes	–	✓	✓	✓
+API	API access	–	–	–	✓
+Support	Support level	Basic	Basic	Standard	High priority + phone/email
+Dev	Advanced player development	–	–	–	✓
+Integrations	Calendar integrations	–	✓	✓	✓
+Payment integrations	–	–	Stripe only	Stripe + QuickBooks + more
+Email/SMS gateways	–	–	✓	✓
+API integrations	–	–	–	✓
+Requests	Feature request queue	–	Standard queue	Standard queue	Priority queue
+
+Complete Prompt for Replit
+markdown
+Copy
+Edit
+Update the subscription feature comparison and plan logic across the entire application with the following specifications:
+
+1. **General Structure**
+   - All pricing tiers: Free, Core ($99), Growth ($199), Elite ($499)
+   - Avoid showing red X for a feature that is replaced by an upgraded version in higher tiers. Instead, replace with the upgraded feature label.
+   - In all displays (pricing cards, settings pages, admin view), use consistent wording and iconography.
+   - Add Free tier to all plan comparison pages.
+
+2. **Feature Allocation**
+
+**Core Features**
+- Player limit: Free=10, Core=150, Growth=500, Elite=Unlimited
+- Session management: Free=Manual only, Core=Recurring, Growth=Recurring + Bulk, Elite=Recurring + Bulk
+- Parent/Player booking: Included in all tiers
+
+**Payments**
+- Accept online payments: Free/Core=None, Growth=Stripe only, Elite=Multiple payment integrations (Stripe, QuickBooks, more)
+
+**Communications**
+- Email notifications: Core and higher
+- SMS notifications: Growth and higher
+
+**Analytics**
+- Reporting & dashboards: Core=Basic, Growth=Advanced, Elite=AI-powered forecasting
+
+**Waitlist**
+- Free: None
+- Core: Manual only
+- Growth/Elite: Auto-promote
+
+**Data Tools**
+- CSV export: Core and higher
+- CSV import: Growth and higher
+
+**Operations**
+- Bulk operations: Growth and higher
+
+**Codes**
+- Access codes: Core and higher
+- Discount codes: Core and higher
+
+**API**
+- API access: Elite only
+
+**Support**
+- Free: Basic
+- Core: Basic
+- Growth: Standard
+- Elite: High priority + phone/email
+
+**Development**
+- Advanced player development: Elite only
+
+**Integrations**
+- Calendar integrations: Core and higher
+- Payment integrations: Growth=Stripe only, Elite=Stripe + QuickBooks + more
+- Email/SMS gateways: Growth and higher
+- API integrations: Elite only
+
+**Feature Requests**
+- Free: None
+- Core/Growth: Standard queue
+- Elite: Priority queue
+
+3. **UI Changes**
+- Update plan comparison page to reflect new features and descriptions.
+- Replace “✕ Manual session creation” in higher tiers with upgraded features like “Recurring + Bulk session tools.”
+- Show Free tier’s limited capabilities clearly.
+- In the admin settings > Feature Availability page, show green check marks for available features, red X only for unavailable features without upgrades.
+- Where upgrades exist, replace X with the new feature name.
+
+4. **Code Requirements**
+- Update subscription JSON/config to match new feature allocations.
+- Ensure pricing cards dynamically render features and icons based on subscription tier data.
+- Update plan selector modals and billing portal.
+- Implement icons: ✅ for available, ❌ for unavailable, and ⬆ Upgrade badge for upgraded versions.
+- Make sure the database values reflect these capabilities for permission checks.
+
+plans.config.ts
+ts
+Copy
+Edit
+export type FeatureStatus = 'included' | 'not_included' | 'upgraded';
+
+export interface PlanFeature {
+  name: string;
+  description?: string;
+  status: FeatureStatus;
+  upgradeLabel?: string; // Shown if status = upgraded
+}
+
+export interface PlanConfig {
+  id: string;
+  name: string;
+  price: number; // monthly in USD
+  playerLimit: number | 'unlimited';
+  features: Record<string, PlanFeature>;
+}
+
+export const plans: PlanConfig[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    playerLimit: 10,
+    features: {
+      sessionManagement: { name: 'Session Management', description: 'Manual only', status: 'included' },
+      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      payments: { name: 'Accept Online Payments', status: 'not_included' },
+      emailNotifications: { name: 'Email Notifications', status: 'not_included' },
+      smsNotifications: { name: 'SMS Notifications', status: 'not_included' },
+      analytics: { name: 'Analytics', description: 'Not available', status: 'not_included' },
+      waitlist: { name: 'Waitlist', status: 'not_included' },
+      csvExport: { name: 'CSV Export', status: 'not_included' },
+      csvImport: { name: 'CSV Import', status: 'not_included' },
+      accessCodes: { name: 'Access Codes', status: 'not_included' },
+      discountCodes: { name: 'Discount Codes', status: 'not_included' },
+      apiAccess: { name: 'API Access', status: 'not_included' },
+      support: { name: 'Support Level', description: 'Basic', status: 'included' },
+      playerDevelopment: { name: 'Advanced Player Development', status: 'not_included' },
+      calendarIntegration: { name: 'Calendar Integrations', status: 'not_included' },
+      paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
+      emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
+      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      featureRequests: { name: 'Feature Request Queue', status: 'not_included' },
+    },
+  },
+  {
+    id: 'core',
+    name: 'Core',
+    price: 99,
+    playerLimit: 150,
+    features: {
+      sessionManagement: { name: 'Session Management', description: 'Recurring', status: 'included' },
+      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      payments: { name: 'Accept Online Payments', status: 'not_included' },
+      emailNotifications: { name: 'Email Notifications', status: 'included' },
+      smsNotifications: { name: 'SMS Notifications', status: 'not_included' },
+      analytics: { name: 'Analytics', description: 'Basic', status: 'included' },
+      waitlist: { name: 'Waitlist', description: 'Manual only', status: 'included' },
+      csvExport: { name: 'CSV Export', status: 'included' },
+      csvImport: { name: 'CSV Import', status: 'not_included' },
+      accessCodes: { name: 'Access Codes', status: 'included' },
+      discountCodes: { name: 'Discount Codes', status: 'included' },
+      apiAccess: { name: 'API Access', status: 'not_included' },
+      support: { name: 'Support Level', description: 'Basic', status: 'included' },
+      playerDevelopment: { name: 'Advanced Player Development', status: 'not_included' },
+      calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
+      paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
+      emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
+      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
+    },
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    price: 199,
+    playerLimit: 500,
+    features: {
+      sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
+      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      payments: { name: 'Accept Online Payments', description: 'Stripe only', status: 'included' },
+      emailNotifications: { name: 'Email Notifications', status: 'included' },
+      smsNotifications: { name: 'SMS Notifications', status: 'included' },
+      analytics: { name: 'Analytics', description: 'Advanced', status: 'included' },
+      waitlist: { name: 'Waitlist', description: 'Auto-promote', status: 'included' },
+      csvExport: { name: 'CSV Export', status: 'included' },
+      csvImport: { name: 'CSV Import', status: 'included' },
+      accessCodes: { name: 'Access Codes', status: 'included' },
+      discountCodes: { name: 'Discount Codes', status: 'included' },
+      apiAccess: { name: 'API Access', status: 'not_included' },
+      support: { name: 'Support Level', description: 'Standard', status: 'included' },
+      playerDevelopment: { name: 'Advanced Player Development', status: 'not_included' },
+      calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
+      paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe only', status: 'included' },
+      emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
+      apiIntegrations: { name: 'API Integrations', status: 'not_included' },
+      featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
+    },
+  },
+  {
+    id: 'elite',
+    name: 'Elite',
+    price: 499,
+    playerLimit: 'unlimited',
+    features: {
+      sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
+      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      payments: { name: 'Accept Online Payments', description: 'Multiple payment integrations', status: 'included' },
+      emailNotifications: { name: 'Email Notifications', status: 'included' },
+      smsNotifications: { name: 'SMS Notifications', status: 'included' },
+      analytics: { name: 'Analytics', description: 'AI-powered forecasting', status: 'included' },
+      waitlist: { name: 'Waitlist', description: 'Auto-promote', status: 'included' },
+      csvExport: { name: 'CSV Export', status: 'included' },
+      csvImport: { name: 'CSV Import', status: 'included' },
+      accessCodes: { name: 'Access Codes', status: 'included' },
+      discountCodes: { name: 'Discount Codes', status: 'included' },
+      apiAccess: { name: 'API Access', status: 'included' },
+      support: { name: 'Support Level', description: 'High priority + phone/email', status: 'included' },
+      playerDevelopment: { name: 'Advanced Player Development', status: 'included' },
+      calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
+      paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe + QuickBooks + more', status: 'included' },
+      emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
+      apiIntegrations: { name: 'API Integrations', status: 'included' },
+      featureRequests: { name: 'Feature Request Queue', description: 'Priority queue', status: 'included' },
+    },
+  },
+];
+Why this is good for you
+Your pricing cards can just loop through plans and display features dynamically.
+
+Admin feature availability view can show ✅ or ❌ automatically.
+
+Permission checks in code can use plans[planId].features[featureKey].status.
+
+No more manually updating multiple files when a feature changes.
+

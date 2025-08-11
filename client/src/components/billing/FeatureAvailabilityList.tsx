@@ -3,37 +3,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, X, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PLANS, type PlanId, type FeatureKey } from "@/constants/plans";
-import { FEATURE_LABELS } from "@/constants/features";
+import { plans } from "@/config/plans.config";
+import { getPlan, isFeatureIncluded, upgradeTargetFor, getFeaturesByCategory } from "@/lib/planUtils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 interface FeatureAvailabilityListProps {
-  currentPlan: PlanId;
+  currentPlan: string;
 }
 
 export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityListProps) {
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const currentPlanFeatures = PLANS[currentPlan].features;
+  const plan = getPlan(currentPlan);
+  if (!plan) return null;
 
-  const handleUpgradeSubscription = async () => {
+  const handleUpgrade = async (targetPlan: string) => {
     try {
-      setUpgradeLoading('upgrade');
+      setUpgradeLoading(targetPlan);
       
-      const response = await apiRequest('/api/billing/manage-subscription', 'POST');
-
-      if (response.url) {
-        window.location.href = response.url;
+      if (currentPlan === 'free') {
+        const response = await apiRequest(`/api/billing/checkout?plan=${targetPlan}`, 'POST');
+        if (response.url) {
+          window.location.href = response.url;
+        }
       } else {
-        throw new Error('No manage subscription URL returned');
+        const response = await apiRequest('/api/billing/portal', 'POST');
+        if (response.url) {
+          window.location.href = response.url;
+        }
       }
     } catch (error: any) {
-      console.error('Error starting subscription management:', error);
+      console.error('Error starting upgrade:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to open subscription management. Please try again.",
+        description: error.message || "Failed to start upgrade. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -41,49 +46,7 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
     }
   };
 
-  const getFeatureValue = (featureKey: FeatureKey) => {
-    const value = currentPlanFeatures[featureKey];
-    
-    if (featureKey === 'maxPlayers') {
-      return value === 'unlimited' ? 'Unlimited players' : `${value} players max`;
-    }
-    
-    if (featureKey === 'advancedAnalytics') {
-      if (value === 'advanced') return 'Advanced analytics';
-      if (value === 'basic') return 'Basic analytics';
-      return false;
-    }
-    
-    return value;
-  };
-
-  const isFeatureEnabled = (featureKey: FeatureKey) => {
-    const value = currentPlanFeatures[featureKey];
-    return !!value;
-  };
-
-  const getRequiredPlan = (featureKey: FeatureKey): PlanId | null => {
-    const planOrder: PlanId[] = ['free', 'core', 'growth', 'elite'];
-    
-    for (const planId of planOrder) {
-      const planFeatures = PLANS[planId].features;
-      if (planFeatures[featureKey]) {
-        return planId;
-      }
-    }
-    return null;
-  };
-
-  // Group features by category - include ALL plan features
-  const featureCategories = {
-    'Core Features': ['maxPlayers', 'manualSessions', 'parentPlayerBooking', 'recurringSessions'] as FeatureKey[],
-    'Payment & Billing': ['payments', 'revenueAnalytics'] as FeatureKey[],
-    'Communication': ['emailSmsNotifications', 'emailNotifications', 'smsNotifications', 'whiteLabelEmail'] as FeatureKey[],
-    'Analytics & Automation': ['advancedAnalytics', 'autoPromotion'] as FeatureKey[],
-    'Advanced Tools': ['csvImport', 'bulkOps', 'apiAccess'] as FeatureKey[],
-    'Player Development': ['playerDevelopment'] as FeatureKey[],
-    'Premium Support': ['featureRequests', 'prioritySupport'] as FeatureKey[]
-  };
+  const featureCategories = getFeaturesByCategory(currentPlan);
 
   return (
     <TooltipProvider>
@@ -103,58 +66,52 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
                 </h4>
                 <div className="space-y-3">
                   {features.map((featureKey) => {
-                    const enabled = isFeatureEnabled(featureKey);
-                    const featureInfo = FEATURE_LABELS[featureKey];
-                    const value = getFeatureValue(featureKey);
-                    const requiredPlan = getRequiredPlan(featureKey);
-                    const isLoading = upgradeLoading === featureKey;
+                    const included = isFeatureIncluded(currentPlan, featureKey);
+                    const feature = plan.features[featureKey];
+                    const target = upgradeTargetFor(featureKey);
+                    const targetPlan = target ? getPlan(target) : null;
 
-                    // Skip features that don't have labels defined
-                    if (!featureInfo) {
-                      console.warn(`Feature label missing for: ${featureKey}`);
-                      return null;
-                    }
+                    if (!feature) return null;
 
                     return (
                       <div key={featureKey} className="flex items-center justify-between p-3 rounded-lg border bg-card">
                         <div className="flex items-center gap-3">
-                          {enabled ? (
-                            <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          {included ? (
+                            <Check className="h-5 w-5 text-emerald-500 flex-shrink-0" />
                           ) : (
-                            <X className="h-5 w-5 text-red-500 flex-shrink-0" />
+                            <X className="h-5 w-5 text-rose-500 flex-shrink-0" />
                           )}
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium ${enabled ? '' : 'text-muted-foreground'}`}>
-                                {featureInfo.label}
+                              <span className={`font-medium ${included ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {feature.name}
                               </span>
-                              {featureInfo.description && (
+                              {feature.description && (
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <Info className="h-3 w-3 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className="max-w-xs">{featureInfo.description}</p>
+                                    <p className="max-w-xs">{feature.description}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
                             </div>
-                            {enabled && typeof value === 'string' && (
-                              <p className="text-sm text-muted-foreground mt-1">{value}</p>
+                            {included && feature.description && (
+                              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">{feature.description}</p>
                             )}
                           </div>
                         </div>
 
-                        {!enabled && (
+                        {!included && targetPlan && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={handleUpgradeSubscription}
-                            disabled={upgradeLoading === 'upgrade'}
-                            className="ml-4"
-                            data-testid="button-upgrade-subscription"
+                            onClick={() => handleUpgrade(target!)}
+                            disabled={upgradeLoading === target}
+                            className="ml-4 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 border-0"
                           >
-                            {upgradeLoading === 'upgrade' ? 'Loading...' : 'Upgrade Subscription'}
+                            {upgradeLoading === target ? 'Loading...' : `Upgrade to ${targetPlan.name}`}
                           </Button>
                         )}
                       </div>

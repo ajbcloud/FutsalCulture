@@ -20,7 +20,7 @@ import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
 import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
 import { FeatureAvailabilityList } from '../../components/billing/FeatureAvailabilityList';
 import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
-import { PLANS } from '../../constants/plans';
+import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
@@ -178,8 +178,9 @@ function PlanAndFeaturesContent() {
   }
 
   const currentPlan = tenantPlan?.planId || planFeatures?.planLevel || 'free';
-  const planDisplayName = PLANS[currentPlan as keyof typeof PLANS]?.name || 'Free';
-  const planPrice = PLANS[currentPlan as keyof typeof PLANS]?.price || 0;
+  const plan = getPlan(currentPlan) || getPlan('free')!;
+  const planDisplayName = plan.name;
+  const planPrice = plan.price;
   const billingStatus = tenantPlan?.billingStatus || 'none';
   const hasActiveSubscription = billingStatus === 'active';
 
@@ -210,12 +211,12 @@ function PlanAndFeaturesContent() {
             <div className="bg-muted/50 rounded-lg p-4">
               <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers === 'unlimited' 
+                {plan.playerLimit === 'unlimited' 
                   ? 'Unlimited' 
-                  : `${planFeatures?.playerCount || 0}/${PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers || 10}`}
+                  : `${planFeatures?.playerCount || 0}/${plan.playerLimit}`}
               </div>
               <div className="text-sm text-muted-foreground">
-                {PLANS[currentPlan as keyof typeof PLANS]?.features.maxPlayers === 'unlimited' 
+                {plan.playerLimit === 'unlimited' 
                   ? `Currently registered: ${planFeatures?.playerCount || 0}`
                   : 'Current vs maximum players'}
               </div>
