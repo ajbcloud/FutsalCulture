@@ -179,9 +179,18 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
               cardholderName: {
                 required: false
               }
+            },
+            venmo: {
+              allowDesktop: true
+            },
+            googlePay: {
+              merchantId: 'BCR2DN4T2B6X3LXT', // Braintree sandbox merchant ID
+              transactionInfo: {
+                totalPriceStatus: 'FINAL',
+                totalPrice: (session.priceCents / 100).toString(),
+                currencyCode: 'USD'
+              }
             }
-            // PayPal disabled - requires linked sandbox account
-            // Will show credit card options (Visa, Mastercard, AMEX, Discover) by default
           });
 
           if (isMounted) {
