@@ -558,6 +558,41 @@ export default function AdminSettings() {
     }
   };
 
+  const handleTestIntegration = async (provider: string) => {
+    setTestingIntegration(provider);
+    
+    try {
+      const response = await fetch(`/api/admin/integrations/test/${provider}`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({
+          title: "Test Successful",
+          description: `${provider} integration is working correctly.`,
+        });
+      } else {
+        toast({
+          title: "Test Failed",
+          description: result.error || `Failed to test ${provider} integration.`,
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error testing integration:', error);
+      toast({
+        title: "Test Error",
+        description: `Failed to test ${provider} integration.`,
+        variant: "destructive",
+      });
+    } finally {
+      setTestingIntegration(null);
+    }
+  };
+
   const handleSaveIntegration = async () => {
     if (!configureDialog) return;
     
@@ -1654,7 +1689,7 @@ export default function AdminSettings() {
             <CardContent className="space-y-6">
               {/* Payment Processors */}
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
                   Payment Processing
                 </h3>
@@ -1682,15 +1717,32 @@ export default function AdminSettings() {
                         )}
                       </div>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleConfigureIntegration('stripe')}
-                      className="w-full"
-                    >
-                      <Settings2 className="w-4 h-4 mr-2" />
-                      Configure
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('stripe')}
+                        className="flex-1"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                      {integrations.find(i => i.provider === 'stripe')?.enabled && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleTestIntegration('stripe')}
+                          disabled={testingIntegration === 'stripe'}
+                          className="px-3"
+                        >
+                          {testingIntegration === 'stripe' ? (
+                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                          ) : (
+                            <TestTube className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Braintree */}
@@ -1717,15 +1769,32 @@ export default function AdminSettings() {
                           )}
                         </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('braintree')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('braintree')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'braintree')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('braintree')}
+                            disabled={testingIntegration === 'braintree'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'braintree' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </FeatureGuard>
                 </div>
@@ -1733,7 +1802,7 @@ export default function AdminSettings() {
 
               {/* Communication */}
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
                   <MessageSquare className="w-5 h-5 mr-2" />
                   Communications
                 </h3>
@@ -1754,15 +1823,32 @@ export default function AdminSettings() {
                         </Badge>
                       )}
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleConfigureIntegration('sendgrid')}
-                      className="w-full"
-                    >
-                      <Settings2 className="w-4 h-4 mr-2" />
-                      Configure
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureIntegration('sendgrid')}
+                        className="flex-1"
+                      >
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Configure
+                      </Button>
+                      {integrations.find(i => i.provider === 'sendgrid')?.enabled && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleTestIntegration('sendgrid')}
+                          disabled={testingIntegration === 'sendgrid'}
+                          className="px-3"
+                        >
+                          {testingIntegration === 'sendgrid' ? (
+                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                          ) : (
+                            <TestTube className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Twilio */}
@@ -1782,15 +1868,32 @@ export default function AdminSettings() {
                           </Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('twilio')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('twilio')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'twilio')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('twilio')}
+                            disabled={testingIntegration === 'twilio'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'twilio' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </FeatureGuard>
 
@@ -1811,15 +1914,32 @@ export default function AdminSettings() {
                           </Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('mailchimp')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('mailchimp')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'mailchimp')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('mailchimp')}
+                            disabled={testingIntegration === 'mailchimp'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'mailchimp' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </FeatureGuard>
                 </div>
@@ -1827,7 +1947,7 @@ export default function AdminSettings() {
 
               {/* Calendar & Productivity */}
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
                   <Calendar className="w-5 h-5 mr-2" />
                   Calendar & Productivity
                 </h3>
@@ -1849,15 +1969,32 @@ export default function AdminSettings() {
                           </Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('google')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('google')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'google')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('google')}
+                            disabled={testingIntegration === 'google'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'google' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </FeatureGuard>
 
@@ -1878,15 +2015,32 @@ export default function AdminSettings() {
                           </Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('microsoft')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('microsoft')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'microsoft')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('microsoft')}
+                            disabled={testingIntegration === 'microsoft'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'microsoft' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </FeatureGuard>
                 </div>
@@ -1895,7 +2049,7 @@ export default function AdminSettings() {
               {/* Accounting */}
               <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS}>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
                     <DollarSign className="w-5 h-5 mr-2" />
                     Accounting & Finance
                   </h3>
@@ -1916,15 +2070,32 @@ export default function AdminSettings() {
                           </Badge>
                         )}
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleConfigureIntegration('quickbooks')}
-                        className="w-full"
-                      >
-                        <Settings2 className="w-4 h-4 mr-2" />
-                        Configure
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleConfigureIntegration('quickbooks')}
+                          className="flex-1"
+                        >
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Configure
+                        </Button>
+                        {integrations.find(i => i.provider === 'quickbooks')?.enabled && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestIntegration('quickbooks')}
+                            disabled={testingIntegration === 'quickbooks'}
+                            className="px-3"
+                          >
+                            {testingIntegration === 'quickbooks' ? (
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
