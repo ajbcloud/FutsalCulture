@@ -30,7 +30,7 @@ export default function Home() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery<FutsalSession[]>({
-    queryKey: ["/api/sessions"],
+    queryKey: ["/api/sessions", { includePast: false }],
     enabled: isAuthenticated,
   });
 

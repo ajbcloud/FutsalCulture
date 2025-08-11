@@ -1857,12 +1857,12 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Waitlist> {
     return await db.transaction(async (tx) => {
       // Get the next position
-      const [{ count }] = await tx
+      const [result] = await tx
         .select({ count: count() })
         .from(waitlists)
         .where(and(eq(waitlists.sessionId, sessionId), eq(waitlists.status, 'active')));
 
-      const nextPosition = (count || 0) + 1;
+      const nextPosition = (result?.count || 0) + 1;
 
       // Insert the waitlist entry
       const [waitlistEntry] = await tx
