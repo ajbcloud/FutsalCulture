@@ -1233,6 +1233,9 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Player = typeof players.$inferSelect;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
+
+// Extended player type with session count for dashboard
+export type PlayerWithSessionCount = Player & { sessionCount: number };
 export type FutsalSession = typeof futsalSessions.$inferSelect & {
   signupsCount?: number;
 };

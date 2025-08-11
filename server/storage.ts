@@ -17,6 +17,7 @@ import {
   type UpsertUser,
   type UpdateUser,
   type Player,
+  type PlayerWithSessionCount,
   type InsertPlayer,
   type FutsalSession,
   type InsertSession,
@@ -58,8 +59,8 @@ export interface IStorage {
   updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
   updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void>;
   
-  // Player operations - now tenant-aware
-  getPlayersByParent(parentId: string, tenantId?: string): Promise<Player[]>;
+  // Player operations - now tenant-aware  
+  getPlayersByParent(parentId: string, tenantId?: string): Promise<PlayerWithSessionCount[]>;
   getPlayer(id: string, tenantId?: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   updatePlayer(id: string, player: Partial<InsertPlayer>): Promise<Player>;
@@ -249,12 +250,40 @@ export class DatabaseStorage implements IStorage {
       .where(eq(players.parentId, parent1Id));
   }
 
-  async getPlayersByParent(parentId: string, tenantId?: string): Promise<Player[]> {
+  async getPlayersByParent(parentId: string, tenantId?: string): Promise<PlayerWithSessionCount[]> {
     const conditions = [eq(players.parentId, parentId)];
     if (tenantId) {
       conditions.push(eq(players.tenantId, tenantId));
     }
-    return await db.select().from(players).where(and(...conditions)).orderBy(desc(players.createdAt));
+    
+    // Get players with session counts
+    const playersWithCounts = await db.select({
+      id: players.id,
+      tenantId: players.tenantId,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      email: players.email,
+      phoneNumber: players.phoneNumber,
+      birthYear: players.birthYear,
+      gender: players.gender,
+      parentId: players.parentId,
+      parent2Id: players.parent2Id,
+      canAccessPortal: players.canAccessPortal,
+      canBookAndPay: players.canBookAndPay,
+      createdAt: players.createdAt,
+      updatedAt: players.updatedAt,
+      sessionCount: sql<number>`(
+        SELECT COUNT(*)::int 
+        FROM ${signups} 
+        WHERE ${signups.playerId} = ${players.id} 
+        AND ${signups.paid} = true
+      )`,
+    })
+    .from(players)
+    .where(and(...conditions))
+    .orderBy(desc(players.createdAt));
+
+    return playersWithCounts;
   }
 
   async getParentsByTenant(tenantId: string): Promise<User[]> {
