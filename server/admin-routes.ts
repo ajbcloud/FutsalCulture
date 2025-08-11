@@ -102,6 +102,26 @@ function validateCredentials(provider: string, credentials: any): string | null 
         return 'Microsoft requires Tenant ID, Client ID, and Client Secret';
       }
       break;
+    case 'stripe':
+      if (!credentials.publishableKey || !credentials.secretKey) {
+        return 'Stripe requires Publishable Key and Secret Key';
+      }
+      break;
+    case 'mailchimp':
+      if (!credentials.apiKey || !credentials.audienceId) {
+        return 'Mailchimp requires API Key and Audience ID';
+      }
+      break;
+    case 'quickbooks':
+      if (!credentials.clientId || !credentials.clientSecret) {
+        return 'QuickBooks requires Client ID and Client Secret';
+      }
+      break;
+    case 'braintree':
+      if (!credentials.merchantId || !credentials.publicKey || !credentials.privateKey || !credentials.environment) {
+        return 'Braintree requires Merchant ID, Public Key, Private Key, and Environment';
+      }
+      break;
     default:
       return 'Unsupported provider';
   }

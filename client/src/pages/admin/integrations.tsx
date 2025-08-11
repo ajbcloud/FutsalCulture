@@ -150,6 +150,8 @@ export default function AdminIntegrations() {
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
+  const [activeProcessor, setActiveProcessor] = useState<any>(null);
+  const [testingCheckout, setTestingCheckout] = useState(false);
   const { toast } = useToast();
   
   // Feature flags
@@ -159,7 +161,20 @@ export default function AdminIntegrations() {
 
   useEffect(() => {
     fetchIntegrations();
+    fetchActiveProcessor();
   }, []);
+
+  const fetchActiveProcessor = async () => {
+    try {
+      const response = await fetch('/api/billing/active-processor');
+      if (response.ok) {
+        const data = await response.json();
+        setActiveProcessor(data);
+      }
+    } catch (error) {
+      console.error('Error fetching active processor:', error);
+    }
+  };
 
   const fetchIntegrations = async () => {
     try {
@@ -232,6 +247,7 @@ export default function AdminIntegrations() {
       setConfigureDialog(null);
       setCredentials({});
       fetchIntegrations();
+      fetchActiveProcessor(); // Refresh active processor after saving
     } catch (error) {
       console.error('Error saving integration:', error);
       toast({
@@ -260,6 +276,7 @@ export default function AdminIntegrations() {
       });
       
       fetchIntegrations();
+      fetchActiveProcessor(); // Refresh active processor after toggle
     } catch (error) {
       console.error('Error updating integration:', error);
       toast({
@@ -305,6 +322,41 @@ export default function AdminIntegrations() {
     }
   };
 
+  const handleTestCheckout = async () => {
+    setTestingCheckout(true);
+    try {
+      const response = await fetch('/api/billing/checkout?planId=core', {
+        method: 'POST'
+      });
+      
+      const result = await response.json();
+      
+      if (result.url) {
+        toast({
+          title: "Checkout Test Successful",
+          description: `${result.provider} checkout session created successfully!`,
+        });
+        // Don't actually redirect in test mode
+      } else if (result.message) {
+        toast({
+          title: "Checkout Test Info",
+          description: result.message,
+        });
+      } else {
+        throw new Error('Unknown response format');
+      }
+    } catch (error) {
+      console.error('Error testing checkout:', error);
+      toast({
+        title: "Checkout Test Failed",
+        description: error instanceof Error ? error.message : "Failed to test checkout",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingCheckout(false);
+    }
+  };
+
   const getStatusIcon = (integration: Integration) => {
     if (!integration.enabled) return <XCircle className="w-4 h-4 text-gray-400" />;
     
@@ -337,6 +389,61 @@ export default function AdminIntegrations() {
             Connect third-party services for SMS, email, calendar, file storage, payments, and accounting.
           </p>
         </div>
+
+        {/* Payment Processor Status */}
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <CreditCard className="w-5 h-5 mr-2" />
+              Payment Processor Status
+            </CardTitle>
+            <CardDescription className="text-zinc-400">
+              Current active payment processor for subscription management
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {activeProcessor?.provider === 'stripe' && (
+                  <>
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-white font-medium">Stripe Active</span>
+                  </>
+                )}
+                {activeProcessor?.provider === 'braintree' && (
+                  <>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-white font-medium">Braintree Active</span>
+                  </>
+                )}
+                {!activeProcessor?.provider && (
+                  <>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <span className="text-zinc-400">
+                      {activeProcessor?.hasFallback ? 'Environment Stripe Fallback' : 'No Payment Processor'}
+                    </span>
+                  </>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestCheckout}
+                disabled={testingCheckout}
+                className="text-white border-zinc-600 hover:bg-zinc-800"
+              >
+                {testingCheckout ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : (
+                  <>
+                    <TestTube className="w-4 h-4 mr-2" />
+                    Test Checkout
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
