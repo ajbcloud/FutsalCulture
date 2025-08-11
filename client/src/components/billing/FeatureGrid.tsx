@@ -126,7 +126,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                 <React.Fragment key={categoryName}>
                   <tr>
                     <td colSpan={plans.length + 1} className="p-4 bg-muted/30">
-                      <div className="font-bold text-lg uppercase tracking-wide" style={{ color: '#3b82f6' }}>
+                      <div className="font-bold text-lg uppercase tracking-wide category-header" style={{ color: '#3b82f6', fontWeight: 'bold' }}>
                         {categoryName}
                       </div>
                     </td>
@@ -150,7 +150,9 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                             <td key={plan.id} className="p-3 text-center">
                               {isIncluded ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <Check className="h-4 w-4" style={{ color: '#16a34a' }} />
+                                  <svg className="h-4 w-4 feature-grid-check" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                  </svg>
                                   {featureValue !== 'Yes' && (
                                     <div className="text-xs text-muted-foreground max-w-20 text-center">
                                       {featureValue}

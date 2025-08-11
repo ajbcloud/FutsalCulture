@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force feature grid checkmarks to be green */
+.feature-grid-check {
+  color: #16a34a !important;
+  stroke: #16a34a !important;
+}
+
+/* Force category headers to be blue */
+.category-header {
+  color: #3b82f6 !important;
+}
+
 
 
 /* Light mode semantic colors (default) */
