@@ -146,7 +146,9 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
                       <div className={`font-medium ${displayFeature.isInheritanceNote ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                         {displayFeature.name}
                       </div>
-                      
+                      {displayFeature.description && (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{displayFeature.description}</div>
+                      )}
                     </div>
                   </div>
                 ))}
