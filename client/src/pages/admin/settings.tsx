@@ -941,7 +941,7 @@ export default function AdminSettings() {
                   </p>
                   {!hasSmsFeature ? (
                     <UpgradePrompt 
-                      feature={FEATURE_KEYS.NOTIFICATIONS_SMS} 
+                      feature={'smsNotifications'} 
                       className="mt-2"
                       targetPlan="growth"
                     />
