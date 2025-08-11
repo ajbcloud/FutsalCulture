@@ -2370,16 +2370,82 @@ export function setupAdminRoutes(app: any) {
   });
 
   // CSV Template Downloads
-  app.get('/api/admin/template/sessions', requireAdmin, (req: Request, res: Response) => {
-    const csvContent = `title*,location*,startTime*,endTime*,ageGroups*,genders*,capacity*,priceCents,bookingOpenHour,bookingOpenMinute,hasAccessCode,accessCode,waitlistEnabled,waitlistLimit,paymentWindowMinutes,autoPromote,isRecurring,recurringType,recurringEndDate,recurringCount
-U10 Boys Morning Training,Sugar Sand Park Boca Raton,2025-07-27 09:00:00,2025-07-27 10:30:00,U10,boys,12,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-U12 Girls Afternoon Session,Central Park Field,2025-07-27 15:00:00,2025-07-27 16:30:00,U12,girls,10,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-U14 Boys Evening Training,Westside Regional Park,2025-07-27 18:00:00,2025-07-27 19:30:00,U14,boys,15,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-"U11,U12 Mixed Skills Development",Sugar Sand Park Boca Raton,2025-07-28 10:00:00,2025-07-28 11:30:00,"U11,U12","boys,girls",12,1000,8,0,TRUE,EARLY2025,TRUE,5,90,TRUE,TRUE,weekly,2025-09-28,8
-U13 Girls Advanced Training,Central Park Field,2025-07-28 16:00:00,2025-07-28 17:30:00,U13,girls,8,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,`;
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
-    res.send(csvContent);
+  app.get('/api/admin/template/sessions', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      // Get system settings from database for this tenant (same pattern as /api/admin/settings)
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.tenantId, tenantId));
+      
+      const settingsMap = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse JSON arrays (for availableLocations)
+        if (setting.key === 'availableLocations' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+          }
+        }
+        acc[setting.key] = value;
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Default locations if none configured
+      const defaultLocations = [
+        { name: "Turf City", addressLine1: "Turf City", city: "Singapore", country: "SG" },
+        { name: "Sports Hub", addressLine1: "Sports Hub", city: "Singapore", country: "SG" },
+        { name: "Jurong East", addressLine1: "Jurong East", city: "Singapore", country: "SG" }
+      ];
+      
+      const locations = settingsMap.availableLocations || defaultLocations;
+      const locationNames = locations.map((loc: any) => loc.name).join(', ');
+      
+      const csvContent = `# SESSION IMPORT TEMPLATE - FUTSAL CULTURE
+# Instructions: Fill in the data rows below. Required fields marked with *
+# Available Locations: ${locationNames}
+# Age Groups: U6,U7,U8,U9,U10,U11,U12,U13,U14,U15,U16,U17,U18
+# Genders: boys,girls (use comma-separated for mixed: "boys,girls")
+# Date Format: YYYY-MM-DD HH:MM:SS (e.g., 2025-07-27 09:00:00)
+# Boolean Values: TRUE or FALSE
+# Multiple Values: Use quotes and commas (e.g., "U10,U11" or "boys,girls")
+
+title*,location*,startTime*,endTime*,ageGroups*,genders*,capacity*,priceCents,bookingOpenHour,bookingOpenMinute,hasAccessCode,accessCode,waitlistEnabled,waitlistLimit,paymentWindowMinutes,autoPromote,isRecurring,recurringType,recurringEndDate,recurringCount
+# Field Descriptions:
+# title* = Session name/title
+# location* = Must match one of your configured locations above
+# startTime* = Session start date and time (YYYY-MM-DD HH:MM:SS)
+# endTime* = Session end date and time (YYYY-MM-DD HH:MM:SS)
+# ageGroups* = Age groups allowed (comma-separated if multiple)
+# genders* = Gender restrictions (boys/girls or "boys,girls" for mixed)
+# capacity* = Maximum number of participants (1-20)
+# priceCents = Price in cents (1000 = $10.00) - leave blank for free
+# bookingOpenHour = Hour when booking opens (0-23, default: 8 for 8 AM)
+# bookingOpenMinute = Minute when booking opens (0/15/30/45, default: 0)
+# hasAccessCode = Require access code? (TRUE/FALSE)
+# accessCode = Access code if required (leave blank if hasAccessCode=FALSE)
+# waitlistEnabled = Enable waitlist when full? (TRUE/FALSE)
+# waitlistLimit = Max waitlist size (leave blank for unlimited)
+# paymentWindowMinutes = Minutes to pay after waitlist promotion (default: 60)
+# autoPromote = Auto-promote from waitlist? (TRUE/FALSE)
+# isRecurring = Create multiple sessions? (TRUE/FALSE)
+# recurringType = Pattern if recurring (weekly/biweekly/monthly)
+# recurringEndDate = Stop creating sessions after this date (YYYY-MM-DD)
+# recurringCount = Number of sessions to create (2-52)
+
+U10 Boys Morning Training,${locations[0]?.name || 'Main Field'},2025-07-27 09:00:00,2025-07-27 10:30:00,U10,boys,12,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
+U12 Girls Afternoon Session,${locations[1]?.name || locations[0]?.name || 'Main Field'},2025-07-27 15:00:00,2025-07-27 16:30:00,U12,girls,10,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
+Mixed U11-U12 Development,${locations[0]?.name || 'Main Field'},2025-07-28 10:00:00,2025-07-28 11:30:00,"U11,U12","boys,girls",12,1000,8,0,TRUE,EARLY2025,TRUE,5,90,TRUE,TRUE,weekly,2025-09-28,8`;
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error('Error generating sessions template:', error);
+      res.status(500).json({ message: 'Failed to generate template' });
+    }
   });
 
   app.get('/api/admin/template/players', requireAdmin, (req: Request, res: Response) => {
