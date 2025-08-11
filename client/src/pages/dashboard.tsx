@@ -567,7 +567,10 @@ export default function Dashboard() {
             setPaymentModalOpen(false);
             setSelectedPaymentSession(null);
           }}
-          session={selectedPaymentSession.session}
+          session={{
+            ...selectedPaymentSession.session,
+            ageGroup: selectedPaymentSession.session.ageGroups?.[0] || 'Unknown'
+          }}
           player={selectedPaymentSession.player}
         />
       )}

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin-layout';
 import { adminPayments } from '@/lib/adminApi';
-import { queryClient } from '@/lib/queryClient';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import { usePageRefresh } from '@/hooks/use-page-refresh';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '../../components/ui/button';
 import {
   Table,
@@ -49,6 +50,25 @@ export default function AdminPayments() {
   
   // Feature flag hooks
   const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
+  
+  // Check active payment processor
+  const { data: paymentProcessor } = useQuery({
+    queryKey: ['/api/billing/active-processor'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/billing/active-processor');
+        if (!response.ok) {
+          throw new Error('Failed to fetch payment processor');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching payment processor:', error);
+        return null;
+      }
+    },
+  });
+  
+  const isAutomaticPaymentsEnabled = paymentProcessor?.provider && paymentProcessor?.isConfigured;
   
   // Refresh payments data when returning to page
   usePageRefresh(["/api/admin/payments"]);
@@ -276,6 +296,14 @@ export default function AdminPayments() {
   const getActionButton = (payment: any) => {
     switch (payment.status) {
       case 'pending':
+        if (isAutomaticPaymentsEnabled) {
+          return (
+            <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <Info className="h-4 w-4 mr-1" />
+              Auto-processing
+            </Badge>
+          );
+        }
         return (
           <Button 
             size="sm" 
@@ -445,8 +473,26 @@ export default function AdminPayments() {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {pendingPayments.length > 0 && (
+      {/* Payment Processing Status */}
+      {isAutomaticPaymentsEnabled && (
+        <Card className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-blue-900 dark:text-blue-100">
+                Automatic Payment Processing Active
+              </span>
+            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+              Payments are automatically processed through {paymentProcessor?.provider} when parents complete session bookings. 
+              Manual payment confirmation is not needed.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bulk Actions - Only show for manual payment processing */}
+      {pendingPayments.length > 0 && !isAutomaticPaymentsEnabled && (
         <div className="bg-zinc-900 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -490,6 +536,23 @@ export default function AdminPayments() {
           </div>
         </div>
       )}
+      
+      {/* Manual Payment Warning - Only show when no automatic processing */}
+      {pendingPayments.length > 0 && !isAutomaticPaymentsEnabled && (
+        <Card className="mb-6 bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-yellow-600" />
+              <span className="font-medium text-yellow-900 dark:text-yellow-100">
+                Manual Payment Processing
+              </span>
+            </div>
+            <p className="text-sm text-yellow-700 dark:text-yellow-200 mt-1">
+              No payment processor is configured. You'll need to manually confirm payments after receiving them through your preferred method.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Single Payments Table */}
       <div className="bg-card rounded-lg overflow-hidden">
@@ -497,7 +560,7 @@ export default function AdminPayments() {
           <TableHeader>
             <TableRow className="border-border">
               <TableHead className="text-muted-foreground w-12">
-                {pendingPayments.length > 0 && (
+                {pendingPayments.length > 0 && !isAutomaticPaymentsEnabled && (
                   <input
                     type="checkbox"
                     checked={pendingPayments.length > 0 && selectedPayments.size === pendingPayments.length}
@@ -520,7 +583,7 @@ export default function AdminPayments() {
             {paginatedPayments.map((payment: any) => (
               <TableRow key={payment.id} className="border-border">
                 <TableCell className="w-12">
-                  {payment.status === 'pending' && (
+                  {payment.status === 'pending' && !isAutomaticPaymentsEnabled && (
                     <input
                       type="checkbox"
                       checked={selectedPayments.has(payment.id)}
