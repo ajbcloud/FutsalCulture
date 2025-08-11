@@ -392,7 +392,7 @@ export default function Help() {
                                 <SelectItem value="payment">Payment</SelectItem>
                                 <SelectItem value="technical">Technical</SelectItem>
                                 <SelectItem value="account">Account</SelectItem>
-                                {hasFeatureRequests && !isParent && <SelectItem value="feature_request">Feature Request</SelectItem>}
+                                {hasFeatureRequests && <SelectItem value="feature_request">Feature Request</SelectItem>}
                               </SelectContent>
                             </Select>
                             <FormMessage />
