@@ -30,6 +30,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiRequest } from '@/lib/queryClient';
 import { useHasFeature } from '@/hooks/use-feature-flags';
+import { useAuth } from '@/contexts/AuthContext';
 import { FEATURE_KEYS } from '@shared/schema';
 
 // Schemas for the forms
@@ -89,6 +90,24 @@ interface FeatureRequest {
   };
 }
 
+interface MyHelpRequest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  category: string;
+  priority: string;
+  message: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  resolved: boolean;
+  resolvedAt?: string;
+  resolutionNote?: string;
+  createdAt: string;
+  source?: string;
+}
+
 export default function AdminHelpRequests() {
   const [helpRequests, setHelpRequests] = useState<any[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
@@ -99,6 +118,7 @@ export default function AdminHelpRequests() {
   const [resolvingRequest, setResolvingRequest] = useState<any>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [sending, setSending] = useState(false);
+  const [selectedMyRequest, setSelectedMyRequest] = useState<MyHelpRequest | null>(null);
   
   // Filter states
   const [userFilter, setUserFilter] = useState('');
@@ -116,6 +136,7 @@ export default function AdminHelpRequests() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
+  const { user } = useAuth();
 
   // Personal request form
   const personalRequestForm = useForm<PersonalRequest>({
@@ -144,6 +165,12 @@ export default function AdminHelpRequests() {
   // Fetch feature requests
   const { data: featureRequests, isLoading: requestsLoading } = useQuery<FeatureRequest[]>({
     queryKey: ['/api/feature-requests']
+  });
+
+  // Fetch my help requests
+  const { data: myHelpRequests, isLoading: myRequestsLoading } = useQuery<MyHelpRequest[]>({
+    queryKey: ['/api/help/my-requests'],
+    enabled: !!user,
   });
 
   // Personal request to PlayHQ mutation
@@ -443,11 +470,16 @@ export default function AdminHelpRequests() {
         </div>
 
         <Tabs defaultValue="help-requests" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-auto">
             <TabsTrigger value="help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Parent/Player Help Requests</span>
               <span className="sm:hidden">Help Requests</span>
+            </TabsTrigger>
+            <TabsTrigger value="my-help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">My Help Requests</span>
+              <span className="sm:hidden">My Requests</span>
             </TabsTrigger>
             <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -986,7 +1018,117 @@ export default function AdminHelpRequests() {
       </Dialog>
           </TabsContent>
 
-          {/* Tab 2: Personal Requests to PlayHQ */}
+          {/* Tab 2: My Help Requests */}
+          <TabsContent value="my-help-requests" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  My Help Requests
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  View and track your submitted help requests to PlayHQ support.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {myRequestsLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+                  </div>
+                ) : !myHelpRequests || myHelpRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">No help requests found</h3>
+                    <p className="text-sm text-muted-foreground">
+                      You haven't submitted any help requests yet. Use the "Personal Requests to PlayHQ" tab to submit a new request.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myHelpRequests.map((request) => (
+                      <Card key={request.id} className="border-border">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-medium text-foreground truncate">{request.subject}</h3>
+                                <div className="flex gap-1">
+                                  <Badge 
+                                    variant={
+                                      request.status === 'resolved' ? 'default' : 
+                                      request.status === 'in_progress' ? 'secondary' : 
+                                      'outline'
+                                    }
+                                    className={
+                                      request.status === 'resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                      request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    }
+                                  >
+                                    {request.status === 'resolved' ? 'Resolved' : request.status === 'in_progress' ? 'In Progress' : 'Open'}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {request.category.replace('_', ' ')}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {request.priority}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{request.message}</p>
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {format(new Date(request.createdAt), 'MMM d, yyyy h:mm a')}
+                                </div>
+                                {request.email && (
+                                  <div className="flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />
+                                    {request.email}
+                                  </div>
+                                )}
+                                {request.phone && (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {request.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedMyRequest(request)}
+                              className="ml-4"
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                          {request.resolved && request.resolvedAt && (
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <div className="flex items-center gap-2 text-sm">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="text-green-600 font-medium">
+                                  Resolved on {format(new Date(request.resolvedAt), 'MMM d, yyyy h:mm a')}
+                                </span>
+                              </div>
+                              {request.resolutionNote && (
+                                <p className="text-sm text-muted-foreground mt-2 pl-6">
+                                  {request.resolutionNote}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 3: Personal Requests to PlayHQ */}
           <TabsContent value="personal-requests" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1304,6 +1446,106 @@ export default function AdminHelpRequests() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* My Help Request Details Dialog */}
+        <Dialog open={!!selectedMyRequest} onOpenChange={(open) => !open && setSelectedMyRequest(null)}>
+          <DialogContent className="bg-card border-border max-w-2xl w-[95vw] md:w-full max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-sm md:text-base text-foreground">Help Request Details</DialogTitle>
+            </DialogHeader>
+            
+            {selectedMyRequest && (
+              <div className="space-y-3 md:space-y-4">
+                <div className="bg-muted p-3 md:p-4 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-medium text-foreground mb-1">{selectedMyRequest.subject}</h3>
+                      <div className="flex gap-2 mb-2">
+                        <Badge 
+                          variant={
+                            selectedMyRequest.status === 'resolved' ? 'default' : 
+                            selectedMyRequest.status === 'in_progress' ? 'secondary' : 
+                            'outline'
+                          }
+                          className={
+                            selectedMyRequest.status === 'resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            selectedMyRequest.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          }
+                        >
+                          {selectedMyRequest.status === 'resolved' ? 'Resolved' : selectedMyRequest.status === 'in_progress' ? 'In Progress' : 'Open'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedMyRequest.category.replace('_', ' ')}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {selectedMyRequest.priority}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Submitted:</span>
+                      <span className="text-foreground">{format(new Date(selectedMyRequest.createdAt), 'MMM d, yyyy h:mm a')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="text-foreground">{selectedMyRequest.email}</span>
+                    </div>
+                    {selectedMyRequest.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Phone:</span>
+                        <span className="text-foreground">{selectedMyRequest.phone}</span>
+                      </div>
+                    )}
+                    {selectedMyRequest.source && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Source:</span>
+                        <span className="text-foreground">{selectedMyRequest.source.replace('_', ' ')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-foreground font-medium">Message</Label>
+                  <div className="bg-muted p-3 rounded-lg mt-1">
+                    <p className="text-foreground whitespace-pre-wrap">{selectedMyRequest.message}</p>
+                  </div>
+                </div>
+
+                {selectedMyRequest.resolved && selectedMyRequest.resolvedAt && (
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-800 dark:text-green-200">
+                        Resolved on {format(new Date(selectedMyRequest.resolvedAt), 'MMM d, yyyy h:mm a')}
+                      </span>
+                    </div>
+                    {selectedMyRequest.resolutionNote && (
+                      <div>
+                        <Label className="text-green-800 dark:text-green-200 font-medium">Resolution</Label>
+                        <p className="text-green-700 dark:text-green-300 mt-1">{selectedMyRequest.resolutionNote}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={() => setSelectedMyRequest(null)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
