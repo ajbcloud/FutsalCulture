@@ -71,10 +71,6 @@ export default function WaitlistOffers() {
     return null;
   }
 
-  if (offers.length === 0) {
-    return null;
-  }
-
   const getTimeRemaining = (expiresAt: string) => {
     const now = new Date();
     const expires = new Date(expiresAt);
@@ -93,6 +89,25 @@ export default function WaitlistOffers() {
     return `${seconds}s`;
   };
 
+  const isOfferExpired = (expiresAt: string) => {
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    return expires.getTime() - now.getTime() <= 0;
+  };
+
+  // Filter out offers that have been expired for more than 30 seconds
+  const activeOffers = offers.filter(offer => {
+    if (!offer.offerExpiresAt) return true;
+    const now = new Date();
+    const expires = new Date(offer.offerExpiresAt.toString());
+    const timeSinceExpired = now.getTime() - expires.getTime();
+    return timeSinceExpired < 30000; // Remove after 30 seconds of being expired
+  });
+
+  if (activeOffers.length === 0) {
+    return null;
+  }
+
   return (
     <Card className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/20">
       <CardHeader>
@@ -100,12 +115,15 @@ export default function WaitlistOffers() {
           <AlertCircle className="w-5 h-5" />
           <span>Waitlist Offers</span>
           <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 dark:text-amber-300">
-            {offers.length}
+            {activeOffers.length}
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {offers.map((offer) => (
+        {activeOffers.map((offer) => {
+          const expired = offer.offerExpiresAt ? isOfferExpired(offer.offerExpiresAt.toString()) : false;
+          
+          return (
           <div
             key={offer.id}
             className="bg-background/60 border border-amber-500/30 rounded-lg p-4 space-y-3"
@@ -133,7 +151,10 @@ export default function WaitlistOffers() {
               <div className="text-right space-y-1">
                 <Badge 
                   variant="outline" 
-                  className="border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                  className={expired 
+                    ? "border-red-500 text-red-700 dark:text-red-400 bg-red-500/10" 
+                    : "border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                  }
                 >
                   <Clock className="w-3 h-3 mr-1" />
                   {offer.offerExpiresAt ? getTimeRemaining(offer.offerExpiresAt.toString()) : "No limit"}
@@ -141,35 +162,48 @@ export default function WaitlistOffers() {
               </div>
             </div>
 
-            <div className="flex space-x-2">
-              <Button
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => acceptOfferMutation.mutate(offer.id)}
-                disabled={acceptOfferMutation.isPending || cancelOfferMutation.isPending}
-                data-testid={`button-accept-${offer.id}`}
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Accept & Pay
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-zinc-600 text-zinc-400 hover:text-white"
-                onClick={() => cancelOfferMutation.mutate(offer.id)}
-                disabled={acceptOfferMutation.isPending || cancelOfferMutation.isPending}
-                data-testid={`button-decline-${offer.id}`}
-              >
-                Decline
-              </Button>
-            </div>
+            {!expired && (
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => acceptOfferMutation.mutate(offer.id)}
+                  disabled={acceptOfferMutation.isPending || cancelOfferMutation.isPending}
+                  data-testid={`button-accept-${offer.id}`}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Accept & Pay
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-zinc-600 text-zinc-400 hover:text-white"
+                  onClick={() => cancelOfferMutation.mutate(offer.id)}
+                  disabled={acceptOfferMutation.isPending || cancelOfferMutation.isPending}
+                  data-testid={`button-decline-${offer.id}`}
+                >
+                  Decline
+                </Button>
+              </div>
+            )}
 
-            <div className="text-xs text-muted-foreground bg-amber-500/5 p-2 rounded border border-amber-500/20">
-              <strong>Important:</strong> You have until {offer.offerExpiresAt ? format(new Date(offer.offerExpiresAt.toString()), 'h:mm a') : 'unlimited time'} to accept this offer. 
-              After accepting, you'll have 5 minutes to complete payment.
-            </div>
+            {expired && (
+              <div className="text-center p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  This offer has expired and is no longer available.
+                </p>
+              </div>
+            )}
+
+            {!expired && (
+              <div className="text-xs text-muted-foreground bg-amber-500/5 p-2 rounded border border-amber-500/20">
+                <strong>Important:</strong> You have until {offer.offerExpiresAt ? format(new Date(offer.offerExpiresAt.toString()), 'h:mm a') : 'unlimited time'} to accept this offer. 
+                After accepting, you'll have 5 minutes to complete payment.
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
