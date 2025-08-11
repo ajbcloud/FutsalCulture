@@ -875,13 +875,17 @@ export default function AdminSessions() {
                 <Label className="text-zinc-300">Location</Label>
                 <Select 
                   value={massUpdateData.location}
-                  onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, location: value }))}
+                  onValueChange={(value) => {
+                    if (value !== 'keep-existing') {
+                      setMassUpdateData(prev => ({ ...prev, location: value }));
+                    }
+                  }}
                 >
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
                     <SelectValue placeholder="Leave empty to keep existing" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-800 border-zinc-700">
-                    <SelectItem value="__no_change__" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                    <SelectItem value="keep-existing" className="text-zinc-400">Leave empty to keep existing</SelectItem>
                     {availableLocationNames.map((location: string) => (
                       <SelectItem key={location} value={location} className="text-white hover:bg-zinc-700">
                         {location}
@@ -1113,13 +1117,17 @@ export default function AdminSessions() {
                     <Label className="text-zinc-300">Waitlist Enabled</Label>
                     <Select 
                       value={massUpdateData.waitlistEnabled}
-                      onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, waitlistEnabled: value }))}
+                      onValueChange={(value) => {
+                        if (value !== 'keep-existing') {
+                          setMassUpdateData(prev => ({ ...prev, waitlistEnabled: value }));
+                        }
+                      }}
                     >
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
                         <SelectValue placeholder="Leave empty to keep existing" />
                       </SelectTrigger>
                       <SelectContent className="bg-zinc-800 border-zinc-700">
-                        <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                        <SelectItem value="keep-existing" className="text-zinc-400">Leave empty to keep existing</SelectItem>
                         <SelectItem value="true" className="text-white hover:bg-zinc-700">Enable waitlist</SelectItem>
                         <SelectItem value="false" className="text-white hover:bg-zinc-700">Disable waitlist</SelectItem>
                       </SelectContent>
@@ -1155,13 +1163,17 @@ export default function AdminSessions() {
                     <Label className="text-zinc-300">Auto-promote from Waitlist</Label>
                     <Select 
                       value={massUpdateData.autoPromote}
-                      onValueChange={(value) => setMassUpdateData(prev => ({ ...prev, autoPromote: value }))}
+                      onValueChange={(value) => {
+                        if (value !== 'keep-existing') {
+                          setMassUpdateData(prev => ({ ...prev, autoPromote: value }));
+                        }
+                      }}
                     >
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
                         <SelectValue placeholder="Leave empty to keep existing" />
                       </SelectTrigger>
                       <SelectContent className="bg-zinc-800 border-zinc-700">
-                        <SelectItem value="" className="text-zinc-400">Leave empty to keep existing</SelectItem>
+                        <SelectItem value="keep-existing" className="text-zinc-400">Leave empty to keep existing</SelectItem>
                         <SelectItem value="true" className="text-white hover:bg-zinc-700">Enable auto-promote</SelectItem>
                         <SelectItem value="false" className="text-white hover:bg-zinc-700">Disable auto-promote</SelectItem>
                       </SelectContent>
