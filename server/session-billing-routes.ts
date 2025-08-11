@@ -636,36 +636,48 @@ router.post('/session-billing/refund', async (req: any, res) => {
       try {
         const gateway = createBraintreeGateway(credentials);
         
-        // Check if this is a test transaction ID (starts with 'bt_')
-        if (signupRecord.paymentId && signupRecord.paymentId.startsWith('bt_')) {
-          console.log('Processing test Braintree refund for:', signupRecord.paymentId);
-          // Simulate successful refund for test transactions
-          refundResult = { 
-            success: true, 
-            refundId: `refund_${signupRecord.paymentId}_${Date.now()}` 
-          };
+        // First, try to get transaction details to ensure it exists and is refundable
+        console.log('Checking transaction details for:', signupRecord.paymentId);
+        let transaction;
+        try {
+          transaction = await gateway.transaction.find(signupRecord.paymentId);
+          console.log('Transaction found:', {
+            id: transaction.id,
+            status: transaction.status,
+            amount: transaction.amount,
+            refundedAmount: transaction.refundedAmount || '0'
+          });
+        } catch (findError: any) {
+          console.error('Error finding transaction:', findError);
+          return res.status(400).json({ message: `Transaction not found: ${findError.message}` });
+        }
+
+        // Check if transaction is already fully refunded
+        if (transaction.refundedAmount && parseFloat(transaction.refundedAmount) >= parseFloat(transaction.amount)) {
+          console.log('Transaction already fully refunded');
+          return res.status(400).json({ message: 'Transaction has already been fully refunded' });
+        }
+
+        // Process real Braintree refund
+        const result = await gateway.transaction.refund(signupRecord.paymentId);
+
+        if (result.success && result.transaction) {
+          console.log('Braintree refund successful:', {
+            originalTransactionId: signupRecord.paymentId,
+            refundTransactionId: result.transaction.id,
+            amount: result.transaction.amount,
+            status: result.transaction.status
+          });
+
+          refundResult = { success: true, refundId: result.transaction.id };
         } else {
-          // Process real Braintree refund
-          const result = await gateway.transaction.refund(signupRecord.paymentId);
-
-          if (result.success && result.transaction) {
-            console.log('Braintree refund successful:', {
-              originalTransactionId: signupRecord.paymentId,
-              refundTransactionId: result.transaction.id,
-              amount: result.transaction.amount,
-              status: result.transaction.status
-            });
-
-            refundResult = { success: true, refundId: result.transaction.id };
-          } else {
-            console.error('Braintree refund error:', result.message);
-            return res.status(400).json({ message: result.message || 'Braintree refund failed' });
-          }
+          console.error('Braintree refund error:', result.message);
+          return res.status(400).json({ message: result.message || 'Braintree refund failed' });
         }
       } catch (braintreeError: any) {
-        // Handle test transaction IDs that might cause not found errors
+        // Handle mock test transaction IDs only (our internal test IDs starting with 'bt_')
         if (braintreeError.type === 'notFoundError' && signupRecord.paymentId && signupRecord.paymentId.startsWith('bt_')) {
-          console.log('Test transaction ID detected, simulating successful refund:', signupRecord.paymentId);
+          console.log('Mock test transaction ID detected, simulating successful refund:', signupRecord.paymentId);
           refundResult = { 
             success: true, 
             refundId: `refund_${signupRecord.paymentId}_${Date.now()}` 
