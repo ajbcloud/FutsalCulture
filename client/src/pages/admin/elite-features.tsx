@@ -230,7 +230,14 @@ export default function EliteFeatures() {
         title: "Theme updated successfully",
         description: "Your custom theme settings have been applied."
       });
+      // Force refresh theme data and trigger re-render
       queryClient.invalidateQueries({ queryKey: ['/api/theme'] });
+      queryClient.refetchQueries({ queryKey: ['/api/theme'] });
+      
+      // Force a page reload to ensure theme CSS variables are reapplied
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     },
     onError: () => {
       toast({

@@ -168,19 +168,40 @@ export function CustomThemeProvider({ children }: { children: React.ReactNode })
       root.style.setProperty('--custom-dark-success-color', `hsl(${hexToHsl(theme.darkSuccessColor || '#34d399')})`);
       root.style.setProperty('--custom-dark-warning-color', `hsl(${hexToHsl(theme.darkWarningColor || '#fbbf24')})`);
       root.style.setProperty('--custom-dark-error-color', `hsl(${hexToHsl(theme.darkErrorColor || '#f87171')})`);
+
+      // Set theme-aware CSS variables for elements to use (elements 10-15)
+      // Set light mode values first
+      root.style.setProperty('--theme-page-title', theme.lightPageTitle || '#111827');
+      root.style.setProperty('--theme-card-background', theme.lightCardBackground || '#ffffff');
+      root.style.setProperty('--theme-card-title', theme.lightCardTitle || '#111827');
+      root.style.setProperty('--theme-feature-title', theme.lightFeatureTitle || '#111827');
+      root.style.setProperty('--theme-feature-description', theme.lightFeatureDescription || '#64748b');
+      root.style.setProperty('--theme-icon-color', theme.lightIconColor || '#6366f1');
       
       console.log('Applied theme colors:', {
         light: {
           primary: theme.lightPrimaryButton,
           secondary: theme.lightSecondaryButton,
           background: theme.lightBackground,
-          text: theme.lightText
+          text: theme.lightText,
+          pageTitle: theme.lightPageTitle,
+          cardBackground: theme.lightCardBackground,
+          cardTitle: theme.lightCardTitle,
+          featureTitle: theme.lightFeatureTitle,
+          featureDescription: theme.lightFeatureDescription,
+          iconColor: theme.lightIconColor
         },
         dark: {
           primary: theme.darkPrimaryButton,
           secondary: theme.darkSecondaryButton, 
           background: theme.darkBackground,
-          text: theme.darkText
+          text: theme.darkText,
+          pageTitle: theme.darkPageTitle,
+          cardBackground: theme.darkCardBackground,
+          cardTitle: theme.darkCardTitle,
+          featureTitle: theme.darkFeatureTitle,
+          featureDescription: theme.darkFeatureDescription,
+          iconColor: theme.darkIconColor
         }
       });
 

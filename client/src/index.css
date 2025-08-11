@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark mode theme variable overrides for elements 10-15 */
+.dark {
+  --theme-page-title: var(--custom-dark-page-title, #ffffff);
+  --theme-card-background: var(--custom-dark-card-background, #1e293b);
+  --theme-card-title: var(--custom-dark-card-title, #ffffff);
+  --theme-feature-title: var(--custom-dark-feature-title, #ffffff);
+  --theme-feature-description: var(--custom-dark-feature-description, #cbd5e1);
+  --theme-icon-color: var(--custom-dark-icon-color, #60a5fa);
+}
+
 /* Light mode semantic colors (default) */
 :root {
   /* Core backgrounds */
