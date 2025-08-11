@@ -25,18 +25,20 @@ import { stripeWebhookRouter } from './stripe-webhooks';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+
   // Payment webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
   
   const { braintreeWebhookRouter } = await import('./braintree-webhooks');
   app.use('/api/braintree', braintreeWebhookRouter);
 
-  // Payment admin routes (for refunds/voids)
+  // Auth middleware MUST come before protected routes
+  await setupAuth(app);
+
+  // Payment admin routes (for refunds/voids) - protected
   const paymentAdminRouter = (await import('./payment-admin-routes')).default;
   app.use('/api', isAuthenticated, paymentAdminRouter);
-
-  // Auth middleware
-  await setupAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
