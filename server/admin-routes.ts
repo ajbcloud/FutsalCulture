@@ -2371,12 +2371,12 @@ export function setupAdminRoutes(app: any) {
 
   // CSV Template Downloads
   app.get('/api/admin/template/sessions', requireAdmin, (req: Request, res: Response) => {
-    const csvContent = `title*,location*,ageGroups*,genders*,startTime*,endTime*,capacity*,priceCents,bookingOpenHour,bookingOpenMinute,hasAccessCode,accessCode,waitlistEnabled,waitlistLimit,paymentWindowMinutes,autoPromote,isRecurring,recurringType,recurringEndDate,recurringCount
-U10 Boys Morning Training,Sugar Sand Park Boca Raton,U10,boys,2025-07-27 09:00:00,2025-07-27 10:30:00,12,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-U12 Girls Afternoon Session,Central Park Field,U12,girls,2025-07-27 15:00:00,2025-07-27 16:30:00,10,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-U14 Boys Evening Training,Westside Regional Park,U14,boys,2025-07-27 18:00:00,2025-07-27 19:30:00,15,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
-U11 Mixed Skills Development,Sugar Sand Park Boca Raton,"U11,U12",mixed,2025-07-28 10:00:00,2025-07-28 11:30:00,12,1000,8,0,TRUE,EARLY2025,TRUE,5,90,TRUE,TRUE,weekly,2025-09-28,8
-U13 Girls Advanced Training,Central Park Field,U13,girls,2025-07-28 16:00:00,2025-07-28 17:30:00,8,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,`;
+    const csvContent = `title*,location*,startTime*,endTime*,ageGroups*,genders*,capacity*,priceCents,bookingOpenHour,bookingOpenMinute,hasAccessCode,accessCode,waitlistEnabled,waitlistLimit,paymentWindowMinutes,autoPromote,isRecurring,recurringType,recurringEndDate,recurringCount
+U10 Boys Morning Training,Sugar Sand Park Boca Raton,2025-07-27 09:00:00,2025-07-27 10:30:00,U10,boys,12,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
+U12 Girls Afternoon Session,Central Park Field,2025-07-27 15:00:00,2025-07-27 16:30:00,U12,girls,10,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
+U14 Boys Evening Training,Westside Regional Park,2025-07-27 18:00:00,2025-07-27 19:30:00,U14,boys,15,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,
+"U11,U12 Mixed Skills Development",Sugar Sand Park Boca Raton,2025-07-28 10:00:00,2025-07-28 11:30:00,"U11,U12","boys,girls",12,1000,8,0,TRUE,EARLY2025,TRUE,5,90,TRUE,TRUE,weekly,2025-09-28,8
+U13 Girls Advanced Training,Central Park Field,2025-07-28 16:00:00,2025-07-28 17:30:00,U13,girls,8,1000,8,0,FALSE,,TRUE,,60,TRUE,FALSE,,,,`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="sessions_template.csv"');
     res.send(csvContent);
