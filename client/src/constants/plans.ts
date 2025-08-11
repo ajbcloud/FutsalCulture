@@ -50,19 +50,19 @@ export const PLANS = {
     price: 99,
     features: {
       maxPlayers: 150,
-      manualSessions: true,
-      parentPlayerBooking: true,
-      emailSmsNotifications: true,
+      manualSessions: false, // Core doesn't include manual session creation
+      parentPlayerBooking: false, // Core doesn't include basic booking functionality
+      emailSmsNotifications: false, // Core only has email, no SMS
       recurringSessions: true,
       csvImport: false,
-      payments: true,
-      emailNotifications: true,
-      smsNotifications: false,
+      payments: false, // Core doesn't include online payments
+      emailNotifications: true, // Only email notifications, no SMS
+      smsNotifications: false, // No SMS in Core
       advancedAnalytics: 'basic' as const,
-      revenueAnalytics: false, // Basic analytics only, no revenue tracking
+      revenueAnalytics: false,
       autoPromotion: false,
       bulkOps: false,
-      featureRequests: 'low' as const, // Core plan gets low priority feature requests
+      featureRequests: 'low' as const,
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: false,
@@ -75,19 +75,19 @@ export const PLANS = {
     price: 199,
     features: {
       maxPlayers: 500,
-      manualSessions: true,
-      parentPlayerBooking: true,
-      emailSmsNotifications: true,
+      manualSessions: false, // Growth doesn't include basic manual sessions
+      parentPlayerBooking: false, // Growth doesn't include basic booking (only Free has this)
+      emailSmsNotifications: true, // Growth includes both email and SMS
       recurringSessions: true,
       csvImport: true,
-      payments: true,
+      payments: true, // Growth includes online payments
       emailNotifications: true,
-      smsNotifications: true,
+      smsNotifications: true, // Growth includes SMS
       advancedAnalytics: 'advanced' as const,
-      revenueAnalytics: true, // Revenue analytics available since they can accept payments
+      revenueAnalytics: true,
       autoPromotion: true,
       bulkOps: true,
-      featureRequests: 'medium' as const, // Growth plan gets medium priority feature requests
+      featureRequests: 'medium' as const,
       prioritySupport: false,
       apiAccess: false,
       whiteLabelEmail: true,
@@ -100,23 +100,23 @@ export const PLANS = {
     price: 499,
     features: {
       maxPlayers: 'unlimited' as const,
-      manualSessions: true,
-      parentPlayerBooking: true,
+      manualSessions: false, // Elite doesn't include basic manual sessions (only Free has this)
+      parentPlayerBooking: false, // Elite doesn't include basic booking (only Free has this)
       emailSmsNotifications: true,
       recurringSessions: true,
       csvImport: true,
       payments: true,
       emailNotifications: true,
       smsNotifications: true,
-      advancedAnalytics: 'elite' as const, // Enhanced with multi-location, progression, forecasting
-      revenueAnalytics: true, // Full revenue analytics available
+      advancedAnalytics: 'elite' as const,
+      revenueAnalytics: true,
       autoPromotion: true,
       bulkOps: true,
-      featureRequests: 'high' as const, // Elite plan gets high priority feature requests
-      prioritySupport: true, // NEW Elite feature
+      featureRequests: 'high' as const,
+      prioritySupport: true,
       apiAccess: true,
       whiteLabelEmail: true,
-      playerDevelopment: true, // Elite-only comprehensive player development system
+      playerDevelopment: true,
     },
   },
 } as const;
