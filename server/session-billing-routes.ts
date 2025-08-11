@@ -7,10 +7,24 @@ import Stripe from 'stripe';
 const router = Router();
 
 // Get payment processor configuration endpoint
-router.get('/payment-config', async (req: any, res) => {
+router.get('/session-billing/payment-config', async (req: any, res) => {
   try {
-    const currentUser = req.currentUser;
+    console.log('Payment config request received');
+    console.log('User from req:', req.user?.claims?.sub);
+    
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      console.log('No user ID found');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Get user and tenant information
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
+    console.log('Current user:', currentUser?.id, 'Tenant:', currentUser?.tenantId);
+    
     if (!currentUser?.tenantId) {
+      console.log('No tenant ID found for user');
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
@@ -90,11 +104,16 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
 }
 
 // Create session booking checkout
-router.post('/session-checkout', async (req: any, res) => {
+router.post('/session-billing/session-checkout', async (req: any, res) => {
   try {
     const { sessionId, playerId } = req.body;
-    const currentUser = req.currentUser;
-    
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
     if (!currentUser?.tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
@@ -193,11 +212,16 @@ router.post('/session-checkout', async (req: any, res) => {
 });
 
 // Handle successful payment confirmation
-router.post('/confirm-session-payment', async (req: any, res) => {
+router.post('/session-billing/confirm-session-payment', async (req: any, res) => {
   try {
     const { sessionId, playerId, paymentId, provider } = req.body;
-    const currentUser = req.currentUser;
-    
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
     if (!currentUser?.tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
@@ -271,11 +295,16 @@ router.post('/confirm-session-payment', async (req: any, res) => {
 });
 
 // Process payment endpoint for both Stripe and Braintree
-router.post('/process-payment', async (req: any, res) => {
+router.post('/session-billing/process-payment', async (req: any, res) => {
   try {
     const { signupId, sessionId, playerId, amount, paymentMethodId, provider } = req.body;
-    const currentUser = req.currentUser;
-    
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
     if (!currentUser?.tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }

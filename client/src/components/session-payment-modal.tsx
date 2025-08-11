@@ -200,12 +200,18 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
   );
 }
 
+interface PaymentConfig {
+  provider: 'stripe' | 'braintree';
+  publishableKey?: string;
+  clientToken?: string;
+}
+
 export function SessionPaymentModal({ isOpen, onClose, session, player, signup }: SessionPaymentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Get payment configuration
-  const { data: paymentConfig, isLoading: configLoading, error: configError } = useQuery({
+  const { data: paymentConfig, isLoading: configLoading, error: configError } = useQuery<PaymentConfig>({
     queryKey: ['/api/session-billing/payment-config'],
     enabled: isOpen,
   });
