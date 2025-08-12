@@ -1340,16 +1340,11 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Enhanced Admin Analytics with player growth calculations
-  app.get('/api/admin/analytics-enhanced', requireAdmin, async (req: Request, res: Response) => {
+  // Admin Analytics with real database filtering
+  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // Prevent caching to ensure fresh data
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
-      console.log('🚀 Enhanced Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy, timestamp: new Date().toISOString() });
+      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
       // Build date filters
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -1380,28 +1375,13 @@ export function setupAdminRoutes(app: any) {
 
       // Apply location filter by adding to where clause
       if (location && location !== '') {
-        sessionQuery = db
-          .select({
-            id: futsalSessions.id,
-            ageGroups: futsalSessions.ageGroups,
-            genders: futsalSessions.genders,
-            location: futsalSessions.location,
-            capacity: futsalSessions.capacity,
-            startTime: futsalSessions.startTime,
-            signupCount: sql<number>`(
-              SELECT COUNT(*)::int 
-              FROM ${signups} 
-              WHERE ${signups.sessionId} = ${futsalSessions.id}
-            )`,
-          })
-          .from(futsalSessions)
-          .where(
-            and(
-              gte(futsalSessions.startTime, dateStart),
-              lte(futsalSessions.startTime, dateEnd),
-              eq(futsalSessions.location, location as string)
-            )
-          );
+        sessionQuery = sessionQuery.where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd),
+            eq(futsalSessions.location, location as string)
+          )
+        );
       }
 
       const applicableSessions = await sessionQuery;
@@ -1503,57 +1483,27 @@ export function setupAdminRoutes(app: any) {
         fillRate: session.capacity > 0 ? Math.round((session.signupCount / session.capacity) * 100) : 0
       }));
       
-      // Get ALL players for the tenant to show cumulative growth
-      const allPlayers = await db
-        .select({
-          id: players.id,
-          createdAt: players.createdAt,
-        })
-        .from(players)
-        .where(eq(players.tenantId, (req as any).currentUser?.tenantId))
-        .orderBy(players.createdAt);
-
-      // Calculate dynamic maximum player capacity
-      const totalDays = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
-      const avgSessionsPerWeek = totalSessions > 0 ? (totalSessions / totalDays) * 7 : 0;
-      const avgCapacityPerSession = totalSessions > 0 ? totalCapacity / totalSessions : 0;
+      // Player growth over time for filtered players
+      const playerGrowthData = await db.select({
+        day: sql<string>`date_trunc('day', ${players.createdAt})::date`,
+        count: sql<number>`count(*)`
+      })
+      .from(players)
+      .where(
+        and(
+          gte(players.createdAt, dateStart),
+          lte(players.createdAt, dateEnd),
+          filteredPlayers.length > 0 ? inArray(players.id, filteredPlayers.map(p => p.id)) : sql`false`
+        )
+      )
+      .groupBy(sql`date_trunc('day', ${players.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${players.createdAt})`);
       
-      // Calculate maximum theoretical players based on session frequency and capacity
-      const weeksInRange = totalDays / 7;
-      const totalSessionSlots = avgSessionsPerWeek * avgCapacityPerSession * weeksInRange;
-      
-      // Assume 70% utilization rate as maximum sustainable (players may miss sessions)
-      const maxSustainablePlayers = Math.round(totalSessionSlots * 0.7);
-      
-      // Create player growth over time showing cumulative growth
-      const playerGrowthWithCapacity: any[] = [];
-      const daysBetween = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
-      
-      for (let i = 0; i <= Math.min(daysBetween, 30); i += Math.max(1, Math.floor(daysBetween / 12))) {
-        const currentDate = new Date(dateStart.getTime() + (i * 24 * 60 * 60 * 1000));
-        const playersUpToDate = allPlayers.filter(p => p.createdAt && new Date(p.createdAt) <= currentDate).length;
-        
-        // Priority: current total players + 100, or max sustainable capacity if higher  
-        const fallbackMax = Math.max(allPlayers.length + 100, 100);
-        const dynamicMax = Math.max(fallbackMax, maxSustainablePlayers);
-        const utilizationPercentage = dynamicMax > 0 ? (playersUpToDate / dynamicMax) * 100 : 0;
-        
-        playerGrowthWithCapacity.push({
-          day: currentDate.toISOString().split('T')[0],
-          players: playersUpToDate,
-          newPlayers: i === 0 ? playersUpToDate : playersUpToDate - (playerGrowthWithCapacity[playerGrowthWithCapacity.length - 1]?.players || 0),
-          maxCapacity: dynamicMax,
-          utilizationPercentage: Math.min(utilizationPercentage, 100),
-          isNearCapacity: utilizationPercentage > 80,
-          isAtCapacity: utilizationPercentage >= 95
-        });
-      }
-      
-      const responseData = {
+      res.json({
         // Summary KPIs
         monthlyRevenue: totalRevenue,
         totalRevenue: totalRevenue,
-        totalPlayers: allPlayers.length,
+        totalPlayers: filteredPlayers.length,
         activeSessions: totalSessions,
         avgFillRate: avgFillRate,
         totalSignups: totalSignups,
@@ -1561,28 +1511,10 @@ export function setupAdminRoutes(app: any) {
         // Detail charts
         revenue: revenueData,
         occupancy: occupancyData,
-        playerGrowth: playerGrowthWithCapacity,
-        
-        // Capacity insights
-        maxSustainablePlayers: maxSustainablePlayers,
-        avgSessionsPerWeek: avgSessionsPerWeek,
-        avgCapacityPerSession: avgCapacityPerSession,
-        currentUtilization: maxSustainablePlayers > 0 ? (allPlayers.length / maxSustainablePlayers) * 100 : 0,
-        
+        playerGrowth: playerGrowthData,
         expenses: [], // Placeholder for expenses data
         refundRate: [] // Placeholder for refund data
-      };
-      
-      console.log('🎯 Enhanced Analytics response data:', {
-        totalPlayers: responseData.totalPlayers,
-        playerGrowthLength: responseData.playerGrowth?.length,
-        revenueLength: responseData.revenue?.length,
-        occupancyLength: responseData.occupancy?.length,
-        maxSustainablePlayers: responseData.maxSustainablePlayers,
-        timestamp: new Date().toISOString()
       });
-      
-      res.json(responseData);
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
@@ -1922,7 +1854,7 @@ export function setupAdminRoutes(app: any) {
             value = JSON.parse(value);
           } catch (e) {
             // If parsing fails, treat as string and split by comma
-            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+            value = value.split(',').map(s => s.trim()).filter(s => s);
           }
         }
         
@@ -2391,7 +2323,151 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Admin Analytics with real database filtering
+  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
+      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
+      
+      // Build date filters
+      const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const dateEnd = endDate ? new Date(endDate as string) : new Date();
+      
+      // Get filtered sessions
+      let sessionQuery = db
+        .select({
+          id: futsalSessions.id,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          location: futsalSessions.location,
+          capacity: futsalSessions.capacity,
+          startTime: futsalSessions.startTime,
+          signupCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${signups} 
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`,
+        })
+        .from(futsalSessions)
+        .where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd)
+          )
+        );
 
+      const filteredSessions = await sessionQuery;
+      
+      // Apply additional filters
+      let applicableSessions = filteredSessions;
+      
+      if (ageGroup && ageGroup !== 'all') {
+        applicableSessions = filteredSessions.filter(session => 
+          session.ageGroups.includes(ageGroup as string)
+        );
+      }
+      
+      if (gender && gender !== 'all') {
+        applicableSessions = filteredSessions.filter(session =>
+          session.genders.includes(gender as string)
+        );
+      }
+      
+      if (location) {
+        applicableSessions = filteredSessions.filter(session =>
+          session.location.toLowerCase().includes((location as string).toLowerCase())
+        );
+      }
+      
+      // Get filtered signups and payments
+      const sessionIds = applicableSessions.map(s => s.id);
+      
+      let filteredSignups: any[] = [];
+      let filteredPayments: any[] = [];
+      
+      if (sessionIds.length > 0) {
+        filteredSignups = await db
+          .select()
+          .from(signups)
+          .where(
+            and(
+              inArray(signups.sessionId, sessionIds),
+              gte(signups.createdAt, dateStart),
+              lte(signups.createdAt, dateEnd)
+            )
+          );
+          
+        const signupIds = filteredSignups.map(s => s.id);
+        
+        if (signupIds.length > 0) {
+          filteredPayments = await db
+            .select()
+            .from(payments)
+            .where(
+              and(
+                inArray(payments.signupId, signupIds),
+                gte(payments.createdAt, dateStart),
+                lte(payments.createdAt, dateEnd)
+              )
+            );
+        }
+      }
+      
+      // Get filtered players
+      let filteredPlayers: any[] = [];
+      if (filteredSignups.length > 0) {
+        const playerIds = Array.from(new Set(filteredSignups.map(s => s.playerId)));
+        filteredPlayers = await db
+          .select()
+          .from(players)
+          .where(inArray(players.id, playerIds));
+          
+        // Apply player-level filters
+        if (ageGroup && ageGroup !== 'all') {
+          const targetAge = parseInt((ageGroup as string).substring(1));
+          filteredPlayers = filteredPlayers.filter(player => {
+            const age = new Date().getFullYear() - player.birthYear;
+            return Math.abs(age - targetAge) <= 2; // Within 2 years
+          });
+        }
+        
+        if (gender && gender !== 'all') {
+          filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
+        }
+      }
+      
+      // Calculate filtered analytics
+      const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
+      const totalSessions = applicableSessions.length;
+      const totalSignups = filteredSignups.length;
+      const totalCapacity = applicableSessions.reduce((sum, session) => sum + session.capacity, 0);
+      const fillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
+      
+      console.log('Analytics calculation:', {
+        filteredPayments: filteredPayments.length,
+        totalRevenue,
+        totalSessions,
+        totalSignups,
+        totalCapacity,
+        fillRate,
+        filteredPlayers: filteredPlayers.length
+      });
+      
+      const filteredAnalytics = {
+        totalPlayers: filteredPlayers.length,
+        monthlyRevenue: Math.round(totalRevenue),
+        activeSessions: totalSessions,
+        avgFillRate: fillRate,
+        totalSignups: totalSignups,
+        pendingPayments: 0, // All payments are complete in demo data
+      };
+      
+      res.json(filteredAnalytics);
+    } catch (error) {
+      console.error("Error fetching admin analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
 
   // CSV Template Downloads
   app.get('/api/admin/template/sessions', requireAdmin, async (req: Request, res: Response) => {

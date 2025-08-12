@@ -9,7 +9,11 @@ import {
 import { Badge } from './ui/badge';
 import { ChevronDown, Calendar, Clock, MapPin, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface ParentSessionHistoryDropdownProps {
   playerId: string;
@@ -46,6 +50,12 @@ export function ParentSessionHistoryDropdown({
 }: ParentSessionHistoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+  
+  const { toast } = useToast();
 
   const { data: historyData, isLoading, error } = useQuery<SessionHistoryData>({
     queryKey: [`/api/players/${playerId}/session-history`, currentPage],
@@ -63,7 +73,53 @@ export function ParentSessionHistoryDropdown({
     setCurrentPage(newPage);
   };
 
-  
+  const handleRefund = (session: any) => {
+    setSelectedSession(session);
+    setRefundDialogOpen(true);
+    setRefundReason('');
+  };
+
+  const processRefund = async () => {
+    if (!selectedSession || !refundReason.trim()) {
+      toast({
+        title: "Refund Error",
+        description: "Please provide a reason for the refund",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessingRefund(true);
+    try {
+      const response = await apiRequest('POST', '/api/session-billing/refund', {
+        signupId: selectedSession.id,
+        reason: refundReason.trim(),
+      });
+
+      toast({
+        title: "Refund Successful",
+        description: "Payment has been refunded successfully",
+      });
+
+      // Refresh session history
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/session-history`, currentPage] });
+      
+      // Close dialog
+      setRefundDialogOpen(false);
+      setSelectedSession(null);
+      setRefundReason('');
+
+    } catch (error: any) {
+      console.error('Refund error:', error);
+      toast({
+        title: "Refund Failed", 
+        description: error.message || "Failed to process refund",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingRefund(false);
+    }
+  };
 
   if (sessionCount === 0) {
     return (
@@ -74,6 +130,7 @@ export function ParentSessionHistoryDropdown({
   }
 
   return (
+    <>
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
@@ -147,18 +204,32 @@ export function ParentSessionHistoryDropdown({
                     </div>
                     
                     {(session.paid || session.refunded) && session.paymentProvider && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <CreditCard className="w-3 h-3" />
-                        <span className="capitalize">{session.paymentProvider}</span>
-                        {session.paymentId && (
-                          <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
-                            {session.paymentId}
-                          </span>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <CreditCard className="w-3 h-3" />
+                          <span className="capitalize">{session.paymentProvider}</span>
+                          {session.paymentId && (
+                            <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
+                              {session.paymentId}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {session.paid && !session.refunded && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-6 text-xs ml-2"
+                            onClick={() => handleRefund(session)}
+                          >
+                            Refund
+                          </Button>
                         )}
+                        
                         {session.refunded && session.refundReason && (
-                          <span className="text-xs text-muted-foreground ml-2">
+                          <div className="text-xs text-muted-foreground">
                             Reason: {session.refundReason}
-                          </span>
+                          </div>
                         )}
                       </div>
                     )}
@@ -199,5 +270,50 @@ export function ParentSessionHistoryDropdown({
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {/* Refund Confirmation Dialog */}
+    <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirm Refund</DialogTitle>
+          <DialogDescription>
+            You are about to refund the payment for "{selectedSession?.sessionName}".
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="refund-reason">Refund Reason *</Label>
+            <Textarea
+              id="refund-reason"
+              placeholder="Please provide a reason for this refund..."
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              className="mt-1"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setRefundDialogOpen(false)}
+            disabled={isProcessingRefund}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={processRefund}
+            disabled={isProcessingRefund || !refundReason.trim()}
+          >
+            {isProcessingRefund ? 'Processing...' : 'Confirm Refund'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
