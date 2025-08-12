@@ -199,8 +199,5 @@ export function ParentSessionHistoryDropdown({
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
-
-    
-    </>
   );
 }
