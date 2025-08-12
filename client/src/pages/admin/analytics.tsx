@@ -426,8 +426,14 @@ export default function AdminAnalytics() {
                             stroke="#9CA3AF" 
                             tick={{ fontSize: 12 }}
                             domain={[0, (dataMax: number) => {
-                              const maxCapacity = chartData.maxSustainablePlayers || 100;
-                              return Math.max(dataMax * 1.1, maxCapacity * 1.1);
+                              // Priority: current total players + 100, or max sustainable capacity if higher
+                              const currentTotalPlayers = chartData.totalPlayers || 0;
+                              const fallbackMax = currentTotalPlayers + 100;
+                              const maxCapacity = chartData.maxSustainablePlayers || fallbackMax;
+                              
+                              // Use whichever is higher: total players + 100 or calculated capacity
+                              const dynamicMax = Math.max(fallbackMax, maxCapacity);
+                              return Math.max(dataMax * 1.1, dynamicMax);
                             }]}
                           />
                           <RechartsTooltip 
@@ -495,7 +501,7 @@ export default function AdminAnalytics() {
                             fill="#8884d8"
                             dataKey="value"
                           >
-                            {chartData.ageDistributionData.map((entry: any, index: number) => (
+                            {chartData.ageDistribution?.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={entry.color || `#${Math.floor(Math.random()*16777215).toString(16)}`} />
                             ))}
                           </Pie>

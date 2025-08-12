@@ -1498,21 +1498,15 @@ export function setupAdminRoutes(app: any) {
         fillRate: session.capacity > 0 ? Math.round((session.signupCount / session.capacity) * 100) : 0
       }));
       
-      // Player growth over time for filtered players
-      const playerGrowthData = await db.select({
-        day: sql<string>`date_trunc('day', ${players.createdAt})::date`,
-        count: sql<number>`count(*)`
-      })
-      .from(players)
-      .where(
-        and(
-          gte(players.createdAt, dateStart),
-          lte(players.createdAt, dateEnd),
-          filteredPlayers.length > 0 ? inArray(players.id, filteredPlayers.map(p => p.id)) : sql`false`
-        )
-      )
-      .groupBy(sql`date_trunc('day', ${players.createdAt})`)
-      .orderBy(sql`date_trunc('day', ${players.createdAt})`);
+      // Get ALL players for the tenant to show cumulative growth
+      const allPlayers = await db
+        .select({
+          id: players.id,
+          createdAt: players.createdAt,
+        })
+        .from(players)
+        .where(eq(players.tenantId, (req as any).currentUser?.tenantId))
+        .orderBy(players.createdAt);
 
       // Calculate dynamic maximum player capacity
       const totalDays = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
@@ -1526,28 +1520,35 @@ export function setupAdminRoutes(app: any) {
       // Assume 70% utilization rate as maximum sustainable (players may miss sessions)
       const maxSustainablePlayers = Math.round(totalSessionSlots * 0.7);
       
-      // Create cumulative player growth data with maximum capacity context
-      let cumulativeCount = 0;
-      const playerGrowthWithCapacity = playerGrowthData.map((item, index) => {
-        cumulativeCount += item.count;
-        const utilizationPercentage = maxSustainablePlayers > 0 ? (cumulativeCount / maxSustainablePlayers) * 100 : 0;
+      // Create player growth over time showing cumulative growth
+      const playerGrowthWithCapacity: any[] = [];
+      const daysBetween = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
+      
+      for (let i = 0; i <= Math.min(daysBetween, 30); i += Math.max(1, Math.floor(daysBetween / 12))) {
+        const currentDate = new Date(dateStart.getTime() + (i * 24 * 60 * 60 * 1000));
+        const playersUpToDate = allPlayers.filter(p => new Date(p.createdAt) <= currentDate).length;
         
-        return {
-          day: item.day,
-          players: cumulativeCount,
-          newPlayers: item.count,
-          maxCapacity: maxSustainablePlayers,
+        // Priority: current total players + 100, or max sustainable capacity if higher  
+        const fallbackMax = Math.max(allPlayers.length + 100, 100);
+        const dynamicMax = Math.max(fallbackMax, maxSustainablePlayers);
+        const utilizationPercentage = dynamicMax > 0 ? (playersUpToDate / dynamicMax) * 100 : 0;
+        
+        playerGrowthWithCapacity.push({
+          day: currentDate.toISOString().split('T')[0],
+          players: playersUpToDate,
+          newPlayers: i === 0 ? playersUpToDate : playersUpToDate - (playerGrowthWithCapacity[playerGrowthWithCapacity.length - 1]?.players || 0),
+          maxCapacity: dynamicMax,
           utilizationPercentage: Math.min(utilizationPercentage, 100),
           isNearCapacity: utilizationPercentage > 80,
           isAtCapacity: utilizationPercentage >= 95
-        };
-      });
+        });
+      }
       
       res.json({
         // Summary KPIs
         monthlyRevenue: totalRevenue,
         totalRevenue: totalRevenue,
-        totalPlayers: filteredPlayers.length,
+        totalPlayers: allPlayers.length,
         activeSessions: totalSessions,
         avgFillRate: avgFillRate,
         totalSignups: totalSignups,
