@@ -152,10 +152,20 @@ export default function AdminAnalytics() {
     },
   });
 
-  // Chart data with real database calculations
-  const { data: chartData } = useQuery<AnalyticsData>({
+  // Chart data with real database calculations  
+  const { data: chartData, isLoading: chartLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/admin/analytics"],
+    staleTime: 0, // Force fresh data
+    cacheTime: 0, // Disable caching temporarily for debugging
   });
+
+  // Debug logging
+  React.useEffect(() => {
+    if (chartData) {
+      console.log('Analytics data received:', chartData);
+      console.log('Player growth data:', chartData.playerGrowth);
+    }
+  }, [chartData]);
 
   if (isLoading) {
     return (
@@ -412,7 +422,11 @@ export default function AdminAnalytics() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
-                    {chartData?.playerGrowth ? (
+                    {chartLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+                      </div>
+                    ) : chartData?.playerGrowth && chartData.playerGrowth.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData.playerGrowth}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

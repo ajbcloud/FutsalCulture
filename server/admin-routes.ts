@@ -1526,7 +1526,7 @@ export function setupAdminRoutes(app: any) {
       
       for (let i = 0; i <= Math.min(daysBetween, 30); i += Math.max(1, Math.floor(daysBetween / 12))) {
         const currentDate = new Date(dateStart.getTime() + (i * 24 * 60 * 60 * 1000));
-        const playersUpToDate = allPlayers.filter(p => new Date(p.createdAt) <= currentDate).length;
+        const playersUpToDate = allPlayers.filter(p => p.createdAt && new Date(p.createdAt) <= currentDate).length;
         
         // Priority: current total players + 100, or max sustainable capacity if higher  
         const fallbackMax = Math.max(allPlayers.length + 100, 100);
@@ -1544,7 +1544,7 @@ export function setupAdminRoutes(app: any) {
         });
       }
       
-      res.json({
+      const responseData = {
         // Summary KPIs
         monthlyRevenue: totalRevenue,
         totalRevenue: totalRevenue,
@@ -1562,11 +1562,21 @@ export function setupAdminRoutes(app: any) {
         maxSustainablePlayers: maxSustainablePlayers,
         avgSessionsPerWeek: avgSessionsPerWeek,
         avgCapacityPerSession: avgCapacityPerSession,
-        currentUtilization: maxSustainablePlayers > 0 ? (filteredPlayers.length / maxSustainablePlayers) * 100 : 0,
+        currentUtilization: maxSustainablePlayers > 0 ? (allPlayers.length / maxSustainablePlayers) * 100 : 0,
         
         expenses: [], // Placeholder for expenses data
         refundRate: [] // Placeholder for refund data
+      };
+      
+      console.log('Analytics response data:', {
+        totalPlayers: responseData.totalPlayers,
+        playerGrowthLength: responseData.playerGrowth?.length,
+        revenueLength: responseData.revenue?.length,
+        occupancyLength: responseData.occupancy?.length,
+        maxSustainablePlayers: responseData.maxSustainablePlayers
       });
+      
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
@@ -1906,7 +1916,7 @@ export function setupAdminRoutes(app: any) {
             value = JSON.parse(value);
           } catch (e) {
             // If parsing fails, treat as string and split by comma
-            value = value.split(',').map(s => s.trim()).filter(s => s);
+            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
           }
         }
         
