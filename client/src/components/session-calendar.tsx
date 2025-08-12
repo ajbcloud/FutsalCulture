@@ -58,49 +58,14 @@ export default function SessionCalendar({
     const now = new Date();
     const sessionDate = new Date(session.startTime);
     const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const twoWeeksFromToday = new Date(todayStart.getTime() + (14 * 24 * 60 * 60 * 1000));
     
     // Only show future sessions (not past ones)
     if (sessionDate < now) {
       return false;
     }
     
-    // Show sessions up to 2 weeks out for calendar view
-    if (sessionDate > twoWeeksFromToday) {
-      return false;
-    }
-    
-    // Don't show full or closed sessions
-    if (session.status === "full" || session.status === "closed") {
-      return false;
-    }
-    
-    // Check if session is currently bookable based on its constraints
-    const isBookable = (() => {
-      // Sessions with no time constraints are always bookable
-      if (session.noTimeConstraints) {
-        return true;
-      }
-      
-      // Sessions with days before booking constraint
-      if (session.daysBeforeBooking) {
-        const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
-        const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
-        return now >= bookingOpenTime;
-      }
-      
-      // Default 8 AM rule - only bookable if it's today and after 8 AM
-      const isToday = sessionDate.toDateString() === today.toDateString();
-      if (!isToday) return false;
-      
-      const bookingHour = session.bookingOpenHour ?? 8;
-      const bookingMinute = session.bookingOpenMinute ?? 0;
-      const bookingOpenTime = new Date(sessionDate);
-      bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
-      
-      return now >= bookingOpenTime;
-    })();
+    // For calendar view, show all future sessions regardless of booking status
+    // The booking availability will be handled in the rendering logic
     
     // Check multi-player filters first (if coming from dashboard with multiple players)
     if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
@@ -126,6 +91,16 @@ export default function SessionCalendar({
   const monthSessions = sessions.filter(session => {
     const sessionDate = new Date(session.startTime);
     return sessionDate >= monthStart && sessionDate <= monthEnd;
+  });
+  
+  // Debug logging
+  console.log('Calendar filtering:', {
+    currentMonth: format(currentMonth, 'MMMM yyyy'),
+    monthStart: monthStart.toISOString(),
+    monthEnd: monthEnd.toISOString(),
+    totalSessions: sessions.length,
+    monthSessions: monthSessions.length,
+    monthSessionIds: monthSessions.map(s => ({ id: s.id, title: s.title, startTime: s.startTime }))
   });
 
   // Group sessions by date
