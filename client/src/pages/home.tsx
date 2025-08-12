@@ -42,25 +42,15 @@ export default function Home() {
     );
   }
 
-  // Show all currently bookable sessions, not just today's
-  const availableSessions = sessions.filter(session => {
+  // Show only today's sessions on the main page - future sessions are handled by calendar
+  const todaysSessions = sessions.filter(session => {
     const now = new Date();
     const sessionDate = new Date(session.startTime);
+    const today = new Date();
     
-    // Debug logging for our specific session
-    if (session.id === "a9e03e7b-5622-4e6a-a06f-243b7ac7acc1") {
-      console.log("Debug session a9e03e7b:", {
-        id: session.id,
-        startTime: session.startTime,
-        sessionDate: sessionDate.toString(),
-        now: now.toString(),
-        noTimeConstraints: session.noTimeConstraints,
-        daysBeforeBooking: session.daysBeforeBooking,
-        status: session.status,
-        isPast: sessionDate < now,
-        isFullOrClosed: session.status === "full" || session.status === "closed"
-      });
-    }
+    // Only show today's sessions
+    const isToday = sessionDate.toDateString() === today.toDateString();
+    if (!isToday) return false;
     
     // Don't show past sessions
     if (sessionDate < now) return false;
@@ -68,10 +58,9 @@ export default function Home() {
     // Don't show full or closed sessions
     if (session.status === "full" || session.status === "closed") return false;
     
-    // Check booking availability based on constraints
+    // Check if today's session is currently bookable
     if (session.noTimeConstraints) {
       // Can book anytime - show it
-      console.log("Session with no time constraints found:", session.id);
       return true;
     }
     
@@ -83,10 +72,6 @@ export default function Home() {
     }
     
     // Default 8 AM rule - only show if it's today and after 8 AM
-    const today = new Date();
-    const isToday = sessionDate.toDateString() === today.toDateString();
-    if (!isToday) return false;
-    
     const bookingHour = session.bookingOpenHour ?? 8;
     const bookingMinute = session.bookingOpenMinute ?? 0;
     const bookingOpenTime = new Date(sessionDate);
@@ -97,8 +82,8 @@ export default function Home() {
   
   // Debug logging
   console.log("Total sessions:", sessions.length);
-  console.log("Available sessions:", availableSessions.length);
-  console.log("Available session IDs:", availableSessions.map(s => s.id));
+  console.log("Today's sessions:", todaysSessions.length);
+  console.log("Today's session IDs:", todaysSessions.map(s => s.id));
 
   return (
     <div className="min-h-screen bg-[#18181b]">
@@ -122,6 +107,10 @@ export default function Home() {
               <Link href="/dashboard">My Dashboard</Link>
             </Button>
 
+            <Button asChild size="lg" variant="outline">
+              <Link href="/calendar">View Calendar</Link>
+            </Button>
+
             <Button 
               variant="outline" 
               size="lg"
@@ -135,31 +124,32 @@ export default function Home() {
                 }
               }}
             >
-              View Full Schedule
+              Future Sessions
             </Button>
           </div>
         </div>
       </section>
-      {/* Available Sessions */}
+      {/* Today's Sessions */}
       <section className="py-8 bg-[#18181b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold bg-[#ffffff00] text-[#ffffff]">Available Sessions 📚</h2>
-              <p className="text-gray-600 mt-2">Sessions you can book right now</p>
+              <h2 className="text-3xl font-bold bg-[#ffffff00] text-[#ffffff]">Today's Sessions 📚</h2>
+              <p className="text-gray-600 mt-2">Sessions you can book today</p>
             </div>
           </div>
 
-          {availableSessions.length === 0 ? (
+          {todaysSessions.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No sessions available for booking at this time.</p>
+              <p className="text-gray-500 text-lg">No sessions available for booking today.</p>
+              <p className="text-gray-400 mt-2">Sessions may open at different times based on their booking rules. Check the calendar for future sessions.</p>
               <Button asChild className="mt-4">
-                <Link href="/calendar">View Full Schedule</Link>
+                <Link href="/calendar">View Future Sessions</Link>
               </Button>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableSessions.map((session) => (
+              {todaysSessions.map((session) => (
                 <SessionCard key={session.id} session={session} />
               ))}
             </div>
@@ -167,19 +157,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Calendar Section */}
-      <section className="py-16 bg-[#18181b]" id="calendar">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Upcoming Sessions Calendar</h2>
-            <p className="text-zinc-400">View your personalized schedule based on your players' age groups</p>
-          </div>
-          <SessionCalendar 
-            showBookingButtons={true}
-            onSessionClick={(session) => {
-              window.location.href = `/sessions/${session.id}`;
-            }}
-          />
+      {/* Future Sessions - Calendar CTA */}
+      <section className="py-12 bg-[#2a2a2a]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Book Future Sessions</h2>
+          <p className="text-lg text-muted-foreground mb-6">
+            Sessions with flexible booking times are available through our calendar view.
+          </p>
+          <Button asChild size="lg">
+            <Link href="/calendar">View Calendar & Book Sessions</Link>
+          </Button>
         </div>
       </section>
     </div>

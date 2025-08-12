@@ -301,17 +301,17 @@ export default function Dashboard() {
           <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
             <div>
               <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Today's Sessions</h2>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base sm:mt-2">Available for booking at 8:00 AM</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base sm:mt-2">Sessions available for booking today (rules may vary)</p>
             </div>
             <Button 
               variant="outline" 
               className="w-full sm:w-auto"
               onClick={() => {
-                // View Full Schedule - always go without filters to show everything
-                setLocation('/sessions');
+                // View Future Sessions Calendar - go to calendar view
+                setLocation('/calendar');
               }}
             >
-              View Full Schedule
+              View Future Sessions
             </Button>
           </div>
 
@@ -357,7 +357,7 @@ export default function Dashboard() {
                       // Add eligibleOnly flag to indicate this came from the eligible sessions button
                       params.set('eligibleOnly', 'true');
                       
-                      const url = `/sessions${params.toString() ? `?${params.toString()}` : ''}`;
+                      const url = `/calendar${params.toString() ? `?${params.toString()}` : ''}`;
                       setLocation(url);
                     }}
                   >

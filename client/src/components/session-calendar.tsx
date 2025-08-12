@@ -53,17 +53,54 @@ export default function SessionCalendar({
     queryKey: ["/api/sessions"],
   });
 
-  // Filter sessions based on provided criteria
+  // Filter sessions based on provided criteria and booking availability
   const sessions = allSessions.filter(session => {
-    // Filter by date: only show current day or future sessions up to 2 weeks out
+    const now = new Date();
     const sessionDate = new Date(session.startTime);
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const twoWeeksFromToday = new Date(todayStart.getTime() + (14 * 24 * 60 * 60 * 1000));
     
-    if (sessionDate < todayStart || sessionDate > twoWeeksFromToday) {
+    // Only show future sessions (not past ones)
+    if (sessionDate < now) {
       return false;
     }
+    
+    // Show sessions up to 2 weeks out for calendar view
+    if (sessionDate > twoWeeksFromToday) {
+      return false;
+    }
+    
+    // Don't show full or closed sessions
+    if (session.status === "full" || session.status === "closed") {
+      return false;
+    }
+    
+    // Check if session is currently bookable based on its constraints
+    const isBookable = (() => {
+      // Sessions with no time constraints are always bookable
+      if (session.noTimeConstraints) {
+        return true;
+      }
+      
+      // Sessions with days before booking constraint
+      if (session.daysBeforeBooking) {
+        const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
+        const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
+        return now >= bookingOpenTime;
+      }
+      
+      // Default 8 AM rule - only bookable if it's today and after 8 AM
+      const isToday = sessionDate.toDateString() === today.toDateString();
+      if (!isToday) return false;
+      
+      const bookingHour = session.bookingOpenHour ?? 8;
+      const bookingMinute = session.bookingOpenMinute ?? 0;
+      const bookingOpenTime = new Date(sessionDate);
+      bookingOpenTime.setHours(bookingHour, bookingMinute, 0, 0);
+      
+      return now >= bookingOpenTime;
+    })();
     
     // Check multi-player filters first (if coming from dashboard with multiple players)
     if (multiPlayerAges.length > 0 || multiPlayerGenders.length > 0) {
@@ -72,12 +109,14 @@ export default function SessionCalendar({
       if (!ageMatch || !genderMatch) return false;
     } else {
       // Apply manual filters if provided (for public sessions page)
-      if (ageGroupFilter && !session.ageGroups?.includes(ageGroupFilter)) return false;
-      if (genderFilter && !session.genders?.includes(genderFilter)) return false;
+      if (ageGroupFilter && session.ageGroups && !session.ageGroups.includes(ageGroupFilter)) return false;
+      if (genderFilter && session.genders && !session.genders.includes(genderFilter)) return false;
     }
     
     // Always apply location filter
     if (locationFilter && session.location !== locationFilter) return false;
+    
+    // For calendar view, show all future sessions
     return true;
   });
 
@@ -250,7 +289,7 @@ export default function SessionCalendar({
                   } else if (session.status === 'full') {
                     statusColor = 'bg-destructive/20';
                     statusText = 'full';
-                  } else if (bookingOpen && session.status !== 'full') {
+                  } else if (bookingOpen && !['full', 'closed'].includes(session.status || '')) {
                     statusColor = 'bg-green-600/20 hover:bg-green-600/30';
                     statusText = 'open';
                   } else if (!bookingOpen && !sessionStarted) {
