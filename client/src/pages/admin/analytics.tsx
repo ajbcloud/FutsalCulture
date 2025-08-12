@@ -156,7 +156,9 @@ export default function AdminAnalytics() {
   const { data: chartData, isLoading: chartLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/admin/analytics"],
     staleTime: 0, // Force fresh data
-    cacheTime: 0, // Disable caching temporarily for debugging
+    gcTime: 0, // Disable caching temporarily for debugging  
+    refetchOnWindowFocus: true,
+    refetchInterval: false
   });
 
   // Debug logging
