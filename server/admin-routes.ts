@@ -1343,8 +1343,13 @@ export function setupAdminRoutes(app: any) {
   // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // Prevent caching to ensure fresh data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
-      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
+      console.log('Enhanced Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
       // Build date filters
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -2385,151 +2390,7 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Analytics with real database filtering
-  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
-      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
-      
-      // Build date filters
-      const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const dateEnd = endDate ? new Date(endDate as string) : new Date();
-      
-      // Get filtered sessions
-      let sessionQuery = db
-        .select({
-          id: futsalSessions.id,
-          ageGroups: futsalSessions.ageGroups,
-          genders: futsalSessions.genders,
-          location: futsalSessions.location,
-          capacity: futsalSessions.capacity,
-          startTime: futsalSessions.startTime,
-          signupCount: sql<number>`(
-            SELECT COUNT(*)::int 
-            FROM ${signups} 
-            WHERE ${signups.sessionId} = ${futsalSessions.id}
-          )`,
-        })
-        .from(futsalSessions)
-        .where(
-          and(
-            gte(futsalSessions.startTime, dateStart),
-            lte(futsalSessions.startTime, dateEnd)
-          )
-        );
 
-      const filteredSessions = await sessionQuery;
-      
-      // Apply additional filters
-      let applicableSessions = filteredSessions;
-      
-      if (ageGroup && ageGroup !== 'all') {
-        applicableSessions = filteredSessions.filter(session => 
-          session.ageGroups.includes(ageGroup as string)
-        );
-      }
-      
-      if (gender && gender !== 'all') {
-        applicableSessions = filteredSessions.filter(session =>
-          session.genders.includes(gender as string)
-        );
-      }
-      
-      if (location) {
-        applicableSessions = filteredSessions.filter(session =>
-          session.location.toLowerCase().includes((location as string).toLowerCase())
-        );
-      }
-      
-      // Get filtered signups and payments
-      const sessionIds = applicableSessions.map(s => s.id);
-      
-      let filteredSignups: any[] = [];
-      let filteredPayments: any[] = [];
-      
-      if (sessionIds.length > 0) {
-        filteredSignups = await db
-          .select()
-          .from(signups)
-          .where(
-            and(
-              inArray(signups.sessionId, sessionIds),
-              gte(signups.createdAt, dateStart),
-              lte(signups.createdAt, dateEnd)
-            )
-          );
-          
-        const signupIds = filteredSignups.map(s => s.id);
-        
-        if (signupIds.length > 0) {
-          filteredPayments = await db
-            .select()
-            .from(payments)
-            .where(
-              and(
-                inArray(payments.signupId, signupIds),
-                gte(payments.createdAt, dateStart),
-                lte(payments.createdAt, dateEnd)
-              )
-            );
-        }
-      }
-      
-      // Get filtered players
-      let filteredPlayers: any[] = [];
-      if (filteredSignups.length > 0) {
-        const playerIds = Array.from(new Set(filteredSignups.map(s => s.playerId)));
-        filteredPlayers = await db
-          .select()
-          .from(players)
-          .where(inArray(players.id, playerIds));
-          
-        // Apply player-level filters
-        if (ageGroup && ageGroup !== 'all') {
-          const targetAge = parseInt((ageGroup as string).substring(1));
-          filteredPlayers = filteredPlayers.filter(player => {
-            const age = new Date().getFullYear() - player.birthYear;
-            return Math.abs(age - targetAge) <= 2; // Within 2 years
-          });
-        }
-        
-        if (gender && gender !== 'all') {
-          filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
-        }
-      }
-      
-      // Calculate filtered analytics
-      const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
-      const totalSessions = applicableSessions.length;
-      const totalSignups = filteredSignups.length;
-      const totalCapacity = applicableSessions.reduce((sum, session) => sum + session.capacity, 0);
-      const fillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
-      
-      console.log('Analytics calculation:', {
-        filteredPayments: filteredPayments.length,
-        totalRevenue,
-        totalSessions,
-        totalSignups,
-        totalCapacity,
-        fillRate,
-        filteredPlayers: filteredPlayers.length
-      });
-      
-      const filteredAnalytics = {
-        totalPlayers: filteredPlayers.length,
-        monthlyRevenue: Math.round(totalRevenue),
-        activeSessions: totalSessions,
-        avgFillRate: fillRate,
-        totalSignups: totalSignups,
-        pendingPayments: 0, // All payments are complete in demo data
-      };
-      
-      res.json(filteredAnalytics);
-    } catch (error) {
-      console.error("Error fetching admin analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
-    }
-  });
 
   // CSV Template Downloads
   app.get('/api/admin/template/sessions', requireAdmin, async (req: Request, res: Response) => {
