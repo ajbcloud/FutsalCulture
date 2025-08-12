@@ -1340,8 +1340,8 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
-  // Admin Analytics with real database filtering
-  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
+  // Enhanced Admin Analytics with player growth calculations
+  app.get('/api/admin/analytics-enhanced', requireAdmin, async (req: Request, res: Response) => {
     try {
       // Prevent caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
