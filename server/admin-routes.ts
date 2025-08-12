@@ -1349,7 +1349,7 @@ export function setupAdminRoutes(app: any) {
       res.setHeader('Expires', '0');
       
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
-      console.log('Enhanced Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
+      console.log('🚀 Enhanced Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy, timestamp: new Date().toISOString() });
       
       // Build date filters
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -1573,12 +1573,13 @@ export function setupAdminRoutes(app: any) {
         refundRate: [] // Placeholder for refund data
       };
       
-      console.log('Analytics response data:', {
+      console.log('🎯 Enhanced Analytics response data:', {
         totalPlayers: responseData.totalPlayers,
         playerGrowthLength: responseData.playerGrowth?.length,
         revenueLength: responseData.revenue?.length,
         occupancyLength: responseData.occupancy?.length,
-        maxSustainablePlayers: responseData.maxSustainablePlayers
+        maxSustainablePlayers: responseData.maxSustainablePlayers,
+        timestamp: new Date().toISOString()
       });
       
       res.json(responseData);
