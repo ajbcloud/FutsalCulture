@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,33 @@ export default function PlayerDevelopment() {
   const { hasFeature, isLoading: featuresLoading } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const [activeTab, setActiveTab] = useState('assessments');
   const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
+
+  // API queries for real data
+  const { data: skillCategories = mockSkillCategories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['/api/dev/skill-categories'],
+    enabled: hasFeature,
+  });
+
+  const { data: skills = mockSkills, isLoading: skillsLoading } = useQuery({
+    queryKey: ['/api/dev/skills'],
+    enabled: hasFeature,
+  });
+
+  const { data: assessments = mockPlayerAssessments, isLoading: assessmentsLoading } = useQuery({
+    queryKey: ['/api/dev/assessments'],
+    enabled: hasFeature,
+  });
+
+  const { data: goals = mockPlayerGoals, isLoading: goalsLoading } = useQuery({
+    queryKey: ['/api/dev/goals'],
+    enabled: hasFeature,
+  });
+
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['/api/dev/analytics'],
+    enabled: hasFeature,
+  });
 
   // Check if user has access to Player Development
   if (featuresLoading) {

@@ -1680,6 +1680,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const sessionBillingRoutes = await import('./session-billing-routes');
   app.use('/api', isAuthenticated, sessionBillingRoutes.default);
 
+  // Setup player development routes (Elite feature)
+  const playerDevRoutes = await import('./player-development-routes');
+  playerDevRoutes.default(app);
+
   // Setup tenant routes
   const tenantRoutes = await import('./tenant-routes');
   app.use('/api', isAuthenticated, tenantRoutes.default);

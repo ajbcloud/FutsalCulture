@@ -11,6 +11,13 @@ import {
   serviceBilling,
   discountCodes,
   waitlists,
+  devSkillCategories,
+  devSkills,
+  devSkillRubrics,
+  playerAssessments,
+  playerAssessmentItems,
+  playerGoals,
+  playerGoalUpdates,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -164,6 +171,36 @@ export interface IStorage {
   getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]>;
   getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]>;
   getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
+  
+  // Player Development operations
+  getDevSkillCategories(tenantId: string): Promise<any[]>;
+  createDevSkillCategory(data: any): Promise<any>;
+  updateDevSkillCategory(id: string, tenantId: string, data: any): Promise<any>;
+  deleteDevSkillCategory(id: string, tenantId: string): Promise<void>;
+  
+  getDevSkills(tenantId: string, filters?: { categoryId?: string; ageBand?: string; sport?: string; status?: string }): Promise<any[]>;
+  createDevSkill(data: any): Promise<any>;
+  updateDevSkill(id: string, tenantId: string, data: any): Promise<any>;
+  deleteDevSkill(id: string, tenantId: string): Promise<void>;
+  
+  getDevSkillRubrics(skillId: string, tenantId: string): Promise<any[]>;
+  upsertDevSkillRubrics(skillId: string, tenantId: string, rubrics: any[]): Promise<any[]>;
+  
+  getPlayerAssessments(tenantId: string, filters?: { playerId?: string; assessedBy?: string; startDate?: string; endDate?: string }): Promise<any[]>;
+  getPlayerAssessmentWithSkills(id: string, tenantId: string): Promise<any | null>;
+  createPlayerAssessment(assessment: any, skillAssessments: any[]): Promise<any>;
+  updatePlayerAssessment(id: string, tenantId: string, assessment: any, skillAssessments: any[]): Promise<any>;
+  deletePlayerAssessment(id: string, tenantId: string): Promise<void>;
+  
+  getPlayerGoals(tenantId: string, filters?: { playerId?: string; status?: string; createdBy?: string }): Promise<any[]>;
+  getPlayerGoalWithUpdates(id: string, tenantId: string): Promise<any | null>;
+  createPlayerGoal(data: any): Promise<any>;
+  updatePlayerGoal(id: string, tenantId: string, data: any): Promise<any>;
+  createPlayerGoalUpdate(data: any): Promise<any>;
+  deletePlayerGoal(id: string, tenantId: string): Promise<void>;
+  
+  getPlayerDevelopmentAnalytics(tenantId: string, filters?: { playerId?: string; startDate?: string; endDate?: string; skillCategoryId?: string }): Promise<any>;
+  getPlayerProgressSnapshots(playerId: string, tenantId: string, filters?: { startDate?: string; endDate?: string; skillId?: string }): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2157,6 +2194,322 @@ export class DatabaseStorage implements IStorage {
     }
 
     return processedCount;
+  }
+
+  // ============ PLAYER DEVELOPMENT METHODS ============
+
+  async getDevSkillCategories(tenantId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(devSkillCategories)
+      .where(eq(devSkillCategories.tenantId, tenantId))
+      .orderBy(devSkillCategories.sortOrder);
+  }
+
+  async createDevSkillCategory(data: any): Promise<any> {
+    const [category] = await db
+      .insert(devSkillCategories)
+      .values(data)
+      .returning();
+    return category;
+  }
+
+  async updateDevSkillCategory(id: string, tenantId: string, data: any): Promise<any> {
+    const [category] = await db
+      .update(devSkillCategories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(devSkillCategories.id, id), eq(devSkillCategories.tenantId, tenantId)))
+      .returning();
+    return category;
+  }
+
+  async deleteDevSkillCategory(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(devSkillCategories)
+      .where(and(eq(devSkillCategories.id, id), eq(devSkillCategories.tenantId, tenantId)));
+  }
+
+  async getDevSkills(tenantId: string, filters?: { categoryId?: string; ageBand?: string; sport?: string; status?: string }): Promise<any[]> {
+    let query = db
+      .select()
+      .from(devSkills)
+      .where(eq(devSkills.tenantId, tenantId));
+
+    if (filters?.categoryId) {
+      query = query.where(eq(devSkills.categoryId, filters.categoryId));
+    }
+    if (filters?.ageBand) {
+      query = query.where(eq(devSkills.ageBand, filters.ageBand));
+    }
+    if (filters?.sport) {
+      query = query.where(eq(devSkills.sport, filters.sport));
+    }
+    if (filters?.status) {
+      query = query.where(eq(devSkills.status, filters.status));
+    }
+
+    return await query.orderBy(devSkills.sortOrder);
+  }
+
+  async createDevSkill(data: any): Promise<any> {
+    const [skill] = await db
+      .insert(devSkills)
+      .values(data)
+      .returning();
+    return skill;
+  }
+
+  async updateDevSkill(id: string, tenantId: string, data: any): Promise<any> {
+    const [skill] = await db
+      .update(devSkills)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(devSkills.id, id), eq(devSkills.tenantId, tenantId)))
+      .returning();
+    return skill;
+  }
+
+  async deleteDevSkill(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(devSkills)
+      .where(and(eq(devSkills.id, id), eq(devSkills.tenantId, tenantId)));
+  }
+
+  async getDevSkillRubrics(skillId: string, tenantId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(devSkillRubrics)
+      .where(and(eq(devSkillRubrics.skillId, skillId), eq(devSkillRubrics.tenantId, tenantId)))
+      .orderBy(devSkillRubrics.level);
+  }
+
+  async upsertDevSkillRubrics(skillId: string, tenantId: string, rubrics: any[]): Promise<any[]> {
+    // Delete existing rubrics for this skill
+    await db
+      .delete(devSkillRubrics)
+      .where(and(eq(devSkillRubrics.skillId, skillId), eq(devSkillRubrics.tenantId, tenantId)));
+
+    // Insert new rubrics
+    if (rubrics.length > 0) {
+      const rubricsWithIds = rubrics.map(r => ({
+        ...r,
+        skillId,
+        tenantId,
+      }));
+      
+      return await db
+        .insert(devSkillRubrics)
+        .values(rubricsWithIds)
+        .returning();
+    }
+    
+    return [];
+  }
+
+  async getPlayerAssessments(tenantId: string, filters?: { playerId?: string; assessedBy?: string; startDate?: string; endDate?: string }): Promise<any[]> {
+    let query = db
+      .select()
+      .from(playerAssessments)
+      .where(eq(playerAssessments.tenantId, tenantId));
+
+    if (filters?.playerId) {
+      query = query.where(eq(playerAssessments.playerId, filters.playerId));
+    }
+    if (filters?.assessedBy) {
+      query = query.where(eq(playerAssessments.assessedBy, filters.assessedBy));
+    }
+    if (filters?.startDate) {
+      query = query.where(gte(playerAssessments.assessmentDate, new Date(filters.startDate)));
+    }
+    if (filters?.endDate) {
+      query = query.where(lte(playerAssessments.assessmentDate, new Date(filters.endDate)));
+    }
+
+    return await query.orderBy(desc(playerAssessments.assessmentDate));
+  }
+
+  async getPlayerAssessmentWithSkills(id: string, tenantId: string): Promise<any | null> {
+    const assessment = await db
+      .select()
+      .from(playerAssessments)
+      .where(and(eq(playerAssessments.id, id), eq(playerAssessments.tenantId, tenantId)))
+      .limit(1);
+
+    if (!assessment[0]) return null;
+
+    const skillAssessments = await db
+      .select()
+      .from(playerAssessmentItems)
+      .where(and(eq(playerAssessmentItems.assessmentId, id), eq(playerAssessmentItems.tenantId, tenantId)));
+
+    return {
+      ...assessment[0],
+      skillAssessments,
+    };
+  }
+
+  async createPlayerAssessment(assessment: any, skillAssessments: any[]): Promise<any> {
+    const [newAssessment] = await db
+      .insert(playerAssessments)
+      .values(assessment)
+      .returning();
+
+    if (skillAssessments.length > 0) {
+      const skillAssessmentsWithIds = skillAssessments.map(sa => ({
+        ...sa,
+        assessmentId: newAssessment.id,
+        tenantId: assessment.tenantId,
+      }));
+
+      await db
+        .insert(playerAssessmentItems)
+        .values(skillAssessmentsWithIds);
+    }
+
+    return newAssessment;
+  }
+
+  async updatePlayerAssessment(id: string, tenantId: string, assessment: any, skillAssessments: any[]): Promise<any> {
+    const [updatedAssessment] = await db
+      .update(playerAssessments)
+      .set({ ...assessment, updatedAt: new Date() })
+      .where(and(eq(playerAssessments.id, id), eq(playerAssessments.tenantId, tenantId)))
+      .returning();
+
+    // Delete existing skill assessments
+    await db
+      .delete(playerAssessmentItems)
+      .where(and(eq(playerAssessmentItems.assessmentId, id), eq(playerAssessmentItems.tenantId, tenantId)));
+
+    // Insert new skill assessments
+    if (skillAssessments.length > 0) {
+      const skillAssessmentsWithIds = skillAssessments.map(sa => ({
+        ...sa,
+        assessmentId: id,
+        tenantId,
+      }));
+
+      await db
+        .insert(playerAssessmentItems)
+        .values(skillAssessmentsWithIds);
+    }
+
+    return updatedAssessment;
+  }
+
+  async deletePlayerAssessment(id: string, tenantId: string): Promise<void> {
+    // Delete skill assessments first
+    await db
+      .delete(playerAssessmentItems)
+      .where(and(eq(playerAssessmentItems.assessmentId, id), eq(playerAssessmentItems.tenantId, tenantId)));
+
+    // Delete main assessment
+    await db
+      .delete(playerAssessments)
+      .where(and(eq(playerAssessments.id, id), eq(playerAssessments.tenantId, tenantId)));
+  }
+
+  async getPlayerGoals(tenantId: string, filters?: { playerId?: string; status?: string; createdBy?: string }): Promise<any[]> {
+    let query = db
+      .select()
+      .from(playerGoals)
+      .where(eq(playerGoals.tenantId, tenantId));
+
+    if (filters?.playerId) {
+      query = query.where(eq(playerGoals.playerId, filters.playerId));
+    }
+    if (filters?.status) {
+      query = query.where(eq(playerGoals.status, filters.status));
+    }
+    if (filters?.createdBy) {
+      query = query.where(eq(playerGoals.createdBy, filters.createdBy));
+    }
+
+    return await query.orderBy(desc(playerGoals.createdAt));
+  }
+
+  async getPlayerGoalWithUpdates(id: string, tenantId: string): Promise<any | null> {
+    const goal = await db
+      .select()
+      .from(playerGoals)
+      .where(and(eq(playerGoals.id, id), eq(playerGoals.tenantId, tenantId)))
+      .limit(1);
+
+    if (!goal[0]) return null;
+
+    const updates = await db
+      .select()
+      .from(playerGoalUpdates)
+      .where(and(eq(playerGoalUpdates.goalId, id), eq(playerGoalUpdates.tenantId, tenantId)))
+      .orderBy(desc(playerGoalUpdates.createdAt));
+
+    return {
+      ...goal[0],
+      updates,
+    };
+  }
+
+  async createPlayerGoal(data: any): Promise<any> {
+    const [goal] = await db
+      .insert(playerGoals)
+      .values(data)
+      .returning();
+    return goal;
+  }
+
+  async updatePlayerGoal(id: string, tenantId: string, data: any): Promise<any> {
+    const [goal] = await db
+      .update(playerGoals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(playerGoals.id, id), eq(playerGoals.tenantId, tenantId)))
+      .returning();
+    return goal;
+  }
+
+  async createPlayerGoalUpdate(data: any): Promise<any> {
+    const [update] = await db
+      .insert(playerGoalUpdates)
+      .values(data)
+      .returning();
+    return update;
+  }
+
+  async deletePlayerGoal(id: string, tenantId: string): Promise<void> {
+    // Delete goal updates first
+    await db
+      .delete(playerGoalUpdates)
+      .where(and(eq(playerGoalUpdates.goalId, id), eq(playerGoalUpdates.tenantId, tenantId)));
+
+    // Delete main goal
+    await db
+      .delete(playerGoals)
+      .where(and(eq(playerGoals.id, id), eq(playerGoals.tenantId, tenantId)));
+  }
+
+  async getPlayerDevelopmentAnalytics(tenantId: string, filters?: { playerId?: string; startDate?: string; endDate?: string; skillCategoryId?: string }): Promise<any> {
+    // This is a comprehensive analytics method that would aggregate data from multiple tables
+    // For now, returning basic statistics - can be expanded based on needs
+    
+    const assessmentCount = await db
+      .select({ count: count() })
+      .from(playerAssessments)
+      .where(eq(playerAssessments.tenantId, tenantId));
+
+    const goalCount = await db
+      .select({ count: count() })
+      .from(playerGoals)
+      .where(eq(playerGoals.tenantId, tenantId));
+
+    return {
+      totalAssessments: assessmentCount[0]?.count || 0,
+      totalGoals: goalCount[0]?.count || 0,
+      // Additional analytics can be added here
+    };
+  }
+
+  async getPlayerProgressSnapshots(playerId: string, tenantId: string, filters?: { startDate?: string; endDate?: string; skillId?: string }): Promise<any[]> {
+    // This would fetch progression snapshots for a player
+    // For now, returning empty array - would need to implement progression tracking
+    return [];
   }
 }
 
