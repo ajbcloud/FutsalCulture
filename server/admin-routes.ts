@@ -1375,13 +1375,28 @@ export function setupAdminRoutes(app: any) {
 
       // Apply location filter by adding to where clause
       if (location && location !== '') {
-        sessionQuery = sessionQuery.where(
-          and(
-            gte(futsalSessions.startTime, dateStart),
-            lte(futsalSessions.startTime, dateEnd),
-            eq(futsalSessions.location, location as string)
-          )
-        );
+        sessionQuery = db
+          .select({
+            id: futsalSessions.id,
+            ageGroups: futsalSessions.ageGroups,
+            genders: futsalSessions.genders,
+            location: futsalSessions.location,
+            capacity: futsalSessions.capacity,
+            startTime: futsalSessions.startTime,
+            signupCount: sql<number>`(
+              SELECT COUNT(*)::int 
+              FROM ${signups} 
+              WHERE ${signups.sessionId} = ${futsalSessions.id}
+            )`,
+          })
+          .from(futsalSessions)
+          .where(
+            and(
+              gte(futsalSessions.startTime, dateStart),
+              lte(futsalSessions.startTime, dateEnd),
+              eq(futsalSessions.location, location as string)
+            )
+          );
       }
 
       const applicableSessions = await sessionQuery;
@@ -1498,6 +1513,35 @@ export function setupAdminRoutes(app: any) {
       )
       .groupBy(sql`date_trunc('day', ${players.createdAt})`)
       .orderBy(sql`date_trunc('day', ${players.createdAt})`);
+
+      // Calculate dynamic maximum player capacity
+      const totalDays = Math.ceil((dateEnd.getTime() - dateStart.getTime()) / (1000 * 60 * 60 * 24));
+      const avgSessionsPerWeek = totalSessions > 0 ? (totalSessions / totalDays) * 7 : 0;
+      const avgCapacityPerSession = totalSessions > 0 ? totalCapacity / totalSessions : 0;
+      
+      // Calculate maximum theoretical players based on session frequency and capacity
+      const weeksInRange = totalDays / 7;
+      const totalSessionSlots = avgSessionsPerWeek * avgCapacityPerSession * weeksInRange;
+      
+      // Assume 70% utilization rate as maximum sustainable (players may miss sessions)
+      const maxSustainablePlayers = Math.round(totalSessionSlots * 0.7);
+      
+      // Create cumulative player growth data with maximum capacity context
+      let cumulativeCount = 0;
+      const playerGrowthWithCapacity = playerGrowthData.map((item, index) => {
+        cumulativeCount += item.count;
+        const utilizationPercentage = maxSustainablePlayers > 0 ? (cumulativeCount / maxSustainablePlayers) * 100 : 0;
+        
+        return {
+          day: item.day,
+          players: cumulativeCount,
+          newPlayers: item.count,
+          maxCapacity: maxSustainablePlayers,
+          utilizationPercentage: Math.min(utilizationPercentage, 100),
+          isNearCapacity: utilizationPercentage > 80,
+          isAtCapacity: utilizationPercentage >= 95
+        };
+      });
       
       res.json({
         // Summary KPIs
@@ -1511,7 +1555,14 @@ export function setupAdminRoutes(app: any) {
         // Detail charts
         revenue: revenueData,
         occupancy: occupancyData,
-        playerGrowth: playerGrowthData,
+        playerGrowth: playerGrowthWithCapacity,
+        
+        // Capacity insights
+        maxSustainablePlayers: maxSustainablePlayers,
+        avgSessionsPerWeek: avgSessionsPerWeek,
+        avgCapacityPerSession: avgCapacityPerSession,
+        currentUtilization: maxSustainablePlayers > 0 ? (filteredPlayers.length / maxSustainablePlayers) * 100 : 0,
+        
         expenses: [], // Placeholder for expenses data
         refundRate: [] // Placeholder for refund data
       });
