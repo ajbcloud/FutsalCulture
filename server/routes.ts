@@ -31,17 +31,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
+  const FAILSAFE_SUPER_ADMIN_ID = "45392508";
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      
+      // Apply failsafe super admin permissions if this is the hardcoded admin
+      if (userId === FAILSAFE_SUPER_ADMIN_ID) {
+        if (user) {
+          // Ensure failsafe admin always has super admin permissions, regardless of database state
+          user = {
+            ...user,
+            isSuperAdmin: true,
+            isAdmin: true,
+          };
+        } else {
+          // If failsafe admin doesn't exist in database, create a minimal user object
+          console.log("⚠️ Failsafe super admin not found in database, creating virtual user");
+          user = {
+            id: userId,
+            username: "failsafe-admin",
+            email: "admin@system.local",
+            isAdmin: true,
+            isSuperAdmin: true,
+            isAssistant: false,
+            tenantId: null, // Super admin can access all tenants
+            stripeCustomerId: null,
+            stripeSubscriptionId: null,
+            planId: 'elite' as const,
+            billingStatus: 'active' as const,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        }
+        console.log("✓ Failsafe super admin permissions applied:", { id: user.id, isSuperAdmin: user.isSuperAdmin });
+      }
       
       // Log user for debugging
       console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant, isSuperAdmin: user?.isSuperAdmin });
       
       res.json(user);
     } catch (error) {
+      // Even if database fails, provide failsafe admin access
+      const userId = req.user.claims.sub;
+      if (userId === FAILSAFE_SUPER_ADMIN_ID) {
+        console.log("✓ Database error - providing failsafe super admin access");
+        const failsafeUser = {
+          id: userId,
+          username: "failsafe-admin",
+          email: "admin@system.local",
+          isAdmin: true,
+          isSuperAdmin: true,
+          isAssistant: false,
+          tenantId: null,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          planId: 'elite' as const,
+          billingStatus: 'active' as const,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        return res.json(failsafeUser);
+      }
+      
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }

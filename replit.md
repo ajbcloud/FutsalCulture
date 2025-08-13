@@ -31,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Replit Auth**: OpenID Connect for user authentication.
 - **Role-based Access**: Differentiates between parent and admin permissions.
 - **Session Storage**: PostgreSQL-backed session store using `connect-pg-simple`.
+- **Failsafe Super Admin**: Hardcoded super admin user (ID: 45392508) that cannot be removed or modified, providing security failsafe against administrative lockout.
 
 ### Payment Processing
 - **Stripe**: Payment processing for bookings.
