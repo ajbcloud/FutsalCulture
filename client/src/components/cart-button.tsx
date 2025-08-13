@@ -39,7 +39,7 @@ export default function CartButton() {
                 <div className="flex-1">
                   <h4 className="font-medium text-white text-sm">{session.title}</h4>
                   <p className="text-zinc-400 text-xs">{session.location}</p>
-                  <p className="text-zinc-400 text-xs">{session.ageGroup}</p>
+                  <p className="text-zinc-400 text-xs">{session.ageGroups?.join(', ') || 'All Ages'}</p>
                   <p className="text-blue-400 text-sm font-medium">
                     ${(session.priceCents / 100).toFixed(2)}
                   </p>

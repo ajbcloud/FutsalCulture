@@ -35,8 +35,8 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
     if (preSelectedPlayerId && players.length > 0) {
       const player = players.find(p => p.id === preSelectedPlayerId);
       if (player) {
-        const isEligible = player.gender === session.gender && 
-                          calculateAgeGroup(player.birthYear) === session.ageGroup;
+        const isEligible = (!session.genders || session.genders.includes(player.gender)) && 
+                          (!session.ageGroups || session.ageGroups.includes(calculateAgeGroup(player.birthYear)));
         if (isEligible) {
           setSelectedPlayerId(preSelectedPlayerId);
         }
@@ -100,13 +100,13 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
-    const isEligible = selectedPlayer.gender === session.gender && 
-                      calculateAgeGroup(selectedPlayer.birthYear) === session.ageGroup;
+    const isEligible = (!session.genders || session.genders.includes(selectedPlayer.gender)) && 
+                      (!session.ageGroups || session.ageGroups.includes(calculateAgeGroup(selectedPlayer.birthYear)));
 
     if (!isEligible) {
       toast({
         title: "Error",
-        description: `Player not eligible: requires ${session.gender} ${session.ageGroup}`,
+        description: `Player not eligible: requires ${session.genders?.join(', ') || 'Any Gender'} ${session.ageGroups?.join(', ') || 'Any Age'}`,
         variant: "destructive",
       });
       return;
@@ -132,8 +132,8 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   const isPlayerEligible = (playerId: string) => {
     const player = players.find(p => p.id === playerId);
     if (!player) return false;
-    return player.gender === session.gender && 
-           calculateAgeGroup(player.birthYear) === session.ageGroup;
+    return (!session.genders || session.genders.includes(player.gender)) && 
+           (!session.ageGroups || session.ageGroups.includes(calculateAgeGroup(player.birthYear)));
   };
 
   if (players.length === 0) {
@@ -159,8 +159,8 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
             <SelectContent>
               {players.map((player) => {
                 const playerAgeGroup = calculateAgeGroup(player.birthYear);
-                const isEligible = player.gender === session.gender && 
-                                  playerAgeGroup === session.ageGroup;
+                const isEligible = (!session.genders || session.genders.includes(player.gender)) && 
+                                  (!session.ageGroups || session.ageGroups.includes(playerAgeGroup));
                 
                 return (
                   <SelectItem 
@@ -168,7 +168,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
                     value={player.id}
                     disabled={!isEligible}
                     className={!isEligible ? "text-zinc-600 cursor-not-allowed" : ""}
-                    title={!isEligible ? `Not eligible: requires ${session.gender} ${session.ageGroup}` : ""}
+                    title={!isEligible ? `Not eligible: requires ${session.genders?.join(', ') || 'Any Gender'} ${session.ageGroups?.join(', ') || 'Any Age'}` : ""}
                   >
                     {player.firstName} {player.lastName} ({playerAgeGroup}) 
                     {!isEligible && " - Not Eligible"}
@@ -211,7 +211,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           className={`w-full ${!selectedPlayerId || !isPlayerEligible(selectedPlayerId) ? 
             'bg-zinc-700 text-zinc-400 cursor-not-allowed' : 
             'bg-green-600 hover:bg-green-700'}`}
-          disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId) || (session.hasAccessCode && !accessCode.trim())}
+          disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId) || (session.hasAccessCode === true && !accessCode.trim())}
         >
           {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
         </Button>

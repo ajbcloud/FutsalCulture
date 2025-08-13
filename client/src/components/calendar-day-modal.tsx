@@ -83,10 +83,10 @@ export default function CalendarDayModal({
                       {/* Age Group and Gender */}
                       <div className="flex gap-2">
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                          {session.ageGroup}
+                          {session.ageGroups?.join(', ') || 'All Ages'}
                         </Badge>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                          {session.gender}
+                          {session.genders?.join(', ') || 'All Genders'}
                         </Badge>
                       </div>
 

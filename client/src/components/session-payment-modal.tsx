@@ -356,7 +356,7 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
               allowNewBrowserTab: false,
               mobileWebFallBack: false,
               paymentMethodUsage: 'single_use',
-              ignoreHistoricalPaymentMethods: true // Force payment method selection
+              // Force payment method selection - removed unsupported option
             },
             googlePay: {
               merchantId: 'BCR2DN4T2B6X3LXT', // Braintree sandbox merchant ID

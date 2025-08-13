@@ -65,7 +65,7 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
                   {categoryName}
                 </h4>
                 <div className="space-y-3">
-                  {features.map((featureKey) => {
+                  {features.map((featureKey: string) => {
                     const included = isFeatureIncluded(currentPlan, featureKey);
                     const feature = plan.features[featureKey];
                     const target = upgradeTargetFor(featureKey);

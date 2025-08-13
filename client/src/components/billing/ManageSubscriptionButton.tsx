@@ -27,9 +27,7 @@ export function ManageSubscriptionButton({
         window.location.href = '/admin/settings?tab=plans-features&upgrade=true';
       } else {
         // Open Stripe billing portal
-        const response = await apiRequest('/api/billing/portal', {
-          method: 'POST'
-        });
+        const response = await apiRequest('POST', '/api/billing/portal');
 
         if (response.url) {
           window.location.href = response.url;
