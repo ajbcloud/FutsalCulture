@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
-  const FAILSAFE_SUPER_ADMIN_ID = "45392508";
+  const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

@@ -4,7 +4,7 @@ import { isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 
 // Hardcoded super admin failsafe - cannot be removed or modified by any database operation
-const FAILSAFE_SUPER_ADMIN_ID = "45392508"; // Replit user ID for failsafe admin
+const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Replit username for failsafe admin
 
 // Middleware to check super admin access with hardcoded failsafe
 async function isSuperAdmin(req: any, res: any, next: any) {
