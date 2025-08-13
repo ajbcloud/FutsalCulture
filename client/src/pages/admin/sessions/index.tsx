@@ -101,7 +101,6 @@ export default function AdminSessions() {
 
   useEffect(() => {
     adminSessions.list().then(data => {
-      console.log('admin sessions:', data);
       setSessions(data);
       setFilteredSessions(data);
       setLoading(false);

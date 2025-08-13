@@ -83,7 +83,6 @@ const helpRequestSubjects = [
 ];
 
 async function clearExistingData() {
-  console.log("Clearing existing data...");
   await db.delete(payments);
   await db.delete(signups);
   await db.delete(futsalSessions);
@@ -91,24 +90,20 @@ async function clearExistingData() {
   await db.delete(helpRequests);
   await db.delete(users);
   await db.delete(tenants);
-  console.log("✓ Existing data cleared");
 }
 
 async function seedTenants() {
-  console.log("Seeding tenants...");
   const createdTenants = [];
   
   for (const tenantData of tenantDataArray) {
     const [tenant] = await db.insert(tenants).values(tenantData).returning();
     createdTenants.push(tenant);
-    console.log(`✓ Created tenant: ${tenant.name}`);
   }
   
   return createdTenants;
 }
 
 async function seedUsersForTenant(tenantId: string, tenantName: string) {
-  console.log(`Seeding users for ${tenantName}...`);
   const createdUsers = [];
   
   // Create 1 super admin
@@ -169,12 +164,10 @@ async function seedUsersForTenant(tenantId: string, tenantName: string) {
     createdUsers.push(parentUser);
   }
   
-  console.log(`✓ Created ${createdUsers.length} users for ${tenantName}`);
   return createdUsers;
 }
 
 async function seedPlayersForTenant(tenantId: string, tenantName: string, parents: any[]) {
-  console.log(`Seeding players for ${tenantName}...`);
   const createdPlayers = [];
   const parentUsers = parents.filter(u => !u.isAdmin);
   
@@ -212,12 +205,10 @@ async function seedPlayersForTenant(tenantId: string, tenantName: string, parent
     }
   }
   
-  console.log(`✓ Created ${createdPlayers.length} players for ${tenantName}`);
   return createdPlayers;
 }
 
 async function seedSessionsForTenant(tenantId: string, tenantName: string) {
-  console.log(`Seeding sessions for ${tenantName}...`);
   const createdSessions = [];
   
   // Generate sessions for past 3 months (3 per week)
@@ -299,12 +290,10 @@ async function seedSessionsForTenant(tenantId: string, tenantName: string) {
     createdSessions.push(createdSession);
   }
   
-  console.log(`✓ Created ${createdSessions.length} sessions for ${tenantName}`);
   return createdSessions;
 }
 
 async function seedSignupsAndPaymentsForTenant(tenantId: string, tenantName: string, players: any[], sessions: any[]) {
-  console.log(`Seeding signups and payments for ${tenantName}...`);
   const createdSignups = [];
   const createdPayments = [];
   
@@ -383,12 +372,10 @@ async function seedSignupsAndPaymentsForTenant(tenantId: string, tenantName: str
     }
   }
   
-  console.log(`✓ Created ${createdSignups.length} signups and ${createdPayments.length} payments for ${tenantName}`);
   return { signups: createdSignups, payments: createdPayments };
 }
 
 async function seedHelpRequestsForTenant(tenantId: string, tenantName: string, parents: any[], admins: any[]) {
-  console.log(`Seeding help requests for ${tenantName}...`);
   const createdHelpRequests = [];
   const parentUsers = parents.filter(u => !u.isAdmin);
   const adminUsers = admins.filter(u => u.isAdmin);
@@ -418,12 +405,10 @@ async function seedHelpRequestsForTenant(tenantId: string, tenantName: string, p
     createdHelpRequests.push(createdHelpRequest);
   }
   
-  console.log(`✓ Created ${createdHelpRequests.length} help requests for ${tenantName}`);
   return createdHelpRequests;
 }
 
 async function seedSystemSettings() {
-  console.log("Seeding system settings...");
   
   const settings = [
     { key: "autoApproveRegistrations", value: "true" },
@@ -439,12 +424,9 @@ async function seedSystemSettings() {
     await db.insert(systemSettings).values(setting);
   }
   
-  console.log("✓ System settings seeded");
 }
 
 async function main() {
-  console.log("🌱 Starting multi-tenant seed process...");
-  console.log(`📅 Date range: ${threeMonthsAgo.toISOString().split('T')[0]} to ${endOfNextMonth.toISOString().split('T')[0]}`);
   
   try {
     await clearExistingData();
@@ -453,7 +435,6 @@ async function main() {
     const createdTenants = await seedTenants();
     
     for (const tenant of createdTenants) {
-      console.log(`\n🏢 Processing tenant: ${tenant.name}`);
       
       const users = await seedUsersForTenant(tenant.id, tenant.name);
       const players = await seedPlayersForTenant(tenant.id, tenant.name, users);
@@ -461,23 +442,8 @@ async function main() {
       const { signups, payments } = await seedSignupsAndPaymentsForTenant(tenant.id, tenant.name, players, sessions);
       const helpRequests = await seedHelpRequestsForTenant(tenant.id, tenant.name, users, users);
       
-      console.log(`✅ Tenant ${tenant.name} complete:`);
-      console.log(`   Users: ${users.length}`);
-      console.log(`   Players: ${players.length}`);
-      console.log(`   Sessions: ${sessions.length}`);
-      console.log(`   Signups: ${signups.length}`);
-      console.log(`   Payments: ${payments.length}`);
-      console.log(`   Help Requests: ${helpRequests.length}`);
     }
     
-    console.log("\n🎉 Multi-tenant seed completed successfully!");
-    console.log("\n📊 Verify your analytics dashboard now shows:");
-    console.log("   ✓ Total Revenue from all payments");
-    console.log("   ✓ Total Players across all tenants");
-    console.log("   ✓ YTD Revenue calculations");
-    console.log("   ✓ Sessions This Week");
-    console.log("   ✓ Growth percentages month-over-month");
-    console.log("   ✓ Pending payments from unpaid signups");
     
   } catch (error) {
     console.error("❌ Seed failed:", error);

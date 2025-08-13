@@ -71,7 +71,6 @@ export default function AdminSessionDetail() {
 
     if (params?.id) {
       adminSessions.get(params.id).then(data => {
-        console.log('admin session detail:', data);
         setSession(data);
         setFormData({
           title: data.title || '',
@@ -173,7 +172,6 @@ export default function AdminSessionDetail() {
         sessionData.endTime = new Date(formData.endTime);
       }
 
-      console.log('Saving session data:', sessionData);
 
       if (isNew) {
         await adminSessions.create(sessionData);

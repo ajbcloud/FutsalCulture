@@ -1619,7 +1619,6 @@ export class DatabaseStorage implements IStorage {
 
   async sendPasswordReset(userId: string): Promise<void> {
     // Mock implementation - would send actual password reset email
-    console.log(`Password reset sent to user ${userId}`);
   }
 
   async exportSuperAdminUsers(): Promise<string> {

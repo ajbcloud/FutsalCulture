@@ -81,9 +81,6 @@ export default function Home() {
   }).slice(0, 6); // Limit to 6 sessions to avoid overwhelming the UI
   
   // Debug logging
-  console.log("Total sessions:", sessions.length);
-  console.log("Today's sessions:", todaysSessions.length);
-  console.log("Today's session IDs:", todaysSessions.map(s => s.id));
 
   return (
     <div className="min-h-screen bg-[#18181b]">

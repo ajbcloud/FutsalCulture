@@ -64,7 +64,6 @@ function getTimeAgo(date: Date): string {
 }
 
 async function clearExistingData() {
-  console.log('🧹 Clearing existing data...');
   
   await db.delete(payments);
   await db.delete(signups);
@@ -73,11 +72,9 @@ async function clearExistingData() {
   await db.delete(players);
   await db.delete(users).where(eq(users.isAdmin, false));
   
-  console.log('✅ Existing data cleared');
 }
 
 async function createParents() {
-  console.log('👨‍👩‍👧‍👦 Creating 20 parent accounts...');
   
   const parentNames = [
     'Michael Johnson', 'Sarah Williams', 'David Brown', 'Jennifer Davis',
@@ -103,13 +100,11 @@ async function createParents() {
   });
 
   await db.insert(users).values(parentData);
-  console.log(`✅ Created ${parentData.length} parent accounts`);
   
   return parentData;
 }
 
 async function createPlayers(parents: any[]) {
-  console.log('⚽ Creating player profiles...');
   
   const boyNames = ['Alex', 'Ben', 'Carlos', 'Diego', 'Ethan', 'Felix', 'Gabriel', 'Hugo', 'Ivan', 'Jake'];
   const girlNames = ['Ana', 'Bella', 'Chloe', 'Diana', 'Emma', 'Fiona', 'Grace', 'Hannah', 'Isabella', 'Julia'];
@@ -148,13 +143,11 @@ async function createPlayers(parents: any[]) {
   }
   
   const insertedPlayers = await db.insert(players).values(playersData).returning();
-  console.log(`✅ Created ${insertedPlayers.length} player profiles`);
   
   return insertedPlayers;
 }
 
 async function createSessions() {
-  console.log('📅 Creating comprehensive session schedule (April-July 2025)...');
   
   const sessionsData = [];
   const startDate = new Date(2025, 3, 1); // April 1, 2025
@@ -198,17 +191,11 @@ async function createSessions() {
   }
   
   const insertedSessions = await db.insert(futsalSessions).values(sessionsData).returning();
-  console.log(`✅ Created ${insertedSessions.length} training sessions`);
-  console.log(`   • 3 sessions per weekday across 4 months`);
-  console.log(`   • Covering all age groups: ${AGE_GROUPS.join(', ')}`);
-  console.log(`   • Both boys and girls sessions`);
-  console.log(`   • Multiple locations: ${LOCATIONS.join(', ')}`);
   
   return insertedSessions;
 }
 
 async function createSignupsAndPayments(sessions: any[], playersData: any[]) {
-  console.log('📝 Creating realistic signups with progressive fill rates...');
   
   const signupsData = [];
   const paymentsData = [];
@@ -281,16 +268,11 @@ async function createSignupsAndPayments(sessions: any[], playersData: any[]) {
   await db.insert(signups).values(signupsData);
   await db.insert(payments).values(paymentsData);
   
-  console.log(`✅ Created ${signupsData.length} signups and ${paymentsData.length} payments`);
-  console.log(`   • Average fill rate: ${Math.round((signupsData.length / (sessions.length * CAPACITY)) * 100)}%`);
-  console.log(`   • ${paymentsData.length} paid bookings (${Math.round((paymentsData.length / signupsData.length) * 100)}%)`);
-  console.log(`   • ${signupsData.length - paymentsData.length} pending payments for testing`);
   
   return { signupsData, paymentsData };
 }
 
 async function createHelpRequests(parents: any[]) {
-  console.log('🆘 Creating help requests across 4 months...');
   
   const subjects = [
     'Cannot access my booking',
@@ -326,12 +308,9 @@ async function createHelpRequests(parents: any[]) {
   }
   
   await db.insert(helpRequests).values(helpRequestsData);
-  console.log(`✅ Created ${helpRequestsData.length} help requests`);
 }
 
 async function printSummaryStats() {
-  console.log('\n📊 COMPREHENSIVE DATA SUMMARY');
-  console.log('═'.repeat(60));
   
   const totalSessions = await db.select({ count: sql<number>`COUNT(*)` }).from(futsalSessions);
   const totalSignups = await db.select({ count: sql<number>`COUNT(*)` }).from(signups);
@@ -340,16 +319,8 @@ async function printSummaryStats() {
   const totalPlayers = await db.select({ count: sql<number>`COUNT(*)` }).from(players);
   const totalParents = await db.select({ count: sql<number>`COUNT(*)` }).from(users).where(eq(users.isAdmin, false));
   
-  console.log(`📅 Total Sessions: ${totalSessions[0]?.count || 0}`);
-  console.log(`⚽ Total Players: ${totalPlayers[0]?.count || 0}`);
-  console.log(`👨‍👩‍👧‍👦 Total Parents: ${totalParents[0]?.count || 0}`);
-  console.log(`📝 Total Signups: ${totalSignups[0]?.count || 0}`);
-  console.log(`💰 Total Payments: ${totalPayments[0]?.count || 0}`);
-  console.log(`💵 Total Revenue: $${((totalRevenue[0]?.revenue || 0) / 100).toFixed(2)}`);
-  console.log(`📈 Fill Rate: ${Math.round(((totalSignups[0]?.count || 0) / ((totalSessions[0]?.count || 1) * CAPACITY)) * 100)}%`);
   
   // Monthly breakdown
-  console.log('\n📊 Monthly Session Distribution:');
   const monthlyStats = await db.execute(sql`
     SELECT 
       TO_CHAR(start_time, 'YYYY-MM') as month,
@@ -360,17 +331,12 @@ async function printSummaryStats() {
   `);
   
   for (const stat of monthlyStats.rows) {
-    console.log(`   ${stat.month}: ${stat.sessions} sessions`);
   }
   
-  console.log('\n✅ Database seeding completed successfully!');
-  console.log('🎯 Ready for comprehensive testing and demos');
 }
 
 async function main() {
   try {
-    console.log('🚀 Starting comprehensive database seeding...');
-    console.log('📋 Target: 3 sessions/day × 5 days/week × 17 weeks = ~255 sessions');
     
     await clearExistingData();
     const parents = await createParents();

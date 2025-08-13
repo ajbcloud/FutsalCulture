@@ -17,12 +17,10 @@ const db = drizzle(connection);
  */
 
 async function seedHistoricalFillRates() {
-  console.log('🏟️ Generating historical session fill rates (April-June 2025)...');
 
   try {
     // Get all players for signup generation
     const allPlayers = await db.select().from(players);
-    console.log(`Found ${allPlayers.length} players for signup generation`);
 
     // Get all historical sessions (April 1 - June 30, 2025)
     const historicalSessions = await db
@@ -36,7 +34,6 @@ async function seedHistoricalFillRates() {
       )
       .orderBy(futsalSessions.startTime);
 
-    console.log(`Found ${historicalSessions.length} historical sessions to fill`);
 
     // Clear existing signups and payments for historical period only
     const sessionIds = historicalSessions.map(s => s.id);
@@ -59,7 +56,6 @@ async function seedHistoricalFillRates() {
         .delete(signups)
         .where(inArray(signups.sessionId, sessionIds));
       
-      console.log('✓ Cleared existing historical signups and payments');
     }
 
     let totalSignups = 0;
@@ -149,15 +145,9 @@ async function seedHistoricalFillRates() {
 
       // Log progress every 50 sessions
       if (totalSignups % 50 === 0) {
-        console.log(`Generated ${totalSignups} signups so far...`);
       }
     }
 
-    console.log('\n🎯 Historical fill rate generation complete!');
-    console.log(`📊 Total signups created: ${totalSignups}`);
-    console.log(`💰 Paid signups: ${totalPayments} (${Math.round((totalPayments/totalSignups)*100)}%)`);
-    console.log(`⏳ Pending payments: ${totalPending} (${Math.round((totalPending/totalSignups)*100)}%)`);
-    console.log(`💵 Total revenue: $${(totalPayments * 10).toLocaleString()}`);
 
     // Verify fill rates
     const sampleVerification = await db
@@ -180,9 +170,7 @@ async function seedHistoricalFillRates() {
       .orderBy(futsalSessions.startTime)
       .limit(10);
 
-    console.log('\n📈 Sample fill rates verification (first 10 sessions):');
     sampleVerification.forEach(session => {
-      console.log(`${session.title}: ${session.signupCount}/${session.capacity} (${session.fillRate}%)`);
     });
 
   } catch (error) {
@@ -195,7 +183,6 @@ async function seedHistoricalFillRates() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   seedHistoricalFillRates()
     .then(() => {
-      console.log('✅ Historical session fill rate generation completed successfully');
       process.exit(0);
     })
     .catch((error) => {

@@ -87,7 +87,6 @@ export default function AdminPayments() {
         ...paid.map((p: any) => ({ ...p, status: p.refundedAt ? 'refunded' : 'paid' }))
       ];
       
-      console.log('admin payments (combined):', combined);
       setAllPayments(combined);
       setFilteredPayments(combined);
       setLoading(false);

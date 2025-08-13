@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -101,10 +100,10 @@ probe_urls() {
 
 wait_for_server_ready() {
   local log="$1"
-  local ports=("3000" "5173" "8080" "8000")
+  local ports=("3000" "5173" "8080" "8000" "5000")
   local bases=()
   for port in "${ports[@]}"; do
-    bases+=("http://0.0.0.0:${port}")
+    bases+=("http://localhost:${port}")
     bases+=("http://127.0.0.1:${port}")
   done
   # Try to parse a URL from logs while probing candidates
@@ -172,7 +171,7 @@ fi
 header "Debug log removal"
 PRE_LOGS="$(count_lines 'console\.(log|debug)')"
 TMPFILE="$(mktemp)"
-while IFS=read -r f; do
+while IFS= read -r f; do
   if grep -E 'console\.(log|debug)\(' "$f" >/dev/null 2>&1; then
     cp "$f" "$TMPFILE"
     sed -E '/console\.(log|debug)\(/d' "$TMPFILE" > "$f"
@@ -188,7 +187,7 @@ append_report "Debug logs removed: $(( PRE_LOGS - POST_LOGS ))"
 header "Orphan file removal"
 CANDIDATES=()
 for root in "${CODE_GLOBS[@]}"; do
-  if [ -d "$root" ]; then while IFS=read -r f; do CANDIDATES+=("$f"); done < <(find "$root" -type f -not -path "*/node_modules/*"); fi
+  if [ -d "$root" ]; then while IFS= read -r f; do CANDIDATES+=("$f"); done < <(find "$root" -type f -not -path "*/node_modules/*"); fi
 done
 TO_DELETE=()
 for f in "${CANDIDATES[@]}"; do
@@ -241,7 +240,7 @@ if [ -n "$START_SCRIPT" ]; then
     # Once server seems up, probe again to capture the working URL
     # Use logs or common ports
     LOG_URL="$(extract_port_from_logs .cleanup_dev.log || true)"
-    CANDIDATES=("http://0.0.0.0:3000" "http://127.0.0.1:3000" "http://0.0.0.0:5173" "http://127.0.0.1:5173" "http://0.0.0.0:8080" "http://127.0.0.1:8080" "http://0.0.0.0:8000" "http://127.0.0.1:8000")
+    CANDIDATES=("http://localhost:3000" "http://127.0.0.1:3000" "http://localhost:5173" "http://127.0.0.1:5173" "http://localhost:8080" "http://127.0.0.1:8080" "http://localhost:8000" "http://127.0.0.1:8000" "http://localhost:5000" "http://127.0.0.1:5000")
     if [ -n "${LOG_URL:-}" ]; then CANDIDATES=("$LOG_URL" "${CANDIDATES[@]}"); fi
     if R="$(probe_urls "${CANDIDATES[@]}" 2>/dev/null)"; then
       RUNTIME_OK="passed"; RUNTIME_URL="$R"

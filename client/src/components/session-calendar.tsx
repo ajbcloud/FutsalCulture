@@ -93,15 +93,7 @@ export default function SessionCalendar({
     return sessionDate >= monthStart && sessionDate <= monthEnd;
   });
   
-  // Debug logging
-  console.log('Calendar filtering:', {
-    currentMonth: format(currentMonth, 'MMMM yyyy'),
-    monthStart: monthStart.toISOString(),
-    monthEnd: monthEnd.toISOString(),
-    totalSessions: sessions.length,
-    monthSessions: monthSessions.length,
-    monthSessionIds: monthSessions.map(s => ({ id: s.id, title: s.title, startTime: s.startTime }))
-  });
+  // Debug logging removed
 
   // Group sessions by date
   const sessionsByDate = monthSessions.reduce((acc, session) => {

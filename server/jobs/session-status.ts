@@ -21,13 +21,11 @@ export async function updateSessionStatus() {
       // If it's the booking time on session day, open booking
       if (now >= bookingOpenTime && now < session.startTime) {
         await storage.updateSessionStatus(session.id, "open");
-        console.log(`Session ${session.id} opened for booking at ${hour}:${minute.toString().padStart(2, '0')}`);
       }
       
       // If session start time has passed, mark as closed
       if (now >= session.startTime) {
         await storage.updateSessionStatus(session.id, "closed");
-        console.log(`Session ${session.id} marked as closed`);
       }
     }
     
@@ -37,7 +35,6 @@ export async function updateSessionStatus() {
     for (const session of openSessions) {
       if (now >= session.startTime) {
         await storage.updateSessionStatus(session.id, "closed");
-        console.log(`Session ${session.id} marked as closed`);
       }
     }
   } catch (error) {

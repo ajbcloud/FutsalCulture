@@ -71,7 +71,6 @@ export default function AdminPlayers() {
     const searchTerm = urlParams.get('search');
     const playerId = urlParams.get('playerId');
     
-    console.log('Players page URL params:', { searchTerm, playerId });
     
     // Load players first, then apply filters
     loadPlayers(searchTerm, playerId);
@@ -82,7 +81,6 @@ export default function AdminPlayers() {
       setLoading(true);
       
       const data = await adminPlayers.list();
-      console.log('admin players:', data);
       
       setPlayers(data);
       

@@ -31,11 +31,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       event = JSON.parse(req.body.toString());
     }
   } catch (err) {
-    console.log('Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err}`);
   }
 
-  console.log('Received Stripe webhook:', event.type);
 
   try {
     switch (event.type) {
@@ -73,9 +71,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 })
                 .where(eq(tenants.id, tenantId));
                 
-              console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via checkout`);
             } else {
-              console.log(`⚠️  Could not determine plan level from price ID: ${subscription.items.data[0]?.price?.id}`);
             }
           } catch (error) {
             console.error('Error processing checkout session:', error);
@@ -89,7 +85,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 })
                 .where(eq(tenants.id, tenantId));
                 
-              console.log(`🧪 DEV MODE: Updated tenant ${tenantId} to core plan`);
             }
           }
         }
@@ -99,19 +94,16 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.subscription) {
-          console.log('Payment succeeded for subscription:', invoice.subscription);
         }
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log('Payment failed for subscription:', invoice.subscription);
         break;
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
     }
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -126,7 +118,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
 
   if (!planLevel) {
-    console.log('Unknown price ID, cannot determine plan level');
     return;
   }
 
@@ -137,7 +128,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .limit(1);
 
   if (tenant.length === 0) {
-    console.log('No tenant found for customer:', customerId);
     return;
   }
 
@@ -149,7 +139,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     })
     .where(eq(tenants.id, tenant[0].id));
 
-  console.log(`Updated tenant ${tenant[0].id} to ${planLevel} plan`);
 }
 
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
@@ -162,7 +151,6 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     .limit(1);
 
   if (tenant.length === 0) {
-    console.log('No tenant found for customer:', customerId);
     return;
   }
 
@@ -174,7 +162,6 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     })
     .where(eq(tenants.id, tenant[0].id));
 
-  console.log(`Reset tenant ${tenant[0].id} to core plan after cancellation`);
 }
 
 function getPlanLevelFromPrice(priceId?: string): string | null {

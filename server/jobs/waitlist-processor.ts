@@ -3,7 +3,6 @@ import { nanoid } from "nanoid";
 
 // Process expired waitlist offers every 5 minutes
 export function startWaitlistProcessor() {
-  console.log("Starting waitlist processor...");
 
   const processExpiredOffers = async () => {
     try {
@@ -11,7 +10,6 @@ export function startWaitlistProcessor() {
       const processedCount = await storage.processExpiredOffers();
       
       if (processedCount > 0) {
-        console.log(`Found ${processedCount} expired waitlist offers`);
       }
     } catch (error) {
       console.error("Error processing expired waitlist offers:", error);
@@ -24,7 +22,6 @@ export function startWaitlistProcessor() {
       const cleanupCount = await storage.cleanupExpiredWaitlists();
       
       if (cleanupCount > 0) {
-        console.log(`Cleaned up ${cleanupCount} expired waitlist entries`);
       }
     } catch (error) {
       console.error("Error cleaning up expired waitlists:", error);

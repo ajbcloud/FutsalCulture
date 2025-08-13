@@ -10,7 +10,6 @@ export async function monitorCapacity() {
       
       if (signupsCount >= session.capacity) {
         await storage.updateSessionStatus(session.id, "full");
-        console.log(`Session ${session.id} marked as full`);
       }
     }
   } catch (error) {

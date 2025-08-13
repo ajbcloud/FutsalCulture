@@ -362,7 +362,6 @@ export default function SessionDetail() {
                                 size="sm"
                                 onClick={() => {
                                   // Implement promote functionality
-                                  console.log('Promote player:', entry.playerId);
                                 }}
                               >
                                 Promote

@@ -376,40 +376,33 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             instance.on('paymentMethodRequestable', (event: any) => {
               if (event.type === 'VenmoAccount' && event.paymentMethodIsSelected) {
                 // Venmo is selected, prepare for mobile app redirect
-                console.log('Venmo payment method selected');
               }
             });
 
             // Handle Venmo flow completion
             instance.on('paymentOptionSelected', (event: any) => {
               if (event.paymentOption === 'venmo') {
-                console.log('Venmo option selected');
                 if (isMobileDevice()) {
-                  console.log('Mobile device detected - Venmo should open app');
                 }
               }
             });
 
             // Handle Venmo payment method flow events
             instance.on('venmoTokenizationStarted', () => {
-              console.log('Venmo tokenization started - redirecting to app');
               setIsProcessing(true);
               
               // Show mobile-specific guidance
               if (isMobileDevice()) {
                 // Don't show error immediately, let Venmo app handle the flow
-                console.log('Mobile Venmo flow initiated - waiting for app to complete');
               }
             });
 
             instance.on('venmoTokenizationCanceled', () => {
-              console.log('Venmo tokenization canceled by user');
               setIsProcessing(false);
             });
 
             // Handle successful Venmo authorization
             instance.on('venmoTokenized', (payload: any) => {
-              console.log('Venmo tokenization completed:', payload);
               setIsProcessing(false);
             });
             
@@ -470,12 +463,9 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
       const { nonce, type } = result;
       
       // Log payment method type for debugging
-      console.log('Payment method type:', type);
-      console.log('Payment result:', result);
 
       // Log Venmo payment completion
       if (type === 'VenmoAccount') {
-        console.log('Venmo payment completed, processing nonce');
       }
       
       const response = await apiRequest('POST', '/api/session-billing/process-payment', {

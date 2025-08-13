@@ -17,19 +17,16 @@ const db = drizzle(connection);
  */
 
 async function seedRealisticData() {
-  console.log('Starting realistic data seeding...');
 
   try {
     // Clear existing signups and payments
     await db.delete(payments);
     await db.delete(signups);
-    console.log('✓ Cleared existing signups and payments');
 
     // Get all players and sessions
     const allPlayers = await db.select().from(players);
     const allSessions = await db.select().from(futsalSessions).orderBy(futsalSessions.startTime);
     
-    console.log(`Found ${allPlayers.length} players and ${allSessions.length} sessions`);
 
     // Create realistic attendance patterns
     const attendancePatterns = new Map();
@@ -123,14 +120,8 @@ async function seedRealisticData() {
       }
     }
 
-    console.log('\n🎯 Realistic seeding completed!');
-    console.log(`📊 Total signups: ${totalSignups}`);
-    console.log(`💰 Paid signups: ${totalPaid} (${((totalPaid/totalSignups)*100).toFixed(1)}%)`);
-    console.log(`⏳ Pending signups: ${totalPending} (${((totalPending/totalSignups)*100).toFixed(1)}%)`);
-    console.log(`💵 Total revenue: $${(totalPaid * 10).toFixed(2)}`);
 
     // Show attendance distribution
-    console.log('\n👥 Player attendance distribution:');
     const attendanceStats = [];
     for (const player of allPlayers) {
       const playerSignups = await db.select().from(signups).where(eq(signups.playerId, player.id));
@@ -142,10 +133,8 @@ async function seedRealisticData() {
     
     attendanceStats.sort((a, b) => b.count - a.count);
     attendanceStats.slice(0, 10).forEach(stat => {
-      console.log(`  ${stat.name}: ${stat.count} sessions`);
     });
     
-    console.log(`  Average attendance per player: ${(totalSignups / allPlayers.length).toFixed(1)} sessions`);
 
   } catch (error) {
     console.error('Error during seeding:', error);
@@ -156,7 +145,6 @@ async function seedRealisticData() {
 // Run seeding if called directly
 seedRealisticData()
   .then(() => {
-    console.log('✅ Realistic seeding completed successfully');
     process.exit(0);
   })
   .catch((error) => {

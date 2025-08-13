@@ -35,7 +35,6 @@ router.get('/tenant/plan-features', async (req, res) => {
     const tenantId = user?.tenantId;
     
     if (!tenantId) {
-      console.log('No tenant ID found. Current user:', user);
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 

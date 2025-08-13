@@ -271,7 +271,6 @@ export default function AdminHelpRequests() {
 
   useEffect(() => {
     adminHelpRequests.list().then(data => {
-      console.log('admin help requests:', data);
       setHelpRequests(data);
       setFilteredRequests(data);
       setLoading(false);

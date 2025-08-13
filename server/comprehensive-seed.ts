@@ -109,7 +109,6 @@ function getBirthYear(ageGroup: string): number {
 }
 
 async function clearExistingData() {
-  console.log('🧹 Clearing existing data...');
   
   await db.delete(payments);
   await db.delete(signups);
@@ -119,11 +118,9 @@ async function clearExistingData() {
   await db.delete(helpRequests);
   await db.delete(users);
   
-  console.log('✅ Existing data cleared');
 }
 
 async function createParents() {
-  console.log('👨‍👩‍👧‍👦 Creating parent accounts...');
   
   const parentData: UpsertUser[] = PARENT_NAMES.map((parent) => ({
     id: nanoid(),
@@ -138,13 +135,11 @@ async function createParents() {
   }));
 
   await db.insert(users).values(parentData);
-  console.log(`✅ Created ${parentData.length} parent accounts`);
   
   return parentData;
 }
 
 async function createPlayers(parents: UpsertUser[]) {
-  console.log('⚽ Creating player profiles...');
   
   const playersData: InsertPlayer[] = [];
   
@@ -179,13 +174,11 @@ async function createPlayers(parents: UpsertUser[]) {
   }
   
   await db.insert(players).values(playersData);
-  console.log(`✅ Created ${playersData.length} player profiles`);
   
   return playersData;
 }
 
 async function createSessions() {
-  console.log('📅 Creating session schedule (April-July 2025)...');
   
   const sessionsData: InsertSession[] = [];
   const startDate = new Date(2025, 3, 1); // April 1, 2025
@@ -228,13 +221,11 @@ async function createSessions() {
   }
   
   await db.insert(futsalSessions).values(sessionsData);
-  console.log(`✅ Created ${sessionsData.length} training sessions`);
   
   return sessionsData;
 }
 
 async function createSignupsAndPayments(sessions: InsertSession[], playersData: InsertPlayer[]) {
-  console.log('📝 Creating signups and payments with growth pattern...');
   
   const signupsData: InsertSignup[] = [];
   const paymentsData: InsertPayment[] = [];
@@ -303,13 +294,11 @@ async function createSignupsAndPayments(sessions: InsertSession[], playersData: 
   await db.insert(signups).values(signupsData);
   await db.insert(payments).values(paymentsData);
   
-  console.log(`✅ Created ${signupsData.length} signups and ${paymentsData.length} payments`);
   
   return { signupsData, paymentsData };
 }
 
 async function createHelpRequests(parents: UpsertUser[]) {
-  console.log('🆘 Creating help requests...');
   
   const helpRequestsData: InsertHelpRequest[] = [];
   
@@ -349,11 +338,9 @@ async function createHelpRequests(parents: UpsertUser[]) {
   }
   
   await db.insert(helpRequests).values(helpRequestsData);
-  console.log(`✅ Created ${helpRequestsData.length} help requests`);
 }
 
 async function createNotificationPreferences(parents: UpsertUser[]) {
-  console.log('🔔 Creating notification preferences...');
   
   const preferencesData: InsertNotificationPreferences[] = parents.map(parent => ({
     parentId: parent.id!,
@@ -362,12 +349,9 @@ async function createNotificationPreferences(parents: UpsertUser[]) {
   }));
   
   await db.insert(notificationPreferences).values(preferencesData);
-  console.log(`✅ Created ${preferencesData.length} notification preferences`);
 }
 
 async function printSummaryStats() {
-  console.log('\n📊 SUMMARY STATISTICS');
-  console.log('═'.repeat(50));
   
   // Revenue by month
   const revenueStats = await db
@@ -381,13 +365,10 @@ async function printSummaryStats() {
     .groupBy(sql`TO_CHAR(paid_at, 'YYYY-MM')`)
     .orderBy(sql`TO_CHAR(paid_at, 'YYYY-MM')`);
     
-  console.log('\n💰 REVENUE BY MONTH:');
   if (revenueStats && revenueStats.length > 0) {
     for (const stat of revenueStats) {
-      console.log(`  ${stat.month}: $${(stat.revenue / 100).toFixed(2)} (${stat.payments} payments)`);
     }
   } else {
-    console.log('  No revenue data found');
   }
   
   // Total stats
@@ -402,12 +383,6 @@ async function printSummaryStats() {
     
   const stats = totalStats[0];
     
-  console.log('\n📈 OVERALL TOTALS:');
-  console.log(`  Players: ${stats?.totalPlayers || 0}`);
-  console.log(`  Sessions: ${stats?.totalSessions || 0}`);
-  console.log(`  Signups: ${stats?.totalSignups || 0}`);
-  console.log(`  Revenue: $${((stats?.totalRevenue || 0) / 100).toFixed(2)}`);
-  console.log(`  Pending Payments: ${stats?.pendingPayments || 0}`);
   
   // Fill rate calculation
   const fillRateStats = await db
@@ -422,12 +397,9 @@ async function printSummaryStats() {
     ? Math.round((fillData.totalBookings / fillData.totalCapacity) * 100)
     : 0;
     
-  console.log(`  Fill Rate: ${fillRate}%`);
-  console.log('═'.repeat(50));
 }
 
 async function main() {
-  console.log('🚀 Starting comprehensive 3-month database seeding...\n');
   
   try {
     await clearExistingData();
@@ -442,8 +414,6 @@ async function main() {
     
     await printSummaryStats();
     
-    console.log('\n🎉 Comprehensive seeding completed successfully!');
-    console.log('✨ Your database now contains 3 months of realistic business data.');
     
   } catch (error) {
     console.error('❌ Error during seeding:', error);

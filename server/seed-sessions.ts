@@ -49,18 +49,15 @@ function generateSessionTitle(ageGroups: string[], genders: string[]): string {
 }
 
 async function clearExistingSessions() {
-  console.log("Clearing existing sessions, signups, and payments...");
   
   // Delete in correct order due to foreign key constraints
   await db.delete(payments);
   await db.delete(signups);
   await db.delete(futsalSessions);
   
-  console.log("Existing data cleared successfully");
 }
 
 async function seedHistoricalSessions() {
-  console.log("Starting comprehensive session seeding...");
   
   // Clear existing data first
   await clearExistingSessions();
@@ -72,7 +69,6 @@ async function seedHistoricalSessions() {
   const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
   
-  console.log(`Generating sessions from ${startDate.toDateString()} to ${endDate.toDateString()}`);
   
   const currentDate = new Date(startDate);
   
@@ -139,17 +135,14 @@ async function seedHistoricalSessions() {
     currentDate.setDate(currentDate.getDate() + 1);
   }
   
-  console.log(`Generated ${sessions.length} sessions`);
   
   // Insert sessions in batches
   const batchSize = 50;
   for (let i = 0; i < sessions.length; i += batchSize) {
     const batch = sessions.slice(i, i + batchSize);
     await db.insert(futsalSessions).values(batch);
-    console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(sessions.length / batchSize)}`);
   }
   
-  console.log(`Successfully seeded ${sessions.length} sessions!`);
   
   // Summary by month
   const monthCounts: { [key: string]: number } = {};
@@ -158,9 +151,7 @@ async function seedHistoricalSessions() {
     monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
   });
   
-  console.log("\nSession distribution by month:");
   Object.entries(monthCounts).forEach(([month, count]) => {
-    console.log(`${month}: ${count} sessions`);
   });
   
   return sessions;
@@ -169,7 +160,6 @@ async function seedHistoricalSessions() {
 // Run the seeding
 seedHistoricalSessions()
   .then(() => {
-    console.log("Session seeding completed successfully!");
     process.exit(0);
   })
   .catch((error) => {

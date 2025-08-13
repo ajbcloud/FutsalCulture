@@ -1,2 +1,0 @@
-I need to remove all content from line 1424 to line 1669 (before integrations TabsContent)
-This includes the old Plan & Features implementation that was not properly removed.
