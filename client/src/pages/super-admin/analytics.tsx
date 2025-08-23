@@ -141,10 +141,10 @@ export default function Analytics() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">Analytics</h1>
+        <p className="text-lg text-muted-foreground">
           Real-time insights across platform and client commerce
         </p>
       </div>
@@ -175,7 +175,7 @@ export default function Analytics() {
           <TabsTrigger value="commerce">Client Commerce</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={lane} className="space-y-6">
+        <TabsContent value={lane} className="space-y-8">
           {/* Sub-tabs */}
           <Tabs value={subTab} onValueChange={setSubTab}>
             <TabsList>
@@ -187,7 +187,7 @@ export default function Analytics() {
             </TabsList>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-8">
               {lane === 'platform' ? (
                 <>
                   {/* Platform Overview Cards */}
@@ -215,7 +215,7 @@ export default function Analytics() {
                   </div>
 
                   {/* Platform panels */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <Section title="Top Tenants" subtitle="By platform revenue">
                       {(overviewData as PlatformOverviewData)?.topTenantsByPlatformRevenue?.length ? (
                         <div className="space-y-2">
@@ -283,7 +283,7 @@ export default function Analytics() {
                   </div>
 
                   {/* Commerce panels */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <Section title="Top Tenants" subtitle="By commerce revenue">
                       {(overviewData as CommerceOverviewData)?.topTenantsByCommerceRevenue?.length ? (
                         <div className="space-y-2">
@@ -318,7 +318,7 @@ export default function Analytics() {
             </TabsContent>
 
             {/* Revenue Trends Tab */}
-            <TabsContent value="revenue-trends" className="space-y-6">
+            <TabsContent value="revenue-trends" className="space-y-8">
               <div className="flex justify-between items-center">
                 <Section title="Revenue Trends" subtitle={`${lane === 'platform' ? 'Platform subscription' : 'Client commerce'} revenue over time`}>
                   <div />
@@ -380,7 +380,7 @@ export default function Analytics() {
 
             {/* Registrations Tab (Commerce only) */}
             {lane === 'commerce' && (
-              <TabsContent value="registrations" className="space-y-6">
+              <TabsContent value="registrations" className="space-y-8">
                 <Section title="Registration Metrics" subtitle="New sign-ups and conversion trends">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatCard
@@ -435,7 +435,7 @@ export default function Analytics() {
 
             {/* Platform Health Tab (Platform only) */}
             {lane === 'platform' && (
-              <TabsContent value="platform-health" className="space-y-6">
+              <TabsContent value="platform-health" className="space-y-8">
                 <Section title="Platform Health" subtitle="System status and risk indicators">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatCard
@@ -474,7 +474,7 @@ export default function Analytics() {
             )}
 
             {/* By Tenant Tab */}
-            <TabsContent value="by-tenant" className="space-y-6">
+            <TabsContent value="by-tenant" className="space-y-8">
               <Section title={`${lane === 'platform' ? 'Platform' : 'Commerce'} Revenue by Tenant`} subtitle="Detailed breakdown per organization">
                 {tenantLoading ? (
                   <div className="h-64 bg-muted/50 rounded-lg animate-pulse" />

@@ -298,8 +298,10 @@ export default function SuperAdminPage() {
           </div>
 
           {/* Page content - Mobile First */}
-          <main className="p-4 md:p-6">
-            {renderPageContent()}
+          <main className="p-6 md:p-8 lg:p-10 max-w-7xl mx-auto">
+            <div className="space-y-8">
+              {renderPageContent()}
+            </div>
           </main>
         </div>
       </div>

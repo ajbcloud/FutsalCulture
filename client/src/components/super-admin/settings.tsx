@@ -173,11 +173,11 @@ export default function SuperAdminSettings() {
 
   if (settingsLoading || integrationsLoading || usersLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Platform Settings</h1>
+          <h1 className="text-3xl font-bold">Platform Settings</h1>
         </div>
-        <div className="grid gap-4">
+        <div className="grid gap-6">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
@@ -192,16 +192,16 @@ export default function SuperAdminSettings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl font-bold">Platform Settings</h1>
-          <p className="text-muted-foreground">Configure global platform settings and integrations</p>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">Platform Settings</h1>
+          <p className="text-lg text-muted-foreground">Configure global platform settings and integrations</p>
         </div>
       </div>
 
-      <Tabs defaultValue="platform" className="space-y-6">
+      <Tabs defaultValue="platform" className="space-y-8">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="platform">Platform Settings</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -209,7 +209,7 @@ export default function SuperAdminSettings() {
         </TabsList>
 
         {/* Platform Settings Tab */}
-        <TabsContent value="platform" className="space-y-6">
+        <TabsContent value="platform" className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -218,8 +218,8 @@ export default function SuperAdminSettings() {
               </CardTitle>
               <CardDescription>Configure default settings that apply across all tenants</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardContent className="space-y-8 p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
