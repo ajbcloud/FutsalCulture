@@ -874,7 +874,7 @@ export const featureAdoptionEvents = pgTable("feature_adoption_events", {
 ]);
 
 export const webhookStatsHourly = pgTable("webhook_stats_hourly", {
-  webhookId: varchar("webhook_id").notNull().references(() => integrationWebhook.id),
+  webhookId: varchar("webhook_id").notNull().references(() => integrationWebhooks.id),
   hour: timestamp("hour").notNull(),
   attempts: integer("attempts").default(0),
   success: integer("success").default(0),
@@ -1725,3 +1725,75 @@ export type ImpersonationEvent = typeof impersonationEvents.$inferSelect;
 export type InsertImpersonationEvent = z.infer<typeof insertImpersonationEventSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Communication Campaigns
+export const communicationCampaigns = pgTable('communication_campaigns', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'email' or 'sms'
+  subject: text('subject'), // For emails
+  content: text('content').notNull(),
+  recipientType: text('recipient_type').notNull(), // 'all_parents', 'all_players', 'specific_age_groups', 'specific_locations', 'custom'
+  recipientFilters: jsonb('recipient_filters').$type<{
+    ageGroups?: string[];
+    locations?: string[];
+    genders?: string[];
+    playerIds?: string[];
+    parentIds?: string[];
+  }>(),
+  schedule: text('schedule').notNull(), // 'immediate', 'scheduled', 'recurring'
+  scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
+  recurringPattern: text('recurring_pattern'), // 'daily', 'weekly', 'monthly'
+  recurringDays: text('recurring_days').array(), // For weekly: ['monday', 'tuesday'], For monthly: ['1', '15']
+  recurringTime: text('recurring_time'), // '09:00'
+  recurringEndDate: timestamp('recurring_end_date', { withTimezone: true }),
+  status: text('status').notNull().default('draft'), // 'draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled'
+  sentCount: integer('sent_count').default(0),
+  failedCount: integer('failed_count').default(0),
+  lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
+  nextRunAt: timestamp('next_run_at', { withTimezone: true }),
+  createdBy: varchar('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+}, (table) => [
+  index("communication_campaigns_tenant_id_idx").on(table.tenantId),
+  index("communication_campaigns_status_idx").on(table.status),
+  index("communication_campaigns_next_run_idx").on(table.nextRunAt),
+]);
+
+export const insertCommunicationCampaignSchema = createInsertSchema(communicationCampaigns).omit({
+  id: true,
+  sentCount: true,
+  failedCount: true,
+  lastSentAt: true,
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertCommunicationCampaign = z.infer<typeof insertCommunicationCampaignSchema>;
+export type SelectCommunicationCampaign = typeof communicationCampaigns.$inferSelect;
+
+// Communication Logs
+export const communicationLogs = pgTable('communication_logs', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar('campaign_id').notNull().references(() => communicationCampaigns.id, { onDelete: 'cascade' }),
+  recipientId: varchar('recipient_id').notNull(),
+  recipientEmail: text('recipient_email'),
+  recipientPhone: text('recipient_phone'),
+  status: text('status').notNull(), // 'sent', 'failed', 'bounced', 'delivered', 'opened', 'clicked'
+  error: text('error'),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  openedAt: timestamp('opened_at', { withTimezone: true }),
+  clickedAt: timestamp('clicked_at', { withTimezone: true })
+}, (table) => [
+  index("communication_logs_campaign_id_idx").on(table.campaignId),
+  index("communication_logs_recipient_id_idx").on(table.recipientId),
+]);
+
+export const insertCommunicationLogSchema = createInsertSchema(communicationLogs).omit({
+  id: true,
+  sentAt: true
+});
+export type InsertCommunicationLog = z.infer<typeof insertCommunicationLogSchema>;
+export type SelectCommunicationLog = typeof communicationLogs.$inferSelect;

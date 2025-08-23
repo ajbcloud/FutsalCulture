@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
+import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
 import './jobs/scheduler'; // Initialize usage rollup scheduler
 
 const app = express();
@@ -74,6 +75,9 @@ app.use((req, res, next) => {
 
   // Mount superAdmin routes
   app.use('/api/super-admin', superAdminRoutes);
+  
+  // Mount admin campaigns routes
+  app.use('/api/admin', adminCampaignsRoutes);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

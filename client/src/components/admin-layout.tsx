@@ -27,7 +27,8 @@ import {
   Shield,
   Shirt,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Mail
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/schema";
@@ -41,6 +42,7 @@ const adminNavItems = [
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
+  { href: "/admin/communications", label: "Communications", icon: Mail },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
