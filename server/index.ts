@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
+import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 
 const app = express();
 
@@ -13,21 +14,21 @@ app.use((req, res, next) => {
     'http://localhost:5000',
     'http://localhost:5173'
   ];
-  
+
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin as string)) {
     res.setHeader('Access-Control-Allow-Origin', origin as string);
   }
-  
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
     return;
   }
-  
+
   next();
 });
 
@@ -70,6 +71,9 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Mount superAdmin routes
+  app.use('/api/super-admin', superAdminRoutes);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -108,18 +112,18 @@ app.use((req, res, next) => {
       const { storage } = await import("./storage");
       const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
       const expiredSignups = await storage.getPendingPaymentSignups();
-      
+
       const expiredReservations = expiredSignups.filter(signup => 
         signup.createdAt && new Date(signup.createdAt) < cutoff
       );
-      
+
       for (const signup of expiredReservations) {
         await storage.deleteSignup(signup.id);
         log(`Expired reservation cleaned up: ${signup.id} for player ${signup.player.firstName}`);
-        
+
         // TODO: Optional - notify parent of cancellation via SMS/email
       }
-      
+
       if (expiredReservations.length > 0) {
         log(`Cleaned up ${expiredReservations.length} expired reservations`);
       }
