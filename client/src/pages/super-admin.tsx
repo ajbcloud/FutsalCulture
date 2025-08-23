@@ -18,6 +18,7 @@ import SuperAdminPlayers from "@/components/super-admin/players";
 import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 import Analytics from "@/pages/super-admin/analytics";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
+import SuperAdminDunning from "@/pages/super-admin/dunning";
 
 import { 
   Building2, 
@@ -68,6 +69,7 @@ export default function SuperAdminPage() {
     { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
     { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
+    { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: location === "/super-admin/dunning" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
   ];
 
@@ -90,6 +92,8 @@ export default function SuperAdminPage() {
         return <Analytics />;
       case "/super-admin/platform-billing":
         return <PlatformBilling />;
+      case "/super-admin/dunning":
+        return <SuperAdminDunning />;
       case "/super-admin/settings":
         return <SuperAdminSettings />;
       case "/super-admin/sessions":

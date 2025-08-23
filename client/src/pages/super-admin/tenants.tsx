@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import TenantProfileDrawer from '@/components/super-admin/TenantProfileDrawer';
 import { 
   Plus, 
   Search, 
@@ -77,6 +78,7 @@ export default function SuperAdminTenants() {
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [profileDrawerTenant, setProfileDrawerTenant] = useState<{ id: string; name: string } | null>(null);
   const [newTenant, setNewTenant] = useState({
     name: '',
     subdomain: '',
@@ -383,6 +385,10 @@ export default function SuperAdminTenants() {
                         <BarChart3 className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setProfileDrawerTenant({ id: tenant.id, name: tenant.name })}>
+                        <UserCheck className="w-4 h-4 mr-2" />
+                        Health Profile
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleImpersonateLogin(tenant)}>
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Login as Admin
@@ -543,6 +549,13 @@ export default function SuperAdminTenants() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Tenant Profile Drawer */}
+      <TenantProfileDrawer
+        tenantId={profileDrawerTenant?.id || null}
+        tenantName={profileDrawerTenant?.name}
+        onClose={() => setProfileDrawerTenant(null)}
+      />
     </div>
   );
 }

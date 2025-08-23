@@ -31,6 +31,12 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
 // Waitlist offer status enum
 export const waitlistOfferStatusEnum = pgEnum("waitlist_offer_status", ["none", "offered", "accepted", "expired"]);
 
+// Invoice status enum
+export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "open", "paid", "uncollectible", "void"]);
+
+// Dunning event status enum
+export const dunningStatusEnum = pgEnum("dunning_status", ["failed", "retry_scheduled", "retrying", "recovered", "uncollectible"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -639,6 +645,86 @@ export const progressionSnapshots = pgTable("progression_snapshots", {
   index("progression_snapshots_snapshot_date_idx").on(table.snapshotDate),
 ]);
 
+// =============================================================================
+// KPI & BILLING TABLES
+// =============================================================================
+
+// Platform billing (tenants → us)
+export const tenantInvoices = pgTable("tenant_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  subtotalCents: integer("subtotal_cents").notNull().default(0),
+  taxCents: integer("tax_cents").notNull().default(0),
+  totalCents: integer("total_cents").notNull().default(0),
+  status: invoiceStatusEnum("status").notNull().default("draft"),
+  dueAt: timestamp("due_at").notNull(),
+  paidAt: timestamp("paid_at"),
+  currency: text("currency").notNull().default("USD"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("tenant_invoices_tenant_id_idx").on(table.tenantId),
+  index("tenant_invoices_status_idx").on(table.status),
+  index("tenant_invoices_due_at_idx").on(table.dueAt),
+]);
+
+export const tenantInvoiceLines = pgTable("tenant_invoice_lines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => tenantInvoices.id),
+  type: text("type").notNull(),
+  qty: integer("qty").notNull().default(1),
+  unitPriceCents: integer("unit_price_cents").notNull().default(0),
+  amountCents: integer("amount_cents").notNull().default(0),
+}, (table) => [
+  index("tenant_invoice_lines_invoice_id_idx").on(table.invoiceId),
+]);
+
+export const dunningEvents = pgTable("dunning_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => tenantInvoices.id),
+  attemptNo: integer("attempt_no").notNull().default(1),
+  status: dunningStatusEnum("status").notNull().default("failed"),
+  gatewayTxnId: text("gateway_txn_id"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("dunning_events_invoice_id_idx").on(table.invoiceId),
+  index("dunning_events_status_idx").on(table.status),
+  index("dunning_events_created_at_idx").on(table.createdAt),
+]);
+
+// Plans & usage
+export const planCatalog = pgTable("plan_catalog", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull().default(0),
+  limits: jsonb("limits").notNull(), // JSON with player/session/etc limits
+});
+
+export const tenantPlanAssignments = pgTable("tenant_plan_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  planCode: text("plan_code").notNull().references(() => planCatalog.code),
+  since: timestamp("since").notNull().defaultNow(),
+  until: timestamp("until"),
+}, (table) => [
+  index("tenant_plan_assignments_tenant_id_idx").on(table.tenantId),
+  index("tenant_plan_assignments_plan_code_idx").on(table.planCode),
+]);
+
+export const tenantUsageDaily = pgTable("tenant_usage_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  date: timestamp("date").notNull(), // date column stored as timestamp
+  counters: jsonb("counters").notNull(), // JSON with players, sessions, emails, sms, storage_mb, api_calls
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("tenant_usage_daily_tenant_id_idx").on(table.tenantId),
+  index("tenant_usage_daily_date_idx").on(table.date),
+  uniqueIndex("tenant_usage_daily_tenant_date_idx").on(table.tenantId, table.date),
+]);
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   users: many(users),
@@ -668,6 +754,10 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   attendanceSnapshots: many(attendanceSnapshots),
   devAchievements: many(devAchievements),
   progressionSnapshots: many(progressionSnapshots),
+  // KPI & Billing relations
+  tenantInvoices: many(tenantInvoices),
+  tenantPlanAssignments: many(tenantPlanAssignments),
+  tenantUsageDaily: many(tenantUsageDaily),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -1294,3 +1384,11 @@ export type DevAchievement = typeof devAchievements.$inferSelect;
 export type InsertDevAchievement = z.infer<typeof insertDevAchievementSchema>;
 export type ProgressionSnapshot = typeof progressionSnapshots.$inferSelect;
 export type InsertProgressionSnapshot = z.infer<typeof insertProgressionSnapshotSchema>;
+
+// KPI & Billing Types
+export type TenantInvoice = typeof tenantInvoices.$inferSelect;
+export type TenantInvoiceLine = typeof tenantInvoiceLines.$inferSelect;
+export type DunningEvent = typeof dunningEvents.$inferSelect;
+export type PlanCatalog = typeof planCatalog.$inferSelect;
+export type TenantPlanAssignment = typeof tenantPlanAssignments.$inferSelect;
+export type TenantUsageDaily = typeof tenantUsageDaily.$inferSelect;

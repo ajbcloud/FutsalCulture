@@ -561,4 +561,43 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch help requests" });
     }
   });
+
+  // KPI endpoints
+  app.get('/api/super-admin/kpi/overview', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db; // Pass database connection
+    const { companyOverview } = await import('./controllers/superAdmin/kpi');
+    return companyOverview(req, res);
+  });
+
+  app.get('/api/super-admin/kpi/series', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db;
+    const { kpiSeries } = await import('./controllers/superAdmin/kpi');
+    return kpiSeries(req, res);
+  });
+
+  // Tenant profile endpoint
+  app.get('/api/super-admin/tenants/:id/profile', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db;
+    const { profile } = await import('./controllers/superAdmin/tenantProfile');
+    return profile(req, res);
+  });
+
+  // Dunning endpoints
+  app.get('/api/super-admin/dunning', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db;
+    const { list } = await import('./controllers/superAdmin/dunning');
+    return list(req, res);
+  });
+
+  app.post('/api/super-admin/dunning/:id/retry', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db;
+    const { retry } = await import('./controllers/superAdmin/dunning');
+    return retry(req, res);
+  });
+
+  app.get('/api/super-admin/dunning/dashboard', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    req.db = req.app.db;
+    const { dashboard } = await import('./controllers/superAdmin/dunning');
+    return dashboard(req, res);
+  });
 }

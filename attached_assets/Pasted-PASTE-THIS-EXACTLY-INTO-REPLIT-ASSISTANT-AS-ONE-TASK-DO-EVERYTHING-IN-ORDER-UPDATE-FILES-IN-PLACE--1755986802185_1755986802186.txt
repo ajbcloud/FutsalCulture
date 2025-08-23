@@ -1,0 +1,491 @@
+PASTE THIS EXACTLY INTO REPLIT ASSISTANT AS ONE TASK. DO EVERYTHING IN ORDER. UPDATE FILES IN PLACE. CREATE MISSING PATHS.
+
+Objective
+Deliver owner-level features 4–6:
+
+4. **Integrations & Webhooks Health** with success rate, latency, dead-letter queue, and **Replay**.
+5. **Comms Deliverability** dashboard (Email/SMS): deliverability rates, template performance, event explorer.
+6. **Security & Audit** page: MFA adoption stats, impersonation log (with revoke), audit log search.
+
+All endpoints behind super-admin auth. All lists paginate. All charts respect `from`/`to`. Secrets remain masked and encrypted at rest.
+
+Packages (if not already installed)
+
+```
+npm i zod @tanstack/react-query @tanstack/react-table recharts
+```
+
+Common conventions
+
+* Dates in ISO; client always `encodeURIComponent`.
+* Use shared Zod range schema and `api.ts` fetch wrapper already added.
+* Never return raw secrets in any response.
+
+───────────────────────────────────────────────────────────────────────────────
+A) DATABASE (migrations / schema)
+
+If a table exists, extend it; otherwise create.
+
+1. **Webhooks & Integrations health**
+
+* `integration_webhook` (already proposed)
+  `id PK, name, url, enabled bool, signing_secret_enc text, last_status int, last_latency_ms int, created_at ts, updated_at ts`
+* `webhook_events`
+  `id PK, webhook_id FK, source text, event_type text, payload_json jsonb, created_at ts, delivered_at ts null`
+* `webhook_attempts`
+  `id PK, event_id FK, attempt_no int, status enum('success','failed'), http_status int null, latency_ms int null, error text null, created_at ts`
+
+  > Dead-letter = latest attempt status = 'failed' AND attempts >= 3
+* `integration_status_pings` (optional)
+  `id PK, integration text ('email'|'sms'|'oauth'|'payments'... ), ok bool, latency_ms int, created_at ts`
+
+2. **Comms (Email/SMS) events**
+
+* `comm_templates`
+  `id PK, type enum('email','sms'), key text, name text, version int, active bool, last_used_at ts`
+* `email_events`
+  `id PK, provider text, message_id text, tenant_id FK null, template_key text null, to_addr text, event enum('processed','delivered','open','click','bounce','dropped','spamreport','deferred'), reason text null, created_at ts`
+* `sms_events`
+  `id PK, provider text, message_sid text, tenant_id FK null, to_number text, event enum('queued','sent','delivered','undelivered','failed'), error_code text null, created_at ts`
+* `unsubscribes` (optional)
+  `id PK, channel enum('email','sms'), address text, reason text, created_at ts`
+
+> NOTE: You can ingest SendGrid/Twilio webhooks into these tables via lightweight public endpoints later. For now, seed with dev data or map from existing logs if present.
+
+3. **Security**
+
+* `impersonation_events`
+  `id PK, super_admin_id FK, tenant_id FK, reason text, token_jti text, started_at ts, expires_at ts, revoked_at ts null, ip text`
+* `audit_logs` (already proposed)
+  Ensure columns: `id, actor_id, actor_role, section text, action text, target_id text, diff jsonb, ip text, created_at ts`.
+* Ensure `users` (or equivalent) has: `role`, `mfa_enabled bool`, `status enum('active','locked')`.
+
+───────────────────────────────────────────────────────────────────────────────
+B) SERVER — Validators & Controllers
+
+Shared validator `server/validators/common.ts`
+
+```ts
+import { z } from 'zod';
+export const pagedRange = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+});
+export const idParam = z.object({ id: z.string() });
+```
+
+4. **Integrations & Webhooks Health** — `server/controllers/superAdmin/integrationsHealth.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+import { pagedRange, idParam } from '../../validators/common';
+
+// Overview tiles: success rate, p95 latency, dead letters
+export async function overview(req: Request, res: Response) {
+  const { from, to } = pagedRange.pick({from:true, to:true}).parse(req.query);
+
+  const byWebhook = await req.db.execute(sql`
+    with attempts as (
+      select a.*, e.webhook_id
+      from webhook_attempts a join webhook_events e on e.id=a.event_id
+      where 1=1
+      ${from ? sql`and a.created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and a.created_at <= ${new Date(to)}`   : sql``}
+    )
+    select
+      w.id, w.name, w.url, w.enabled,
+      coalesce(avg(case when a.status='success' then 1 else 0 end),0)::float as success_rate,
+      percentile_disc(0.95) within group (order by a.latency_ms) as p95_latency,
+      sum(case when a.status='failed' then 1 else 0 end)::int as failures,
+      sum(case when a.status='failed' and a.attempt_no>=3 then 1 else 0 end)::int as dead_letters
+    from integration_webhook w
+    left join attempts a on a.webhook_id = w.id
+    group by w.id
+    order by w.name
+  `).then(r => (r as any).rows);
+
+  res.json({ webhooks: byWebhook });
+}
+
+// Events list for a webhook
+export async function events(req: Request, res: Response) {
+  const { page, pageSize, from, to } = pagedRange.parse(req.query);
+  const { id } = idParam.parse(req.params);
+  const offset = (page-1)*pageSize;
+
+  const rows = await req.db.execute(sql`
+    select e.id, e.event_type, e.created_at,
+           (select count(*) from webhook_attempts a where a.event_id=e.id and a.status='success') as success_count,
+           (select count(*) from webhook_attempts a where a.event_id=e.id and a.status='failed') as fail_count
+    from webhook_events e
+    where e.webhook_id=${id}
+      ${from ? sql`and e.created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and e.created_at <= ${new Date(to)}`   : sql``}
+    order by e.created_at desc
+    limit ${pageSize} offset ${offset}
+  `).then(r => (r as any).rows);
+
+  const total = await req.db.execute(sql`
+    select count(*)::int as c from webhook_events where webhook_id=${id}
+  `).then(r => Number((r as any).rows[0].c));
+
+  res.json({ rows, page, pageSize, totalRows: total });
+}
+
+// Attempts for an event + Replay
+export async function attempts(req: Request, res: Response) {
+  const { page, pageSize } = pagedRange.parse(req.query);
+  const eventId = req.params.id;
+  const offset = (page-1)*pageSize;
+  const rows = await req.db.execute(sql`
+    select id, attempt_no, status, http_status, latency_ms, error, created_at
+    from webhook_attempts where event_id=${eventId}
+    order by attempt_no asc limit ${pageSize} offset ${offset}
+  `).then(r => (r as any).rows);
+  const total = await req.db.execute(sql`
+    select count(*)::int as c from webhook_attempts where event_id=${eventId}
+  `).then(r => Number((r as any).rows[0].c));
+  res.json({ rows, page, pageSize, totalRows: total });
+}
+
+// Replay latest failed attempt for an event
+export async function replay(req: Request, res: Response) {
+  const eventId = req.params.id;
+  const event = await req.db.execute(sql`
+    select e.*, w.url, w.signing_secret_enc from webhook_events e
+    join integration_webhook w on w.id = e.webhook_id
+    where e.id=${eventId}
+  `).then(r => (r as any).rows[0]);
+  if (!event) return res.status(404).json({ error:'not_found' });
+
+  // TODO: sign payload using decrypted secret and POST to w.url (stub success)
+  const ok = true; const httpStatus = 200; const latency = 123;
+
+  await req.db.execute(sql`
+    insert into webhook_attempts (event_id, attempt_no, status, http_status, latency_ms, error)
+    values (${eventId},
+      (select coalesce(max(attempt_no),0)+1 from webhook_attempts where event_id=${eventId}),
+      ${ok ? 'success' : 'failed'}, ${httpStatus}, ${latency}, ${ok ? null : 'retry failed'})
+  `);
+  res.json({ ok, httpStatus, latencyMs: latency });
+}
+```
+
+Routes — `server/routes/superAdmin.ts`
+
+```ts
+import * as integ from '../controllers/superAdmin/integrationsHealth';
+
+r.get('/integrations/health/overview', integ.overview);
+r.get('/integrations/webhooks/:id/events', integ.events);
+r.get('/integrations/webhooks/events/:id/attempts', integ.attempts);
+r.post('/integrations/webhooks/events/:id/replay', integ.replay);
+```
+
+5. **Comms Deliverability** — `server/controllers/superAdmin/comms.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+import { pagedRange } from '../../validators/common';
+
+export async function overview(req: Request, res: Response) {
+  const { from, to } = pagedRange.pick({from:true, to:true}).parse(req.query);
+
+  const email = await req.db.execute(sql`
+    with e as (
+      select * from email_events
+      where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    )
+    select
+      sum(case when event='delivered' then 1 else 0 end)::int as delivered,
+      sum(case when event in ('bounce','dropped','spamreport') then 1 else 0 end)::int as failed,
+      sum(case when event='open' then 1 else 0 end)::int as opens,
+      sum(case when event='click' then 1 else 0 end)::int as clicks
+    from e
+  `).then(r => (r as any).rows[0] || {});
+
+  const sms = await req.db.execute(sql`
+    with s as (
+      select * from sms_events
+      where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    )
+    select
+      sum(case when event='delivered' then 1 else 0 end)::int as delivered,
+      sum(case when event in ('undelivered','failed') then 1 else 0 end)::int as failed
+    from s
+  `).then(r => (r as any).rows[0] || {});
+
+  // Top templates by volume & bounce
+  const templates = await req.db.execute(sql`
+    select template_key, 
+      sum(case when event='delivered' then 1 else 0 end)::int as delivered,
+      sum(case when event in ('bounce','dropped','spamreport') then 1 else 0 end)::int as failed,
+      sum(case when event='open' then 1 else 0 end)::int as opens,
+      sum(case when event='click' then 1 else 0 end)::int as clicks
+    from email_events
+    where template_key is not null
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    group by template_key
+    order by delivered desc nulls last
+    limit 50
+  `).then(r => (r as any).rows);
+
+  res.json({
+    email: {
+      delivered: Number(email.delivered||0),
+      failed: Number(email.failed||0),
+      opens: Number(email.opens||0),
+      clicks: Number(email.clicks||0),
+    },
+    sms: {
+      delivered: Number(sms.delivered||0),
+      failed: Number(sms.failed||0),
+    },
+    templates
+  });
+}
+
+export async function series(req: Request, res: Response) {
+  const { from, to } = pagedRange.pick({from:true, to:true}).parse(req.query);
+  const emailSeries = await req.db.execute(sql`
+    select date_trunc('day', created_at) d,
+      sum(case when event='delivered' then 1 else 0 end)::int as delivered,
+      sum(case when event in ('bounce','dropped','spamreport') then 1 else 0 end)::int as failed
+    from email_events
+    where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    group by 1 order by 1
+  `).then(r => (r as any).rows);
+  const smsSeries = await req.db.execute(sql`
+    select date_trunc('day', created_at) d,
+      sum(case when event='delivered' then 1 else 0 end)::int as delivered,
+      sum(case when event in ('undelivered','failed') then 1 else 0 end)::int as failed
+    from sms_events
+    where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    group by 1 order by 1
+  `).then(r => (r as any).rows);
+  res.json({ email: emailSeries, sms: smsSeries });
+}
+
+export async function events(req: Request, res: Response) {
+  const { page, pageSize, from, to } = pagedRange.parse(req.query);
+  const offset = (page-1)*pageSize;
+  const channel = (req.query.channel || 'email') as 'email'|'sms';
+  const table = channel === 'email' ? 'email_events' : 'sms_events';
+
+  const rows = await req.db.execute(sql`
+    select * from ${sql.raw(table)}
+    where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    order by created_at desc
+    limit ${pageSize} offset ${offset}
+  `).then(r => (r as any).rows);
+
+  const total = await req.db.execute(sql`
+    select count(*)::int as c from ${sql.raw(table)}
+  `).then(r => Number((r as any).rows[0].c));
+
+  res.json({ rows, page, pageSize, totalRows: total });
+}
+```
+
+Routes — `server/routes/superAdmin.ts`
+
+```ts
+import * as comms from '../controllers/superAdmin/comms';
+
+r.get('/comms/overview', comms.overview);
+r.get('/comms/series',   comms.series);
+r.get('/comms/events',   comms.events); // ?channel=email|sms&from=&to=&page=&pageSize=
+```
+
+6. **Security & Audit** — `server/controllers/superAdmin/security.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+import { pagedRange, idParam } from '../../validators/common';
+
+export async function overview(req: Request, res: Response) {
+  // MFA adoption and login method mix
+  const superAdmins = await req.db.execute(sql`
+    select
+      sum(case when role='super_admin' then 1 else 0 end)::int as total,
+      sum(case when role='super_admin' and mfa_enabled then 1 else 0 end)::int as with_mfa
+    from users
+  `).then(r => (r as any).rows[0]);
+
+  const tenantAdmins = await req.db.execute(sql`
+    select
+      sum(case when role='tenant_admin' then 1 else 0 end)::int as total,
+      sum(case when role='tenant_admin' and mfa_enabled then 1 else 0 end)::int as with_mfa
+    from users
+  `).then(r => (r as any).rows[0]);
+
+  res.json({
+    superAdmins: { total: Number(superAdmins.total||0), withMfa: Number(superAdmins.with_mfa||0) },
+    tenantAdmins: { total: Number(tenantAdmins.total||0), withMfa: Number(tenantAdmins.with_mfa||0) },
+  });
+}
+
+export async function impersonations(req: Request, res: Response) {
+  const { page, pageSize, from, to } = pagedRange.parse(req.query);
+  const offset = (page-1)*pageSize;
+
+  const rows = await req.db.execute(sql`
+    select e.id, e.super_admin_id, sa.email as super_admin_email,
+           e.tenant_id, t.name as tenant_name, e.reason, e.started_at, e.expires_at, e.revoked_at, e.ip
+    from impersonation_events e
+    left join users sa on sa.id = e.super_admin_id
+    left join tenants t on t.id = e.tenant_id
+    where 1=1
+      ${from ? sql`and e.started_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and e.started_at <= ${new Date(to)}`   : sql``}
+    order by e.started_at desc
+    limit ${pageSize} offset ${offset}
+  `).then(r => (r as any).rows);
+
+  const total = await req.db.execute(sql`select count(*)::int as c from impersonation_events`).then(r => Number((r as any).rows[0].c));
+  res.json({ rows, page, pageSize, totalRows: total });
+}
+
+export async function revokeImpersonation(req: Request, res: Response) {
+  const { id } = idParam.parse(req.params);
+  await req.db.execute(sql`
+    update impersonation_events set revoked_at = now() where id=${id} and revoked_at is null
+  `);
+  res.json({ ok:true });
+}
+
+export async function auditLogs(req: Request, res: Response) {
+  const { page, pageSize, from, to } = pagedRange.parse(req.query);
+  const offset = (page-1)*pageSize;
+  const rows = await req.db.execute(sql`
+    select id, actor_id, actor_role, section, action, target_id, diff, ip, created_at
+    from audit_logs
+    where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and created_at <= ${new Date(to)}`   : sql``}
+    order by created_at desc
+    limit ${pageSize} offset ${offset}
+  `).then(r => (r as any).rows);
+  const total = await req.db.execute(sql`select count(*)::int as c from audit_logs`).then(r => Number((r as any).rows[0].c));
+  res.json({ rows, page, pageSize, totalRows: total });
+}
+```
+
+Routes — `server/routes/superAdmin.ts`
+
+```ts
+import * as sec from '../controllers/superAdmin/security';
+
+r.get('/security/overview', sec.overview);
+r.get('/security/impersonations', sec.impersonations);
+r.post('/security/impersonations/:id/revoke', sec.revokeImpersonation);
+r.get('/security/audit-logs', sec.auditLogs);
+```
+
+───────────────────────────────────────────────────────────────────────────────
+C) CLIENT — Pages & Components
+
+Navigation (Company group)
+Add three routes under Company:
+
+* **Integrations Health** → `/super-admin/integrations-health`
+* **Comms** → `/super-admin/comms`
+* **Security** → `/super-admin/security`
+
+1. **Integrations Health** — `src/routes/super-admin/IntegrationsHealth.tsx`
+
+* Header: “Integrations & Webhooks Health”.
+* Filters: date range (shared `FilterBar`).
+* **Webhooks table** (server-side pagination optional; small sets OK):
+
+  * Columns: Name, URL (domain only), Enabled, Success Rate, p95 Latency, Failures (last window), Dead Letters.
+  * Data from `GET /api/super-admin/integrations/health/overview?from=&to=`.
+  * Row expand → **Events** (`GET /integrations/webhooks/:id/events`) with nested **Attempts** per event (`GET /integrations/webhooks/events/:id/attempts`), and an **Replay** button calling `POST /integrations/webhooks/events/:id/replay`.
+* KPI strip: total success %, total dead letters, worst p95 webhook.
+
+Zero states with hints (e.g., “No events yet—send a test payload from Settings → Integrations → Webhooks”).
+
+2. **Comms Deliverability** — `src/routes/super-admin/Comms.tsx`
+
+* Header: “Communications Deliverability”.
+* Filters: date range + channel toggle (Email/SMS).
+* KPI cards:
+
+  * Email: Delivered, Failed (bounce/complaint), Opens, Clicks; CTR (Clicks/Delivered).
+  * SMS: Delivered, Failed (undelivered/failed); Delivery rate.
+* **Time series** (Recharts LineChart) using `GET /api/super-admin/comms/series`.
+* **Template performance** (email): table from `GET /api/super-admin/comms/overview` → `templates[]`. Columns: Template Key, Delivered, Failed, Open Rate, Click Rate; sortable.
+* **Event explorer**: tabular feed from `GET /api/super-admin/comms/events?channel=&from=&to=&page=&pageSize=` with columns: Time, Provider, To, Event, Reason/Code (if any), Tenant (if present). Paginates.
+
+3. **Security & Audit** — `src/routes/super-admin/Security.tsx`
+
+* Header: “Security & Audit”.
+* Section **MFA Adoption** (cards + progress bars):
+
+  * Super Admins: `withMfa / total`
+  * Tenant Admins: `withMfa / total`
+* Section **Impersonations**:
+
+  * Table from `GET /api/super-admin/security/impersonations?from=&to=&page=&pageSize=` with columns: Started, Super Admin, Tenant, Reason, Expires, Status (active/revoked), IP, **Revoke** action → `POST /security/impersonations/:id/revoke` then refetch.
+* Section **Audit Log**:
+
+  * Filters: date range + text search (client-side filter on section/action/actor\_email).
+  * Table from `GET /api/super-admin/security/audit-logs?from=&to=&page=&pageSize=` columns: Time, Actor (role), Section, Action, Target, Diff (expand JSON), IP.
+
+UI Notes
+
+* Reuse `StatCard` and `DataTable` components.
+* For success rate, display as `%` with color thresholds (red < 90, amber 90–97, green > 97).
+* For latency, show `p95` in ms and a mini bar.
+
+───────────────────────────────────────────────────────────────────────────────
+D) ACCEPTANCE CRITERIA
+
+**Integrations & Webhooks Health**
+
+* Overview shows each webhook with success %, p95 latency, failures, dead letters for the chosen window.
+* Expanding a row displays recent events and their attempts.
+* Clicking **Replay** creates a new attempt and the table refreshes (stubbed delivery OK).
+* No secrets leaked in any payloads or responses.
+
+**Comms Deliverability**
+
+* KPI cards and series change with date range.
+* Template performance table sorts by Delivered / Open Rate / Click Rate.
+* Event explorer paginates and shows both Email and SMS.
+* Delivery rate and failure rate are correct with zero-division protection.
+
+**Security & Audit**
+
+* MFA adoption cards reflect real counts.
+* Impersonation table lists and supports **Revoke** (marks `revoked_at`).
+* Audit Log table paginates and filters by date.
+* All endpoints are super-admin protected; no PII secrets exposed.
+
+───────────────────────────────────────────────────────────────────────────────
+E) NOTES / TODOs (leave comments in code)
+
+* Add public ingestion endpoints later for SendGrid/Twilio to populate `email_events`/`sms_events`.
+* Implement real webhook POST + signature in `replay` once secrets KMS helper is wired (use existing encryption helper).
+* Consider background jobs to compute hourly success stats for faster dashboards.
+
+When finished, post a summary with:
+(1) Integrations Health screenshot (with a replayed attempt),
+(2) Comms Deliverability with series & template table,
+(3) Security page showing MFA stats and impersonation revoke flow.

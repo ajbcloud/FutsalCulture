@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import FilterBar from '@/components/shared/FilterBar';
 import StatCard from '@/components/super-admin/ui/StatCard';
 import Section from '@/components/super-admin/ui/Section';
+import CompanyKPIs from '@/components/super-admin/CompanyKPIs';
 import { get } from '@/lib/api';
 import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, UserCheck, AlertTriangle } from 'lucide-react';
 
@@ -47,7 +48,7 @@ interface TenantData {
 }
 
 export default function Analytics() {
-  const [lane, setLane] = useState<'platform' | 'commerce'>('platform');
+  const [lane, setLane] = useState<'platform' | 'commerce' | 'kpis'>('platform');
   const [subTab, setSubTab] = useState('overview');
   const [tenantId, setTenantId] = useState('all');
   const [status, setStatus] = useState('all');
@@ -168,23 +169,31 @@ export default function Analytics() {
         ]}
       />
 
-      {/* Main tabs: Platform | Client Commerce */}
-      <Tabs value={lane} onValueChange={(value) => { setLane(value as 'platform' | 'commerce'); setSubTab('overview'); }}>
-        <TabsList className="grid w-full grid-cols-2">
+      {/* Main tabs: Platform | Client Commerce | Company KPIs */}
+      <Tabs value={lane} onValueChange={(value) => { setLane(value as 'platform' | 'commerce' | 'kpis'); setSubTab('overview'); }}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="platform">Platform</TabsTrigger>
           <TabsTrigger value="commerce">Client Commerce</TabsTrigger>
+          <TabsTrigger value="kpis">Company KPIs</TabsTrigger>
         </TabsList>
 
+        {/* KPIs Tab Content */}
+        <TabsContent value="kpis" className="space-y-8">
+          <CompanyKPIs />
+        </TabsContent>
+
+        {/* Platform/Commerce Tab Content */}
         <TabsContent value={lane} className="space-y-8">
           {/* Sub-tabs */}
-          <Tabs value={subTab} onValueChange={setSubTab}>
-            <TabsList>
-              {currentSubTabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+          {lane !== 'kpis' && (
+            <Tabs value={subTab} onValueChange={setSubTab}>
+              <TabsList>
+                {currentSubTabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-8">
@@ -530,6 +539,7 @@ export default function Analytics() {
               </Section>
             </TabsContent>
           </Tabs>
+          )}
         </TabsContent>
       </Tabs>
     </div>
