@@ -53,7 +53,7 @@ export default function Analytics() {
   const [status, setStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [interval, setInterval] = useState<'day' | 'week' | 'month'>('day');
+  const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   // Build query params
   const buildParams = (additionalParams?: Record<string, string>) => {
@@ -323,7 +323,7 @@ export default function Analytics() {
                 <Section title="Revenue Trends" subtitle={`${lane === 'platform' ? 'Platform subscription' : 'Client commerce'} revenue over time`}>
                   <div />
                 </Section>
-                <Select value={interval} onValueChange={(value) => setInterval(value as 'day' | 'week' | 'month')}>
+                <Select value={interval} onValueChange={(value) => setInterval(value as 'day' | 'week' | 'month' | 'year')}>
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -331,6 +331,7 @@ export default function Analytics() {
                     <SelectItem value="day">Daily</SelectItem>
                     <SelectItem value="week">Weekly</SelectItem>
                     <SelectItem value="month">Monthly</SelectItem>
+                    <SelectItem value="year">Yearly</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

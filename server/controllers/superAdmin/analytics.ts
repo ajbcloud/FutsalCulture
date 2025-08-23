@@ -18,7 +18,7 @@ const analyticsQuerySchema = z.object({
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   tenantId: z.string().uuid().optional(),
-  interval: z.enum(['day', 'week', 'month']).default('day')
+  interval: z.enum(['day', 'week', 'month', 'year']).default('day')
 });
 
 const paginationSchema = z.object({
@@ -219,6 +219,9 @@ export async function series(req: Request, res: Response) {
       } else if (interval === 'month') {
         dateFormat = 'YYYY-MM';
         truncFunction = 'DATE_TRUNC(\'month\', ';
+      } else if (interval === 'year') {
+        dateFormat = 'YYYY';
+        truncFunction = 'DATE_TRUNC(\'year\', ';
       }
       
       // Revenue series
