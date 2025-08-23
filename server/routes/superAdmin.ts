@@ -11,6 +11,8 @@ import * as players from '../controllers/superAdmin/players';
 import * as analytics from '../controllers/superAdmin/analytics';
 import * as help from '../controllers/superAdmin/help';
 import * as settings from '../controllers/superAdmin/settings';
+import * as platformPayments from '../controllers/superAdmin/platformPayments';
+import * as impersonate from '../controllers/superAdmin/impersonate';
 
 const r = Router();
 r.use(requireAuth, requireSuperAdmin);
@@ -33,11 +35,16 @@ r.get('/players', players.list);
 
 r.get('/analytics/series', analytics.series);
 r.get('/analytics/by-tenant', analytics.byTenant);
+r.get('/analytics/overview', analytics.overview);
 
 r.get('/help', help.list);
 r.patch('/help/:id', help.update);
 
 r.get('/settings', settings.get);
 r.patch('/settings', settings.patch);
+
+r.get('/platform-payments', platformPayments.list);
+
+r.post('/impersonate', impersonate.start);
 
 export default r;

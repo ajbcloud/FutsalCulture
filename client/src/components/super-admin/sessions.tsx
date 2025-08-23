@@ -33,7 +33,7 @@ export default function SuperAdminSessions() {
   const [dateRange, setDateRange] = useState<any>(null);
 
   // Fetch tenants for filter
-  const { data: tenantsData } = useQuery({
+  const { data: tenants = [] } = useQuery({
     queryKey: ["/api/super-admin/tenants"],
     queryFn: async () => {
       const response = await fetch("/api/super-admin/tenants", {
@@ -42,8 +42,6 @@ export default function SuperAdminSessions() {
       return response.json();
     },
   });
-  
-  const tenants = tenantsData?.rows || [];
 
   // Fetch sessions with filters
   const { data: sessions = [], isLoading } = useQuery<Session[]>({
@@ -169,7 +167,7 @@ export default function SuperAdminSessions() {
                 <SelectItem value="all">All Tenants</SelectItem>
                 {tenants.map((tenant: any) => (
                   <SelectItem key={tenant.id} value={tenant.id}>
-                    {tenant.organization}
+                    {tenant.name}
                   </SelectItem>
                 ))}
               </SelectContent>

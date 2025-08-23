@@ -20,7 +20,7 @@ import { z } from "zod";
 import "./jobs/capacity-monitor";
 import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
-// Super admin routes are now handled in server/index.ts via server/routes/superAdmin.ts
+import { setupSuperAdminRoutes } from './super-admin-routes';
 import { stripeWebhookRouter } from './stripe-webhooks';
 
 
@@ -1722,7 +1722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAdminRoutes(app);
 
   // Setup super admin routes
-  // Super admin routes are now handled in server/index.ts via server/routes/superAdmin.ts
+  setupSuperAdminRoutes(app);
 
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');
