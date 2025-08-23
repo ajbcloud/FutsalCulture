@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from './db';
-import { futsalSessions, signups, players, tenants, integrations } from '../shared/schema';
+import { futsalSessions, signups, players, tenants, integrations, systemSettings } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import braintree from 'braintree';
@@ -721,6 +721,45 @@ router.post('/session-billing/refund', async (req: any, res) => {
     // Check if payment exists
     if (!signupRecord.paid || !signupRecord.paymentId || !signupRecord.paymentProvider) {
       return res.status(400).json({ message: 'No valid payment found to refund' });
+    }
+
+    // Get session details to check refund cutoff
+    const sessionDetails = await db.select()
+      .from(futsalSessions)
+      .where(and(
+        eq(futsalSessions.id, signupRecord.sessionId),
+        eq(futsalSessions.tenantId, currentUser.tenantId)
+      ))
+      .limit(1);
+
+    if (!sessionDetails.length) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const session = sessionDetails[0];
+
+    // Get refund cutoff setting from system settings
+    const refundCutoffSetting = await db.select()
+      .from(systemSettings)
+      .where(and(
+        eq(systemSettings.tenantId, currentUser.tenantId),
+        eq(systemSettings.key, 'refundCutoffHours')
+      ))
+      .limit(1);
+
+    const refundCutoffHours = refundCutoffSetting.length > 0 
+      ? parseInt(refundCutoffSetting[0].value) 
+      : 1; // Default to 1 hour if not set
+
+    // Check if refund is within cutoff period
+    const sessionDateTime = new Date(session.startTime);
+    const cutoffTime = new Date(sessionDateTime.getTime() - (refundCutoffHours * 60 * 60 * 1000));
+    const now = new Date();
+
+    if (now >= cutoffTime) {
+      return res.status(400).json({ 
+        message: `Refund not allowed. Cutoff time is ${refundCutoffHours} hour(s) before session start.` 
+      });
     }
 
     let refundResult = { success: false, refundId: null as string | null };

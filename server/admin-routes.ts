@@ -1319,6 +1319,8 @@ export function setupAdminRoutes(app: any) {
           minute: '2-digit',
           hour12: true 
         })}`,
+        sessionDate: new Date(session.startTime).toISOString().split('T')[0], // YYYY-MM-DD format
+        sessionStartTime: new Date(session.startTime).toTimeString().split(' ')[0], // HH:MM:SS format
         location: session.location,
         paid: session.paid || false,
         paymentId: session.paymentId,
@@ -1877,6 +1879,8 @@ export function setupAdminRoutes(app: any) {
         smsNotifications: false,
         sessionCapacityWarning: 3,
         paymentReminderMinutes: 60, // Default to 60 minutes
+        paymentSubmissionTimeMinutes: 30, // Default payment submission time
+        refundCutoffHours: 1, // Default refund cutoff time
         // Business schedule settings
         weekdayStart: "monday", // Business week starts on Monday by default
         weekdayEnd: "sunday", // Business week ends on Sunday by default

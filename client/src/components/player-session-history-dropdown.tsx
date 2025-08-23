@@ -36,6 +36,8 @@ interface SessionHistoryItem {
   refundReason?: string;
   refundedAt?: string;
   createdAt: string;
+  sessionDate?: string;
+  sessionStartTime?: string;
 }
 
 interface PlayerSessionHistoryDropdownProps {
@@ -59,6 +61,16 @@ export function PlayerSessionHistoryDropdown({
   
   const { toast } = useToast();
 
+  // Fetch system settings to get refund cutoff time
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/settings');
+      if (!response.ok) throw new Error('Failed to fetch settings');
+      return response.json();
+    },
+  });
+
   const { data: sessionHistory, isLoading } = useQuery({
     queryKey: ['player-session-history', playerId, currentPage],
     queryFn: async () => {
@@ -72,6 +84,25 @@ export function PlayerSessionHistoryDropdown({
   });
 
   const totalPages = sessionHistory ? Math.ceil(sessionHistory.total / itemsPerPage) : 0;
+
+  // Helper function to check if refund is allowed based on cutoff time
+  const isRefundAllowed = (session: SessionHistoryItem): boolean => {
+    if (!systemSettings?.refundCutoffHours) return true;
+    
+    // If session doesn't have proper date/time info, allow refund (legacy data)
+    if (!session.sessionDate || !session.sessionStartTime) return true;
+    
+    // Parse session date and time
+    const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionStartTime}`);
+    if (isNaN(sessionDateTime.getTime())) return true; // Invalid date, allow refund
+    
+    // Calculate cutoff time (session start time minus cutoff hours)
+    const cutoffTime = new Date(sessionDateTime.getTime() - (systemSettings.refundCutoffHours * 60 * 60 * 1000));
+    const now = new Date();
+    
+    // Allow refund if current time is before cutoff time
+    return now < cutoffTime;
+  };
 
   const handleRefund = (session: SessionHistoryItem) => {
     setSelectedSession(session);
@@ -202,7 +233,7 @@ export function PlayerSessionHistoryDropdown({
                             </Badge>
                           )}
                         </div>
-                        {session.paid && !session.refunded && (
+                        {session.paid && !session.refunded && isRefundAllowed(session) && (
                           <Button 
                             size="sm" 
                             variant="outline"
@@ -212,6 +243,11 @@ export function PlayerSessionHistoryDropdown({
                           >
                             Refund
                           </Button>
+                        )}
+                        {session.paid && !session.refunded && !isRefundAllowed(session) && (
+                          <Badge variant="secondary" className="h-6 text-xs px-2">
+                            Refund Expired
+                          </Badge>
                         )}
                         {session.refunded && session.refundReason && (
                           <div className="text-xs text-muted-foreground">
