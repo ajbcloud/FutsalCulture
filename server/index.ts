@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
-import { setupSuperAdminRoutes } from './super-admin-routes'; // Import setupSuperAdminRoutes
+import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 
 const app = express();
 
@@ -72,7 +72,7 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // Mount superAdmin routes
-  setupSuperAdminRoutes(app);
+  app.use('/api/super-admin', superAdminRoutes);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
