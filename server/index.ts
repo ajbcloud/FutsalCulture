@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
+import './jobs/scheduler'; // Initialize usage rollup scheduler
 
 const app = express();
 

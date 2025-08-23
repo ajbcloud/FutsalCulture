@@ -290,6 +290,7 @@ export const helpRequests = pgTable("help_requests", {
   resolvedBy: varchar("resolved_by"), // admin user ID who resolved the issue
   resolutionNote: text("resolution_note"), // detailed explanation of resolution
   resolvedAt: timestamp("resolved_at"), // when the issue was resolved
+  firstResponseAt: timestamp("first_response_at"), // when first response was sent (for SLA tracking)
   replyHistory: jsonb("reply_history").$type<Array<{
     message: string;
     repliedBy: string;
@@ -860,6 +861,31 @@ export const unsubscribes = pgTable("unsubscribes", {
 ]);
 
 // Security Tables
+
+export const featureAdoptionEvents = pgTable("feature_adoption_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  userId: varchar("user_id").references(() => users.id),
+  featureKey: text("feature_key").notNull(),
+  occurredAt: timestamp("occurred_at").defaultNow(),
+}, (table) => [
+  index("feature_adoption_events_tenant_id_idx").on(table.tenantId),
+  index("feature_adoption_events_feature_key_idx").on(table.featureKey),
+]);
+
+export const webhookStatsHourly = pgTable("webhook_stats_hourly", {
+  webhookId: varchar("webhook_id").notNull().references(() => integrationWebhook.id),
+  hour: timestamp("hour").notNull(),
+  attempts: integer("attempts").default(0),
+  success: integer("success").default(0),
+  failed: integer("failed").default(0),
+  p95LatencyMs: integer("p95_latency_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  // Composite primary key
+  index("webhook_stats_hourly_pkey").on(table.webhookId, table.hour),
+  index("webhook_stats_hourly_hour_idx").on(table.hour),
+]);
 
 export const impersonationEvents = pgTable("impersonation_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

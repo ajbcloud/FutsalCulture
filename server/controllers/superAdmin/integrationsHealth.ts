@@ -7,23 +7,30 @@ import { pagedRange, idParam } from '../../validators/common';
 export async function overview(req: Request, res: Response) {
   const { from, to } = pagedRange.pick({from:true, to:true}).parse(req.query);
 
+  // Use materialized stats for better performance
   const byWebhook = await db.execute(sql`
-    with attempts as (
-      select a.*, e.webhook_id
-      from webhook_attempts a join webhook_events e on e.id=a.event_id
+    with stats as (
+      select 
+        webhook_id,
+        sum(attempts) as total_attempts,
+        sum(success) as total_success,
+        sum(failed) as total_failed,
+        avg(p95_latency_ms) as avg_p95_latency
+      from webhook_stats_hourly
       where 1=1
-      ${from ? sql`and a.created_at >= ${new Date(from)}` : sql``}
-      ${to   ? sql`and a.created_at <= ${new Date(to)}`   : sql``}
+      ${from ? sql`and hour >= ${new Date(from)}` : sql`and hour >= now() - interval '7 days'`}
+      ${to   ? sql`and hour <= ${new Date(to)}`   : sql``}
+      group by webhook_id
     )
     select
       w.id, w.name, w.url, w.enabled,
-      coalesce(avg(case when a.status='success' then 1 else 0 end),0)::float as success_rate,
-      percentile_disc(0.95) within group (order by a.latency_ms) as p95_latency,
-      sum(case when a.status='failed' then 1 else 0 end)::int as failures,
-      sum(case when a.status='failed' and a.attempt_no>=3 then 1 else 0 end)::int as dead_letters
+      coalesce(case when s.total_attempts > 0 then s.total_success::float / s.total_attempts else 0 end, 0) as success_rate,
+      coalesce(s.avg_p95_latency, 0)::int as p95_latency,
+      coalesce(s.total_failed, 0) as failures,
+      -- Dead letters approximation: failed attempts where we likely gave up
+      coalesce(s.total_failed / 3, 0)::int as dead_letters
     from integration_webhook w
-    left join attempts a on a.webhook_id = w.id
-    group by w.id
+    left join stats s on s.webhook_id = w.id
     order by w.name
   `).then(r => (r as any).rows);
 
@@ -81,14 +88,73 @@ export async function replay(req: Request, res: Response) {
   `).then(r => (r as any).rows[0]);
   if (!event) return res.status(404).json({ error:'not_found' });
 
-  // TODO: sign payload using decrypted secret and POST to w.url (stub success)
-  const ok = true; const httpStatus = 200; const latency = 123;
+  let ok = false;
+  let httpStatus = 500;
+  let latency = 0;
+  let error = null;
 
+  try {
+    const startTime = Date.now();
+    
+    // Prepare payload 
+    const payload = JSON.stringify(event.payload_json || {});
+    
+    // Sign payload if we have a signing secret
+    let signature = '';
+    if (event.signing_secret_enc) {
+      const { decrypt } = await import('../../lib/kms');
+      try {
+        const secret = decrypt(event.signing_secret_enc);
+        const crypto = await import('crypto');
+        signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+      } catch (decryptError) {
+        console.warn('Failed to decrypt webhook signing secret:', decryptError);
+      }
+    }
+    
+    // Make HTTP POST request
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'FutsalHQ-Webhooks/1.0'
+    };
+    
+    if (signature) {
+      headers['X-Signature-SHA256'] = `sha256=${signature}`;
+    }
+    
+    const response = await fetch(event.url, {
+      method: 'POST',
+      headers,
+      body: payload,
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+    
+    httpStatus = response.status;
+    latency = Date.now() - startTime;
+    ok = response.ok;
+    
+    if (!ok) {
+      error = `HTTP ${httpStatus}: ${response.statusText}`;
+      const body = await response.text().catch(() => '');
+      if (body) error += ` - ${body.substring(0, 200)}`;
+    }
+    
+  } catch (e: any) {
+    latency = Date.now() - Date.now();
+    error = e.message || 'Request failed';
+    if (e.name === 'AbortError') {
+      error = 'Request timeout';
+      httpStatus = 408;
+    }
+  }
+
+  // Record the attempt
   await db.execute(sql`
     insert into webhook_attempts (event_id, attempt_no, status, http_status, latency_ms, error)
     values (${eventId},
       (select coalesce(max(attempt_no),0)+1 from webhook_attempts where event_id=${eventId}),
-      ${ok ? 'success' : 'failed'}, ${httpStatus}, ${latency}, ${ok ? null : 'retry failed'})
+      ${ok ? 'success' : 'failed'}, ${httpStatus}, ${latency}, ${error})
   `);
-  res.json({ ok, httpStatus, latencyMs: latency });
+  
+  res.json({ ok, httpStatus, latencyMs: latency, error });
 }

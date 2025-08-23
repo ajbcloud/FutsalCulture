@@ -22,9 +22,13 @@ import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { stripeWebhookRouter } from './stripe-webhooks';
+import publicIngestionRoutes from './routes/publicIngestion';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Public ingestion endpoints (BEFORE auth middleware since they're public)
+  app.use('/api/public', publicIngestionRoutes);
+  
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
 
