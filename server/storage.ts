@@ -157,6 +157,7 @@ export interface IStorage {
   getSuperAdminTenantDetails(tenantId: string): Promise<any>;
   updateTenantStatus(tenantId: string, status: string): Promise<any>;
   getSuperAdminUsers(filters?: any): Promise<any[]>;
+  createSuperAdminUser(userData: { email: string; firstName: string; lastName: string; role: 'super-admin' | 'platform-admin' }): Promise<any>;
   updateUserStatus(userId: string, status: string): Promise<any>;
   sendPasswordReset(userId: string): Promise<void>;
   exportSuperAdminUsers(): Promise<string>;
@@ -1548,67 +1549,36 @@ export class DatabaseStorage implements IStorage {
     return { ...tenant, status };
   }
 
-  async getSuperAdminUsers(filters?: any): Promise<any[]> {
-    let query = db.select({
-      id: users.id,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      email: users.email,
-      isAdmin: users.isAdmin,
-      isSuperAdmin: users.isSuperAdmin,
-      tenantId: users.tenantId,
-      tenantName: tenants.name,
-      lastLogin: users.createdAt,
-      createdAt: users.createdAt,
-      status: sql<string>`'active'`
-    })
-    .from(users)
-    .leftJoin(tenants, eq(users.tenantId, tenants.id));
-
-    // Apply filters
-    const conditions = [];
-    if (filters?.search) {
-      conditions.push(
-        or(
-          ilike(users.firstName, `%${filters.search}%`),
-          ilike(users.lastName, `%${filters.search}%`),
-          ilike(users.email, `%${filters.search}%`)
-        )
-      );
-    }
-    if (filters?.role === 'admin') {
-      conditions.push(eq(users.isAdmin, true));
-    } else if (filters?.role === 'super-admin') {
-      conditions.push(eq(users.isSuperAdmin, true));
-    } else if (filters?.role === 'user') {
-      conditions.push(and(eq(users.isAdmin, false), eq(users.isSuperAdmin, false)));
-    }
-    if (filters?.tenantId) {
-      conditions.push(eq(users.tenantId, filters.tenantId));
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const results = await query.orderBy(desc(users.createdAt));
+  async createSuperAdminUser(userData: { email: string; firstName: string; lastName: string; role: 'super-admin' | 'platform-admin' }): Promise<any> {
+    const userId = nanoid();
     
-    // Add player count for each user
-    const usersWithStats = await Promise.all(
-      results.map(async (user) => {
-        const playerCount = await db.select({ count: count() })
-          .from(players)
-          .where(eq(players.parentId, user.id));
-        
-        return {
-          ...user,
-          playerCount: playerCount[0].count,
-          sessionCount: 0 // Could calculate actual session bookings
-        };
-      })
-    );
-
-    return usersWithStats;
+    const newUser = {
+      id: userId,
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      isAdmin: true,
+      isSuperAdmin: userData.role === 'super-admin',
+      phone: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isApproved: true,
+      registrationStatus: 'completed' as const,
+      tenantId: null // Super admins don't belong to specific tenants
+    };
+    
+    await db.insert(users).values(newUser);
+    
+    return {
+      id: newUser.id,
+      email: newUser.email,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      role: userData.role,
+      status: 'active',
+      lastLogin: newUser.createdAt.toISOString(),
+      createdAt: newUser.createdAt.toISOString(),
+    };
   }
 
   async updateUserStatus(userId: string, status: string): Promise<any> {
@@ -1810,21 +1780,69 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getSuperAdminUsers(): Promise<any[]> {
-    const superAdminUsers = await db.select({
+  async getSuperAdminUsers(filters?: any): Promise<any[]> {
+    const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Hardcoded failsafe admin
+    
+    // Get super admin users from database
+    let query = db.select({
       id: users.id,
-      email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
+      email: users.email,
       role: sql<string>`CASE WHEN ${users.isSuperAdmin} = true THEN 'super-admin' ELSE 'platform-admin' END`,
-      status: sql<string>`'active'`, // Default to active since no isActive field exists
-      lastLogin: users.createdAt, // Placeholder
+      status: sql<string>`'active'`,
+      lastLogin: users.createdAt,
       createdAt: users.createdAt,
     })
     .from(users)
-    .where(eq(users.isSuperAdmin, true));
+    .where(or(eq(users.isSuperAdmin, true), eq(users.isAdmin, true)));
 
-    return superAdminUsers;
+    // Apply filters
+    const conditions = [];
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(users.firstName, `%${filters.search}%`),
+          ilike(users.lastName, `%${filters.search}%`),
+          ilike(users.email, `%${filters.search}%`)
+        )
+      );
+    }
+    if (filters?.role === 'super-admin') {
+      conditions.push(eq(users.isSuperAdmin, true));
+    } else if (filters?.role === 'platform-admin') {
+      conditions.push(and(eq(users.isAdmin, true), eq(users.isSuperAdmin, false)));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(or(eq(users.isSuperAdmin, true), eq(users.isAdmin, true)), ...conditions));
+    }
+
+    const dbUsers = await query.orderBy(desc(users.createdAt));
+    
+    // Always include failsafe super admin if not already in results
+    const failsafeExists = dbUsers.some(user => user.id === FAILSAFE_SUPER_ADMIN_ID);
+    
+    const allUsers = [...dbUsers];
+    
+    if (!failsafeExists && (!filters?.search || 
+        'ajosephfinch'.includes(filters.search.toLowerCase()) || 
+        'failsafe admin'.includes(filters.search.toLowerCase()))) {
+      
+      // Add virtual failsafe admin user
+      allUsers.unshift({
+        id: FAILSAFE_SUPER_ADMIN_ID,
+        firstName: "Failsafe",
+        lastName: "Admin",
+        email: "ajosephfinch@replit.com",
+        role: "super-admin",
+        status: "active",
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return allUsers;
   }
 
   // Waitlist operations

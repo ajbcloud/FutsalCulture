@@ -271,6 +271,33 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Create New Super Admin User
+  app.post('/api/super-admin/users', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { email, firstName, lastName, role } = req.body;
+      
+      if (!email || !firstName || !lastName || !role) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      if (!['super-admin', 'platform-admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role specified" });
+      }
+      
+      const newUser = await storage.createSuperAdminUser({
+        email,
+        firstName,
+        lastName,
+        role
+      });
+      
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating super admin user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // Export Users
   app.get('/api/super-admin/users/export', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

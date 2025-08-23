@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Settings, 
@@ -21,7 +22,9 @@ import {
   Check,
   X,
   Key,
-  Webhook
+  Webhook,
+  Plus,
+  UserPlus
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -70,6 +73,13 @@ export default function SuperAdminSettings() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [users, setUsers] = useState<SuperAdminUser[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'platform-admin' as 'super-admin' | 'platform-admin'
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -110,7 +120,7 @@ export default function SuperAdminSettings() {
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', newSettings, 'POST'),
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', 'PUT', newSettings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
       toast({ title: "Success", description: "Platform settings saved successfully!" });
@@ -118,15 +128,28 @@ export default function SuperAdminSettings() {
   });
 
   const updateIntegrationMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, data, 'PATCH'),
+    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, 'PATCH', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/integrations'] });
       toast({ title: "Success", description: "Integration updated successfully!" });
     }
   });
 
+  const addUserMutation = useMutation({
+    mutationFn: (userData: any) => apiRequest('/api/super-admin/users', 'POST', userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/users'] });
+      setShowAddUserDialog(false);
+      setNewUser({ email: '', firstName: '', lastName: '', role: 'platform-admin' });
+      toast({ title: "Success", description: "User added successfully!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to add user" });
+    }
+  });
+
   const testIntegrationMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, {}, 'POST'),
+    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, 'POST', {}),
     onSuccess: () => {
       toast({ title: "Success", description: "Integration test completed successfully!" });
     },
@@ -540,11 +563,86 @@ export default function SuperAdminSettings() {
         <TabsContent value="users" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="w-5 h-5" />
-                <span>Super Admin Users</span>
-              </CardTitle>
-              <CardDescription>Manage platform administrators and their permissions</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="w-5 h-5" />
+                    <span>Super Admin Users</span>
+                  </CardTitle>
+                  <CardDescription>Manage platform administrators and their permissions</CardDescription>
+                </div>
+                <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Super Admin User</DialogTitle>
+                      <DialogDescription>
+                        Add a new user with platform administration privileges
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="firstName">First Name</Label>
+                          <Input
+                            id="firstName"
+                            value={newUser.firstName}
+                            onChange={(e) => setNewUser(prev => ({ ...prev, firstName: e.target.value }))}
+                            placeholder="Enter first name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            value={newUser.lastName}
+                            onChange={(e) => setNewUser(prev => ({ ...prev, lastName: e.target.value }))}
+                            placeholder="Enter last name"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="Enter email address"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="role">Role</Label>
+                        <Select value={newUser.role} onValueChange={(value: 'super-admin' | 'platform-admin') => setNewUser(prev => ({ ...prev, role: value }))}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="platform-admin">Platform Admin</SelectItem>
+                            <SelectItem value="super-admin">Super Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => addUserMutation.mutate(newUser)}
+                        disabled={!newUser.email || !newUser.firstName || !newUser.lastName || addUserMutation.isPending}
+                      >
+                        {addUserMutation.isPending ? 'Adding...' : 'Add User'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border max-h-[600px] overflow-auto">
