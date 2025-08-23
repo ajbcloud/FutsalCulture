@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -318,7 +319,13 @@ export default function SuperAdminPlayers() {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{player.parentName}</p>
+                      {/* Clickable parent name linking to parents page */}
+                      <Link 
+                        href={`/super-admin/parents?parentName=${encodeURIComponent(player.parentName)}`}
+                        className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
+                      >
+                        {player.parentName}
+                      </Link>
                       <div className="flex items-center space-x-1">
                         <Mail className="w-3 h-3 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">{player.parentEmail}</p>

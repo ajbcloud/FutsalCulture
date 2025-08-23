@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { UserCheck, Search, Filter, Building2, Mail, Phone, Users, Calendar } from "lucide-react";
+import { UserCheck, Search, Filter, Building2, Mail, Phone, Users, Calendar, ChevronDown, ChevronRight } from "lucide-react";
 
 interface Parent {
   id: string;
@@ -25,11 +26,23 @@ interface Parent {
   tenantId: string;
 }
 
+interface Player {
+  id: string;
+  firstName: string;
+  lastName: string;
+  age: number;
+  gender: string;
+  totalBookings: number;
+}
+
 export default function SuperAdminParents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTenant, setSelectedTenant] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
+  const [parentPlayers, setParentPlayers] = useState<Record<string, Player[]>>({});
+  const [loadingPlayers, setLoadingPlayers] = useState<Set<string>>(new Set());
 
   // Fetch tenants for filter
   const { data: tenants = [] } = useQuery({
@@ -60,6 +73,41 @@ export default function SuperAdminParents() {
       return response.json();
     },
   });
+
+  // Load players for a specific parent (similar to admin panel)
+  const loadPlayersForParent = async (parentId: string) => {
+    if (parentPlayers[parentId]) {
+      return; // Already loaded
+    }
+
+    setLoadingPlayers(prev => new Set(prev).add(parentId));
+
+    try {
+      // Fetch players for this parent
+      const response = await fetch(`/api/super-admin/players?parentId=${parentId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch players');
+      const playersList = await response.json();
+      
+      setParentPlayers(prev => ({
+        ...prev,
+        [parentId]: playersList
+      }));
+    } catch (error) {
+      console.error('Error loading players for parent:', error);
+      setParentPlayers(prev => ({
+        ...prev,
+        [parentId]: []
+      }));
+    } finally {
+      setLoadingPlayers(prev => {
+        const next = new Set(prev);
+        next.delete(parentId);
+        return next;
+      });
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -266,63 +314,124 @@ export default function SuperAdminParents() {
                   </TableRow>
                 ) : (
                   parents.map((parent) => (
-                <TableRow key={parent.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{parent.tenantName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{parent.firstName} {parent.lastName}</p>
-                      <p className="text-sm text-muted-foreground">ID: {parent.id}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="flex items-center space-x-1 mb-1">
-                        <Mail className="w-3 h-3 text-muted-foreground" />
-                        <p className="text-sm">{parent.email}</p>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Phone className="w-3 h-3 text-muted-foreground" />
-                        <p className="text-sm">{parent.phone}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{new Date(parent.registrationDate).toLocaleDateString()}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(parent.registrationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{parent.playerCount}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">{parent.totalBookings}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium text-green-600">${(parent.totalSpent / 100).toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{new Date(parent.lastActivity).toLocaleDateString()}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(parent.lastActivity).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(parent.status)}
-                  </TableCell>
-                </TableRow>
+                    <React.Fragment key={parent.id}>
+                      <TableRow>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{parent.tenantName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{parent.firstName} {parent.lastName}</p>
+                            <p className="text-sm text-muted-foreground">ID: {parent.id}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="flex items-center space-x-1 mb-1">
+                              <Mail className="w-3 h-3 text-muted-foreground" />
+                              <p className="text-sm">{parent.email}</p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Phone className="w-3 h-3 text-muted-foreground" />
+                              <p className="text-sm">{parent.phone}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="text-sm">{new Date(parent.registrationDate).toLocaleDateString()}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(parent.registrationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => {
+                              const nextExpanded = new Set(expandedParentIds);
+                              const isExpanded = expandedParentIds.has(parent.id);
+                              if (isExpanded) {
+                                nextExpanded.delete(parent.id);
+                              } else {
+                                nextExpanded.add(parent.id);
+                                loadPlayersForParent(parent.id);
+                              }
+                              setExpandedParentIds(nextExpanded);
+                            }}
+                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 cursor-pointer"
+                          >
+                            {expandedParentIds.has(parent.id) ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                            <Users className="w-4 h-4" />
+                            <span className="font-medium">{parent.playerCount}</span>
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">{parent.totalBookings}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-green-600">${(parent.totalSpent / 100).toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="text-sm">{new Date(parent.lastActivity).toLocaleDateString()}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(parent.lastActivity).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(parent.status)}
+                        </TableCell>
+                      </TableRow>
+                      {/* Expanded Player Details Row */}
+                      {expandedParentIds.has(parent.id) && (
+                        <TableRow className="bg-muted/20">
+                          <TableCell colSpan={9} className="p-0">
+                            <div className="px-4 py-3 border-l-4 border-blue-500">
+                              {loadingPlayers.has(parent.id) ? (
+                                <p className="text-muted-foreground text-sm">Loading player details...</p>
+                              ) : parentPlayers[parent.id] && parentPlayers[parent.id].length > 0 ? (
+                                <div className="space-y-2">
+                                  <p className="font-medium text-foreground text-sm">Players:</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {parentPlayers[parent.id].map((player) => (
+                                      <div key={player.id} className="bg-background p-3 rounded border">
+                                        <div className="flex justify-between items-start">
+                                          <div className="flex-1">
+                                            {/* Clickable player name linking to players page */}
+                                            <Link 
+                                              href={`/super-admin/players?playerId=${player.id}`}
+                                              className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
+                                            >
+                                              {player.firstName} {player.lastName}
+                                            </Link>
+                                            <p className="text-muted-foreground text-sm">
+                                              Age {player.age} • {player.gender}
+                                            </p>
+                                          </div>
+                                          <div className="text-right text-sm text-muted-foreground">
+                                            {player.totalBookings || 0} bookings
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-muted-foreground text-sm">No players registered</p>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>
