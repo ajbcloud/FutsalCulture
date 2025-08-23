@@ -18,6 +18,7 @@ interface Tenant {
   subdomain: string;
   contactEmail: string;
   status: 'active' | 'inactive';
+  planLevel: 'core' | 'growth' | 'elite';
   createdAt: string;
   adminCount: number;
   playerCount: number;
@@ -264,6 +265,7 @@ export default function SuperAdminTenants() {
                   <TableHead>Organization</TableHead>
                   <TableHead>Subdomain</TableHead>
                   <TableHead>Contact Email</TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Admins</TableHead>
                   <TableHead>Players</TableHead>
@@ -279,6 +281,19 @@ export default function SuperAdminTenants() {
                     <TableCell className="font-medium">{tenant.name}</TableCell>
                     <TableCell>{tenant.subdomain}</TableCell>
                     <TableCell>{tenant.contactEmail}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        tenant.planLevel === 'elite' ? 'default' : 
+                        tenant.planLevel === 'growth' ? 'secondary' : 
+                        'outline'
+                      } className={
+                        tenant.planLevel === 'elite' ? 'bg-purple-600 text-white' : 
+                        tenant.planLevel === 'growth' ? 'bg-blue-600 text-white' : 
+                        'bg-gray-600 text-white'
+                      }>
+                        {tenant.planLevel?.toUpperCase() || 'CORE'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
                         {tenant.status}
