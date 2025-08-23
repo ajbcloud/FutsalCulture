@@ -1409,9 +1409,9 @@ export class DatabaseStorage implements IStorage {
 
   async getSuperAdminTotalRevenue(): Promise<number> {
     const [result] = await db.select({ 
-      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` 
-    }).from(payments);
-    return result.total;
+      total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` 
+    }).from(payments).where(eq(payments.status, 'paid'));
+    return result.total || 0;
   }
 
   async getSuperAdminSessionCount(): Promise<number> {

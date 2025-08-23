@@ -17,6 +17,7 @@ import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
 import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 import CompanyAnalytics from "@/pages/super-admin/company-analytics";
+import EnhancedAnalytics from "@/pages/super-admin/enhanced-analytics";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 
 import { 
@@ -36,7 +37,8 @@ import {
   Home,
   Menu,
   X,
-  Shirt
+  Shirt,
+  TrendingUp
 } from "lucide-react";
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
@@ -66,6 +68,7 @@ export default function SuperAdminPage() {
   const companySection = [
     { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
     { name: "Analytics", href: "/super-admin/company-analytics", icon: BarChart3, current: location === "/super-admin/company-analytics" },
+    { name: "Enhanced Analytics", href: "/super-admin/enhanced-analytics", icon: TrendingUp, current: location === "/super-admin/enhanced-analytics" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
   ];
@@ -89,6 +92,8 @@ export default function SuperAdminPage() {
         return <SuperAdminAnalytics />;
       case "/super-admin/company-analytics":
         return <CompanyAnalytics />;
+      case "/super-admin/enhanced-analytics":
+        return <EnhancedAnalytics />;
       case "/super-admin/platform-billing":
         return <PlatformBilling />;
       case "/super-admin/settings":

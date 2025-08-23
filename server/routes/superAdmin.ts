@@ -10,9 +10,9 @@ import * as registrations from '../controllers/superAdmin/registrations';
 import * as parents from '../controllers/superAdmin/parents';
 import * as players from '../controllers/superAdmin/players';
 import * as analytics from '../controllers/superAdmin/analytics';
+import * as detailedAnalytics from '../controllers/superAdmin/detailedAnalytics';
 import * as help from '../controllers/superAdmin/help';
 import * as settings from '../controllers/superAdmin/settings';
-import * as platformPayments from '../controllers/superAdmin/platformPayments';
 import * as impersonate from '../controllers/superAdmin/impersonate';
 
 const r = Router();
@@ -37,6 +37,15 @@ r.get('/players', players.list);
 r.get('/analytics/series', analytics.series);
 r.get('/analytics/by-tenant', analytics.byTenant);
 r.get('/analytics/overview', analytics.overview);
+
+// Detailed KPI endpoints
+r.get('/analytics/platform-billing', detailedAnalytics.platformBillingKPIs);
+r.get('/analytics/client-commerce', detailedAnalytics.clientCommerceKPIs);
+r.get('/analytics/registrations', detailedAnalytics.registrationKPIs);
+r.get('/analytics/players', detailedAnalytics.playerKPIs);
+r.get('/analytics/sessions', detailedAnalytics.sessionKPIs);
+r.get('/analytics/parents', detailedAnalytics.parentKPIs);
+r.get('/analytics/cross-cutting', detailedAnalytics.crossCuttingKPIs);
 
 r.get('/help', help.list);
 r.patch('/help/:id', help.update);
