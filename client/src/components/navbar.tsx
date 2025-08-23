@@ -6,7 +6,7 @@ import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle } from "lucide-react";
+import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle, Home } from "lucide-react";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
@@ -108,6 +108,13 @@ export default function Navbar() {
                   
                   <DropdownMenuItem asChild>
                     <Link href="/" className="cursor-pointer">
+                      <Home className="mr-2 h-4 w-4" />
+                      Home
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       Parent Profile
                     </Link>
