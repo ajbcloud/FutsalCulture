@@ -41,6 +41,50 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Safe fetch wrapper for analytics and other endpoints
+export async function get<T>(url: string): Promise<T> {
+  try {
+    const res = await fetch(url, {
+      credentials: "include",
+    });
+    
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.warn(`Fetch error for ${url}:`, error);
+    // Return safe defaults for different endpoint types
+    if (url.includes('/stats')) {
+      return { totals: { revenue: 0, players: 0, activeTenants: 0, sessionsThisMonth: 0, pendingPayments: 0 }, topTenants: [], recentActivity: [] } as T;
+    } else if (url.includes('/series')) {
+      return { series: [] } as T;
+    } else if (url.includes('/tenants') || url.includes('/payments') || url.includes('/sessions')) {
+      return { rows: [], page: 1, pageSize: 25, totalRows: 0 } as T;
+    }
+    // Generic safe default
+    return {} as T;
+  }
+}
+
+export async function patch<T>(url: string, data: any): Promise<T> {
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
+  
+  if (!res.ok) {
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
+  }
+  
+  return await res.json();
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

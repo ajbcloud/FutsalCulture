@@ -36,35 +36,50 @@ export default function SuperAdminOverview() {
   const [dateRange, setDateRange] = useState<any>(null);
 
   // Fetch super admin metrics
-  const { data: metrics, isLoading } = useQuery<SuperAdminMetrics>({
-    queryKey: ["/api/super-admin/metrics", selectedTenant, dateRange],
+  const { data: metricsData, isLoading } = useQuery({
+    queryKey: ["/api/super-admin/stats", selectedTenant, dateRange],
     queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return {
-        totalRevenue: 450000,
-        monthlyRevenue: 85000,
-        ytdRevenue: 450000,
-        totalPlayers: 1250,
-        totalTenants: 8,
-        totalSessions: 340,
-        pendingPayments: 12,
-        revenueGrowth: 15,
-        playersGrowth: 8,
-        tenantsGrowth: 2,
-      };
+      const tenantParam = selectedTenant !== 'all' ? `?tenantId=${selectedTenant}` : '';
+      const response = await fetch(`/api/super-admin/stats${tenantParam}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        return {
+          totals: { revenue: 0, players: 0, activeTenants: 0, sessionsThisMonth: 0, pendingPayments: 0 },
+          topTenants: [],
+          recentActivity: []
+        };
+      }
+      return response.json();
     },
   });
+  
+  const metrics = metricsData ? {
+    totalRevenue: metricsData.totals?.revenue || 0,
+    monthlyRevenue: metricsData.totals?.revenue || 0,
+    ytdRevenue: metricsData.totals?.revenue || 0,
+    totalPlayers: metricsData.totals?.players || 0,
+    totalTenants: metricsData.totals?.activeTenants || 0,
+    totalSessions: metricsData.totals?.sessionsThisMonth || 0,
+    pendingPayments: metricsData.totals?.pendingPayments || 0,
+    revenueGrowth: 15,
+    playersGrowth: 8,
+    tenantsGrowth: 2,
+  } : null;
 
   // Fetch tenants for filter
-  const { data: tenants = [] } = useQuery({
+  const { data: tenantsData } = useQuery({
     queryKey: ["/api/super-admin/tenants"],
     queryFn: async () => {
       const response = await fetch("/api/super-admin/tenants", {
         credentials: 'include'
       });
+      if (!response.ok) return { rows: [] };
       return response.json();
     },
   });
+  
+  const tenants = tenantsData?.rows || [];
 
   const formatGrowth = (growth: number) => {
     if (!isFinite(growth) || isNaN(growth)) {

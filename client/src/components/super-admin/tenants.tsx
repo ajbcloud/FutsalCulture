@@ -33,13 +33,16 @@ export default function SuperAdminTenants() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: tenants = [], isLoading } = useQuery({
+  const { data: tenantsData, isLoading } = useQuery({
     queryKey: ['/api/super-admin/tenants'],
     queryFn: async () => {
       const response = await fetch('/api/super-admin/tenants');
-      return response.json();
+      const data = await response.json();
+      return data.rows || data || [];
     }
   });
+  
+  const tenants = Array.isArray(tenantsData) ? tenantsData : [];
 
   const createTenantMutation = useMutation({
     mutationFn: (tenantData: any) => apiRequest('/api/super-admin/tenants', tenantData),
@@ -119,9 +122,9 @@ export default function SuperAdminTenants() {
     );
   }
 
-  const totalRevenue = tenants.reduce((sum: number, tenant: Tenant) => sum + tenant.revenue, 0);
-  const totalPlayers = tenants.reduce((sum: number, tenant: Tenant) => sum + tenant.playerCount, 0);
-  const totalSessions = tenants.reduce((sum: number, tenant: Tenant) => sum + tenant.sessionCount, 0);
+  const totalRevenue = tenants.reduce((sum: number, tenant: Tenant) => sum + (Number(tenant.revenue) || 0), 0);
+  const totalPlayers = tenants.reduce((sum: number, tenant: Tenant) => sum + (Number(tenant.playerCount) || 0), 0);
+  const totalSessions = tenants.reduce((sum: number, tenant: Tenant) => sum + (Number(tenant.sessionCount) || 0), 0);
   const activeTenants = tenants.filter((tenant: Tenant) => tenant.status === 'active').length;
 
   return (
@@ -191,7 +194,7 @@ export default function SuperAdminTenants() {
               <DollarSign className="w-5 h-5 text-green-600" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${(totalRevenue / 100).toFixed(2)}</p>
+                <p className="text-2xl font-bold">${totalRevenue.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -281,10 +284,10 @@ export default function SuperAdminTenants() {
                         {tenant.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{tenant.adminCount}</TableCell>
-                    <TableCell>{tenant.playerCount}</TableCell>
-                    <TableCell>{tenant.sessionCount}</TableCell>
-                    <TableCell>${(tenant.revenue / 100).toFixed(2)}</TableCell>
+                    <TableCell>{Number(tenant.adminCount) || 0}</TableCell>
+                    <TableCell>{Number(tenant.playerCount) || 0}</TableCell>
+                    <TableCell>{Number(tenant.sessionCount) || 0}</TableCell>
+                    <TableCell>${(Number(tenant.revenue) || 0).toFixed(2)}</TableCell>
                     <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">

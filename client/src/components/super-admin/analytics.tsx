@@ -21,7 +21,7 @@ import {
   Check,
   Search
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { get } from "@/lib/queryClient";
 import { addDays, subDays, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
