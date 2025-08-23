@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2 } from 'lucide-react';
+import { CardDescription } from '@/components/ui/card';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -877,6 +878,18 @@ export default function AdminSettings() {
               Sessions & Schedule
             </TabsTrigger>
             <TabsTrigger 
+              value="communications" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Communications
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Security
+            </TabsTrigger>
+            <TabsTrigger 
               value="plan" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
@@ -894,12 +907,18 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-4 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-6 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
             <TabsTrigger value="sessions" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Sessions & Schedule
+            </TabsTrigger>
+            <TabsTrigger value="communications" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Communications
+            </TabsTrigger>
+            <TabsTrigger value="security" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Security
             </TabsTrigger>
             <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Plan & Features
@@ -1151,69 +1170,7 @@ export default function AdminSettings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Bell className="w-5 h-5 mr-2" />
-                Notification Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-foreground">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive email notifications for important events
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Default: Emails sent from company domain. White-label options available on higher plans.
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.emailNotifications}
-                  onCheckedChange={(checked) => 
-                    setSettings(prev => ({ ...prev, emailNotifications: checked }))
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className={`${!canUseSms ? 'text-muted-foreground' : 'text-foreground'}`}>
-                    SMS Notifications
-                    {!hasSmsFeature && (
-                      <Crown className="w-4 h-4 inline ml-1 text-amber-500" />
-                    )}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {!hasSmsFeature 
-                      ? 'SMS notifications are available on Growth and Elite plans'
-                      : isTwilioEnabled 
-                        ? 'Receive SMS notifications for urgent events'
-                        : 'Requires Twilio integration to be configured'
-                    }
-                  </p>
-                  {!hasSmsFeature ? (
-                    <UpgradePrompt 
-                      feature={FEATURE_KEYS.NOTIFICATIONS_SMS} 
-                      className="mt-2"
-                      targetPlan="growth"
-                    />
-                  ) : !isTwilioEnabled && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Configure Twilio in the Integrations tab to enable SMS notifications
-                    </p>
-                  )}
-                </div>
-                <Switch
-                  checked={settings.smsNotifications && canUseSms}
-                  onCheckedChange={(checked) => 
-                    setSettings(prev => ({ ...prev, smsNotifications: checked }))
-                  }
-                  disabled={!canUseSms}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Notification settings moved to Communications tab */}
           
           {/* Save Button at bottom of General & Registration tab */}
           <div className="flex justify-start">
@@ -1683,6 +1640,178 @@ export default function AdminSettings() {
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
+        </TabsContent>
+
+        {/* Communications Tab */}
+        <TabsContent value="communications" className="space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <Bell className="w-5 h-5 mr-2" />
+                Email Notifications
+              </CardTitle>
+              <CardDescription>Configure email communication preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-foreground">Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive email notifications for important events
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Default: Emails sent from company domain. White-label options available on higher plans.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.emailNotifications}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, emailNotifications: checked }))
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <MessageSquare className="w-5 h-5 mr-2" />
+                SMS Notifications
+              </CardTitle>
+              <CardDescription>Configure SMS communication preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className={`${!canUseSms ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    SMS Notifications
+                    {!hasSmsFeature && (
+                      <Crown className="w-4 h-4 inline ml-1 text-amber-500" />
+                    )}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {!hasSmsFeature 
+                      ? 'SMS notifications are available on Growth and Elite plans'
+                      : isTwilioEnabled 
+                        ? 'Receive SMS notifications for urgent events'
+                        : 'Requires Twilio integration to be configured'
+                    }
+                  </p>
+                  {!hasSmsFeature ? (
+                    <UpgradePrompt 
+                      feature={FEATURE_KEYS.NOTIFICATIONS_SMS} 
+                      className="mt-2"
+                      targetPlan="growth"
+                    />
+                  ) : !isTwilioEnabled && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Configure Twilio in the Integrations tab to enable SMS notifications
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={settings.smsNotifications && canUseSms}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, smsNotifications: checked }))
+                  }
+                  disabled={!canUseSms}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button for Communications */}
+          <div className="flex justify-start">
+            <Button onClick={handleSave} disabled={saving} className="px-6">
+              {saving ? 'Saving...' : 'Save Communications Settings'}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <Shield className="w-5 h-5 mr-2" />
+                Access & Security
+              </CardTitle>
+              <CardDescription>Manage access controls and security settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Admin Access</h4>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        Admin Portal Access
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                        Admin access is managed automatically based on your user role. Contact your super admin to modify access permissions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Session Security</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-foreground">Automatic Logout</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically log out inactive admin sessions after 8 hours
+                      </p>
+                    </div>
+                    <Switch
+                      checked={true}
+                      disabled={true}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Data Protection</h4>
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Lock className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Data Encryption
+                      </h4>
+                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                        All sensitive data is encrypted at rest and in transit. Payment information is handled by secure third-party processors and never stored directly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Audit Log
+              </CardTitle>
+              <CardDescription>Recent administrative actions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="w-12 h-12 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Recent Activity</h3>
+                  <p>Administrative actions will appear here</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="plan" className="space-y-6">
