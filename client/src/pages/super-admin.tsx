@@ -240,7 +240,7 @@ export default function SuperAdminPage() {
                   
                   {/* Portal Navigation */}
                   <DropdownMenuItem asChild>
-                    <Link href="/" className="cursor-pointer">
+                    <Link href="/profile" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       Parent Profile
                     </Link>
