@@ -76,10 +76,11 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
     try {
       setUpgradeLoading(targetPlan);
       
-      const response = await apiRequest(`/api/billing/checkout?planId=${targetPlan}`, 'POST');
+      const response = await apiRequest('POST', `/api/billing/checkout?planId=${targetPlan}`);
+      const responseData = await response.json();
 
-      if (response.url) {
-        window.location.href = response.url;
+      if (responseData.url) {
+        window.location.href = responseData.url;
       } else {
         throw new Error('No checkout URL returned');
       }

@@ -21,7 +21,7 @@ import {
   Check,
   Search
 } from "lucide-react";
-import { get } from "@/lib/queryClient";
+import { get, apiRequest } from "@/lib/queryClient";
 import { addDays, subDays, format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
@@ -75,12 +75,15 @@ export default function SuperAdminAnalytics() {
 
   const { data: tenants = [] } = useQuery({
     queryKey: ['/api/super-admin/tenants'],
-    queryFn: () => apiRequest('/api/super-admin/tenants')
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/super-admin/tenants');
+      return await response.json();
+    }
   });
 
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['/api/super-admin/analytics', selectedTenants, dateRange, ageGroupFilter, genderFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedTenants.length > 0) {
         params.append('tenants', selectedTenants.join(','));
@@ -97,7 +100,8 @@ export default function SuperAdminAnalytics() {
       if (genderFilter !== 'all') {
         params.append('gender', genderFilter);
       }
-      return apiRequest(`/api/super-admin/analytics?${params.toString()}`);
+      const response = await apiRequest('GET', `/api/super-admin/analytics?${params.toString()}`);
+      return await response.json();
     }
   });
 
@@ -269,13 +273,19 @@ export default function SuperAdminAnalytics() {
                     type="date"
                     className="h-10"
                     value={dateRange?.from?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
+                    onChange={(e) => setDateRange(prev => ({ 
+                      from: new Date(e.target.value), 
+                      to: prev?.to || new Date() 
+                    }))}
                   />
                   <Input
                     type="date"
                     className="h-10"
                     value={dateRange?.to?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
+                    onChange={(e) => setDateRange(prev => ({ 
+                      from: prev?.from || subDays(new Date(), 30), 
+                      to: new Date(e.target.value) 
+                    }))}
                   />
                 </div>
               </div>
@@ -473,7 +483,7 @@ export default function SuperAdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics?.revenueByTenant?.map((tenant) => (
+              {analytics?.revenueByTenant?.map((tenant: any) => (
                 <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Badge variant="outline">{tenant.tenantName}</Badge>
@@ -509,7 +519,7 @@ export default function SuperAdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics?.playersByTenant?.map((tenant) => (
+              {analytics?.playersByTenant?.map((tenant: any) => (
                 <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Badge variant="outline">{tenant.tenantName}</Badge>
@@ -545,7 +555,7 @@ export default function SuperAdminAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics?.sessionsByTenant?.map((tenant) => (
+              {analytics?.sessionsByTenant?.map((tenant: any) => (
                 <div key={tenant.tenantId} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Badge variant="outline">{tenant.tenantName}</Badge>

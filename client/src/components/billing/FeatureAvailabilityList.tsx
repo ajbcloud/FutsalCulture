@@ -24,14 +24,16 @@ export function FeatureAvailabilityList({ currentPlan }: FeatureAvailabilityList
       setUpgradeLoading(targetPlan);
       
       if (currentPlan === 'free') {
-        const response = await apiRequest(`/api/billing/checkout?plan=${targetPlan}`, 'POST');
-        if (response.url) {
-          window.location.href = response.url;
+        const response = await apiRequest('POST', `/api/billing/checkout?plan=${targetPlan}`);
+        const responseData = await response.json();
+        if (responseData.url) {
+          window.location.href = responseData.url;
         }
       } else {
-        const response = await apiRequest('/api/billing/portal', 'POST');
-        if (response.url) {
-          window.location.href = response.url;
+        const response = await apiRequest('POST', '/api/billing/portal');
+        const responseData = await response.json();
+        if (responseData.url) {
+          window.location.href = responseData.url;
         }
       }
     } catch (error: any) {

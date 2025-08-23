@@ -68,27 +68,34 @@ export default function SecurityAudit() {
   // Overview query
   const { data: overview, isLoading: overviewLoading } = useQuery<SecurityOverview>({
     queryKey: ['super-admin', 'security', 'overview'],
-    queryFn: () => apiRequest('/api/super-admin/security/overview'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/super-admin/security/overview');
+      return await response.json();
+    },
   });
 
   // Impersonations query
   const { data: impersonationsData, isLoading: impersonationsLoading } = useQuery<PaginatedResponse<ImpersonationEvent>>({
     queryKey: ['super-admin', 'security', 'impersonations', dateRange, impersonationsPage],
-    queryFn: () => apiRequest(`/api/super-admin/security/impersonations?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${impersonationsPage}&pageSize=25`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/security/impersonations?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${impersonationsPage}&pageSize=25`);
+      return await response.json();
+    },
   });
 
   // Audit logs query
   const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery<PaginatedResponse<AuditLog>>({
     queryKey: ['super-admin', 'security', 'audit-logs', dateRange, auditLogsPage],
-    queryFn: () => apiRequest(`/api/super-admin/security/audit-logs?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${auditLogsPage}&pageSize=25`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/security/audit-logs?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${auditLogsPage}&pageSize=25`);
+      return await response.json();
+    },
   });
 
   // Revoke impersonation mutation
   const revokeMutation = useMutation({
     mutationFn: (impersonationId: string) => 
-      apiRequest(`/api/super-admin/security/impersonations/${impersonationId}/revoke`, {
-        method: 'POST',
-      }),
+      apiRequest('POST', `/api/super-admin/security/impersonations/${impersonationId}/revoke`),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['super-admin', 'security', 'impersonations']
@@ -96,11 +103,11 @@ export default function SecurityAudit() {
     },
   });
 
-  const superAdminMfaPercentage = overview?.superAdmins.total > 0 
+  const superAdminMfaPercentage = overview?.superAdmins?.total > 0 
     ? (overview.superAdmins.withMfa / overview.superAdmins.total) * 100 
     : 0;
 
-  const tenantAdminMfaPercentage = overview?.tenantAdmins.total > 0 
+  const tenantAdminMfaPercentage = overview?.tenantAdmins?.total > 0 
     ? (overview.tenantAdmins.withMfa / overview.tenantAdmins.total) * 100 
     : 0;
 
@@ -129,8 +136,9 @@ export default function SecurityAudit() {
       </div>
 
       <FilterBar
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
+        dateFrom={dateRange.from}
+        dateTo={dateRange.to}
+        onDateRangeChange={(from, to) => setDateRange({ from, to })}
       />
 
       {/* MFA Adoption Section */}

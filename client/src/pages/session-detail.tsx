@@ -38,7 +38,7 @@ export default function SessionDetail() {
   // Fetch user's waitlist entries
   const { data: waitlistEntries } = useQuery({
     queryKey: ["/api/waitlists"],
-    enabled: isAuthenticated,
+    enabled: !!isAuthenticated,
   });
 
   // Waitlist mutations
@@ -49,12 +49,10 @@ export default function SessionDetail() {
       notifyOnJoin?: boolean;
       notifyOnPositionChange?: boolean;
     }) => {
-      return apiRequest(`/api/sessions/${sessionId}/waitlist/join`, {
-        method: "POST",
-        body: { playerId, notifyOnJoin, notifyOnPositionChange },
-      });
+      return apiRequest("POST", `/api/sessions/${sessionId}/waitlist/join`, { playerId, notifyOnJoin, notifyOnPositionChange });
     },
-    onSuccess: (data) => {
+    onSuccess: async (response) => {
+      const data = await response.json();
       queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${id}/waitlist`] });
       toast({
@@ -73,10 +71,7 @@ export default function SessionDetail() {
 
   const leaveWaitlistMutation = useMutation({
     mutationFn: async ({ sessionId, playerId }: { sessionId: string; playerId: string }) => {
-      return apiRequest(`/api/sessions/${sessionId}/waitlist/leave`, {
-        method: "DELETE",
-        body: { playerId },
-      });
+      return apiRequest("DELETE", `/api/sessions/${sessionId}/waitlist/leave`, { playerId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/waitlists"] });

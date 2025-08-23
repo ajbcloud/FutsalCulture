@@ -120,7 +120,7 @@ export default function SuperAdminSettings() {
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: (newSettings: PlatformSettings) => apiRequest('/api/super-admin/settings', 'PUT', newSettings),
+    mutationFn: (newSettings: PlatformSettings) => apiRequest('PUT', '/api/super-admin/settings', newSettings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
       toast({ title: "Success", description: "Platform settings saved successfully!" });
@@ -128,7 +128,7 @@ export default function SuperAdminSettings() {
   });
 
   const updateIntegrationMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => apiRequest(`/api/super-admin/integrations/${id}`, 'PATCH', data),
+    mutationFn: ({ id, ...data }: any) => apiRequest('PATCH', `/api/super-admin/integrations/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/integrations'] });
       toast({ title: "Success", description: "Integration updated successfully!" });
@@ -136,7 +136,7 @@ export default function SuperAdminSettings() {
   });
 
   const addUserMutation = useMutation({
-    mutationFn: (userData: any) => apiRequest('/api/super-admin/users', 'POST', userData),
+    mutationFn: (userData: any) => apiRequest('POST', '/api/super-admin/users', userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/users'] });
       setShowAddUserDialog(false);
@@ -149,7 +149,7 @@ export default function SuperAdminSettings() {
   });
 
   const testIntegrationMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/super-admin/integrations/${id}/test`, 'POST', {}),
+    mutationFn: (id: string) => apiRequest('POST', `/api/super-admin/integrations/${id}/test`),
     onSuccess: () => {
       toast({ title: "Success", description: "Integration test completed successfully!" });
     },
