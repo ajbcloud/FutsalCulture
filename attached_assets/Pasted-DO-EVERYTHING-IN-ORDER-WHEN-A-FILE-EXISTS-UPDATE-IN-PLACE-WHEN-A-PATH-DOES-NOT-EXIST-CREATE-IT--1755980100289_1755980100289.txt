@@ -1,0 +1,294 @@
+DO EVERYTHING IN ORDER. WHEN A FILE EXISTS, UPDATE IN PLACE. WHEN A PATH DOES NOT EXIST, CREATE IT.
+
+Objective
+Fix Super Admin issues that were reported. Wire tenant and date filters into Overview. Repair Analytics fetch. Replace Analytics query utility with a safe wrapper. Show platform billing payments from tenants to the company. Separate company wide views from client activity views. Add secure impersonation to enter a tenant. Redesign Settings to be clear. Provide first cut analytics endpoints with real filters. All list endpoints must paginate.
+
+Packages to ensure are installed
+
+npm i zod @tanstack/react-query @tanstack/react-table recharts jsonwebtoken
+npm i -D @types/jsonwebtoken
+
+
+ONE. Safe fetch wrapper and removal of the broken query utility
+Create or replace src/lib/api.ts with
+
+export async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+export const get = <T>(url: string) => api<T>(url);
+export const post = <T>(url: string, body: unknown) => api<T>(url, { method: 'POST', body: JSON.stringify(body) });
+export const patch = <T>(url: string, body: unknown) => api<T>(url, { method: 'PATCH', body: JSON.stringify(body) });
+
+
+Find and delete or stop using any function that calls fetch(method, url). For example replace uses of src/lib/queryClient.ts with the wrapper above. All client code must import from src/lib/api.
+
+TWO. Overview filters must drive the stats
+Server. Update the Super Admin stats route to accept optional tenantId, from, to.
+File server/controllers/superAdmin/overview.ts
+
+import { Request, Response } from 'express';
+import { sql, and, gte, lte, eq } from 'drizzle-orm';
+import { payments, players, tenants, sessions } from '../../db/schema'; // adjust imports to your schema
+
+export async function getStats(req: Request, res: Response) {
+  const { tenantId, from, to } = req.query as { tenantId?: string, from?: string, to?: string };
+
+  const datePreds = [];
+  if (from) datePreds.push(gte(payments.created_at, new Date(from)));
+  if (to) datePreds.push(lte(payments.created_at, new Date(to)));
+
+  const tenantPred = tenantId ? [eq(payments.tenant_id, tenantId)] : [];
+
+  const paidRevenue = await req.db.select({ sum: sql<number>`coalesce(sum(${payments.amount}),0)` })
+    .from(payments)
+    .where(and(eq(payments.status, 'completed'), ...tenantPred, ...datePreds))
+    .then(r => r[0]?.sum ?? 0);
+
+  const totalPlayers = await req.db.select({ c: sql<number>`count(*)` })
+    .from(players)
+    .where(and(...(tenantId ? [eq(players.tenant_id, tenantId)] : [])))
+    .then(r => r[0]?.c ?? 0);
+
+  const activeTenants = await req.db.select({ c: sql<number>`count(*)` })
+    .from(tenants)
+    .where(eq(tenants.status, 'active'))
+    .then(r => r[0]?.c ?? 0);
+
+  const monthSessions = await req.db.select({ c: sql<number>`count(*)` })
+    .from(sessions)
+    .where(and(...(tenantId ? [eq(sessions.tenant_id, tenantId)] : []), ...(from ? [gte(sessions.date_time, new Date(from))] : []), ...(to ? [lte(sessions.date_time, new Date(to))] : [])))
+    .then(r => r[0]?.c ?? 0);
+
+  const pendingPayments = await req.db.select({ c: sql<number>`count(*)` })
+    .from(payments)
+    .where(and(eq(payments.status, 'pending'), ...tenantPred, ...datePreds))
+    .then(r => r[0]?.c ?? 0);
+
+  const topTenants = await req.db.execute(sql`
+    select t.id, t.name, t.subdomain, coalesce(sum(p.amount),0) as revenue
+    from tenants t
+    left join payments p on p.tenant_id = t.id and p.status = 'completed'
+      ${from ? sql`and p.created_at >= ${new Date(from)}` : sql``}
+      ${to ? sql`and p.created_at <= ${new Date(to)}` : sql``}
+    ${tenantId ? sql`where t.id = ${tenantId}` : sql``}
+    group by t.id, t.name, t.subdomain
+    order by revenue desc
+    limit 5
+  `).then(r => r.rows ?? []);
+
+  const recentActivity = [
+    { id: 'evt-1', when: new Date().toISOString(), text: 'Activity feed coming from audit log soon' }
+  ];
+
+  res.json({
+    totals: {
+      revenue: paidRevenue,
+      players: totalPlayers,
+      activeTenants,
+      sessionsThisMonth: monthSessions,
+      pendingPayments
+    },
+    topTenants,
+    recentActivity
+  });
+}
+
+
+Client. Update Overview page to pass filters and to update the query key when filters change.
+In src/routes/super-admin/Overview.tsx ensure the hook constructs a URL like
+/api/super-admin/stats?tenantId=${tenantId||''}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)} and that both tenant dropdown and date picker call setState which in turn changes the React Query key.
+
+THREE. Fix NaN cards on Tenants list
+In server/controllers/superAdmin/tenants.ts make sure each card value is a number and not undefined. If any aggregate is not available set to zero. Return numeric fields and the client must render them as numbers. Verify the top header cards on the Tenants page are computed from real queries or mocked numbers and not from undefined.
+
+FOUR. Analytics endpoint and page repair
+Server. Replace the analytics controllers to use from, to, and interval.
+server/controllers/superAdmin/analytics.ts
+
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+import { payments, registrations } from '../../db/schema'; // adjust
+
+export async function series(req: Request, res: Response) {
+  const { from, to, interval = 'day' } = req.query as any;
+  const bucket = interval === 'month' ? 'month' : interval === 'week' ? 'week' : 'day';
+
+  const revenue = await req.db.execute(sql`
+    select date_trunc(${bucket}, p.created_at) as d, coalesce(sum(p.amount),0) as revenue
+    from ${payments} p
+    where p.status = 'completed'
+      ${from ? sql`and p.created_at >= ${new Date(from)}` : sql``}
+      ${to ? sql`and p.created_at <= ${new Date(to)}` : sql``}
+    group by d
+    order by d asc
+  `);
+
+  const regs = await req.db.execute(sql`
+    select date_trunc(${bucket}, r.created_at) as d, count(*) as signups
+    from ${registrations} r
+      ${from ? sql`where r.created_at >= ${new Date(from)}` : sql``}
+      ${to && !from ? sql`where r.created_at <= ${new Date(to)}` : to ? sql`and r.created_at <= ${new Date(to)}` : sql``}
+    group by d
+    order by d asc
+  `);
+
+  const map = new Map<string, { date: string, revenue: number, signups: number }>();
+  for (const row of revenue.rows as any[]) {
+    const k = new Date(row.d).toISOString().slice(0, 10);
+    map.set(k, { date: k, revenue: Number(row.revenue) || 0, signups: 0 });
+  }
+  for (const row of regs.rows as any[]) {
+    const k = new Date(row.d).toISOString().slice(0, 10);
+    const v = map.get(k) || { date: k, revenue: 0, signups: 0 };
+    v.signups = Number(row.signups) || 0;
+    map.set(k, v);
+  }
+  res.json({ series: Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date)) });
+}
+
+export async function byTenant(req: Request, res: Response) {
+  const { from, to } = req.query as any;
+  const out = await req.db.execute(sql`
+    select tenant_id as id, coalesce(sum(amount),0) as revenue, count(*) filter (where status = 'completed') as paid
+    from ${payments}
+    where status in ('completed','pending','failed')
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to ? sql`and created_at <= ${new Date(to)}` : sql``}
+    group by tenant_id
+    order by revenue desc
+    limit 10
+  `);
+  res.json({ rows: out.rows });
+}
+
+
+Client. Replace the Analytics page data calls to use get from src/lib/api and always encodeURIComponent for dates. The error overlay must disappear.
+
+FIVE. Platform billing payments view
+Create a new controller that shows payments from tenants to the company.
+Add a new route GET /api/super-admin/platform-payments.
+File server/controllers/superAdmin/platformPayments.ts
+
+import { Request, Response } from 'express';
+import { pageParams } from '../../lib/pagination';
+// schema suggestion: tenant_subscriptions, tenant_invoices, gateways
+export async function list(req: Request, res: Response) {
+  const { page, pageSize, offset } = pageParams(req.query);
+  // Replace with real queries. Mock for now
+  const rows = [
+    { id: 'inv_1001', tenant: 'Elite Footwork Academy', gateway: 'stripe', paymentId: 'ch_1ABC', admin: 'William Lee', plan: 'Pro', method: 'card', status: 'paid', date: '2025-07-28T15:10:00Z' },
+    { id: 'inv_1002', tenant: 'Futsal Culture', gateway: 'braintree', paymentId: 'txn_9XYZ', admin: 'Atticus Brind', plan: 'Starter', method: 'ach', status: 'paid', date: '2025-07-28T16:15:00Z' }
+  ];
+  res.json({ rows, page, pageSize, totalRows: rows.length });
+}
+
+
+Wire it in server/routes/superAdmin.ts
+
+import * as platformPayments from '../controllers/superAdmin/platformPayments';
+r.get('/platform-payments', platformPayments.list);
+
+
+Client. Create src/routes/super-admin/PlatformBilling.tsx that fetches /api/super-admin/platform-payments and shows columns
+tenant, paymentId, admin, plan, method, status, date, gateway.
+
+SIX. Clear separation of company stats and client activity
+In the left sidebar create a new top group called Company. Items inside Company are Overview, Platform Billing, Analytics, Settings, User Management. Create a second group called Client Activity that contains Tenants, Sessions, Payments, Registrations, Parents, Players, Help Requests. Visually separate with a group label component. This is a view level change only.
+
+SEVEN. Secure impersonation to troubleshoot inside a tenant
+Create an endpoint that returns a short lived token that logs the caller in at a tenant subdomain as a tenant admin. The token must carry the tenant id, the acting super admin id, the intended role, and an expiry of five minutes.
+File server/controllers/superAdmin/impersonate.ts
+
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+
+const SECRET = process.env.IMPERSONATION_SECRET || 'dev-secret-change-me';
+
+export async function start(req: Request, res: Response) {
+  const { tenantId } = req.body as { tenantId: string };
+  if (!tenantId) return res.status(400).json({ error: 'tenantId required' });
+  const token = jwt.sign(
+    { sub: (req as any).user.id, role: 'tenant_admin', tenantId, type: 'impersonation' },
+    SECRET,
+    { expiresIn: '5m' }
+  );
+  // return a url the client can open in a new tab
+  const subdomain = req.body.subdomain || 'tenant-subdomain'; // replace by fetching tenant
+  const url = `https://${subdomain}.your-domain.com/impersonate?token=${encodeURIComponent(token)}`;
+  res.json({ url });
+}
+
+
+Wire it
+
+import * as impersonate from '../controllers/superAdmin/impersonate';
+r.post('/impersonate', impersonate.start);
+
+
+Tenant app must have an /impersonate handler that verifies the token with the same secret and creates a session for that tenant admin. Add a short audit log entry.
+
+EIGHT. Settings page redesign
+Keep three tabs. Platform Settings, Integrations, User Management. In Platform Settings show only these fields with clear help text
+auto approve new tenants toggle
+require admin approval for tenant changes toggle
+default booking window hours numeric
+max tenants per admin numeric
+default session capacity numeric
+maintenance mode toggle
+Save button persists to platform_settings.
+Update server/controllers/superAdmin/settings.ts to validate inputs with Zod and persist. For now keep the same mock but with validation.
+
+Example Zod validation in settings.ts
+
+import { z } from 'zod';
+const SettingsSchema = z.object({
+  autoApproveTenants: z.boolean(),
+  requireTenantApproval: z.boolean(),
+  defaultBookingWindowHours: z.number().int().nonnegative(),
+  maxTenantsPerAdmin: z.number().int().positive(),
+  defaultSessionCapacity: z.number().int().positive(),
+  maintenanceMode: z.boolean(),
+});
+export async function patch(req: any, res: any) {
+  const data = SettingsSchema.parse(req.body);
+  // persist data to platform_settings
+  res.json({ ok: true, data });
+}
+
+
+NINE. Company analytics starter set to run the business
+Expand the analytics controller with these computed outputs over the selected range
+MRR by tenant and total
+Revenue time series
+Registrations time series
+Failed payments count and list
+Top tenants by revenue
+Churn candidates defined as tenants with zero payments in the last thirty days
+Add a new route GET /api/super-admin/analytics/overview?from=&to= that returns all of the above in one payload. Implement with SQL similar to the series endpoint. Client can render cards and a couple of charts first.
+
+TEN. Global date handling rules
+On the client always use encodeURIComponent for from and to. On the server always parse with new Date(value) and guard for invalid values. All queries must include optional tenant predicate when tenantId is present.
+
+ELEVEN. Confirm the fixes
+Start the dev server.
+Go to Super Admin Overview. Change tenant dropdown and date range. Cards and lists must change.
+Go to Analytics. The overlay with the fetch error must not appear.
+Go to Platform Billing. See tenant to company payments.
+Use the new Company and Client Activity groupings in the sidebar.
+Open Settings. Fields are concise and save without confusion.
+Call POST /api/super-admin/impersonate from the UI action on a tenant row. It should return a url. Opening it must authenticate you in that tenant as a tenant admin for five minutes.
+
+Deliverables
+Working Overview filters.
+Analytics fetch fixed and endpoints live.
+Platform Billing page added.
+Sidebar grouping added.
+Settings simplified and validated.
+Impersonation endpoint added.
+All new routes mounted under /api/super-admin.
