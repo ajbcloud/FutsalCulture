@@ -315,24 +315,80 @@ router.post('/campaigns/:id/send', async (req: AuthRequest, res: Response) => {
       })
       .where(eq(communicationCampaigns.id, id));
 
-    // In a real implementation, you would:
-    // 1. Queue the messages for sending
-    // 2. Integrate with SendGrid for emails
-    // 3. Integrate with Twilio for SMS
-    // 4. Log each send attempt in communicationLogs
-    // 5. Update campaign with final counts
+    // Execute campaign sending with actual email/SMS services
+    try {
+      let sentCount = 0;
+      let failedCount = 0;
 
-    // For now, just simulate success
-    setTimeout(async () => {
+      if (campaignData.type === 'email') {
+        // Import email service
+        const { sendCampaignEmail } = await import('../emailService');
+        
+        const emailRecipients = recipients.map((r: any) => ({
+          email: r.email,
+          name: r.firstName || r.name,
+          tenantId: r.tenantId
+        }));
+
+        const emailResult = await sendCampaignEmail(
+          id,
+          emailRecipients,
+          campaignData.subject || '',
+          campaignData.content,
+          {} // Additional template variables could be added here
+        );
+
+        sentCount = emailResult.sent;
+        failedCount = emailResult.failed;
+        
+      } else if (campaignData.type === 'sms') {
+        // Import SMS service
+        const { sendCampaignSMS } = await import('../smsService');
+        
+        const smsRecipients = recipients.map((r: any) => ({
+          phone: r.phone || r.phoneNumber,
+          name: r.firstName || r.name,
+          tenantId: r.tenantId
+        })).filter((r: any) => r.phone); // Only recipients with phone numbers
+
+        const smsResult = await sendCampaignSMS(
+          id,
+          smsRecipients,
+          campaignData.content,
+          {} // Additional template variables could be added here
+        );
+
+        sentCount = smsResult.sent;
+        failedCount = smsResult.failed;
+      }
+
+      // Update campaign with final status
       await db
         .update(communicationCampaigns)
         .set({
-          status: 'sent',
-          sentCount: recipients.length,
-          failedCount: 0
+          status: sentCount > 0 ? 'sent' : 'failed',
+          sentCount,
+          failedCount,
+          completedAt: new Date()
         })
         .where(eq(communicationCampaigns.id, id));
-    }, 2000);
+
+      console.log(`📡 Campaign ${campaignData.name} completed: ${sentCount} sent, ${failedCount} failed`);
+      
+    } catch (sendError) {
+      console.error('Campaign sending error:', sendError);
+      
+      // Update campaign as failed
+      await db
+        .update(communicationCampaigns)
+        .set({
+          status: 'failed',
+          sentCount: 0,
+          failedCount: recipients.length,
+          completedAt: new Date()
+        })
+        .where(eq(communicationCampaigns.id, id));
+    }
 
     res.json({ 
       success: true, 

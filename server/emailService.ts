@@ -17,25 +17,127 @@ interface EmailParams {
   html?: string;
 }
 
-export async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmail(params: EmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!mailService) {
     console.warn('SendGrid not configured - skipping email notification');
-    return false;
+    return { success: false, error: 'SendGrid not configured' };
   }
 
   try {
-    await mailService.send({
+    const result = await mailService.send({
       to: params.to,
       from: params.from,
       subject: params.subject,
       text: params.text,
       html: params.html,
     });
-    return true;
-  } catch (error) {
-    console.error('SendGrid email error:', error);
-    return false;
+    
+    console.log(`📧 Email sent successfully to ${params.to}`);
+    
+    return { 
+      success: true, 
+      messageId: result[0]?.headers?.['x-message-id'] || 'unknown'
+    };
+  } catch (error: any) {
+    console.error('❌ SendGrid email error:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Email sending failed'
+    };
   }
+}
+
+export async function sendBulkEmail(recipients: Array<{ 
+  email: string; 
+  subject: string; 
+  html?: string; 
+  text?: string;
+  tenantId?: string;
+  campaignId?: string;
+}>): Promise<{
+  sent: number;
+  failed: number;
+  results: Array<{ email: string; success: boolean; messageId?: string; error?: string }>;
+}> {
+  if (!mailService) {
+    console.warn('SendGrid not configured - skipping bulk email');
+    return { 
+      sent: 0, 
+      failed: recipients.length, 
+      results: recipients.map(r => ({ email: r.email, success: false, error: 'SendGrid not configured' }))
+    };
+  }
+
+  const results = [];
+  let sent = 0;
+  let failed = 0;
+
+  for (const recipient of recipients) {
+    const result = await sendEmail({
+      to: recipient.email,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@futsalculture.com',
+      subject: recipient.subject,
+      text: recipient.text || '',
+      html: recipient.html || ''
+    });
+
+    results.push({
+      email: recipient.email,
+      ...result
+    });
+
+    if (result.success) {
+      sent++;
+    } else {
+      failed++;
+    }
+
+    // Add small delay between emails to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  console.log(`📧 Bulk email completed: ${sent} sent, ${failed} failed`);
+  
+  return { sent, failed, results };
+}
+
+export async function sendCampaignEmail(
+  campaignId: string,
+  recipients: Array<{ email: string; name?: string; tenantId?: string }>,
+  subject: string,
+  template: string,
+  variables: Record<string, string> = {}
+): Promise<{ sent: number; failed: number }> {
+  const emailRecipients = recipients.map(recipient => {
+    // Replace template variables with actual values
+    let personalizedSubject = subject;
+    let personalizedTemplate = template;
+    
+    // Replace common variables
+    personalizedSubject = personalizedSubject.replace(/\{\{name\}\}/g, recipient.name || 'there');
+    personalizedSubject = personalizedSubject.replace(/\{\{firstName\}\}/g, recipient.name?.split(' ')[0] || 'there');
+    
+    personalizedTemplate = personalizedTemplate.replace(/\{\{name\}\}/g, recipient.name || 'there');
+    personalizedTemplate = personalizedTemplate.replace(/\{\{firstName\}\}/g, recipient.name?.split(' ')[0] || 'there');
+    
+    // Replace any custom variables
+    Object.entries(variables).forEach(([key, value]) => {
+      personalizedSubject = personalizedSubject.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+      personalizedTemplate = personalizedTemplate.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+    });
+
+    return {
+      email: recipient.email,
+      subject: personalizedSubject,
+      html: personalizedTemplate,
+      text: personalizedTemplate.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      tenantId: recipient.tenantId,
+      campaignId
+    };
+  });
+
+  const result = await sendBulkEmail(emailRecipients);
+  return { sent: result.sent, failed: result.failed };
 }
 
 export async function sendHelpRequestNotification(
@@ -69,11 +171,13 @@ Please respond to this request as soon as possible.
     <p><em>Please respond to this request as soon as possible.</em></p>
   `;
 
-  return await sendEmail({
+  const result = await sendEmail({
     to: supportEmail,
     from: supportEmail, // Use same email for from/to for now
     subject,
     text,
     html,
   });
+  
+  return result.success;
 }

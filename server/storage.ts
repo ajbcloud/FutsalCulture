@@ -170,7 +170,7 @@ export interface IStorage {
   getSuperAdminPayments(filters?: { tenantId?: string; status?: string; dateFrom?: string; dateTo?: string; amountMin?: number; amountMax?: number }): Promise<any[]>;
   getSuperAdminRegistrations(filters?: { tenantId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
   getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]>;
-  getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string }): Promise<any[]>;
+  getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; parentId?: string }): Promise<any[]>;
   getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
   
   // Player Development operations
@@ -1183,7 +1183,7 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
+  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; dateFrom?: string; dateTo?: string; parentId?: string }): Promise<any[]> {
     let query = db.select({
       id: players.id,
       tenantId: players.tenantId,
@@ -1240,6 +1240,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.dateTo) {
       conditions.push(lte(players.createdAt, new Date(filters.dateTo)));
+    }
+    if (filters?.parentId) {
+      conditions.push(eq(players.parentId, filters.parentId));
     }
 
     if (conditions.length > 0) {
