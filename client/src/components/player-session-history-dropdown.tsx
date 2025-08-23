@@ -87,7 +87,7 @@ export function PlayerSessionHistoryDropdown({
 
   // Helper function to check if refund is allowed based on cutoff time
   const isRefundAllowed = (session: SessionHistoryItem): boolean => {
-    if (!systemSettings?.refundCutoffHours) return true;
+    if (!systemSettings?.refundCutoffMinutes) return true;
     
     // If session doesn't have proper date/time info, allow refund (legacy data)
     if (!session.sessionDate || !session.sessionStartTime) return true;
@@ -96,8 +96,8 @@ export function PlayerSessionHistoryDropdown({
     const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionStartTime}`);
     if (isNaN(sessionDateTime.getTime())) return true; // Invalid date, allow refund
     
-    // Calculate cutoff time (session start time minus cutoff hours)
-    const cutoffTime = new Date(sessionDateTime.getTime() - (systemSettings.refundCutoffHours * 60 * 60 * 1000));
+    // Calculate cutoff time (session start time minus cutoff minutes)
+    const cutoffTime = new Date(sessionDateTime.getTime() - (systemSettings.refundCutoffMinutes * 60 * 1000));
     const now = new Date();
     
     // Allow refund if current time is before cutoff time

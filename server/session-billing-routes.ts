@@ -743,22 +743,22 @@ router.post('/session-billing/refund', async (req: any, res) => {
       .from(systemSettings)
       .where(and(
         eq(systemSettings.tenantId, currentUser.tenantId),
-        eq(systemSettings.key, 'refundCutoffHours')
+        eq(systemSettings.key, 'refundCutoffMinutes')
       ))
       .limit(1);
 
-    const refundCutoffHours = refundCutoffSetting.length > 0 
+    const refundCutoffMinutes = refundCutoffSetting.length > 0 
       ? parseInt(refundCutoffSetting[0].value) 
-      : 1; // Default to 1 hour if not set
+      : 60; // Default to 60 minutes if not set
 
     // Check if refund is within cutoff period
     const sessionDateTime = new Date(session.startTime);
-    const cutoffTime = new Date(sessionDateTime.getTime() - (refundCutoffHours * 60 * 60 * 1000));
+    const cutoffTime = new Date(sessionDateTime.getTime() - (refundCutoffMinutes * 60 * 1000));
     const now = new Date();
 
     if (now >= cutoffTime) {
       return res.status(400).json({ 
-        message: `Refund not allowed. Cutoff time is ${refundCutoffHours} hour(s) before session start.` 
+        message: `Refund not allowed. Cutoff time is ${refundCutoffMinutes} minute(s) before session start.` 
       });
     }
 

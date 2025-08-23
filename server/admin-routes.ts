@@ -1880,7 +1880,7 @@ export function setupAdminRoutes(app: any) {
         sessionCapacityWarning: 3,
         paymentReminderMinutes: 60, // Default to 60 minutes
         paymentSubmissionTimeMinutes: 30, // Default payment submission time
-        refundCutoffHours: 1, // Default refund cutoff time
+        refundCutoffMinutes: 60, // Default refund cutoff time
         // Business schedule settings
         weekdayStart: "monday", // Business week starts on Monday by default
         weekdayEnd: "sunday", // Business week ends on Sunday by default

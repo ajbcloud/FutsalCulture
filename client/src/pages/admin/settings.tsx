@@ -52,7 +52,7 @@ interface SystemSettings {
   sessionCapacityWarning: number;
   paymentReminderMinutes: number;
   paymentSubmissionTimeMinutes: number;
-  refundCutoffHours: number;
+  refundCutoffMinutes: number;
   weekdayStart: string;
   weekdayEnd: string;
   fiscalYearType: string;
@@ -1281,18 +1281,18 @@ export default function AdminSettings() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="refundCutoff" className="text-foreground">Refund Cutoff Hours</Label>
+                  <Label htmlFor="refundCutoff" className="text-foreground">Refund Cutoff Minutes</Label>
                   <Input
                     id="refundCutoff"
                     type="number"
                     min="0"
-                    max="168"
-                    value={settings.refundCutoffHours || 1}
-                    onChange={(e) => setSettings(prev => ({ ...prev, refundCutoffHours: parseInt(e.target.value) || 1 }))}
+                    max="10080"
+                    value={settings.refundCutoffMinutes || 60}
+                    onChange={(e) => setSettings(prev => ({ ...prev, refundCutoffMinutes: parseInt(e.target.value) || 60 }))}
                     className="bg-input border-border text-foreground mt-1"
                     data-testid="input-refund-cutoff"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Hours before session start when refunds are no longer allowed</p>
+                  <p className="text-xs text-muted-foreground mt-1">Minutes before session start when refunds are no longer allowed</p>
                 </div>
               </div>
 
