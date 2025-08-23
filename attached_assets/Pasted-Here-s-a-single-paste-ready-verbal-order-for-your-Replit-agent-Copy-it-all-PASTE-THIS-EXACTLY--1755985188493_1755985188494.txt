@@ -1,0 +1,133 @@
+Here’s a single, paste‑ready verbal order for your Replit agent. Copy it all.
+
+PASTE THIS EXACTLY INTO REPLIT ASSISTANT AS ONE TASK. DO EVERYTHING IN ORDER. UPDATE FILES IN PLACE. CREATE MISSING PATHS.
+
+Objective
+Fix the Analytics UX and data. Merge “Analytics” + “Enhanced Analytics” into a single **Analytics** page with two lanes: **Platform (company)** and **Client Commerce**. Make **Status**, **Tenant**, and **Date Range** filters work. Populate real KPIs and charts mapped to DB. Improve visual design (consistent cards, tab bar, zero states). Split payments/registrations views already done should remain. All endpoints must paginate and accept `tenantId`, `status`, `from`, `to`.
+
+Packages
+
+```
+npm i zod @tanstack/react-query @tanstack/react-table recharts
+```
+
+1. Merge pages and navigation
+
+* Delete the separate “Enhanced Analytics” route/component.
+* Keep a single route: `src/routes/super-admin/Analytics.tsx`.
+* Left sidebar: under **Company**, keep items: Overview, **Analytics**, Platform Billing, Settings. Remove “Enhanced Analytics”.
+* The page must render two top tabs: **Platform** | **Client Commerce**. Below that, a second row of sub-tabs: **Overview**, **Revenue Trends**, **By Tenant**, **Platform Health** (on Platform lane) and **Overview**, **Revenue Trends**, **Registrations**, **By Tenant** (on Client lane).
+
+2. Filters that actually work
+
+* Create/ensure a shared component `src/shared/FilterBar.tsx` exposing:
+  `tenantId` (All Tenants option), `status` (All Data | Completed | Pending | Failed), `from`, `to`, `onApply`.
+* Wire it so filter state is local to Analytics page and INCLUDED in React Query keys.
+* Build URLs like:
+  `/api/super-admin/analytics/overview?lane=platform&status=${status}&tenantId=${tenantId||''}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  (same for `lane=commerce`, series, by-tenant).
+
+3. Fix data endpoints and map to DB (server)
+   Create/replace `server/controllers/superAdmin/analytics.ts` with these handlers (validate with Zod; return zeros when empty):
+
+* `GET /api/super-admin/analytics/overview`
+  Params: `lane=platform|commerce`, `tenantId?`, `status?`, `from?`, `to?`.
+  Returns cards + small tables:
+
+  * For `lane=platform` (use **tenant\_billing/tenant\_invoices/tenant\_payments**):
+    `platformRevenue`, `mrr`, `arr`, `activeTenants`, `planMix[]`, `failedCount`, `outstandingReceivables`, `topTenantsByPlatformRevenue[]`, `churnCandidates[]` (no platform payment in last 30d).
+  * For `lane=commerce` (use **payments**, **registrations**):
+    `commerceRevenue`, `netRevenue` (minus refunds), `failedCount`, `refundCount`, `totalRegistrations`, `activePlayers`, `avgTicket`, `revenuePerPlayer`, `topTenantsByCommerceRevenue[]`.
+* `GET /api/super-admin/analytics/series`
+  Params: `lane`, `interval=day|week|month`, `tenantId?`, `status?`, `from?`, `to?`.
+  Returns array of `{ date, revenue, registrations }` based on lane (platform uses tenant\_billing; commerce uses payments/registrations).
+* `GET /api/super-admin/analytics/by-tenant`
+  Params: `lane`, `tenantId?`, `status?`, `from?`, `to?`.
+  Returns rows `{ tenantId, tenantName, revenue, transactions, failed, refunds }` for table.
+
+Implementation notes:
+
+* STATUS filter:
+
+  * platform lane: map to tenant billing payments `status in ('completed','pending','failed')`.
+  * commerce lane: map to payments table same way.
+* Always `AND` date predicates on the appropriate `created_at`.
+* Use cents→currency at controller edge if amounts are stored in cents.
+* Document table mappings at top of each handler.
+
+4. Client safe fetch wrapper
+   Ensure all data calls use `src/lib/api.ts` (`get/post/patch`). No `fetch(method, url)` usage anywhere. Break the overlay error forever.
+
+5. Analytics page (client) — structure & design
+
+* In `src/routes/super-admin/Analytics.tsx`:
+
+  * Page header: “Analytics — real-time insights”.
+  * Filters row: use `FilterBar` with **Status**, **Tenant**, **From**, **To**, **Apply**.
+  * Tabs row 1: **Platform** | **Client Commerce** (stateful).
+  * Tabs row 2 (contextual, see step 1).
+  * **Cards** (uniform component): 4 cards per row, compact, with label, value, and delta (if available).
+  * Zero state: if arrays empty, show dashed box + “No data for selected filters”.
+  * Charts: Recharts LineChart for revenue/registrations (single chart, two series), BarChart for “By Tenant” revenue; responsive, height 320.
+  * Tables: use our `DataTable` with server-side pagination.
+
+* Map sub-tabs to data:
+
+  * Platform → Overview: cards = `platformRevenue`, `MRR`, `ARR`, `Active Tenants`; side-by-side panels: Top Tenants, Failed Payments (count + list).
+
+  * Platform → Revenue Trends: series chart (revenue only), interval switches (Day/Week/Month).
+
+  * Platform → By Tenant: table using `/by-tenant?lane=platform`.
+
+  * Platform → Platform Health: cards for `failedCount`, `outstandingReceivables`, plan mix donut (optional later), churn candidates list.
+
+  * Commerce → Overview: cards = `commerceRevenue`, `Net Revenue`, `Failed`, `Total Registrations`; side panels: Top Tenants by commerce, Refunds list.
+
+  * Commerce → Revenue Trends: dual series (revenue + registrations).
+
+  * Commerce → Registrations: small KPI row (new regs, drop-off if present), line chart of registrations.
+
+  * Commerce → By Tenant: table using `/by-tenant?lane=commerce`.
+
+6. Make Status dropdown functional
+
+* Replace the inert Status control with a real `Select` wired to state; include options: All Data, Completed, Pending, Failed.
+* On Apply, refetch queries by changing React Query keys (include `status`).
+
+7. Card + table components (consistency)
+   Create `src/components/super-admin/ui/StatCard.tsx` and `src/components/super-admin/ui/Section.tsx` for consistent spacing/typography. Use the same in Company Overview later.
+
+* `StatCard` props: `title`, `value`, `subtext?`, `intent?('default'|'warn'|'danger')`.
+
+8. Add basic validation
+   At each analytics controller, validate query params with Zod:
+
+```
+lane: z.enum(['platform','commerce'])
+status: z.enum(['all','completed','pending','failed']).default('all')
+from/to: z.string().datetime().optional()
+tenantId: z.string().uuid().optional()
+interval: z.enum(['day','week','month']).default('day')
+```
+
+Return `200` with safe defaults on empty sets.
+
+9. Performance & pagination
+
+* All “by-tenant” and list endpoints: `{ rows, page, pageSize, totalRows }`.
+* On client tables, request `page` + `pageSize`. Default `pageSize=25`.
+
+10. Final checks
+
+* The single **Analytics** page shows real numbers (no NaN).
+* Status/Tenant/Date filters update cards, charts, and tables across tabs.
+* Platform vs Client lanes show clearly different data sources.
+* No “Enhanced Analytics” route remains.
+* Design is clean: uniform cards, consistent padding, clear zero states.
+
+Deliverables
+
+* Updated server analytics controllers (overview, series, by-tenant) with DB mappings + Zod validation.
+* Single consolidated `Analytics.tsx` with functional filters, tabs, cards, charts, and tables.
+* Working Status dropdown.
+* No overlay errors; all data loads with mock OR real DB depending on environment.

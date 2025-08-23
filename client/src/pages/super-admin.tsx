@@ -16,8 +16,7 @@ import SuperAdminRegistrations from "@/components/super-admin/registrations";
 import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
 import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
-import CompanyAnalytics from "@/pages/super-admin/company-analytics";
-import EnhancedAnalytics from "@/pages/super-admin/enhanced-analytics";
+import Analytics from "@/pages/super-admin/analytics";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 
 import { 
@@ -67,8 +66,7 @@ export default function SuperAdminPage() {
   // Navigation sections
   const companySection = [
     { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
-    { name: "Analytics", href: "/super-admin/company-analytics", icon: BarChart3, current: location === "/super-admin/company-analytics" },
-    { name: "Enhanced Analytics", href: "/super-admin/enhanced-analytics", icon: TrendingUp, current: location === "/super-admin/enhanced-analytics" },
+    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
   ];
@@ -89,11 +87,7 @@ export default function SuperAdminPage() {
       case "/super-admin/tenants":
         return <SuperAdminTenants />;
       case "/super-admin/analytics":
-        return <SuperAdminAnalytics />;
-      case "/super-admin/company-analytics":
-        return <CompanyAnalytics />;
-      case "/super-admin/enhanced-analytics":
-        return <EnhancedAnalytics />;
+        return <Analytics />;
       case "/super-admin/platform-billing":
         return <PlatformBilling />;
       case "/super-admin/settings":

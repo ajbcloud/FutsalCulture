@@ -1,0 +1,240 @@
+Awesome—here’s a clear pass on your Settings page: what’s good, what’s confusing, what’s missing, plus the backend routes/tables you need. I’m also giving you a paste-ready agent order at the end.
+
+---
+
+# What makes sense (keep)
+
+* **Auto-approve new tenants** (platform policy)
+* **Require admin approval for tenant changes** (governance)
+* **Default booking window (hours)** (tenant *default*)
+* **Max tenants per admin** (security/governance)
+* **Default session capacity** (tenant *default*)
+* **Maintenance mode** (ops “big red switch”)
+
+These are the right types of controls—you just need clearer grouping and copy.
+
+---
+
+# What doesn’t (rename or move)
+
+* **“Enable MFA by default”** → ambiguous. Split:
+
+  * **Require MFA for Super Admins** (platform-wide, always on)
+  * **Require MFA for Tenant Admins (default)** (applied to new tenants; existing tenants can override)
+* **“Enable tenant subdomains”** → make this a section with DNS status + domain policy (apex + wildcard) instead of a single toggle.
+* **Mixing platform policies with tenant defaults** in the same panel → separate them.
+
+---
+
+# What’s missing (high-impact)
+
+**A. Platform policies (company level)**
+
+* (Security) Require MFA for Super Admins (non-toggleable in prod)
+* (Security) Session length, idle timeout, password policy
+* (Security) Allowed login methods (email, OAuth providers)
+* (Governance) Change-management approval settings (who can approve)
+* (Compliance) Data retention windows (logs, analytics, PII)
+* (Ops) Log level, error reporting DSN (e.g., Sentry), health check
+* (Branding) Platform name/logo/primary color for portals
+
+**B. Tenant defaults (applied on tenant creation)**
+
+* Default currency, timezone, locale
+* Default booking lead/cancel windows
+* Default session capacity, age groups, genders
+* Default payment methods allowed (Card/ACH/PayPal/Venmo…)
+* Default email/SMS templates enabled
+* Feature flags (portal access, waitlists, refunds, etc.)
+
+**C. Billing & plans (your revenue)**
+
+* Plan catalog (Starter/Pro/Enterprise) with limits & price
+* Invoice settings (net terms, tax %, tax ID, legal footer)
+* Processor keys (Stripe/Braintree) + **Test connection**
+* Webhook signing secret + **Resend last event**
+
+**D. Integrations**
+
+* Email (SendGrid, etc.) with API key, sender domains, test email
+* SMS (Twilio) with from number pool, test SMS
+* OAuth (Google, Apple) with client IDs/secrets and allowlist
+* Webhooks (URL list, enable/disable, test ping)
+
+**E. User management**
+
+* Invite Super Admin, assign role (Owner/Admin/Analyst/Support)
+* Reset password / force MFA / lock account
+* Audit log (who changed what setting, when)
+
+**F. Impersonation controls**
+
+* “Allow Super Admin impersonation” + require **reason** field
+* List of last N impersonations with revoke button
+
+---
+
+# UI structure (simple & clear)
+
+**Tabs:**
+
+1. **Platform Settings** (policies & ops)
+2. **Tenant Defaults**
+3. **Billing & Plans**
+4. **Integrations**
+5. **User Management**
+6. **Audit & Security**
+
+Each section has short help text + “Test” actions where relevant.
+
+---
+
+# Backend you’re missing (routes + storage)
+
+### Table: `platform_settings` (single row)
+
+* `id PK default 1`
+* `platform_policies JSONB`  (mfaRequiredForSuper, session, password, loginMethods, maintenanceMode, logLevel, sentryDsn…)
+* `tenant_defaults JSONB`    (currency, timezone, booking/cancel windows, defaultCapacity, ageGroups, featureFlags, defaultPaymentMethods…)
+* `billing JSONB`            (planCatalog\[], netTerms, taxPercent, invoiceFooter…)
+* `branding JSONB`           (name, logoUrl, colors)
+* `updated_at timestamptz`
+
+### Secret tables (encrypted at rest)
+
+* `integration_email (provider, settings JSONB, enc_secret TEXT, status, updated_at)`
+* `integration_sms (provider, settings JSONB, enc_secret TEXT, status, updated_at)`
+* `integration_oauth (provider, client_id, enc_client_secret, scopes, status)`
+* `integration_webhook (name, url, enabled, signing_secret_enc, last_status, updated_at)`
+
+> Use a KMS or a master key from `ENV` to encrypt/decrypt secrets server-side.
+
+### Routes (all behind `requireAuth` + `requireSuperAdmin`)
+
+```
+GET    /api/super-admin/settings/platform
+PATCH  /api/super-admin/settings/platform
+
+GET    /api/super-admin/settings/tenant-defaults
+PATCH  /api/super-admin/settings/tenant-defaults
+
+GET    /api/super-admin/settings/billing
+PATCH  /api/super-admin/settings/billing
+
+# Integrations
+GET    /api/super-admin/integrations/email
+PATCH  /api/super-admin/integrations/email
+POST   /api/super-admin/integrations/email/test   {to}
+
+GET    /api/super-admin/integrations/sms
+PATCH  /api/super-admin/integrations/sms
+POST   /api/super-admin/integrations/sms/test     {to}
+
+GET    /api/super-admin/integrations/oauth
+PATCH  /api/super-admin/integrations/oauth
+POST   /api/super-admin/integrations/oauth/test   {provider}
+
+GET    /api/super-admin/integrations/webhooks
+POST   /api/super-admin/integrations/webhooks       # create
+PATCH  /api/super-admin/integrations/webhooks/:id
+DELETE /api/super-admin/integrations/webhooks/:id
+POST   /api/super-admin/integrations/webhooks/:id/test
+
+# User management
+GET    /api/super-admin/users
+POST   /api/super-admin/users/invite                 {email, role}
+PATCH  /api/super-admin/users/:id                    {role|lock|forceMfa}
+POST   /api/super-admin/users/:id/reset-password
+GET    /api/super-admin/audit-logs?page=&pageSize=
+
+# Impersonation controls
+POST   /api/super-admin/impersonate                  {tenantId, reason}
+GET    /api/super-admin/impersonations?page=&pageSize=
+POST   /api/super-admin/impersonations/:id/revoke
+```
+
+### Validation (Zod examples)
+
+```ts
+// Platform policies
+const PlatformPolicySchema = z.object({
+  mfaRequiredForSuper: z.boolean(),
+  mfaRequiredForTenantAdminsDefault: z.boolean(),
+  sessionMaxHours: z.number().int().positive(),
+  sessionIdleMinutes: z.number().int().positive(),
+  passwordPolicy: z.object({
+    minLength: z.number().int().min(8),
+    requireUpper: z.boolean(),
+    requireNumber: z.boolean(),
+    requireSymbol: z.boolean(),
+  }),
+  loginMethods: z.object({
+    emailPassword: z.boolean(),
+    google: z.boolean(),
+    apple: z.boolean(),
+  }),
+  maintenanceMode: z.boolean(),
+  logLevel: z.enum(['error','warn','info','debug']),
+  sentryDsn: z.string().url().optional().or(z.literal('')),
+});
+
+// Tenant defaults
+const TenantDefaultsSchema = z.object({
+  currency: z.string().default('USD'),
+  timezone: z.string(),
+  bookingWindowHours: z.number().int().nonnegative(),
+  cancelWindowHours: z.number().int().nonnegative(),
+  defaultCapacity: z.number().int().positive(),
+  ageGroups: z.array(z.string()).default(['U8','U10','U12','U14','U16','U18']),
+  featureFlags: z.record(z.boolean()),
+  paymentMethods: z.array(z.enum(['card','ach','paypal','venmo'])),
+});
+```
+
+### Secrets handling
+
+* `POST/PATCH /integrations/*` accept public settings + **masked** secret fields.
+* Store secrets encrypted; never return raw secrets (return “•••• last4”).
+* **/test** endpoints use the stored secrets; respond with `ok: true|false` + diagnostic.
+
+### Ops niceties
+
+* Cache `platform_settings` in memory (TTL \~ 60s); bust cache on PATCH.
+* Emit an audit event for every PATCH with `{userId, section, diff, ip}`.
+* Health check route: `GET /api/_health` returns settings version & db time.
+
+---
+
+## Paste-ready order for your agent
+
+**PASTE THIS EXACTLY INTO REPLIT ASSISTANT AS ONE TASK. UPDATE FILES IN PLACE.**
+
+**Objective**
+Refactor Settings into clear sections with working persistence; add missing backend routes, Zod validation, encrypted secrets, and “Test” actions for integrations. Separate **Platform Settings**, **Tenant Defaults**, **Billing & Plans**, **Integrations**, **User Management**, **Audit & Security**.
+
+**Server**
+
+1. Migrations: create `platform_settings`, `integration_email`, `integration_sms`, `integration_oauth`, `integration_webhook`, `audit_logs`.
+2. Add crypto helper `server/lib/secrets.ts` (encrypt/decrypt with env key).
+3. Controllers + routes under `/api/super-admin/settings/*` and `/api/super-admin/integrations/*` exactly as listed above, with Zod schemas (examples provided) and in-memory cache + audit log on every change.
+4. Implement `/integrations/*/test` endpoints (SendGrid email, Twilio SMS, OAuth metadata ping, webhook POST echo).
+5. User management routes (invite, role change, lock, reset password) and `/audit-logs`.
+
+**Client**
+
+1. Replace Settings UI with tabs: **Platform Settings**, **Tenant Defaults**, **Billing & Plans**, **Integrations**, **User Management**, **Audit & Security**.
+2. Each tab loads via React Query, uses forms with inline help and **Save** + **Test** buttons. Mask secrets; show connection badges (connected/disconnected).
+3. Tenant Defaults: move booking/cancel windows, default capacity, payment methods, feature flags here.
+4. Platform Settings: move MFA, session, login methods, maintenance mode, log level, sentry DSN here.
+5. Billing & Plans: plan catalog CRUD + processor keys (masked) + test; webhook URL list + test.
+6. User Management: list super admins, invite, change role, lock, reset password.
+7. Audit & Security: table of last 200 audit events with filters.
+8. Wire everything to new endpoints; add optimistic toasts; show diffs on save.
+
+**Done when**
+
+* Each tab loads/saves without errors; secrets are masked; “Test” buttons work; audit logs populate; maintenance mode toggle persists; tenant defaults no longer appear in Platform tab.
+
+---
+
+If you want, I can also draft the Drizzle schemas and example controller skeletons next.

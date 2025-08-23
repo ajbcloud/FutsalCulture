@@ -12,6 +12,7 @@ interface FilterBarProps {
   onStatusChange?: (status: string) => void;
   onDateRangeChange?: (from: string, to: string) => void;
   onClearFilters?: () => void;
+  onApply?: () => void;
   tenantId?: string;
   status?: string;
   dateFrom?: string;
@@ -25,23 +26,26 @@ export default function FilterBar({
   onStatusChange,
   onDateRangeChange,
   onClearFilters,
+  onApply,
   tenantId = 'all',
   status = 'all',
   dateFrom = '',
   dateTo = '',
   statusOptions = [
-    { value: 'all', label: 'All Status' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' }
+    { value: 'all', label: 'All Data' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'refunded', label: 'Refunded' }
   ]
 }: FilterBarProps) {
   const [localFrom, setLocalFrom] = useState(dateFrom);
   const [localTo, setLocalTo] = useState(dateTo);
 
-  const handleDateRangeChange = () => {
+  const handleApply = () => {
     if (onDateRangeChange && (localFrom !== dateFrom || localTo !== dateTo)) {
       onDateRangeChange(localFrom, localTo);
     }
+    onApply?.();
   };
 
   const handleClearFilters = () => {
@@ -105,7 +109,6 @@ export default function FilterBar({
               type="date"
               value={localFrom}
               onChange={(e) => setLocalFrom(e.target.value)}
-              onBlur={handleDateRangeChange}
             />
           </div>
 
@@ -118,14 +121,13 @@ export default function FilterBar({
               type="date"
               value={localTo}
               onChange={(e) => setLocalTo(e.target.value)}
-              onBlur={handleDateRangeChange}
             />
           </div>
 
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleDateRangeChange}
+              onClick={handleApply}
               className="whitespace-nowrap"
             >
               <Filter className="w-4 h-4 mr-2" />
