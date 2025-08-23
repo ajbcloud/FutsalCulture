@@ -59,19 +59,28 @@ export default function CommsDeliverability() {
   // Overview query
   const { data: overview, isLoading: overviewLoading } = useQuery<CommsOverview>({
     queryKey: ['super-admin', 'comms', 'overview', dateRange],
-    queryFn: () => apiRequest(`/api/super-admin/comms/overview?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/overview?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`);
+      return await response.json();
+    },
   });
 
   // Series query for charts
   const { data: seriesData } = useQuery<SeriesData>({
     queryKey: ['super-admin', 'comms', 'series', dateRange],
-    queryFn: () => apiRequest(`/api/super-admin/comms/series?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/series?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`);
+      return await response.json();
+    },
   });
 
   // Events query
   const { data: eventsData, isLoading: eventsLoading } = useQuery<EventsResponse>({
     queryKey: ['super-admin', 'comms', 'events', selectedChannel, dateRange, eventsPage],
-    queryFn: () => apiRequest(`/api/super-admin/comms/events?channel=${selectedChannel}&from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${eventsPage}&pageSize=25`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/events?channel=${selectedChannel}&from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}&page=${eventsPage}&pageSize=25`);
+      return await response.json();
+    },
   });
 
   const emailStats = overview?.email || { delivered: 0, failed: 0, opens: 0, clicks: 0 };
@@ -125,8 +134,9 @@ export default function CommsDeliverability() {
       </div>
 
       <FilterBar
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
+        dateFrom={dateRange.from}
+        dateTo={dateRange.to}
+        onDateRangeChange={(from, to) => setDateRange({ from, to })}
       />
 
       <Tabs value={selectedChannel} onValueChange={(value) => setSelectedChannel(value as 'email' | 'sms')}>
