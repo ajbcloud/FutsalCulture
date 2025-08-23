@@ -5,6 +5,7 @@ import * as overview from '../controllers/superAdmin/overview';
 import * as tenants from '../controllers/superAdmin/tenants';
 import * as sessions from '../controllers/superAdmin/sessions';
 import * as payments from '../controllers/superAdmin/payments';
+import * as platformPayments from '../controllers/superAdmin/platformPayments';
 import * as registrations from '../controllers/superAdmin/registrations';
 import * as parents from '../controllers/superAdmin/parents';
 import * as players from '../controllers/superAdmin/players';

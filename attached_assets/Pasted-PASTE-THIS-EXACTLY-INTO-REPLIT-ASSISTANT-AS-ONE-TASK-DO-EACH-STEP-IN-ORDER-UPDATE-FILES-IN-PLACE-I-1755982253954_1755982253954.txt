@@ -1,0 +1,86 @@
+PASTE THIS EXACTLY INTO REPLIT ASSISTANT AS ONE TASK. DO EACH STEP IN ORDER. UPDATE FILES IN PLACE IF THEY EXIST.
+Objective
+Make the Super Admin portal clearly separate company data from client data. Add detailed analytics that map to our database. Split Payments and Registrations into two views each, platform billing to QIT and tenant commerce between parents and tenants. Ensure Overview cards and list data on every page are driven by the correct source. All list endpoints must paginate and respect tenant, status, and date filters.
+Packages
+npm i zod @tanstack/react-query @tanstack/react-table recharts
+
+
+
+Sidebar and routing
+Create two labeled groups in the Super Admin sidebar.
+Group Company, items Overview, Company Analytics, Platform Billing, Settings, User Management.
+Group Client Activity, items Tenants, Sessions, Client Payments, Client Registrations, Parents, Players, Help Requests.
+Create routes for the new pages Company Analytics and Platform Billing, keep existing routes for client activity pages but rename the menu labels to match the new names.
+
+
+Filters used across pages
+Add a shared filter bar component that supports Tenant filter, Status filter, Date range, Clear filters.
+All Company pages ignore the Tenant filter unless a cross tenant drill down makes sense. All Client pages require the Tenant filter but also work with All Tenants.
+Use encodeURIComponent for all date parameters in client requests.
+
+
+Payments split
+Create a new server controller file server/controllers/superAdmin/platformPayments.ts that returns invoices and payments from tenants to QIT. Fields id, tenant, adminName, planLevel, gateway, paymentId, method, status, date. Add route GET /api/super-admin/platform-payments.
+Rename current parent payment view to Client Payments and point it at GET /api/super-admin/payments. Confirm it shows tenant, player, parent, session, amount, method, status, date.
+Create src/routes/super-admin/PlatformBilling.tsx to render the platform payments table.
+Ensure both lists paginate and accept from, to, tenantId, status, method.
+
+
+Registrations split
+Keep current registration endpoint for client registrations between parents and tenants.
+Add a new endpoint GET /api/super-admin/platform-registrations only if QIT ever sells plans to tenants through a subscription model. If not needed now, hide the Company level Registrations item.
+
+
+Analytics upgrade and mapping
+Add GET /api/super-admin/analytics/series?from=&to=&interval=day|week|month returning time series for revenue and registrations.
+Add GET /api/super-admin/analytics/overview?from=&to= returning
+total platform revenue to QIT, total tenant commerce revenue, total active tenants, total players, new tenants in range, failed payments count for platform billing, failed payments count for tenant commerce, top tenants by platform revenue, top tenants by commerce revenue, churn candidate tenants with zero platform payments in the last thirty days.
+Add GET /api/super-admin/analytics/by-tenant?from=&to=&type=platform|commerce returning per tenant aggregates.
+Create src/routes/super-admin/CompanyAnalytics.tsx to show
+cards from analytics overview, a revenue time series for platform, a time series for client commerce, a table of top tenants by platform revenue, a table of failed platform payments.
+Use Recharts for charts. Use React Query for data fetching. Use the shared filter bar and date range.
+All analytics endpoints must map directly to database tables as follows.
+platform revenue uses tenant_invoices or tenant_payments table, status completed only, amount numeric, created_at.
+client commerce revenue uses payments table that backs parent to tenant payments, status completed, amount, created_at.
+registrations time series uses registrations table, created_at.
+active tenants uses tenants table, status active.
+players count uses players table.
+failed counts use the same payment tables with status failed.
+Document these mappings in comments at the top of each controller function.
+
+
+Overview cards and accuracy
+Update GET /api/super-admin/stats?tenantId=&from=&to= to compute
+Total platform revenue to QIT from tenant payments, Total players across all tenants, Active tenants, Total sessions in range, Pending platform payments count.
+Show these on the Company Overview page.
+On Client pages that show header cards, compute cards from the client commerce tables, for example Client Payments page shows total commerce revenue in range, pending commerce revenue, failed commerce payments, total transactions.
+
+
+Safe fetch wrapper and broken fetch call
+Create or update src/lib/api.ts with a safe wrapper that calls fetch(url, init) and never fetch(method, url). Replace any usage of a broken query utility so the Analytics overlay error disappears.
+
+
+Pagination and shapes
+All list endpoints must return { rows, page, pageSize, totalRows }.
+Tables must request with page and pageSize and render pager controls.
+
+
+Settings cleanup
+Keep three tabs. Platform Settings, Integrations, User Management.
+Platform Settings fields only, auto approve new tenants, require admin approval for tenant changes, default booking window hours, max tenants per admin, default session capacity, maintenance mode.
+Validate with Zod in the controller. Persist to the store in a single row table platform_settings.
+Make help text concise under each field.
+
+
+Impersonation for troubleshooting
+Add POST /api/super-admin/impersonate that returns a short lived token and a URL to open that logs the Super Admin into the selected tenant as a tenant admin for five minutes. Use JWT with a secret from env. Create a minimal handler in the tenant app to accept the token and create a session. Log this event to an audit table.
+
+
+Confirm results
+Company Overview updates when date range changes.
+Company Analytics shows charts and tables using platform data.
+Platform Billing shows tenant to QIT payments only.
+Client Payments and Client Registrations continue to work for parent to tenant data.
+Sidebar clearly separates Company and Client Activity.
+Settings is simple and saves.
+Analytics overlay error is gone.

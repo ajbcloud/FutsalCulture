@@ -16,6 +16,8 @@ import SuperAdminRegistrations from "@/components/super-admin/registrations";
 import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
 import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
+import CompanyAnalytics from "@/pages/super-admin/company-analytics";
+import PlatformBilling from "@/pages/super-admin/platform-billing";
 
 import { 
   Building2, 
@@ -60,18 +62,22 @@ export default function SuperAdminPage() {
     );
   }
 
-  // Navigation items
-  const navigation = [
+  // Navigation sections
+  const companySection = [
     { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
+    { name: "Analytics", href: "/super-admin/company-analytics", icon: BarChart3, current: location === "/super-admin/company-analytics" },
+    { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
+    { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
+  ];
+
+  const clientActivitySection = [
     { name: "Tenants", href: "/super-admin/tenants", icon: Building2, current: location === "/super-admin/tenants" },
     { name: "Sessions", href: "/super-admin/sessions", icon: Calendar, current: location === "/super-admin/sessions" },
     { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: location === "/super-admin/payments" },
     { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: location === "/super-admin/registrations" },
     { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: location === "/super-admin/parents" },
     { name: "Players", href: "/super-admin/players", icon: Shirt, current: location === "/super-admin/players" },
-    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: location === "/super-admin/help" },
-    { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
   ];
 
   // Render current page content
@@ -81,6 +87,10 @@ export default function SuperAdminPage() {
         return <SuperAdminTenants />;
       case "/super-admin/analytics":
         return <SuperAdminAnalytics />;
+      case "/super-admin/company-analytics":
+        return <CompanyAnalytics />;
+      case "/super-admin/platform-billing":
+        return <PlatformBilling />;
       case "/super-admin/settings":
         return <SuperAdminSettings />;
       case "/super-admin/sessions":
@@ -135,28 +145,61 @@ export default function SuperAdminPage() {
             </Button>
           </div>
 
-          {/* Scrollable navigation area */}
+          {/* Scrollable navigation area with sections */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <nav className="py-6">
-              <div className="px-3 space-y-1">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link key={item.href} href={item.href}>
-                      <div 
-                        className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                          item.current 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        }`}
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        <Icon className="w-5 h-5 mr-3" />
-                        {item.name}
-                      </div>
-                    </Link>
-                  );
-                })}
+              {/* Company Section */}
+              <div className="px-3 mb-6">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Company
+                </h3>
+                <div className="space-y-1">
+                  {companySection.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <div 
+                          className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                            item.current 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                          }`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          {item.name}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Client Activity Section */}
+              <div className="px-3">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Client Activity
+                </h3>
+                <div className="space-y-1">
+                  {clientActivitySection.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <div 
+                          className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                            item.current 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                          }`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          {item.name}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             </nav>
           </div>
