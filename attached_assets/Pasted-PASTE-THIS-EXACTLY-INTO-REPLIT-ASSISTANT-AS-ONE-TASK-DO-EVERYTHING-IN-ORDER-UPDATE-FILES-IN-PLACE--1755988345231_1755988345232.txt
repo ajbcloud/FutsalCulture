@@ -1,0 +1,521 @@
+PASTE THIS EXACTLY INTO REPLIT ASSISTANT AS ONE TASK. DO EVERYTHING IN ORDER. UPDATE FILES IN PLACE. CREATE MISSING PATHS.
+
+Objective
+Implement the previously-listed TODOs end-to-end:
+
+1. **Enhance Tenant Health Score** with feature adoption + support SLA signals.
+2. **Real Dunning Retry** via **Stripe/Braintree** adapters (replace stub).
+3. **Nightly Usage Rollups** → populate `tenant_usage_daily`.
+4. **Public Ingestion Endpoints** for **SendGrid** (email) and **Twilio** (SMS).
+5. **Real Webhook Replay** (HTTP POST + signature using KMS/crypto helper).
+6. **Hourly Webhook Stats** job + fast dashboard API (success %, p95 latency, failures).
+
+All endpoints behind super-admin auth unless explicitly marked “public”. Follow the existing project structure (Express + React Query). Leave TODO comments where appropriate.
+
+Packages (add only if not already installed)
+
+```
+npm i zod node-cron stripe braintree body-parser
+```
+
+> If a job runner already exists, use it; otherwise use `node-cron`.
+
+Conventions
+
+* All money values are stored/queried in **cents**, rendered with existing money formatter.
+* All times are UTC ISO strings; APIs accept `?from=&to=`; validate with Zod.
+* Never log or return raw secrets. Mask in logs; encrypt at rest.
+
+───────────────────────────────────────────────────────────────────────────────
+A) DATABASE – Migrations / Schema Extensions
+
+Create or extend the following tables. If a table exists, add missing columns only.
+
+1. **Feature adoption & SLA**
+
+* `feature_adoption_events`
+  `id PK, tenant_id FK, user_id FK null, feature_key text, occurred_at timestamptz`
+* `support_tickets` (if you already have help requests, reuse that table and add any missing cols)
+  Required columns: `id PK, tenant_id FK, status text, first_response_at ts null, resolved_at ts null, created_at ts`
+
+2. **Usage rollups**
+
+* `tenant_usage_daily`
+  `tenant_id, date date, counters jsonb, created_at ts default now(), PRIMARY KEY (tenant_id, date)`
+
+3. **Webhook stats (hourly materialized)**
+
+* `webhook_stats_hourly`
+  `webhook_id FK, hour timestamptz, attempts int, success int, failed int, p95_latency_ms int, created_at ts default now(), PRIMARY KEY (webhook_id, hour)`
+
+> Assumes `webhook_events` and `webhook_attempts` tables exist (previous prompt). If not, create them as previously specified.
+
+───────────────────────────────────────────────────────────────────────────────
+B) SERVER LIBS
+
+1. **KMS/Crypto helper** – use existing if present. If not, create `server/lib/kms.ts`:
+
+```ts
+import crypto from 'crypto';
+const KEY = process.env.SECRET_KEY!; // 32 bytes base64 or hex (document in .env.example)
+
+export function encrypt(plain: string): string {
+  const iv = crypto.randomBytes(12);
+  const key = Buffer.from(KEY, KEY.length === 64 ? 'hex' : 'base64');
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString('base64');
+}
+export function decrypt(encB64: string): string {
+  const buf = Buffer.from(encB64, 'base64');
+  const iv = buf.subarray(0,12);
+  const tag = buf.subarray(12,28);
+  const data = buf.subarray(28);
+  const key = Buffer.from(KEY, KEY.length === 64 ? 'hex' : 'base64');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const dec = Buffer.concat([decipher.update(data), decipher.final()]);
+  return dec.toString('utf8');
+}
+```
+
+2. Shared validators – add (or extend) `server/validators/common.ts`:
+
+```ts
+import { z } from 'zod';
+export const range = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});
+export const pagedRange = range.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+});
+```
+
+───────────────────────────────────────────────────────────────────────────────
+C) (1) ENHANCED TENANT HEALTH SCORE
+
+Update the existing **Tenant Profile** controller to include new drivers and a richer score.
+
+File: `server/controllers/superAdmin/tenantProfile.ts` (or equivalent)
+
+* Import `range` from validators.
+* Add 2 new server-side queries:
+
+```ts
+// FEATURE ADOPTION: % of defined key features touched in last 30d
+const FEATURE_KEYS = ['sessions.create','players.invite','payments.collect','reports.download','api.usage']; // adjust to your product
+const featureAdoption = await req.db.execute(sql`
+  with recent as (
+    select distinct feature_key from feature_adoption_events
+    where tenant_id = ${id} and occurred_at >= now() - interval '30 days'
+  )
+  select count(*)::int as used from recent
+`).then(r => Number((r as any).rows[0]?.used || 0));
+const featurePct = FEATURE_KEYS.length ? featureAdoption / FEATURE_KEYS.length : 0;
+
+// SUPPORT SLA: average first-response (hrs) and resolution (hrs) last 60d
+const sla = await req.db.execute(sql`
+  select
+    avg(extract(epoch from (first_response_at - created_at))/3600.0) as first_resp_hrs,
+    avg(extract(epoch from (resolved_at - created_at))/3600.0) as resolution_hrs
+  from support_tickets
+  where tenant_id=${id} and created_at >= now() - interval '60 days'
+`).then(r => (r as any).rows[0] || {});
+const firstResp = Number(sla.first_resp_hrs || 999);
+const resolveHrs = Number(sla.resolution_hrs || 999);
+```
+
+* **Score v2** (weights you can tweak; keep explainable):
+
+```ts
+// existing drivers (usagePct, failedDunning, noPayDays) + new ones:
+const featureScore  = Math.round(featurePct * 25); // 0..25
+const slaScore      = Math.max(0, 25 - Math.round(Math.min(24, (firstResp/2) + (resolveHrs/8)))); // faster = better (0..25)
+const baseScore     = /* existing calculation from v1 (0..50) */ score; // rename old to baseScore (0..50)
+const v2Score       = Math.max(0, Math.min(100, baseScore + featureScore + slaScore));
+```
+
+* Return in JSON:
+
+```ts
+healthScoreV2: v2Score,
+drivers: { usagePct, failedDunning, noPayDays, featurePct, firstRespHrs:firstResp, resolveHrs }
+```
+
+Client: in `TenantProfileDrawer` show **Health v2** with a tooltip explaining drivers. Add two chips “Feature adoption” and “SLA”.
+
+───────────────────────────────────────────────────────────────────────────────
+D) (2) REAL DUNNING RETRY – STRIPE & BRAINTREE
+
+1. **Gateway adapters** – new folder `server/gateways/`:
+
+`server/gateways/stripe.ts`
+
+```ts
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2024-06-20' });
+export async function chargeInvoice(invoiceId: string, tenantId: string, amountCents: number) {
+  // Look up tenant's default payment method (store a stripe customer id per tenant)
+  const customerId = await getStripeCustomerIdForTenant(tenantId); // implement lookup
+  if (!customerId) throw new Error('missing_customer');
+  // Create a PaymentIntent and confirm
+  const pi = await stripe.paymentIntents.create({
+    amount: amountCents,
+    currency: 'usd',
+    customer: customerId,
+    automatic_payment_methods: { enabled: true },
+    description: `Invoice ${invoiceId}`,
+    statement_descriptor: 'PlayHQ',
+  });
+  return { ok: pi.status === 'succeeded' || pi.status === 'requires_capture', id: pi.id, status: pi.status };
+}
+```
+
+`server/gateways/braintree.ts`
+
+```ts
+import braintree from 'braintree';
+const gateway = new braintree.BraintreeGateway({
+  environment: (process.env.BRAINTREE_ENV === 'production' ? braintree.Environment.Production : braintree.Environment.Sandbox),
+  merchantId: process.env.BRAINTREE_MERCHANT_ID!,
+  publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
+  privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
+});
+export async function chargeInvoice(invoiceId: string, tenantId: string, amountCents: number) {
+  const paymentMethodToken = await getBTDefaultPaymentMethodToken(tenantId); // implement lookup
+  if (!paymentMethodToken) throw new Error('missing_payment_method');
+  const result = await gateway.transaction.sale({
+    amount: (amountCents/100).toFixed(2),
+    paymentMethodToken,
+    options: { submitForSettlement: true },
+  });
+  return { ok: result.success, id: result.transaction?.id, status: result.success ? 'submitted' : 'failed' };
+}
+```
+
+2. **Retry controller** – update `server/controllers/superAdmin/dunning.ts` `retry`:
+
+```ts
+import * as s from '../../gateways/stripe';
+import * as bt from '../../gateways/braintree';
+
+const provider = process.env.PAYMENTS_PROVIDER || 'stripe';
+const adapter = provider === 'braintree' ? bt : s;
+
+export async function retry(req: Request, res: Response) {
+  // fetch invoice & tenant
+  const row = await req.db.execute(sql`
+    select i.id, i.tenant_id, i.total_cents from dunning_events d
+    join tenant_invoices i on i.id=d.invoice_id where d.id=${req.params.id} limit 1
+  `).then(r => (r as any).rows[0]);
+  if (!row) return res.status(404).json({ error:'not_found' });
+  try {
+    const r = await adapter.chargeInvoice(row.id, row.tenant_id, Number(row.total_cents||0));
+    await req.db.execute(sql`
+      insert into dunning_events (invoice_id, attempt_no, status, reason)
+      values (${row.id}, (select coalesce(max(attempt_no),0)+1 from dunning_events where invoice_id=${row.id}),
+        ${r.ok ? 'recovered' : 'failed'}, ${r.status})
+    `);
+    return res.json({ ok:r.ok, gatewayStatus:r.status, transactionId:r.id });
+  } catch (e:any) {
+    await req.db.execute(sql`
+      insert into dunning_events (invoice_id, attempt_no, status, reason)
+      values (${row.id}, (select coalesce(max(attempt_no),0)+1 from dunning_events where invoice_id=${row.id}),
+        'failed', ${e.message})
+    `);
+    return res.status(400).json({ ok:false, error:e.message });
+  }
+}
+```
+
+> Implement `getStripeCustomerIdForTenant` / `getBTDefaultPaymentMethodToken` in a small helper that looks up tenant payment metadata table you already use. If not present, create `tenant_payment_profiles(tenant_id, provider, external_id, default_pm_token)`.
+
+───────────────────────────────────────────────────────────────────────────────
+E) (3) NIGHTLY USAGE ROLLUPS
+
+Add scheduler: `server/jobs/scheduler.ts`
+
+```ts
+import cron from 'node-cron';
+import { rollupUsageForDay } from './usageRollup';
+cron.schedule('12 3 * * *', async () => { // nightly 03:12 UTC
+  const yesterday = new Date(Date.now() - 86400000);
+  await rollupUsageForDay(yesterday);
+});
+export {}; // imported at server bootstrap
+```
+
+Add `server/jobs/usageRollup.ts`
+
+```ts
+import { sql } from 'drizzle-orm';
+import db from '../lib/db'; // your db accessor
+
+export async function rollupUsageForDay(d: Date) {
+  const day = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  // Rollups: players created, sessions created, emails sent, sms sent, API calls (if logged)
+  await db.execute(sql`
+    with tenants as (select id from tenants),
+    players as (
+      select tenant_id, count(*) as c from players where date_trunc('day', created_at) = ${day} group by tenant_id
+    ),
+    sessions as (
+      select tenant_id, count(*) as c from sessions where date_trunc('day', created_at) = ${day} group by tenant_id
+    ),
+    emails as (
+      select tenant_id, count(*) as c from email_events
+      where event='delivered' and date_trunc('day', created_at) = ${day} group by tenant_id
+    ),
+    sms as (
+      select tenant_id, count(*) as c from sms_events
+      where event='delivered' and date_trunc('day', created_at) = ${day} group by tenant_id
+    )
+    insert into tenant_usage_daily (tenant_id, date, counters)
+    select t.id, ${day}::date,
+      jsonb_build_object(
+        'players', coalesce((select c from players where players.tenant_id=t.id),0),
+        'sessions', coalesce((select c from sessions where sessions.tenant_id=t.id),0),
+        'emails', coalesce((select c from emails where emails.tenant_id=t.id),0),
+        'sms', coalesce((select c from sms where sms.tenant_id=t.id),0),
+        'api_calls', 0
+      )
+    from tenants t
+    on conflict (tenant_id, date)
+    do update set counters = excluded.counters;
+  `);
+}
+```
+
+Wire the scheduler: import `./jobs/scheduler` in your server bootstrap (e.g., `server/index.ts`).
+
+───────────────────────────────────────────────────────────────────────────────
+F) (4) PUBLIC INGESTION ENDPOINTS – SENDGRID & TWILIO
+
+**Middleware** – update Express to parse both JSON and urlencoded bodies for public webhooks:
+
+```ts
+app.use('/api/public', bodyParser.json({ limit: '1mb' }));
+app.use('/api/public', bodyParser.urlencoded({ extended: true }));
+```
+
+Routes: `server/routes/public.ts`
+
+```ts
+import { Router } from 'express';
+import * as ingest from '../webhooks/ingest';
+const r = Router();
+r.post('/sendgrid/events', ingest.sendgrid);  // JSON array of events
+r.post('/twilio/sms', ingest.twilio);         // urlencoded
+export default r;
+```
+
+Mount in server bootstrap: `app.use('/api/public', publicRoutes);`
+
+Controller: `server/webhooks/ingest.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+
+// SendGrid — expects array of events
+export async function sendgrid(req: Request, res: Response) {
+  const events = Array.isArray(req.body) ? req.body : [];
+  // TODO: verify signature header 'X-Twilio-Email-Event-Webhook-Signature' if configured
+  for (const e of events) {
+    const template_key = e?.sg_event_id ? e?.template_id ?? null : null;
+    await req.db.execute(sql`
+      insert into email_events (provider, message_id, tenant_id, template_key, to_addr, event, reason, created_at)
+      values ('sendgrid', ${e.sg_message_id||e.smtp-id||null}, ${e.tenant_id||null}, ${template_key},
+              ${e.email||null}, ${e.event}, ${e.reason||null}, to_timestamp(${Number(e.timestamp||Date.now()/1000)}))
+    `);
+  }
+  res.json({ ok:true, received: events.length });
+}
+
+// Twilio — status callbacks (urlencoded)
+export async function twilio(req: Request, res: Response) {
+  // TODO: verify X-Twilio-Signature with your auth token
+  const e = req.body;
+  await req.db.execute(sql`
+    insert into sms_events (provider, message_sid, tenant_id, to_number, event, error_code, created_at)
+    values ('twilio', ${e.MessageSid}, ${e.tenant_id||null}, ${e.To}, ${e.MessageStatus}, ${e.ErrorCode||null}, now())
+  `);
+  res.type('text/plain').send('OK');
+}
+```
+
+> Add basic signature verification later if keys are available. For now, accept and persist.
+
+───────────────────────────────────────────────────────────────────────────────
+G) (5) REAL WEBHOOK **REPLAY** – POST + SIGNATURE
+
+Update `server/controllers/superAdmin/integrationsHealth.ts` `replay`:
+
+```ts
+import fetch from 'node-fetch';
+import { decrypt } from '../../lib/kms';
+import crypto from 'crypto';
+
+function sign(body: string, secretEnc: string) {
+  const secret = decrypt(secretEnc);
+  const sig = crypto.createHmac('sha256', secret).update(body).digest('hex');
+  return `sha256=${sig}`;
+}
+
+export async function replay(req: Request, res: Response) {
+  const eventId = req.params.id;
+  const event = await req.db.execute(sql`
+    select e.id, e.payload_json, w.url, w.signing_secret_enc
+    from webhook_events e join integration_webhook w on w.id=e.webhook_id
+    where e.id=${eventId}
+  `).then(r => (r as any).rows[0]);
+  if (!event) return res.status(404).json({ error:'not_found' });
+
+  const body = JSON.stringify(event.payload_json || {});
+  const signature = sign(body, event.signing_secret_enc);
+
+  const started = Date.now();
+  let ok=false, status=0, error:string|undefined;
+  try {
+    const resp = await fetch(event.url, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Webhook-Signature': signature },
+      body
+    });
+    status = resp.status; ok = resp.ok;
+  } catch (e:any) { error = e.message; }
+  const latency = Date.now()-started;
+
+  await req.db.execute(sql`
+    insert into webhook_attempts (event_id, attempt_no, status, http_status, latency_ms, error)
+    values (${eventId}, (select coalesce(max(attempt_no),0)+1 from webhook_attempts where event_id=${eventId}),
+      ${ok?'success':'failed'}, ${status||null}, ${latency}, ${error||null})
+  `);
+  res.json({ ok, httpStatus: status||0, latencyMs: latency, error});
+}
+```
+
+───────────────────────────────────────────────────────────────────────────────
+H) (6) HOURLY WEBHOOK STATS JOB + DASHBOARD API
+
+Job: `server/jobs/webhookStats.ts`
+
+```ts
+import { sql } from 'drizzle-orm';
+import db from '../lib/db';
+
+export async function computeHour(h: Date) {
+  // h = top of hour
+  await db.execute(sql`
+    with base as (
+      select e.webhook_id, date_trunc('hour', a.created_at) as hr,
+             count(*) as attempts,
+             sum(case when a.status='success' then 1 else 0 end) as success,
+             sum(case when a.status='failed' then 1 else 0 end) as failed,
+             percentile_disc(0.95) within group (order by a.latency_ms) as p95
+      from webhook_attempts a
+      join webhook_events e on e.id=a.event_id
+      where date_trunc('hour', a.created_at) = ${h}
+      group by 1,2
+    )
+    insert into webhook_stats_hourly (webhook_id, hour, attempts, success, failed, p95_latency_ms)
+    select webhook_id, hr, attempts, success, failed, coalesce(p95,0)::int from base
+    on conflict (webhook_id, hour) do update
+    set attempts=excluded.attempts, success=excluded.success,
+        failed=excluded.failed, p95_latency_ms=excluded.p95_latency_ms
+  `);
+}
+```
+
+Scheduler entry – add to `server/jobs/scheduler.ts`:
+
+```ts
+import { computeHour } from './webhookStats';
+cron.schedule('5 * * * *', async () => { // at minute 5 each hour
+  const now = new Date();
+  const hour = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0));
+  await computeHour(hour);
+});
+```
+
+API for fast dashboard: `server/controllers/superAdmin/integrationsHealth.ts` add:
+
+```ts
+export async function hourlyOverview(req: Request, res: Response) {
+  const { from, to } = range.parse(req.query);
+  const rows = await req.db.execute(sql`
+    select w.id, w.name, s.hour, s.attempts, s.success, s.failed, s.p95_latency_ms
+    from webhook_stats_hourly s join integration_webhook w on w.id=s.webhook_id
+    where 1=1
+      ${from ? sql`and s.hour >= ${new Date(from)}` : sql``}
+      ${to   ? sql`and s.hour <= ${new Date(to)}`   : sql``}
+    order by w.name, s.hour
+  `).then(r => (r as any).rows);
+  res.json({ series: rows });
+}
+```
+
+Route (in `server/routes/superAdmin.ts`):
+
+```ts
+r.get('/integrations/health/hourly', integ.hourlyOverview);
+```
+
+Client (quick): on Integrations Health page, add a “Fast (Hourly)” toggle that calls `/api/super-admin/integrations/health/hourly` to render per-webhook stacked/line charts.
+
+───────────────────────────────────────────────────────────────────────────────
+I) SECURITY & COMPLIANCE
+
+* Public ingestion endpoints must **not** require auth, but:
+
+  * Rate limit (if middleware exists) and validate provider signature when keys are available (TODO comments left).
+  * Store the raw provider IDs (`sg_message_id`, `MessageSid`) for idempotency; make inserts **idempotent** (ON CONFLICT or dedupe by unique index if feasible).
+* KMS/crypto secrets: keep encrypted at rest; do not log decrypted values.
+* Dunning retry endpoints restricted to super-admin; log audit entries on retry attempts (`audit_logs`).
+
+───────────────────────────────────────────────────────────────────────────────
+J) ACCEPTANCE CRITERIA (manual)
+
+**Health Score v2**
+
+* Tenant profile shows a numeric **Health v2**. Feature adoption and SLA chips appear with real values.
+* Score changes when feature events/support tickets are inserted.
+
+**Dunning Retry**
+
+* Triggering **Retry** calls real gateway, returns gateway status, records a new `dunning_events` row and updates UI.
+
+**Nightly Rollups**
+
+* After running `rollupUsageForDay(new Date())` manually, `tenant_usage_daily` has rows for today with counters set. Drawer usage bars reflect updated rollups.
+
+**Public Ingestion**
+
+* POSTing a sample SendGrid events array creates rows in `email_events`.
+* POSTing a Twilio status callback (urlencoded) creates rows in `sms_events`.
+
+**Webhook Replay**
+
+* Replay creates a real HTTP POST to the configured URL with a valid HMAC header (`X-Webhook-Signature`), records an attempt with latency and http status.
+
+**Hourly Webhook Stats**
+
+* Cron writes `webhook_stats_hourly` each hour.
+* Hitting `/integrations/health/hourly?from=&to=` returns time-series data. The Integrations page renders it quickly.
+
+───────────────────────────────────────────────────────────────────────────────
+K) FINAL NOTES (leave TODOs in code comments)
+
+* Implement provider **signature verification** for SendGrid/Twilio once keys are configured.
+* Add idempotency unique indexes on `email_events(message_id)` and `sms_events(message_sid)` to avoid duplicates.
+* Enrich Health v2 with product-specific metrics (e.g., **time-to-first-value**, **DAU/WAU**) next sprint.
+* Consider replacing `node-cron` with a durable job runner (BullMQ/Cloud scheduler) in production.
+
+When finished, reply with:
+
+1. A list of files changed/added,
+2. Any env vars required (STRIPE\_SECRET\_KEY, BRAINTREE\_\* , SECRET\_KEY),
+3. Screenshots of: Tenant Profile (Health v2), Dunning successful retry, Integrations (hourly chart), and a sample ingestion POST with resulting events.

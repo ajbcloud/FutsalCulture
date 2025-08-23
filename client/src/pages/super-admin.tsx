@@ -19,6 +19,9 @@ import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 import Analytics from "@/pages/super-admin/analytics";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 import SuperAdminDunning from "@/pages/super-admin/dunning";
+import IntegrationsHealth from "@/pages/super-admin/integrations-health";
+import CommsDeliverability from "@/pages/super-admin/comms";
+import SecurityAudit from "@/pages/super-admin/security";
 
 import { 
   Building2, 
@@ -38,7 +41,10 @@ import {
   Menu,
   X,
   Shirt,
-  TrendingUp
+  TrendingUp,
+  Webhook,
+  Mail,
+  Shield
 } from "lucide-react";
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
@@ -70,6 +76,9 @@ export default function SuperAdminPage() {
     { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: location === "/super-admin/dunning" },
+    { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: location === "/super-admin/integrations-health" },
+    { name: "Comms Deliverability", href: "/super-admin/comms", icon: Mail, current: location === "/super-admin/comms" },
+    { name: "Security & Audit", href: "/super-admin/security", icon: Shield, current: location === "/super-admin/security" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
   ];
 
@@ -94,6 +103,12 @@ export default function SuperAdminPage() {
         return <PlatformBilling />;
       case "/super-admin/dunning":
         return <SuperAdminDunning />;
+      case "/super-admin/integrations-health":
+        return <IntegrationsHealth />;
+      case "/super-admin/comms":
+        return <CommsDeliverability />;
+      case "/super-admin/security":
+        return <SecurityAudit />;
       case "/super-admin/settings":
         return <SuperAdminSettings />;
       case "/super-admin/sessions":

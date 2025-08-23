@@ -37,6 +37,27 @@ export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "open", "pai
 // Dunning event status enum
 export const dunningStatusEnum = pgEnum("dunning_status", ["failed", "retry_scheduled", "retrying", "recovered", "uncollectible"]);
 
+// Webhook attempt status enum
+export const webhookAttemptStatusEnum = pgEnum("webhook_attempt_status", ["success", "failed"]);
+
+// Communication template type enum
+export const commTemplateTypeEnum = pgEnum("comm_template_type", ["email", "sms"]);
+
+// Email event enum
+export const emailEventEnum = pgEnum("email_event", ["processed", "delivered", "open", "click", "bounce", "dropped", "spamreport", "deferred"]);
+
+// SMS event enum  
+export const smsEventEnum = pgEnum("sms_event", ["queued", "sent", "delivered", "undelivered", "failed"]);
+
+// User role enum
+export const userRoleEnum = pgEnum("user_role", ["parent", "player", "tenant_admin", "super_admin"]);
+
+// User status enum
+export const userStatusEnum = pgEnum("user_status", ["active", "locked"]);
+
+// Unsubscribe channel enum
+export const unsubscribeChannelEnum = pgEnum("unsubscribe_channel", ["email", "sms"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -75,6 +96,9 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false),
   isAssistant: boolean("is_assistant").default(false),
   isSuperAdmin: boolean("is_super_admin").default(false), // New Super-Admin role
+  role: userRoleEnum("role").default("parent"),
+  mfaEnabled: boolean("mfa_enabled").default(false),
+  status: userStatusEnum("status").default("active"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   customerId: varchar("customer_id"),
@@ -725,6 +749,151 @@ export const tenantUsageDaily = pgTable("tenant_usage_daily", {
   uniqueIndex("tenant_usage_daily_tenant_date_idx").on(table.tenantId, table.date),
 ]);
 
+// Webhooks & Integration Health Tables
+
+export const integrationWebhooks = pgTable("integration_webhook", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  enabled: boolean("enabled").default(true),
+  signingSecretEnc: text("signing_secret_enc"),
+  lastStatus: integer("last_status"),
+  lastLatencyMs: integer("last_latency_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhookEvents = pgTable("webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  webhookId: varchar("webhook_id").notNull().references(() => integrationWebhooks.id),
+  source: text("source").notNull(),
+  eventType: text("event_type").notNull(),
+  payloadJson: jsonb("payload_json").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+}, (table) => [
+  index("webhook_events_webhook_id_idx").on(table.webhookId),
+  index("webhook_events_created_at_idx").on(table.createdAt),
+]);
+
+export const webhookAttempts = pgTable("webhook_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => webhookEvents.id),
+  attemptNo: integer("attempt_no").notNull(),
+  status: webhookAttemptStatusEnum("status").notNull(),
+  httpStatus: integer("http_status"),
+  latencyMs: integer("latency_ms"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("webhook_attempts_event_id_idx").on(table.eventId),
+  index("webhook_attempts_status_idx").on(table.status),
+]);
+
+export const integrationStatusPings = pgTable("integration_status_pings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integration: text("integration").notNull(), // 'email', 'sms', 'oauth', 'payments', etc
+  ok: boolean("ok").notNull(),
+  latencyMs: integer("latency_ms").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("integration_status_pings_integration_idx").on(table.integration),
+  index("integration_status_pings_created_at_idx").on(table.createdAt),
+]);
+
+// Communication Events Tables
+
+export const commTemplates = pgTable("comm_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: commTemplateTypeEnum("type").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  version: integer("version").default(1),
+  active: boolean("active").default(true),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => [
+  index("comm_templates_type_idx").on(table.type),
+  index("comm_templates_key_idx").on(table.key),
+]);
+
+export const emailEvents = pgTable("email_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(),
+  messageId: text("message_id").notNull(),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  templateKey: text("template_key"),
+  toAddr: text("to_addr").notNull(),
+  event: emailEventEnum("event").notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("email_events_tenant_id_idx").on(table.tenantId),
+  index("email_events_template_key_idx").on(table.templateKey),
+  index("email_events_created_at_idx").on(table.createdAt),
+  index("email_events_event_idx").on(table.event),
+]);
+
+export const smsEvents = pgTable("sms_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(),
+  messageSid: text("message_sid").notNull(),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  toNumber: text("to_number").notNull(),
+  event: smsEventEnum("event").notNull(),
+  errorCode: text("error_code"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("sms_events_tenant_id_idx").on(table.tenantId),
+  index("sms_events_created_at_idx").on(table.createdAt),
+  index("sms_events_event_idx").on(table.event),
+]);
+
+export const unsubscribes = pgTable("unsubscribes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channel: unsubscribeChannelEnum("channel").notNull(),
+  address: text("address").notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("unsubscribes_channel_idx").on(table.channel),
+  index("unsubscribes_address_idx").on(table.address),
+]);
+
+// Security Tables
+
+export const impersonationEvents = pgTable("impersonation_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  superAdminId: varchar("super_admin_id").notNull().references(() => users.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  reason: text("reason").notNull(),
+  tokenJti: text("token_jti").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  ip: text("ip"),
+}, (table) => [
+  index("impersonation_events_super_admin_id_idx").on(table.superAdminId),
+  index("impersonation_events_tenant_id_idx").on(table.tenantId),
+  index("impersonation_events_started_at_idx").on(table.startedAt),
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actorId: varchar("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  section: text("section").notNull(),
+  action: text("action").notNull(),
+  targetId: text("target_id").notNull(),
+  diff: jsonb("diff"),
+  ip: text("ip"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("audit_logs_actor_id_idx").on(table.actorId),
+  index("audit_logs_section_idx").on(table.section),
+  index("audit_logs_action_idx").on(table.action),
+  index("audit_logs_created_at_idx").on(table.createdAt),
+]);
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   users: many(users),
@@ -758,6 +927,11 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   tenantInvoices: many(tenantInvoices),
   tenantPlanAssignments: many(tenantPlanAssignments),
   tenantUsageDaily: many(tenantUsageDaily),
+  // Communication Events relations
+  emailEvents: many(emailEvents),
+  smsEvents: many(smsEvents),
+  // Impersonation Events relations
+  impersonationEvents: many(impersonationEvents),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -773,6 +947,10 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   playerGoals: many(playerGoals),
   playerGoalUpdates: many(playerGoalUpdates),
   trainingPlans: many(trainingPlans),
+  // Impersonation Events relations
+  impersonationEventsAsAdmin: many(impersonationEvents, {
+    relationName: "impersonationSuperAdmin"
+  }),
 }));
 
 export const playersRelations = relations(players, ({ one, many }) => ({
@@ -1040,6 +1218,57 @@ export const progressionSnapshotsRelations = relations(progressionSnapshots, ({ 
   }),
 }));
 
+// Webhooks & Integration Relations
+
+export const integrationWebhooksRelations = relations(integrationWebhooks, ({ many }) => ({
+  webhookEvents: many(webhookEvents),
+}));
+
+export const webhookEventsRelations = relations(webhookEvents, ({ one, many }) => ({
+  webhook: one(integrationWebhooks, {
+    fields: [webhookEvents.webhookId],
+    references: [integrationWebhooks.id],
+  }),
+  attempts: many(webhookAttempts),
+}));
+
+export const webhookAttemptsRelations = relations(webhookAttempts, ({ one }) => ({
+  event: one(webhookEvents, {
+    fields: [webhookAttempts.eventId],
+    references: [webhookEvents.id],
+  }),
+}));
+
+// Communication Relations
+
+export const emailEventsRelations = relations(emailEvents, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [emailEvents.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const smsEventsRelations = relations(smsEvents, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [smsEvents.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+// Security Relations
+
+export const impersonationEventsRelations = relations(impersonationEvents, ({ one }) => ({
+  superAdmin: one(users, {
+    fields: [impersonationEvents.superAdminId],
+    references: [users.id],
+    relationName: "impersonationSuperAdmin"
+  }),
+  tenant: one(tenants, {
+    fields: [impersonationEvents.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -1284,6 +1513,58 @@ export const insertProgressionSnapshotSchema = createInsertSchema(progressionSna
   createdAt: true,
 });
 
+// Insert schemas for new tables
+
+export const insertIntegrationWebhookSchema = createInsertSchema(integrationWebhooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWebhookAttemptSchema = createInsertSchema(webhookAttempts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertIntegrationStatusPingSchema = createInsertSchema(integrationStatusPings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCommTemplateSchema = createInsertSchema(commTemplates).omit({
+  id: true,
+});
+
+export const insertEmailEventSchema = createInsertSchema(emailEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSmsEventSchema = createInsertSchema(smsEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUnsubscribeSchema = createInsertSchema(unsubscribes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertImpersonationEventSchema = createInsertSchema(impersonationEvents).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Type exports for plan levels
 export type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
 
@@ -1392,3 +1673,29 @@ export type DunningEvent = typeof dunningEvents.$inferSelect;
 export type PlanCatalog = typeof planCatalog.$inferSelect;
 export type TenantPlanAssignment = typeof tenantPlanAssignments.$inferSelect;
 export type TenantUsageDaily = typeof tenantUsageDaily.$inferSelect;
+
+// Webhook & Integration Health Types
+export type IntegrationWebhook = typeof integrationWebhooks.$inferSelect;
+export type InsertIntegrationWebhook = z.infer<typeof insertIntegrationWebhookSchema>;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+export type WebhookAttempt = typeof webhookAttempts.$inferSelect;
+export type InsertWebhookAttempt = z.infer<typeof insertWebhookAttemptSchema>;
+export type IntegrationStatusPing = typeof integrationStatusPings.$inferSelect;
+export type InsertIntegrationStatusPing = z.infer<typeof insertIntegrationStatusPingSchema>;
+
+// Communication Types
+export type CommTemplate = typeof commTemplates.$inferSelect;
+export type InsertCommTemplate = z.infer<typeof insertCommTemplateSchema>;
+export type EmailEvent = typeof emailEvents.$inferSelect;
+export type InsertEmailEvent = z.infer<typeof insertEmailEventSchema>;
+export type SmsEvent = typeof smsEvents.$inferSelect;
+export type InsertSmsEvent = z.infer<typeof insertSmsEventSchema>;
+export type Unsubscribe = typeof unsubscribes.$inferSelect;
+export type InsertUnsubscribe = z.infer<typeof insertUnsubscribeSchema>;
+
+// Security & Audit Types
+export type ImpersonationEvent = typeof impersonationEvents.$inferSelect;
+export type InsertImpersonationEvent = z.infer<typeof insertImpersonationEventSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

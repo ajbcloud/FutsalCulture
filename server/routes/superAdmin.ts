@@ -14,6 +14,9 @@ import * as detailedAnalytics from '../controllers/superAdmin/detailedAnalytics'
 import * as help from '../controllers/superAdmin/help';
 import * as settings from '../controllers/superAdmin/settings';
 import * as impersonate from '../controllers/superAdmin/impersonate';
+import * as integ from '../controllers/superAdmin/integrationsHealth';
+import * as comms from '../controllers/superAdmin/comms';
+import * as sec from '../controllers/superAdmin/security';
 
 const r = Router();
 r.use(requireAuth, requireSuperAdmin);
@@ -56,5 +59,22 @@ r.patch('/settings', settings.patch);
 r.get('/platform-payments', platformPayments.list);
 
 r.post('/impersonate', impersonate.start);
+
+// Integrations & Webhooks Health routes
+r.get('/integrations/health/overview', integ.overview);
+r.get('/integrations/webhooks/:id/events', integ.events);
+r.get('/integrations/webhooks/events/:id/attempts', integ.attempts);
+r.post('/integrations/webhooks/events/:id/replay', integ.replay);
+
+// Comms Deliverability routes
+r.get('/comms/overview', comms.overview);
+r.get('/comms/series',   comms.series);
+r.get('/comms/events',   comms.events); // ?channel=email|sms&from=&to=&page=&pageSize=
+
+// Security & Audit routes
+r.get('/security/overview', sec.overview);
+r.get('/security/impersonations', sec.impersonations);
+r.post('/security/impersonations/:id/revoke', sec.revokeImpersonation);
+r.get('/security/audit-logs', sec.auditLogs);
 
 export default r;
