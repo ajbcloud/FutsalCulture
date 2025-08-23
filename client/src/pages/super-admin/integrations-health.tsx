@@ -51,29 +51,36 @@ export default function IntegrationsHealth() {
   // Overview query
   const { data: overview, isLoading } = useQuery({
     queryKey: ['super-admin', 'integrations', 'health', 'overview', dateRange],
-    queryFn: () => apiRequest(`/api/super-admin/integrations/health/overview?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/integrations/health/overview?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`);
+      return await response.json();
+    },
   });
 
   // Events query for expanded webhooks
   const getEventsQuery = (webhookId: string) => useQuery({
     queryKey: ['super-admin', 'integrations', 'webhooks', webhookId, 'events', dateRange],
-    queryFn: () => apiRequest(`/api/super-admin/integrations/webhooks/${webhookId}/events?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/integrations/webhooks/${webhookId}/events?from=${encodeURIComponent(dateRange.from)}&to=${encodeURIComponent(dateRange.to)}`);
+      return await response.json();
+    },
     enabled: expandedWebhooks.has(webhookId),
   });
 
   // Attempts query for expanded events
   const getAttemptsQuery = (eventId: string) => useQuery({
     queryKey: ['super-admin', 'integrations', 'webhooks', 'events', eventId, 'attempts'],
-    queryFn: () => apiRequest(`/api/super-admin/integrations/webhooks/events/${eventId}/attempts`),
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/integrations/webhooks/events/${eventId}/attempts`);
+      return await response.json();
+    },
     enabled: expandedEvents.has(eventId),
   });
 
   // Replay mutation
   const replayMutation = useMutation({
     mutationFn: (eventId: string) => 
-      apiRequest(`/api/super-admin/integrations/webhooks/events/${eventId}/replay`, {
-        method: 'POST',
-      }),
+      apiRequest('POST', `/api/super-admin/integrations/webhooks/events/${eventId}/replay`),
     onSuccess: (data, eventId) => {
       // Invalidate attempts for this event
       queryClient.invalidateQueries({
@@ -140,8 +147,9 @@ export default function IntegrationsHealth() {
       </div>
 
       <FilterBar
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
+        dateFrom={dateRange.from}
+        dateTo={dateRange.to}
+        onDateRangeChange={(from, to) => setDateRange({ from, to })}
       />
 
       {/* KPI Cards */}
