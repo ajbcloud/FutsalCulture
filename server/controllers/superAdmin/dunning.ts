@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { sql } from 'drizzle-orm';
+import { db } from '../../db';
 import { rangeSchema } from '../../validators/kpi';
 import { fromCents } from '../../lib/currency';
 
@@ -7,7 +8,7 @@ export async function list(req: Request, res: Response) {
   try {
     const { page, pageSize, from, to } = rangeSchema.parse(req.query);
     const offset = (page-1)*pageSize;
-    const rows = await (req as any).db.execute(sql`
+    const rows = await db.execute(sql`
       select d.id, d.status, d.attempt_no, d.reason, d.created_at,
              i.id as invoice_id, i.tenant_id, t.name as tenant_name, i.total_cents, i.status as invoice_status
       from dunning_events d
@@ -20,7 +21,7 @@ export async function list(req: Request, res: Response) {
       limit ${pageSize} offset ${offset}
     `).then((r: any) => r.rows);
 
-    const total = await (req as any).db.execute(sql`
+    const total = await db.execute(sql`
       select count(*) as c from dunning_events d
       join tenant_invoices i on i.id = d.invoice_id
       where 1=1
@@ -49,7 +50,7 @@ export async function retry(req: Request, res: Response) {
     const id = req.params.id;
     
     // Get the dunning event and associated invoice
-    const dunningEvent = await (req as any).db.execute(sql`
+    const dunningEvent = await db.execute(sql`
       select d.*, i.total_cents, i.tenant_id, t.name as tenant_name
       from dunning_events d
       join tenant_invoices i on i.id = d.invoice_id
@@ -62,13 +63,13 @@ export async function retry(req: Request, res: Response) {
     }
 
     // Create a new retry attempt
-    await (req as any).db.execute(sql`
+    await db.execute(sql`
       insert into dunning_events (invoice_id, attempt_no, status, reason, created_at)
       values (${dunningEvent.invoice_id}, ${dunningEvent.attempt_no + 1}, 'retrying', 'Manual retry', now())
     `);
 
     // Update the invoice status to retry_scheduled for now
-    await (req as any).db.execute(sql`
+    await db.execute(sql`
       update dunning_events 
       set status = 'retry_scheduled'
       where id = ${id}
@@ -83,7 +84,7 @@ export async function retry(req: Request, res: Response) {
 
 export async function dashboard(req: Request, res: Response) {
   try {
-    const stats = await (req as any).db.execute(sql`
+    const stats = await db.execute(sql`
       select
         sum(case when status = 'failed' then 1 else 0 end) as failed,
         sum(case when status = 'retry_scheduled' then 1 else 0 end) as retry_scheduled,
