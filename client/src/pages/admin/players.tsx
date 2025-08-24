@@ -25,6 +25,45 @@ import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { PlayerSessionHistoryDropdown } from '@/components/player-session-history-dropdown';
+import { useQuery } from '@tanstack/react-query';
+import { FileCheck, FileX, Loader2 } from 'lucide-react';
+
+// Consent Status Cell Component
+function ConsentStatusCell({ playerId, playerName }: { playerId: string; playerName: string }) {
+  const { data: consentStatus, isLoading } = useQuery({
+    queryKey: [`/api/admin/players/${playerId}/consent-status`],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/players/${playerId}/consent-status`);
+      if (!response.ok) throw new Error('Failed to fetch consent status');
+      return response.json();
+    },
+    enabled: !!playerId
+  });
+
+  if (isLoading) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
+
+  if (!consentStatus) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const { completedCount, missingCount, totalTemplates } = consentStatus;
+  const isComplete = missingCount === 0 && totalTemplates > 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      {isComplete ? (
+        <FileCheck className="w-4 h-4 text-green-500" />
+      ) : (
+        <FileX className="w-4 h-4 text-red-500" />
+      )}
+      <span className={`text-sm ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+        {completedCount}/{totalTemplates}
+      </span>
+    </div>
+  );
+}
 
 export default function AdminPlayers() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -492,6 +531,7 @@ export default function AdminPlayers() {
               <SortableHeader field="parentName">Parent 1</SortableHeader>
               <TableHead className="text-muted-foreground">Parent 2</TableHead>
               <TableHead className="text-muted-foreground">Portal Access</TableHead>
+              <TableHead className="text-muted-foreground">Consent Forms</TableHead>
               <SortableHeader field="signupCount">Sessions</SortableHeader>
               <TableHead className="text-muted-foreground">Last Activity</TableHead>
             </TableRow>
@@ -544,6 +584,9 @@ export default function AdminPlayers() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
+                  <ConsentStatusCell playerId={player.id} playerName={`${player.firstName} ${player.lastName}`} />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
                   <PlayerSessionHistoryDropdown
                     playerId={player.id}
                     sessionCount={player.signupCount || 0}
@@ -557,7 +600,7 @@ export default function AdminPlayers() {
             ))}
             {paginatedPlayers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
                 </TableCell>
               </TableRow>
@@ -605,6 +648,11 @@ export default function AdminPlayers() {
                   </div>
                 )}
                 
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Consent Forms:</span>
+                  <ConsentStatusCell playerId={player.id} playerName={`${player.firstName} ${player.lastName}`} />
+                </div>
+
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Sessions:</span>
                   <PlayerSessionHistoryDropdown

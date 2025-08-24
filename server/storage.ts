@@ -3077,6 +3077,177 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  // Get consent form completion status for a player (for admin views)
+  async getPlayerConsentStatus(tenantId: string, playerId: string): Promise<{
+    totalTemplates: number;
+    completedCount: number;
+    missingCount: number;
+    completedForms: Array<{
+      templateId: string;
+      templateTitle: string;
+      templateType: string;
+      signedAt: Date;
+      signedBy: string;
+    }>;
+    missingForms: Array<{
+      templateId: string;
+      templateTitle: string;
+      templateType: string;
+    }>;
+  }> {
+    // Get all active consent templates for the tenant
+    const allTemplates = await db
+      .select({
+        id: consentTemplates.id,
+        title: consentTemplates.title,
+        templateType: consentTemplates.templateType,
+      })
+      .from(consentTemplates)
+      .where(
+        and(
+          eq(consentTemplates.tenantId, tenantId),
+          eq(consentTemplates.isActive, true)
+        )
+      );
+
+    // Get completed forms for this player
+    const completedForms = await db
+      .select({
+        templateId: consentSignatures.templateId,
+        templateTitle: consentTemplates.title,
+        templateType: consentTemplates.templateType,
+        signedAt: consentSignatures.signedAt,
+        signedByFirstName: sql<string>`signer.first_name`,
+        signedByLastName: sql<string>`signer.last_name`,
+      })
+      .from(consentSignatures)
+      .innerJoin(consentTemplates, eq(consentSignatures.templateId, consentTemplates.id))
+      .leftJoin(sql`users as signer`, sql`signer.id = ${consentSignatures.signedById}`)
+      .where(
+        and(
+          eq(consentSignatures.tenantId, tenantId),
+          eq(consentSignatures.subjectId, playerId),
+          eq(consentSignatures.subjectRole, 'player')
+        )
+      );
+
+    const completedTemplateIds = new Set(completedForms.map(form => form.templateId));
+    const missingForms = allTemplates.filter(template => !completedTemplateIds.has(template.id));
+
+    return {
+      totalTemplates: allTemplates.length,
+      completedCount: completedForms.length,
+      missingCount: missingForms.length,
+      completedForms: completedForms.map(form => ({
+        templateId: form.templateId,
+        templateTitle: form.templateTitle,
+        templateType: form.templateType,
+        signedAt: form.signedAt,
+        signedBy: `${form.signedByFirstName || ''} ${form.signedByLastName || ''}`.trim()
+      })),
+      missingForms: missingForms.map(template => ({
+        templateId: template.id,
+        templateTitle: template.title,
+        templateType: template.templateType,
+      }))
+    };
+  }
+
+  // Get consent form completion status for a parent (for admin views)
+  async getParentConsentStatus(tenantId: string, parentId: string): Promise<{
+    totalTemplates: number;
+    completedCount: number;
+    missingCount: number;
+    completedForms: Array<{
+      templateId: string;
+      templateTitle: string;
+      templateType: string;
+      signedAt: Date;
+      subjectRole: string;
+      subjectName: string;
+    }>;
+    missingForms: Array<{
+      templateId: string;
+      templateTitle: string;
+      templateType: string;
+    }>;
+  }> {
+    // Get all active consent templates for the tenant
+    const allTemplates = await db
+      .select({
+        id: consentTemplates.id,
+        title: consentTemplates.title,
+        templateType: consentTemplates.templateType,
+      })
+      .from(consentTemplates)
+      .where(
+        and(
+          eq(consentTemplates.tenantId, tenantId),
+          eq(consentTemplates.isActive, true)
+        )
+      );
+
+    // Get completed forms signed by this parent (for themselves and their players)
+    const completedForms = await db
+      .select({
+        templateId: consentSignatures.templateId,
+        templateTitle: consentTemplates.title,
+        templateType: consentTemplates.templateType,
+        signedAt: consentSignatures.signedAt,
+        subjectRole: consentSignatures.subjectRole,
+        subjectId: consentSignatures.subjectId,
+        // Get subject name based on role
+        playerFirstName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'player' THEN players.first_name ELSE NULL END`,
+        playerLastName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'player' THEN players.last_name ELSE NULL END`,
+        parentFirstName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'parent' THEN users.first_name ELSE NULL END`,
+        parentLastName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'parent' THEN users.last_name ELSE NULL END`,
+      })
+      .from(consentSignatures)
+      .innerJoin(consentTemplates, eq(consentSignatures.templateId, consentTemplates.id))
+      .leftJoin(players, and(
+        eq(consentSignatures.subjectId, players.id),
+        eq(consentSignatures.subjectRole, 'player')
+      ))
+      .leftJoin(users, and(
+        eq(consentSignatures.subjectId, users.id),
+        eq(consentSignatures.subjectRole, 'parent')
+      ))
+      .where(
+        and(
+          eq(consentSignatures.tenantId, tenantId),
+          eq(consentSignatures.signedById, parentId)
+        )
+      );
+
+    // For missing forms, we need to check what this parent should have signed
+    // They should sign forms for themselves and their players
+    const parentPlayers = await this.getPlayersByParent(parentId);
+    
+    const completedTemplateIds = new Set(completedForms.map(form => form.templateId));
+    const missingForms = allTemplates.filter(template => !completedTemplateIds.has(template.id));
+
+    return {
+      totalTemplates: allTemplates.length,
+      completedCount: completedForms.length,
+      missingCount: missingForms.length,
+      completedForms: completedForms.map(form => ({
+        templateId: form.templateId,
+        templateTitle: form.templateTitle,
+        templateType: form.templateType,
+        signedAt: form.signedAt,
+        subjectRole: form.subjectRole,
+        subjectName: form.subjectRole === 'player' 
+          ? `${form.playerFirstName || ''} ${form.playerLastName || ''}`.trim()
+          : `${form.parentFirstName || ''} ${form.parentLastName || ''}`.trim()
+      })),
+      missingForms: missingForms.map(template => ({
+        templateId: template.id,
+        templateTitle: template.title,
+        templateType: template.templateType,
+      }))
+    };
+  }
+
   async getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined> {
     const [document] = await db
       .select()

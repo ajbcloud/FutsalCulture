@@ -4262,4 +4262,40 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.status(500).json({ error: 'Failed to check consent status' });
     }
   });
+
+  // Get consent form completion status for a player
+  app.get('/api/admin/players/:playerId/consent-status', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { playerId } = req.params;
+      const tenantId = req.user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const consentStatus = await storage.getPlayerConsentStatus(tenantId, playerId);
+      res.json(consentStatus);
+    } catch (error) {
+      console.error('Error fetching player consent status:', error);
+      res.status(500).json({ error: 'Failed to fetch consent status' });
+    }
+  });
+
+  // Get consent form completion status for a parent
+  app.get('/api/admin/parents/:parentId/consent-status', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { parentId } = req.params;
+      const tenantId = req.user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const consentStatus = await storage.getParentConsentStatus(tenantId, parentId);
+      res.json(consentStatus);
+    } catch (error) {
+      console.error('Error fetching parent consent status:', error);
+      res.status(500).json({ error: 'Failed to fetch consent status' });
+    }
+  });
 }

@@ -25,6 +25,49 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery as useReactQuery } from '@tanstack/react-query';
+import { FileCheck, FileX, Loader2 } from 'lucide-react';
+
+// Consent Status Component for Super Admin Players
+function SuperAdminPlayerConsentStatusCell({ playerId, playerName, tenantId }: { 
+  playerId: string; 
+  playerName: string; 
+  tenantId: string; 
+}) {
+  const { data: consentStatus, isLoading } = useReactQuery({
+    queryKey: [`/api/super-admin/players/${playerId}/consent-status`, tenantId],
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/players/${playerId}/consent-status?tenantId=${tenantId}`);
+      if (!response.ok) throw new Error('Failed to fetch consent status');
+      return response.json();
+    },
+    enabled: !!playerId && !!tenantId
+  });
+
+  if (isLoading) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
+
+  if (!consentStatus) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const { completedCount, missingCount, totalTemplates } = consentStatus;
+  const isComplete = missingCount === 0 && totalTemplates > 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      {isComplete ? (
+        <FileCheck className="w-4 h-4 text-green-500" />
+      ) : (
+        <FileX className="w-4 h-4 text-red-500" />
+      )}
+      <span className={`text-sm ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+        {completedCount}/{totalTemplates}
+      </span>
+    </div>
+  );
+}
 
 interface Player {
   id: string;
@@ -238,17 +281,18 @@ export default function SuperAdminPlayers() {
         <CardContent>
           <div className="rounded-md border">
             <div className="grid grid-cols-12 gap-4 p-4 font-medium border-b bg-muted/50">
-              <div className="col-span-3">Player Name</div>
+              <div className="col-span-2">Player Name</div>
               <div className="col-span-2">Age/Gender</div>
               <div className="col-span-2">Parent</div>
               <div className="col-span-2">Organization</div>
+              <div className="col-span-1">Consent</div>
               <div className="col-span-1">Portal</div>
               <div className="col-span-1">Bookings</div>
               <div className="col-span-1">Actions</div>
             </div>
             {players.map((player) => (
               <div key={player.id} className="grid grid-cols-12 gap-4 p-4 border-b last:border-b-0 hover:bg-muted/25">
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <div className="font-medium">{player.firstName} {player.lastName}</div>
                   {player.soccerClub && (
                     <div className="text-sm text-muted-foreground">{player.soccerClub}</div>
@@ -268,6 +312,13 @@ export default function SuperAdminPlayers() {
                 </div>
                 <div className="col-span-2">
                   <div className="text-sm">{player.tenantName}</div>
+                </div>
+                <div className="col-span-1">
+                  <SuperAdminPlayerConsentStatusCell 
+                    playerId={player.id} 
+                    playerName={`${player.firstName} ${player.lastName}`}
+                    tenantId={player.tenantId}
+                  />
                 </div>
                 <div className="col-span-1">
                   <Badge variant={

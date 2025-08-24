@@ -15,11 +15,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X, Activity, Phone, Mail } from 'lucide-react';
+import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X, Activity, Phone, Mail, FileCheck, FileX, Loader2 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
 import { useLocation, Link } from 'wouter';
 import { Pagination } from '../../components/pagination';
+import { useQuery } from '@tanstack/react-query';
+
+// Consent Status Cell Component for Parents
+function ParentConsentStatusCell({ parentId, parentName }: { parentId: string; parentName: string }) {
+  const { data: consentStatus, isLoading } = useQuery({
+    queryKey: [`/api/admin/parents/${parentId}/consent-status`],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/parents/${parentId}/consent-status`);
+      if (!response.ok) throw new Error('Failed to fetch consent status');
+      return response.json();
+    },
+    enabled: !!parentId
+  });
+
+  if (isLoading) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
+
+  if (!consentStatus) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const { completedCount, missingCount, totalTemplates } = consentStatus;
+  const isComplete = missingCount === 0 && totalTemplates > 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      {isComplete ? (
+        <FileCheck className="w-4 h-4 text-green-500" />
+      ) : (
+        <FileX className="w-4 h-4 text-red-500" />
+      )}
+      <span className={`text-sm ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+        {completedCount}/{totalTemplates}
+      </span>
+    </div>
+  );
+}
 
 export default function AdminParents() {
   const [parents, setParents] = useState<any[]>([]);
@@ -415,6 +453,7 @@ export default function AdminParents() {
                 <TableHead className="text-muted-foreground">Email</TableHead>
                 <TableHead className="text-muted-foreground">Phone</TableHead>
                 <TableHead className="text-muted-foreground">Role</TableHead>
+                <TableHead className="text-muted-foreground">Consent Forms</TableHead>
                 <TableHead className="text-muted-foreground">Players</TableHead>
                 <TableHead className="text-muted-foreground">Last Activity</TableHead>
                 <TableHead className="text-muted-foreground">Actions</TableHead>
@@ -432,6 +471,9 @@ export default function AdminParents() {
                       <TableCell className="text-muted-foreground">{parent.email}</TableCell>
                       <TableCell className="text-muted-foreground">{parent.phone || '-'}</TableCell>
                       <TableCell>{getRoleDisplay(parent)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <ParentConsentStatusCell parentId={parent.id} parentName={`${parent.firstName} ${parent.lastName}`} />
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         <button
                           onClick={() => {
@@ -527,7 +569,7 @@ export default function AdminParents() {
               })}
               {paginatedParents.length === 0 && (
                 <TableRow className="border-border">
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     {filteredParents.length === 0 ? 'No parents found' : 'No parents on this page'}
                   </TableCell>
                 </TableRow>
@@ -566,6 +608,11 @@ export default function AdminParents() {
                         <span className="text-foreground">{parent.phone}</span>
                       </div>
                     )}
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Consent Forms:</span>
+                      <ParentConsentStatusCell parentId={parent.id} parentName={`${parent.firstName} ${parent.lastName}`} />
+                    </div>
                     
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">Players:</span>

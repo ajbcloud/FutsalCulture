@@ -30,6 +30,49 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocation } from 'wouter';
 import React from 'react';
+import { useQuery as useReactQuery } from '@tanstack/react-query';
+import { FileCheck, FileX, Loader2 } from 'lucide-react';
+
+// Consent Status Component for Super Admin Parents
+function SuperAdminParentConsentStatusCell({ parentId, parentName, tenantId }: { 
+  parentId: string; 
+  parentName: string; 
+  tenantId: string; 
+}) {
+  const { data: consentStatus, isLoading } = useReactQuery({
+    queryKey: [`/api/super-admin/parents/${parentId}/consent-status`, tenantId],
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/parents/${parentId}/consent-status?tenantId=${tenantId}`);
+      if (!response.ok) throw new Error('Failed to fetch consent status');
+      return response.json();
+    },
+    enabled: !!parentId && !!tenantId
+  });
+
+  if (isLoading) {
+    return <Loader2 className="w-4 h-4 animate-spin" />;
+  }
+
+  if (!consentStatus) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const { completedCount, missingCount, totalTemplates } = consentStatus;
+  const isComplete = missingCount === 0 && totalTemplates > 0;
+
+  return (
+    <div className="flex items-center gap-1">
+      {isComplete ? (
+        <FileCheck className="w-4 h-4 text-green-500" />
+      ) : (
+        <FileX className="w-4 h-4 text-red-500" />
+      )}
+      <span className={`text-sm ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+        {completedCount}/{totalTemplates}
+      </span>
+    </div>
+  );
+}
 
 interface Parent {
   id: string;
@@ -266,9 +309,10 @@ export default function SuperAdminParents() {
         <CardContent>
           <div className="rounded-md border">
             <div className="grid grid-cols-12 gap-4 p-4 font-medium border-b bg-muted/50">
-              <div className="col-span-3">Parent</div>
+              <div className="col-span-2">Parent</div>
               <div className="col-span-2">Organization</div>
               <div className="col-span-1">Players</div>
+              <div className="col-span-1">Consent</div>
               <div className="col-span-1">Status</div>
               <div className="col-span-2">Last Login</div>
               <div className="col-span-2">Bookings/Spent</div>
@@ -279,7 +323,7 @@ export default function SuperAdminParents() {
               return (
                 <div key={parent.id} className="border-b last:border-b-0">
                   <div className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/25">
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <div className="font-medium">{parent.firstName} {parent.lastName}</div>
                       <div className="text-sm text-muted-foreground">{parent.email}</div>
                       {parent.phone && (
@@ -310,6 +354,13 @@ export default function SuperAdminParents() {
                         )}
                         <span className="font-medium">{parent.playerCount || 0}</span>
                       </button>
+                    </div>
+                    <div className="col-span-1">
+                      <SuperAdminParentConsentStatusCell 
+                        parentId={parent.id} 
+                        parentName={`${parent.firstName} ${parent.lastName}`}
+                        tenantId={parent.tenantId}
+                      />
                     </div>
                     <div className="col-span-1">
                       <Badge variant={

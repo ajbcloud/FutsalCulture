@@ -1230,4 +1230,40 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to delete tenant override' });
     }
   });
+
+  // Get consent form completion status for a player (across all tenants)
+  app.get('/api/super-admin/players/:playerId/consent-status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const { tenantId } = req.query;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const consentStatus = await storage.getPlayerConsentStatus(tenantId as string, playerId);
+      res.json(consentStatus);
+    } catch (error) {
+      console.error('Error fetching player consent status:', error);
+      res.status(500).json({ error: 'Failed to fetch consent status' });
+    }
+  });
+
+  // Get consent form completion status for a parent (across all tenants)
+  app.get('/api/super-admin/parents/:parentId/consent-status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { parentId } = req.params;
+      const { tenantId } = req.query;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const consentStatus = await storage.getParentConsentStatus(tenantId as string, parentId);
+      res.json(consentStatus);
+    } catch (error) {
+      console.error('Error fetching parent consent status:', error);
+      res.status(500).json({ error: 'Failed to fetch consent status' });
+    }
+  });
 }
