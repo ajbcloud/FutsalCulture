@@ -184,7 +184,7 @@ export default function PlanManagement() {
   // Update single feature mutation (autosave)
   const updateFeatureMutation = useMutation({
     mutationFn: ({ planCode, featureKey, value }: any) => 
-      apiRequest(`/api/super-admin/plans/${planCode}/features/${featureKey}`, 'PATCH', value),
+      apiRequest('PATCH', `/api/super-admin/plans/${planCode}/features/${featureKey}`, value),
     onSuccess: (data, variables) => {
       setLastSaved(prev => ({
         ...prev,
@@ -209,7 +209,7 @@ export default function PlanManagement() {
   // Bulk update features mutation
   const bulkUpdateMutation = useMutation({
     mutationFn: ({ planCode, sourcePlanCode }: any) => 
-      apiRequest(`/api/super-admin/plans/${planCode}/features`, 'PATCH', { sourcePlanCode }),
+      apiRequest('PATCH', `/api/super-admin/plans/${planCode}/features`, { sourcePlanCode }),
     onSuccess: (data, variables) => {
       toast({
         title: 'Features copied',
@@ -564,14 +564,7 @@ export default function PlanManagement() {
                                 </Badge>
                               </div>
                               <div className="ml-auto">
-                                {(() => {
-                                  try {
-                                    return renderFeatureControl(feature);
-                                  } catch (error) {
-                                    console.error('Error rendering feature control:', error, feature);
-                                    return <span className="text-red-500">Error</span>;
-                                  }
-                                })()}
+                                {renderFeatureControl(feature)}
                               </div>
                             </div>
                           ))}
