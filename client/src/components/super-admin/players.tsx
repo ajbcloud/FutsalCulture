@@ -275,21 +275,22 @@ export default function SuperAdminPlayers() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border max-h-[600px] overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-background">
-                <TableRow>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Player</TableHead>
-                  <TableHead>Age & Gender</TableHead>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead>Total Bookings</TableHead>
-                  <TableHead>Portal Access</TableHead>
-                  <TableHead>Booking Permission</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                </TableRow>
-              </TableHeader>
+          <div className="w-full overflow-x-auto">
+            <div className="rounded-md border max-h-[600px] overflow-y-auto min-w-[1200px]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="min-w-[140px]">Tenant</TableHead>
+                    <TableHead className="min-w-[150px]">Player</TableHead>
+                    <TableHead className="min-w-[120px]">Age & Gender</TableHead>
+                    <TableHead className="min-w-[180px]">Parent</TableHead>
+                    <TableHead className="min-w-[110px]">Registered</TableHead>
+                    <TableHead className="min-w-[100px] text-center">Bookings</TableHead>
+                    <TableHead className="min-w-[120px] text-center">Portal</TableHead>
+                    <TableHead className="min-w-[120px] text-center">Permission</TableHead>
+                    <TableHead className="min-w-[110px]">Last Activity</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
@@ -348,35 +349,35 @@ export default function SuperAdminPlayers() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="text-sm">{new Date(player.registrationDate).toLocaleDateString()}</p>
+                    <div className="whitespace-nowrap">
+                      <p className="text-sm">{new Date(player.registrationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(player.registrationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <span className="font-medium">{player.totalBookings}</span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center space-x-1">
                       <Shield className={`w-4 h-4 ${player.portalAccess ? 'text-green-500' : 'text-gray-400'}`} />
                       <Badge variant={player.portalAccess ? "default" : "secondary"} className={player.portalAccess ? "bg-green-500" : ""}>
-                        {player.portalAccess ? "Enabled" : "Disabled"}
+                        {player.portalAccess ? "Yes" : "No"}
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center space-x-1">
                       <UserCheck className={`w-4 h-4 ${player.bookingPermission ? 'text-blue-500' : 'text-gray-400'}`} />
                       <Badge variant={player.bookingPermission ? "default" : "secondary"} className={player.bookingPermission ? "bg-blue-500" : ""}>
-                        {player.bookingPermission ? "Allowed" : "Restricted"}
+                        {player.bookingPermission ? "Yes" : "No"}
                       </Badge>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="text-sm">{new Date(player.lastActivity).toLocaleDateString()}</p>
+                    <div className="whitespace-nowrap">
+                      <p className="text-sm">{new Date(player.lastActivity).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(player.lastActivity).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -387,6 +388,7 @@ export default function SuperAdminPlayers() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
