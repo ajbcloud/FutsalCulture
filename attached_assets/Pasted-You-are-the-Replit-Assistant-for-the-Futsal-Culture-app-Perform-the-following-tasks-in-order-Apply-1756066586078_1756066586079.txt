@@ -1,0 +1,791 @@
+You are the Replit Assistant for the Futsal Culture app. Perform the following tasks in order. Apply file changes exactly as specified. Create files if they do not exist. Preserve existing unrelated code. Use TypeScript. Use Drizzle ORM with PostgreSQL. Use Express on the backend. Use React on the frontend. Use Stripe for billing. Use Resend for email. Use Replit Auth for user sessions. The goal is to implement complete beta onboarding, including tenant creation, invites, join by code, email verification, billing upgrade, onboarding checklist, audit logging, and super admin support tools. At the end, seed test data and provide a short test script I can run.
+
+Section 1, Dependencies and project wiring
+1, Add or confirm these packages, run in the Replit shell
+
+npm add express cors cookie-parser express-rate-limit zod
+npm add drizzle-orm pg postgres drizzle-kit
+npm add stripe resend
+npm add uuid nanoid
+npm add jsonwebtoken bcryptjs
+npm add multer
+npm add dotenv
+npm add date-fns
+npm add helmet
+npm add pino pino-http
+npm add qr-image
+npm add speakeasy
+npm add otplib
+
+npm add -D typescript ts-node ts-node-dev @types/node @types/express @types/cookie-parser @types/jsonwebtoken @types/bcryptjs @types/multer @types/cors @types/pino-http
+
+2, Ensure tsconfig.json has strict true, esModuleInterop true, moduleResolution node, module commonjs, target ES2020, outDir dist, rootDir src
+
+3, Ensure project has the following folders
+src
+src,db
+src,db,schema
+src,lib
+src,middleware
+src,routes
+src,services
+src,types
+src,ui
+
+4, Create src,types,express.d.ts to extend Request with user and tenantId
+
+import "express";
+
+declare module "express-serve-static-core" {
+interface Request {
+user?: { id: string; email: string; isVerified?: boolean; isSuperAdmin?: boolean };
+tenantId?: string;
+requestId?: string;
+}
+}
+
+export {};
+
+Section 2, Environment variables
+1, Add these keys to the Replit Secrets panel, use real values later in prod
+
+DATABASE\_URL
+APP\_URL
+EMAIL\_FROM
+RESEND\_API\_KEY
+STRIPE\_SECRET\_KEY
+STRIPE\_PUBLISHABLE\_KEY
+STRIPE\_WEBHOOK\_SECRET
+SESSION\_SECRET
+RATE\_LIMIT\_WINDOW\_MS
+RATE\_LIMIT\_MAX
+
+2, Create src,lib,env.ts
+
+export const env = {
+DATABASE\_URL: process.env.DATABASE\_URL!,
+APP\_URL: process.env.APP\_URL!,
+EMAIL\_FROM: process.env.EMAIL\_FROM!,
+RESEND\_API\_KEY: process.env.RESEND\_API\_KEY!,
+STRIPE\_SECRET\_KEY: process.env.STRIPE\_SECRET\_KEY!,
+STRIPE\_PUBLISHABLE\_KEY: process.env.STRIPE\_PUBLISHABLE\_KEY!,
+STRIPE\_WEBHOOK\_SECRET: process.env.STRIPE\_WEBHOOK\_SECRET!,
+SESSION\_SECRET: process.env.SESSION\_SECRET!,
+RATE\_LIMIT\_WINDOW\_MS: Number(process.env.RATE\_LIMIT\_WINDOW\_MS || 60000),
+RATE\_LIMIT\_MAX: Number(process.env.RATE\_LIMIT\_MAX || 60)
+};
+
+Section 3, Database schema with Drizzle
+Create these files, use drizzle schema syntax, adjust imports to your setup
+
+src,db,schema,tenants.ts
+
+import { pgTable, text, timestamp, varchar, boolean, integer, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const tenants = pgTable("tenants", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+name: varchar("name", { length: 160 }).notNull(),
+slug: varchar("slug", { length: 160 }).notNull(),
+tenant\_code: varchar("tenant\_code", { length: 16 }).notNull(),
+contact\_name: varchar("contact\_name", { length: 160 }).notNull(),
+contact\_email: varchar("contact\_email", { length: 320 }).notNull(),
+city: varchar("city", { length: 100 }),
+state: varchar("state", { length: 100 }),
+country: varchar("country", { length: 100 }),
+status: varchar("status", { length: 24 }).notNull().default("active"),
+allowed\_domains: jsonb("allowed\_domains"),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+slugIdx: uniqueIndex("tenants\_slug\_idx").on(t.slug),
+codeIdx: uniqueIndex("tenants\_code\_idx").on(t.tenant\_code),
+emailIdx: index("tenants\_contact\_email\_idx").on(t.contact\_email)
+}));
+
+src,db,schema,tenantUsers.ts
+
+import { pgTable, varchar, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const tenant\_users = pgTable("tenant\_users", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+tenant\_id: varchar("tenant\_id", { length: 36 }).notNull(),
+user\_id: varchar("user\_id", { length: 36 }).notNull(),
+role: varchar("role", { length: 40 }).notNull(),
+invited\_by\_user\_id: varchar("invited\_by\_user\_id", { length: 36 }),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+uniq: uniqueIndex("tenant\_users\_uniq").on(t.tenant\_id, t.user\_id),
+roleIdx: index("tenant\_users\_role\_idx").on(t.role)
+}));
+
+src,db,schema,invites.ts
+
+import { pgTable, varchar, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const invites = pgTable("invites", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+tenant\_id: varchar("tenant\_id", { length: 36 }).notNull(),
+email: varchar("email", { length: 320 }).notNull(),
+role: varchar("role", { length: 40 }).notNull(),
+token: varchar("token", { length: 64 }).notNull(),
+expires\_at: timestamp("expires\_at").notNull(),
+used\_at: timestamp("used\_at"),
+invited\_by\_user\_id: varchar("invited\_by\_user\_id", { length: 36 }),
+channel: varchar("channel", { length: 20 }).default("email"),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+tokenIdx: uniqueIndex("invites\_token\_idx").on(t.token),
+tenantEmailIdx: index("invites\_tenant\_email\_idx").on(t.tenant\_id, t.email)
+}));
+
+src,db,schema,emailVerifications.ts
+
+import { pgTable, varchar, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const email\_verifications = pgTable("email\_verifications", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+user\_id: varchar("user\_id", { length: 36 }).notNull(),
+email: varchar("email", { length: 320 }).notNull(),
+token: varchar("token", { length: 64 }).notNull(),
+expires\_at: timestamp("expires\_at").notNull(),
+used\_at: timestamp("used\_at"),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+tokenIdx: uniqueIndex("email\_verifications\_token\_idx").on(t.token)
+}));
+
+src,db,schema,subscriptions.ts
+
+import { pgTable, varchar, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const subscriptions = pgTable("subscriptions", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+tenant\_id: varchar("tenant\_id", { length: 36 }).notNull(),
+stripe\_customer\_id: varchar("stripe\_customer\_id", { length: 64 }),
+stripe\_subscription\_id: varchar("stripe\_subscription\_id", { length: 64 }),
+plan\_key: varchar("plan\_key", { length: 40 }).notNull().default("free"),
+status: varchar("status", { length: 40 }).notNull().default("inactive"),
+trial\_end: timestamp("trial\_end"),
+current\_period\_end: timestamp("current\_period\_end"),
+created\_at: timestamp("created\_at").defaultNow().notNull(),
+updated\_at: timestamp("updated\_at").defaultNow().notNull()
+}, t => ({
+uniq: uniqueIndex("subscriptions\_tenant\_idx").on(t.tenant\_id),
+stripeIdx: index("subscriptions\_stripe\_idx").on(t.stripe\_customer\_id)
+}));
+
+src,db,schema,planFeatures.ts
+
+import { pgTable, varchar, boolean, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const plan\_features = pgTable("plan\_features", {
+plan\_key: varchar("plan\_key", { length: 40 }).notNull(),
+feature\_key: varchar("feature\_key", { length: 80 }).notNull(),
+enabled: boolean("enabled").notNull().default(true),
+limits\_json: jsonb("limits\_json")
+}, t => ({
+uniq: uniqueIndex("plan\_features\_uniq").on(t.plan\_key, t.feature\_key)
+}));
+
+src,db,schema,auditEvents.ts
+
+import { pgTable, varchar, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const audit\_events = pgTable("audit\_events", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+actor\_user\_id: varchar("actor\_user\_id", { length: 36 }),
+tenant\_id: varchar("tenant\_id", { length: 36 }),
+event\_type: varchar("event\_type", { length: 80 }).notNull(),
+target\_id: varchar("target\_id", { length: 64 }),
+metadata\_json: jsonb("metadata\_json"),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+tenantIdx: index("audit\_events\_tenant\_idx").on(t.tenant\_id),
+typeIdx: index("audit\_events\_type\_idx").on(t.event\_type)
+}));
+
+src,db,schema,consentRecords.ts
+
+import { pgTable, varchar, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const consent\_records = pgTable("consent\_records", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+tenant\_id: varchar("tenant\_id", { length: 36 }).notNull(),
+child\_user\_id: varchar("child\_user\_id", { length: 36 }).notNull(),
+parent\_user\_id: varchar("parent\_user\_id", { length: 36 }).notNull(),
+method: varchar("method", { length: 40 }).notNull(),
+policy\_version: varchar("policy\_version", { length: 20 }).notNull(),
+ip: varchar("ip", { length: 64 }),
+meta: jsonb("meta"),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+tenantIdx: index("consent\_tenant\_idx").on(t.tenant\_id)
+}));
+
+src,db,schema,userPolicyAcceptances.ts
+
+import { pgTable, varchar, timestamp, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const user\_policy\_acceptances = pgTable("user\_policy\_acceptances", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+user\_id: varchar("user\_id", { length: 36 }).notNull(),
+policy\_type: varchar("policy\_type", { length: 40 }).notNull(),
+version: varchar("version", { length: 20 }).notNull(),
+ip: varchar("ip", { length: 64 }),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+userIdx: index("upa\_user\_idx").on(t.user\_id)
+}));
+
+src,db,schema,emailBounces.ts
+
+import { pgTable, varchar, timestamp, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const email\_bounces = pgTable("email\_bounces", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+email: varchar("email", { length: 320 }).notNull(),
+provider: varchar("provider", { length: 40 }).notNull(),
+reason: varchar("reason", { length: 200 }),
+event: varchar("event", { length: 40 }).notNull(),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+emailIdx: index("email\_bounces\_email\_idx").on(t.email)
+}));
+
+src,db,schema,parentPlayerLinks.ts
+
+import { pgTable, varchar, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const parent\_player\_links = pgTable("parent\_player\_links", {
+id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+tenant\_id: varchar("tenant\_id", { length: 36 }).notNull(),
+parent\_user\_id: varchar("parent\_user\_id", { length: 36 }).notNull(),
+player\_user\_id: varchar("player\_user\_id", { length: 36 }).notNull(),
+created\_at: timestamp("created\_at").defaultNow().notNull()
+}, t => ({
+uniq: uniqueIndex("parent\_player\_uniq").on(t.tenant\_id, t.parent\_user\_id, t.player\_user\_id)
+}));
+
+Section 4, Utility helpers
+
+src,lib,ids.ts
+
+export function randomToken(length = 48) {
+const bytes = crypto.getRandomValues(new Uint8Array(length));
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+return Array.from(bytes, b => alphabet\[b % alphabet.length]).join("");
+}
+
+export function slugify(name: string) {
+return name
+.toLowerCase()
+.replace(/\[^a-z0-9]+/g, "-")
+.replace(/(^-|-\$)+/g, "");
+}
+
+export function generateTenantCode() {
+const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+let code = "";
+for (let i = 0; i < 8; i++) code += alphabet\[Math.floor(Math.random() \* alphabet.length)];
+return code;
+}
+
+src,lib,email.ts
+
+import { Resend } from "resend";
+import { env } from "./env";
+const resend = new Resend(env.RESEND\_API\_KEY);
+const FROM = env.EMAIL\_FROM;
+
+export async function sendVerifyEmail(to: string, link: string) {
+await resend.emails.send({ from: FROM, to, subject: "Verify your email", html: `<p>Welcome to Futsal Culture.</p><p><a href="${link}">Verify</a></p>` });
+}
+
+export async function sendInviteEmail(to: string, link: string, role: string, tenantName: string) {
+await resend.emails.send({ from: FROM, to, subject: `Invite to ${tenantName}`, html: `<p>You are invited as ${role}.</p><p><a href="${link}">Accept invite</a></p>` });
+}
+
+export async function sendWelcomeEmail(to: string, tenantName: string) {
+await resend.emails.send({ from: FROM, to, subject: `Welcome to ${tenantName}`, html: `<p>You are all set.</p>` });
+}
+
+src,lib,audit.ts
+
+import { db } from "../db";
+import { audit\_events } from "../db/schema/auditEvents";
+
+export async function recordAudit(input: { actor\_user\_id?: string; tenant\_id?: string; event\_type: string; target\_id?: string; metadata?: any }) {
+await db.insert(audit\_events).values({
+actor\_user\_id: input.actor\_user\_id,
+tenant\_id: input.tenant\_id,
+event\_type: input.event\_type,
+target\_id: input.target\_id,
+metadata\_json: input.metadata
+});
+}
+
+Section 5, Middleware
+
+src,middleware,requireAuth.ts
+
+import type { Request, Response, NextFunction } from "express";
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+if (!req.user) return res.status(401).json({ error: "Auth required" });
+next();
+}
+
+src,middleware,tenantContext.ts
+
+import type { Request, Response, NextFunction } from "express";
+import { db } from "../db";
+import { tenant\_users } from "../db/schema/tenantUsers";
+import { and, eq } from "drizzle-orm";
+
+export async function loadActiveTenant(req: Request, res: Response, next: NextFunction) {
+const activeTenantId = req.session?.activeTenantId as string | undefined;
+if (activeTenantId) req.tenantId = activeTenantId;
+next();
+}
+
+export function requireTenant() {
+return async function(req: Request, res: Response, next: NextFunction) {
+if (!req.tenantId) return res.status(400).json({ error: "Tenant not selected" });
+next();
+}
+}
+
+export function requireRole(...roles: string\[]) {
+return async function(req: Request, res: Response, next: NextFunction) {
+if (!req.user || !req.tenantId) return res.status(401).json({ error: "Unauthorized" });
+const row = await db.query.tenant\_users.findFirst({
+where: (t, { eq, and }) => and(eq(t.user\_id, req.user.id), eq(t.tenant\_id, req.tenantId!))
+});
+if (!row || !roles.includes(row\.role)) return res.status(403).json({ error: "Forbidden" });
+next();
+}
+}
+
+Section 6, Routes
+
+src,routes,tenants.ts
+
+import express from "express";
+import { db } from "../db";
+import { tenant\_users } from "../db/schema/tenantUsers";
+import { tenants } from "../db/schema/tenants";
+import { eq, and } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
+
+const router = express.Router();
+
+router.post("/tenants,switch", requireAuth, async (req, res) => {
+const { tenant\_id } = req.body;
+const member = await db.query.tenant\_users.findFirst({ where: (t, { eq, and }) => and(eq(t.user\_id, req.user!.id), eq(t.tenant\_id, tenant\_id)) });
+if (!member) return res.status(403).json({ error: "Not a member" });
+req.session.activeTenantId = tenant\_id;
+res.json({ ok: true });
+});
+
+router.post("/tenant,code,rotate", requireAuth, async (req, res) => {
+if (!req.tenantId) return res.status(400).json({ error: "Tenant not selected" });
+const newCode = generateTenantCode();
+await db.update(tenants).set({ tenant\_code: newCode }).where(eq(tenants.id, req.tenantId));
+res.json({ code: newCode });
+});
+
+export default router;
+
+src,routes,getStarted.ts
+
+import express from "express";
+import Stripe from "stripe";
+import { db } from "../db";
+import { tenants } from "../db/schema/tenants";
+import { tenant\_users } from "../db/schema/tenantUsers";
+import { subscriptions } from "../db/schema/subscriptions";
+import { email\_verifications } from "../db/schema/emailVerifications";
+import { randomToken, slugify, generateTenantCode } from "../lib/ids";
+import { sendVerifyEmail } from "../lib/email";
+import { recordAudit } from "../lib,audit";
+
+const stripe = new Stripe(process.env.STRIPE\_SECRET\_KEY!);
+const router = express.Router();
+
+async function uniqueSlug(base: string) {
+let candidate = base;
+let i = 1;
+while (true) {
+const found = await db.query.tenants.findFirst({ where: (t, { eq }) => eq(t.slug, candidate) });
+if (!found) return candidate;
+i += 1;
+candidate = `${base}-${i}`;
+}
+}
+
+router.post("/get-started", async (req, res) => {
+const { org\_name, contact\_name, contact\_email, city, state, country } = req.body;
+if (!org\_name || !contact\_name || !contact\_email) return res.status(400).json({ error: "Missing fields" });
+const userId = req.user?.id || await createUserForEmail(contact\_email);
+const slug = await uniqueSlug(slugify(org\_name));
+const code = generateTenantCode();
+const tenant = await db.insert(tenants).values({ name: org\_name, slug, tenant\_code: code, contact\_name, contact\_email, city, state, country }).returning();
+await db.insert(tenant\_users).values({ tenant\_id: tenant\[0].id, user\_id: userId, role: "tenant\_owner" });
+const customer = await stripe.customers.create({ email: contact\_email, name: org\_name, metadata: { tenant\_id: tenant\[0].id } });
+await db.insert(subscriptions).values({ tenant\_id: tenant\[0].id, stripe\_customer\_id: customer.id, plan\_key: "free", status: "inactive" });
+const token = randomToken(48);
+const expires = new Date(Date.now() + 1000 \* 60 \* 60 \* 24);
+await db.insert(email\_verifications).values({ user\_id: userId, email: contact\_email, token, expires\_at: expires });
+const link = `${process.env.APP_URL}/verify?token=${token}`;
+await sendVerifyEmail(contact\_email, link);
+await recordAudit({ event\_type: "tenant\_created", tenant\_id: tenant\[0].id, actor\_user\_id: userId, metadata: { slug } });
+res.json({ ok: true });
+});
+
+export default router;
+
+src,routes,verify.ts
+
+import express from "express";
+import { db } from "../db";
+import { email\_verifications } from "../db/schema/emailVerifications";
+
+const router = express.Router();
+
+router.get("/verify", async (req, res) => {
+const token = req.query.token as string;
+if (!token) return res.status(400).send("Missing token");
+const row = await db.query.email\_verifications.findFirst({ where: (t, { eq }) => eq(t.token, token) });
+if (!row) return res.status(400).send("Invalid token");
+if (row\.used\_at) return res.status(400).send("Token already used");
+if (new Date(row\.expires\_at) < new Date()) return res.status(400).send("Token expired");
+await db.update(email\_verifications).set({ used\_at: new Date() }).where(eq(email\_verifications.id, row\.id));
+await markUserVerified(row\.user\_id);
+res.redirect("/dashboard");
+});
+
+export default router;
+
+src,routes,invites.ts
+
+import express from "express";
+import { db } from "../db";
+import { invites } from "../db/schema/invites";
+import { randomToken } from "../lib/ids";
+import { sendInviteEmail } from "../lib/email";
+import { requireAuth } from "../middleware/requireAuth";
+import { requireTenant, requireRole } from "../middleware/tenantContext";
+import { and, eq } from "drizzle-orm";
+
+const router = express.Router();
+
+router.post("/invites", requireAuth, requireTenant(), requireRole("tenant\_owner", "coach"), async (req, res) => {
+const { email, role, channel } = req.body;
+if (!email || !role) return res.status(400).json({ error: "Missing fields" });
+const token = randomToken(48);
+const expires = new Date(Date.now() + 1000 \* 60 \* 60 \* 24 \* 7);
+const row = await db.insert(invites).values({ tenant\_id: req.tenantId!, email, role, token, expires\_at: expires, invited\_by\_user\_id: req.user!.id, channel: channel || "email" }).returning();
+const link = `${process.env.APP_URL}/join?token=${token}`;
+await sendInviteEmail(email, link, role, await tenantName(req.tenantId!));
+await recordAudit({ event\_type: "invite\_sent", tenant\_id: req.tenantId!, actor\_user\_id: req.user!.id, target\_id: row\[0].id, metadata: { email, role } });
+res.json({ ok: true });
+});
+
+router.post("/invites,resend", requireAuth, requireTenant(), requireRole("tenant\_owner", "coach"), async (req, res) => {
+const { id } = req.body;
+const row = await db.query.invites.findFirst({ where: (t, { eq }) => eq(t.id, id) });
+if (!row || row\.tenant\_id !== req.tenantId) return res.status(404).json({ error: "Not found" });
+const link = `${process.env.APP_URL}/join?token=${row.token}`;
+await sendInviteEmail(row\.email, link, row\.role, await tenantName(req.tenantId!));
+res.json({ ok: true });
+});
+
+router.post("/invites,revoke", requireAuth, requireTenant(), requireRole("tenant\_owner", "coach"), async (req, res) => {
+const { id } = req.body;
+const row = await db.query.invites.findFirst({ where: (t, { eq }) => eq(t.id, id) });
+if (!row || row\.tenant\_id !== req.tenantId) return res.status(404).json({ error: "Not found" });
+await db.update(invites).set({ expires\_at: new Date() }).where(eq(invites.id, id));
+res.json({ ok: true });
+});
+
+export default router;
+
+src,routes,join.ts
+
+import express from "express";
+import { db } from "../db";
+import { invites } from "../db/schema/invites";
+import { tenant\_users } from "../db/schema/tenantUsers";
+import { and, eq } from "drizzle-orm";
+
+const router = express.Router();
+
+router.post("/join,by-token", async (req, res) => {
+const { token, password, parent\_email, profile } = req.body;
+const row = await db.query.invites.findFirst({ where: (t, { eq }) => eq(t.token, token) });
+if (!row) return res.status(400).json({ error: "Invalid token" });
+if (row\.used\_at) return res.status(400).json({ error: "Already used" });
+if (new Date(row\.expires\_at) < new Date()) return res.status(400).json({ error: "Expired" });
+const userId = await ensureUser(row\.email, password, profile);
+await db.insert(tenant\_users).values({ tenant\_id: row\.tenant\_id, user\_id: userId, role: row\.role });
+await db.update(invites).set({ used\_at: new Date() }).where(eq(invites.id, row\.id));
+if (row\.role === "player" && parent\_email) {
+await parentsJoinPlayerIfNeeded(row\.tenant\_id, parent\_email, userId);
+}
+await recordAudit({ event\_type: "invite\_accepted", tenant\_id: row\.tenant\_id, actor\_user\_id: userId, target\_id: row\.id });
+res.json({ ok: true });
+});
+
+router.post("/join,by-code", async (req, res) => {
+const { tenant\_code, email, role, password, profile, parent\_email } = req.body;
+const tenant = await findTenantByCode(tenant\_code);
+if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+if (await tenantRequiresApproval(tenant.id)) {
+await queueJoinRequest(tenant.id, email, role);
+return res.json({ ok: true, queued: true });
+}
+const userId = await ensureUser(email, password, profile);
+await db.insert(tenant\_users).values({ tenant\_id: tenant.id, user\_id: userId, role });
+if (role === "player" && parent\_email) {
+await parentsJoinPlayerIfNeeded(tenant.id, parent\_email, userId);
+}
+await recordAudit({ event\_type: "joined\_by\_code", tenant\_id: tenant.id, actor\_user\_id: userId });
+res.json({ ok: true });
+});
+
+export default router;
+
+src,routes,billing.ts
+
+import express from "express";
+import Stripe from "stripe";
+import { db } from "../db";
+import { subscriptions } from "../db/schema/subscriptions";
+import { requireAuth } from "../middleware/requireAuth";
+import { requireTenant, requireRole } from "../middleware/tenantContext";
+import { eq } from "drizzle-orm";
+
+const router = express.Router();
+const stripe = new Stripe(process.env.STRIPE\_SECRET\_KEY!);
+
+router.post("/billing,checkout", requireAuth, requireTenant(), requireRole("tenant\_owner"), async (req, res) => {
+const { price\_id } = req.body;
+const sub = await db.query.subscriptions.findFirst({ where: (t, { eq }) => eq(t.tenant\_id, req.tenantId!) });
+if (!sub?.stripe\_customer\_id) return res.status(400).json({ error: "Customer not found" });
+const session = await stripe.checkout.sessions.create({
+mode: "subscription",
+customer: sub.stripe\_customer\_id,
+line\_items: \[{ price: price\_id, quantity: 1 }],
+success\_url: `${process.env.APP_URL}/billing/success`,
+cancel\_url: `${process.env.APP_URL}/billing/cancel`,
+metadata: { tenant\_id: req.tenantId! }
+});
+res.json({ url: session.url });
+});
+
+export default router;
+
+src,routes,stripeWebhook.ts
+
+import express from "express";
+import Stripe from "stripe";
+import { db } from "../db";
+import { subscriptions } from "../db/schema/subscriptions";
+import { eq } from "drizzle-orm";
+
+const router = express.Router();
+const stripe = new Stripe(process.env.STRIPE\_SECRET\_KEY!);
+
+router.post("/webhooks,stripe", express.raw({ type: "application/json" }), async (req, res) => {
+const sig = req.headers\["stripe-signature"] as string;
+let event: Stripe.Event;
+try {
+event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE\_WEBHOOK\_SECRET!);
+} catch {
+return res.status(400).send("Webhook Error");
+}
+switch (event.type) {
+case "checkout.session.completed": {
+const session = event.data.object as Stripe.Checkout.Session;
+const subscriptionId = session.subscription as string;
+const customerId = session.customer as string;
+const tenantId = session.metadata?.tenant\_id as string;
+await db.update(subscriptions).set({ stripe\_subscription\_id: subscriptionId, stripe\_customer\_id: customerId, plan\_key: "paid", status: "active" }).where(eq(subscriptions.tenant\_id, tenantId));
+break;
+}
+case "customer.subscription.deleted":
+case "customer.subscription.paused": {
+const sub = event.data.object as Stripe.Subscription;
+const tenantId = sub.metadata?.tenant\_id as string | undefined;
+if (tenantId) {
+await db.update(subscriptions).set({ status: "canceled" }).where(eq(subscriptions.tenant\_id, tenantId));
+}
+break;
+}
+}
+res.json({ received: true });
+});
+
+export default router;
+
+Section 7, Server bootstrap
+
+src,server.ts
+
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import pino from "pino-http";
+import rateLimit from "express-rate-limit";
+import getStarted from "./routes/getStarted";
+import verify from "./routes/verify";
+import invites from "./routes/invites";
+import join from "./routes/join";
+import billing from "./routes/billing";
+import stripeWebhook from "./routes/stripeWebhook";
+import tenantsRouter from "./routes/tenants";
+
+const app = express();
+
+const publicLimiter = rateLimit({ windowMs: Number(process.env.RATE\_LIMIT\_WINDOW\_MS || 60000), max: Number(process.env.RATE\_LIMIT\_MAX || 60) });
+
+app.use(helmet());
+app.use(cors({ origin: true, credentials: true }));
+app.use(pino());
+app.use("/api/webhooks,stripe", stripeWebhook);
+app.use(express.json());
+app.use(cookieParser());
+
+app.use("/api", publicLimiter, getStarted);
+app.use("/api", publicLimiter, verify);
+app.use("/api", invites);
+app.use("/api", join);
+app.use("/api", billing);
+app.use("/api", tenantsRouter);
+
+app.get("/health", (req, res) => res.json({ ok: true }));
+
+app.listen(3000, () => console.log("Server running"));
+
+Section 8, Frontend UI scaffolds, minimal forms
+
+Create simple React pages that post to the API. If you already have a router, add routes for GetStarted, Join, People, Billing. Use your design system. Provide basic client side validation. Keep copy clear.
+
+src,ui,GetStarted.tsx
+
+import { useState } from "react";
+
+export default function GetStarted() {
+const \[form, setForm] = useState({ org\_name: "", contact\_name: "", contact\_email: "", city: "", state: "", country: "" });
+return (
+\<form onSubmit={async e => { e.preventDefault(); await fetch("/api/get-started", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); alert("Check your email to verify"); }}>
+\<input placeholder="Club or Organization" value={form.org\_name} onChange={e => setForm({ ...form, org\_name: e.target.value })} />
+\<input placeholder="Contact name" value={form.contact\_name} onChange={e => setForm({ ...form, contact\_name: e.target.value })} />
+\<input placeholder="Email" value={form.contact\_email} onChange={e => setForm({ ...form, contact\_email: e.target.value })} /> <button type="submit">Create free account</button> </form>
+);
+}
+
+src,ui,Join.tsx
+
+import { useState, useEffect } from "react";
+
+export default function Join() {
+const params = new URLSearchParams(location.search);
+const token = params.get("token");
+const \[form, setForm] = useState({ tenant\_code: "", email: "", role: "player", parent\_email: "" });
+return token ? (
+\<form onSubmit={async e => { e.preventDefault(); await fetch("/api/join,by-token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }); alert("Joined"); }}> <button type="submit">Accept invite</button> </form>
+) : (
+\<form onSubmit={async e => { e.preventDefault(); await fetch("/api/join,by-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); alert("Request sent" ); }}>
+\<input placeholder="Tenant code" value={form.tenant\_code} onChange={e => setForm({ ...form, tenant\_code: e.target.value })} />
+\<input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+\<select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}> <option value="player">Player</option> <option value="parent">Parent</option> </select>
+\<input placeholder="Parent email for under thirteen" value={form.parent\_email} onChange={e => setForm({ ...form, parent\_email: e.target.value })} /> <button type="submit">Join</button> </form>
+);
+}
+
+src,ui,People.tsx
+
+import { useState } from "react";
+
+export default function People() {
+const \[email, setEmail] = useState("");
+const \[role, setRole] = useState("player");
+return (
+\<form onSubmit={async e => { e.preventDefault(); await fetch("/api/invites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, role }) }); alert("Invite sent"); }}>
+\<input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+\<select value={role} onChange={e => setRole(e.target.value)}> <option value="player">Player</option> <option value="parent">Parent</option> </select> <button type="submit">Send invite</button> </form>
+);
+}
+
+src,ui,Billing.tsx
+
+export default function Billing() {
+async function upgrade(price\_id: string) {
+const res = await fetch("/api/billing,checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ price\_id }) });
+const data = await res.json();
+if (data.url) location.href = data.url;
+}
+return ( <div>
+\<button onClick={() => upgrade("price\_123")}>Upgrade</button> </div>
+);
+}
+
+Section 9, Bring in the Futsal Culture Beta Onboarding Implementation Playbook content
+
+Paste in the entire playbook here for reference, and follow its structure. The schemas, routes, email templates, Stripe logic, invite and join flows, onboarding checklist, RBAC, rate limits, and QA steps in this prompt are consistent with the playbook. If there is a conflict, prefer the explicit code and file paths in this master prompt. Keep the spirit and acceptance tests from the playbook.
+
+Section 10, Extra features from deep review
+
+1, Parental consent records, ensure that a player marked under thirteen cannot access protected areas until a consent\_records entry exists that links a parent account, include method and version
+2, Policy versioning, write user\_policy\_acceptances at signup and after any policy version bump
+3, Email bounce capture endpoint, create a simple route at /api,webhooks,resend to capture bounces into email\_bounces
+4, Two factor for tenant owners and super admins using TOTP, store TOTP secret and recovery codes, add activate and verify endpoints, guard super admin impersonation with TOTP
+5, Request id logging, add a middleware that assigns a uuid to req.requestId and include it in every log line
+6, Abuse controls for join by code, throttle by IP, after several failures require a fresh code from the owner
+7, Tenant status handling, if tenant status is suspended, block new invites and joins, show a banner in the dashboard
+8, Export endpoint, create a protected endpoint that returns a CSV of the roster and sessions for the tenant owner
+
+Section 11, Seeding script
+
+Create scripts,seed.ts
+
+import { db } from "../src/db";
+import { tenants } from "../src/db/schema/tenants";
+import { tenant\_users } from "../src/db/schema/tenantUsers";
+import { generateTenantCode } from "../src/lib/ids";
+
+async function run() {
+const t = await db.insert(tenants).values({ name: "Charter Club", slug: "charter-club", tenant\_code: generateTenantCode(), contact\_name: "Owner One", contact\_email: "[owner1@example.com](mailto:owner1@example.com)" }).returning();
+const ownerId = await ensureUser("[owner1@example.com](mailto:owner1@example.com)", "Password123", { name: "Owner One" });
+await db.insert(tenant\_users).values({ tenant\_id: t\[0].id, user\_id: ownerId, role: "tenant\_owner" });
+console.log("Seeded tenant", t\[0].id);
+}
+
+run();
+
+Section 12, QA checklist runner
+
+Create scripts,qa.md with the acceptance tests from the playbook, include ten numbered steps, sign up, verify, invite, accept, join by code, upgrade, webhook flips plan, rotate code, rate limits, email renders
+
+Section 13, Final wiring
+
+1, Add all new routes to the Express app in src,server.ts as shown
+2, Verify build, run ts-node-dev to start the server
+3, Expose the four UI pages, wire them into your client router
+
+Section 14, Output
+
+After completing the above, print a short summary to the console with the created files and any notes. Provide the URL for the health endpoint and the list of API endpoints created.
+
+End of prompt.
