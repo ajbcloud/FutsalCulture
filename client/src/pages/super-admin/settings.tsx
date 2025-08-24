@@ -100,7 +100,9 @@ export default function SuperAdminSettings() {
   const { data: policies, isLoading: policiesLoading } = useQuery<Policies>({
     queryKey: ['/api/super-admin/settings/policies'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/settings/policies');
+      const response = await fetch('/api/super-admin/settings/policies', {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to fetch policies');
       return response.json();
     }
@@ -110,7 +112,9 @@ export default function SuperAdminSettings() {
   const { data: tenantDefaults, isLoading: defaultsLoading } = useQuery<TenantDefaults>({
     queryKey: ['/api/super-admin/settings/tenant-defaults'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/settings/tenant-defaults');
+      const response = await fetch('/api/super-admin/settings/tenant-defaults', {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to fetch tenant defaults');
       return response.json();
     }
@@ -122,6 +126,7 @@ export default function SuperAdminSettings() {
       const response = await fetch('/api/super-admin/settings/policies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update policies');
@@ -144,6 +149,7 @@ export default function SuperAdminSettings() {
       const response = await fetch('/api/super-admin/settings/tenant-defaults', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update tenant defaults');

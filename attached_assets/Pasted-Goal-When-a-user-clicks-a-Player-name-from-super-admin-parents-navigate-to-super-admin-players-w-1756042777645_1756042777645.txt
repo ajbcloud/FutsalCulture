@@ -1,0 +1,145 @@
+Goal
+
+When a user clicks a Player name from /super-admin/parents, navigate to /super-admin/players with the search box prefilled to that player’s name and auto-apply the table filter. Likewise, clicking a Parent name from /super-admin/players goes to /super-admin/parents with the search prefilled to that parent’s name. Preserve the current tenant filter. Also restore the Parents column on Players.
+
+We are not adding ID-based filters here; we’re intentionally using the existing search UI so behavior is obvious and consistent.
+
+Frontend updates
+
+Files (adjust to your structure):
+
+client/src/routes/super-admin/Parents.tsx
+
+client/src/routes/super-admin/Players.tsx
+
+client/src/components/super-admin/FilterBar.tsx (if it owns tenantId / global q)
+
+client/src/components/super-admin/DataTable.tsx (or wherever global/table filters are wired)
+
+1) Link building to prefill search
+
+Parents → Players: in the cell that lists a parent’s players, wrap each player full name in a Link:
+
+href = /super-admin/players?q=<encodeURIComponent(player.fullName)>&tenantId=<TENANT_ID>&focus=search
+
+Players → Parents: add a Parents column (see step 4). For each parent name:
+
+href = /super-admin/parents?q=<encodeURIComponent(parent.fullName)>&tenantId=<TENANT_ID>&focus=search
+
+Keep any existing date/status params if helpful: append &from=&to= when present.
+
+2) Read q from URL and apply search automatically
+
+On both Players.tsx and Parents.tsx:
+
+On mount:
+
+const [searchParams, setSearchParams] = useSearchParams();
+const q = searchParams.get('q')?.trim() ?? '';
+const tenantId = searchParams.get('tenantId') ?? null;
+const focus = searchParams.get('focus'); // 'search' optional
+
+// If you have a controlled FilterBar:
+if (tenantId) setTenantFilter(tenantId); // expose setter in FilterBar/context
+
+if (q) {
+  setSearchInputValue(q);            // set the UI input value
+  setGlobalTableFilter(q);           // TanStack Table global filter setter
+  refetchWithQ(q);                   // if server-side search, pass q in the query key/params
+  highlightFirstMatch(q);            // optional: add row highlight & scrollIntoView
+}
+
+if (focus === 'search') searchInputRef?.current?.focus();
+
+
+Ensure the page applies the filter immediately (no extra keystroke needed).
+
+Show a small dismissible banner if q yields multiple matches: “Showing results for ‘{q}’ — Clear”.
+
+3) Ensure the search box and fetchers use q
+
+If client-side filtering (TanStack Table globalFilter):
+
+Wire globalFilter to your search input and to q from URL.
+
+Case-insensitive contains match on name & email (players: fullName, email; parents: fullName, email/phone).
+
+If server-side search:
+
+Update React Query fetchers to include q param:
+
+api.get('/api/super-admin/players', { params: { tenantId, q, include: 'parents' } })
+api.get('/api/super-admin/parents', { params: { tenantId, q, include: 'players' } })
+
+
+Debounce user typing (250–300ms) and sync q back to the URL.
+
+4) Restore Parents column on Players
+
+Add a Parents column to the Players table:
+
+Render up to 2 names inline as links to /super-admin/parents?q=<Parent Name>&tenantId=...&focus=search.
+
+If there are more than 2 parents, show +N with a hover popover listing the rest (also linked).
+
+Make sure the Players query includes parents (via include=parents or join).
+
+5) Tenant filter preservation
+
+When building links, always include the current tenantId if one is active.
+
+On the destination page, if tenantId is present, programmatically set the tenant filter before applying q.
+
+6) Clear behavior
+
+If q is present, show a Clear chip/button near the search input:
+
+Clears the input, resets the table filter, and removes q (and focus) from URL via setSearchParams.
+
+7) Row highlight (nice-to-have)
+
+After applying q, if exactly one row matches, add a temporary highlight class and scrollIntoView({ block: 'center' }).
+
+Backend (only if server-side search is used)
+
+Players endpoint GET /api/super-admin/players:
+
+Accept tenantId?, q?, include=parents?.
+
+If q provided, filter on case-insensitive name/email (and parent name if you support that join).
+
+Parents endpoint GET /api/super-admin/parents:
+
+Accept tenantId?, q?, include=players?.
+
+If q provided, filter on case-insensitive name/email/phone.
+
+Add necessary indexes (lower(full_name), lower(email)), or compute search_text column to keep it fast.
+
+QA / Acceptance
+
+From /super-admin/parents, clicking a Player name:
+
+Navigates to /super-admin/players with ?q=<player name>&tenantId=<id>&focus=search.
+
+The search box is prefilled, the table is already filtered, and (if single match) the row is highlighted and scrolled into view.
+
+From /super-admin/players, clicking a Parent name:
+
+Navigates to /super-admin/parents with ?q=<parent name>&tenantId=<id>&focus=search.
+
+Prefilled and filtered as above.
+
+Parents column is visible on Players; names are correct and clickable.
+
+Hitting Back/Forward retains search and tenant filters; page reload preserves the filter via q.
+
+If q yields no results, show an empty state with a Clear button that removes q and resets the table.
+
+Notes
+
+We intentionally avoid ID-based params here to keep behavior transparent for users. If two people share the same name, multiple matches are fine; the banner clarifies and users can refine the query.
+
+Keep parity with the Admin section: reuse the same search util/normalizer to avoid surprises (normalize('NFKD').toLowerCase(), etc.).
+
+If you already implemented ID deep links earlier, keep them working (honor playerId/parentId if present), but prefer q when both exist.
