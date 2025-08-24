@@ -190,7 +190,7 @@ export default function PlanManagement() {
   // Update plan mutation
   const updatePlanMutation = useMutation({
     mutationFn: async ({ planId, updates }: { planId: string; updates: Partial<Plan> }) => 
-      apiRequest(`/api/super-admin/plans/${planId}`, 'PUT', updates),
+      apiRequest('PUT', `/api/super-admin/plans/${planId}`, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/super-admin/plans'] });
       toast({ title: 'Plan updated successfully' });
