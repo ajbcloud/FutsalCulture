@@ -15,7 +15,6 @@ import SuperAdminPayments from "@/components/super-admin/payments";
 import SuperAdminRegistrations from "@/components/super-admin/registrations";
 import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
-import Analytics from "@/pages/super-admin/analytics";
 import AnalyticsV2 from "@/pages/super-admin/analytics-v2";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 import SuperAdminDunning from "@/pages/super-admin/dunning";
@@ -78,8 +77,7 @@ export default function SuperAdminPage() {
   const companySection = [
     { name: "Overview", href: "/super-admin", icon: Home, current: basePath === "/super-admin" },
     { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: basePath === "/super-admin/plan-management" },
-    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: basePath === "/super-admin/analytics" },
-    { name: "Analytics v2 🚀", href: "/super-admin/analytics-v2", icon: BarChart3, current: basePath.startsWith("/super-admin/analytics-v2") },
+    { name: "Analytics", href: "/super-admin/analytics-v2", icon: BarChart3, current: basePath.startsWith("/super-admin/analytics-v2") },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
@@ -105,8 +103,6 @@ export default function SuperAdminPage() {
     switch (true) {
       case basePath === "/super-admin/tenants":
         return <SuperAdminTenants />;
-      case basePath === "/super-admin/analytics":
-        return <Analytics />;
       case basePath.startsWith("/super-admin/analytics-v2"):
         return <AnalyticsV2 />;
       case basePath === "/super-admin/plan-management":
