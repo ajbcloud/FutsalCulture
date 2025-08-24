@@ -139,8 +139,9 @@ export default function StateTenantsModal({
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        // Navigate to tenant details - could be implemented later
-                        console.log('Navigate to tenant:', tenant.tenantId);
+                        // Open tenant details in new tab to avoid losing Super Admin context
+                        const url = `/super-admin/tenant/${tenant.tenantId}`;
+                        window.open(url, '_blank');
                       }}
                       data-testid={`view-tenant-${tenant.tenantId}`}
                     >
