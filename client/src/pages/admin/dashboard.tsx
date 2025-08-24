@@ -333,7 +333,7 @@ export default function AdminDashboard() {
               iconColor="text-orange-500"
               subtitle="Current Week"
               growth={hasAdvancedAnalytics ? metrics?.sessionsGrowth || 0 : undefined}
-              showGrowth={hasAdvancedAnalytics}
+              showGrowth={hasAdvancedAnalytics.hasFeature}
             />
             
             {hasPayments ? (

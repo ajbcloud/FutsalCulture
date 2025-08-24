@@ -599,7 +599,9 @@ export default function SuperAdminHelpRequests() {
                   Reply
                 </Button>
                 <Button onClick={() => {
-                  handleResolve(viewingRequest);
+                  if (viewingRequest) {
+                    handleResolve(viewingRequest);
+                  }
                   setViewingRequest(null);
                 }}>
                   Mark Resolved
