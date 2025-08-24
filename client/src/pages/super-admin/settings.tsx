@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -155,6 +156,16 @@ export default function SuperAdminSettings() {
   const [savingIntegration, setSavingIntegration] = useState<string | null>(null);
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [sendingTestSMS, setSendingTestSMS] = useState(false);
+  
+  // Add Super Admin dialog states
+  const [addSuperAdminOpen, setAddSuperAdminOpen] = useState(false);
+  const [newSuperAdminData, setNewSuperAdminData] = useState({
+    username: '',
+    email: '',
+    fullName: '',
+    requireMfa: true
+  });
+  const [addingSuperAdmin, setAddingSuperAdmin] = useState(false);
 
   // Fetch policies
   const { data: policies, isLoading: policiesLoading } = useQuery<Policies>({
@@ -417,6 +428,55 @@ export default function SuperAdminSettings() {
       });
     } finally {
       setSendingTestSMS(false);
+    }
+  };
+  
+  // Handle adding new Super Admin
+  const handleAddSuperAdmin = async () => {
+    if (!newSuperAdminData.username || !newSuperAdminData.email) {
+      toast({ 
+        title: 'Validation Error', 
+        description: 'Username and email are required',
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    setAddingSuperAdmin(true);
+    try {
+      const response = await fetch('/api/super-admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newSuperAdminData)
+      });
+      
+      if (response.ok) {
+        toast({ 
+          title: 'Super Admin Added', 
+          description: `${newSuperAdminData.fullName || newSuperAdminData.username} has been added as a Super Admin` 
+        });
+        setAddSuperAdminOpen(false);
+        setNewSuperAdminData({
+          username: '',
+          email: '',
+          fullName: '',
+          requireMfa: true
+        });
+        // Refresh the user list if needed
+        queryClient.invalidateQueries({ queryKey: ['/api/super-admin/users'] });
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add Super Admin');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Failed to add Super Admin', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setAddingSuperAdmin(false);
     }
   };
 
@@ -1933,7 +1993,12 @@ export default function SuperAdminSettings() {
                   <Shield className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>Super Admin Users</CardTitle>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setAddSuperAdminOpen(true)}
+                  data-testid="button-add-super-admin"
+                >
                   <UserCheck className="h-4 w-4 mr-2" />
                   Add Super Admin
                 </Button>
@@ -2108,6 +2173,104 @@ export default function SuperAdminSettings() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+      
+      {/* Add Super Admin Dialog */}
+      <Dialog open={addSuperAdminOpen} onOpenChange={setAddSuperAdminOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Super Admin User</DialogTitle>
+            <DialogDescription>
+              Create a new Super Admin account with full platform access and management permissions.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username *</Label>
+              <Input
+                id="username"
+                placeholder="Enter username"
+                value={newSuperAdminData.username}
+                onChange={(e) => setNewSuperAdminData({ ...newSuperAdminData, username: e.target.value })}
+                data-testid="input-username"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={newSuperAdminData.email}
+                onChange={(e) => setNewSuperAdminData({ ...newSuperAdminData, email: e.target.value })}
+                data-testid="input-email"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                placeholder="Enter full name"
+                value={newSuperAdminData.fullName}
+                onChange={(e) => setNewSuperAdminData({ ...newSuperAdminData, fullName: e.target.value })}
+                data-testid="input-full-name"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="text-sm font-medium">Require Multi-Factor Authentication</p>
+                <p className="text-xs text-muted-foreground">Enforce MFA for enhanced security</p>
+              </div>
+              <Switch 
+                checked={newSuperAdminData.requireMfa}
+                onCheckedChange={(checked) => setNewSuperAdminData({ ...newSuperAdminData, requireMfa: checked })}
+                data-testid="switch-require-mfa"
+              />
+            </div>
+            
+            <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-yellow-800 dark:text-yellow-200">Security Notice</p>
+                  <p className="text-yellow-700 dark:text-yellow-300">Super Admins have full platform access. Only add trusted users.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setAddSuperAdminOpen(false)}
+              disabled={addingSuperAdmin}
+              data-testid="button-cancel-add-admin"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddSuperAdmin}
+              disabled={addingSuperAdmin || !newSuperAdminData.username || !newSuperAdminData.email}
+              data-testid="button-confirm-add-admin"
+            >
+              {addingSuperAdmin ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Add Super Admin
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

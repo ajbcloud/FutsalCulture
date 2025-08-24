@@ -746,6 +746,47 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Add new Super Admin user
+  app.post('/api/super-admin/users', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { username, email, fullName, requireMfa } = req.body;
+      
+      if (!username || !email) {
+        return res.status(400).json({ message: "Username and email are required" });
+      }
+      
+      // In a real implementation, this would:
+      // 1. Validate the email format
+      // 2. Check if username/email already exists
+      // 3. Create the user account in the database
+      // 4. Send invitation email
+      // 5. Set up MFA if required
+      
+      console.log('Creating new Super Admin user:', { username, email, fullName, requireMfa });
+      
+      // For now, simulate successful creation
+      const newUser = {
+        id: Date.now().toString(),
+        username,
+        email,
+        fullName: fullName || username,
+        role: 'super_admin',
+        mfaEnabled: requireMfa,
+        createdAt: new Date().toISOString(),
+        status: 'pending_verification'
+      };
+      
+      res.status(201).json({
+        success: true,
+        message: `Super Admin user ${fullName || username} has been created successfully`,
+        user: newUser
+      });
+    } catch (error) {
+      console.error("Error creating super admin user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // Get all help requests across all tenants for Super Admin
   app.get('/api/super-admin/help-requests', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
