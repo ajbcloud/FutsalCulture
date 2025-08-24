@@ -564,7 +564,14 @@ export default function PlanManagement() {
                                 </Badge>
                               </div>
                               <div className="ml-auto">
-                                {renderFeatureControl(feature)}
+                                {(() => {
+                                  try {
+                                    return renderFeatureControl(feature);
+                                  } catch (error) {
+                                    console.error('Error rendering feature control:', error, feature);
+                                    return <span className="text-red-500">Error</span>;
+                                  }
+                                })()}
                               </div>
                             </div>
                           ))}
