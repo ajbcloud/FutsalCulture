@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import TenantProfileDrawer from '@/components/super-admin/TenantProfileDrawer';
 import { 
@@ -23,7 +24,9 @@ import {
   BarChart3,
   ExternalLink,
   Power,
-  PowerOff
+  PowerOff,
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -79,6 +82,8 @@ export default function SuperAdminTenants() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [profileDrawerTenant, setProfileDrawerTenant] = useState<{ id: string; name: string } | null>(null);
+  const [impersonationDialog, setImpersonationDialog] = useState<{ tenant: Tenant | null; open: boolean }>({ tenant: null, open: false });
+  const [impersonationReason, setImpersonationReason] = useState('');
   const [newTenant, setNewTenant] = useState({
     name: '',
     subdomain: '',
@@ -174,9 +179,56 @@ export default function SuperAdminTenants() {
     toggleStatusMutation.mutate({ tenantId, status: newStatus });
   };
 
+  // Impersonation mutation
+  const impersonateMutation = useMutation({
+    mutationFn: async ({ tenantId, reason }: { tenantId: string; reason: string }) => {
+      const response = await fetch('/api/super-admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, reason })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start impersonation');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'Impersonation session started', 
+        description: 'Opening tenant admin portal in new tab...' 
+      });
+      // Open the impersonation URL in a new tab
+      window.open(data.url, '_blank');
+      setImpersonationDialog({ tenant: null, open: false });
+      setImpersonationReason('');
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Failed to start impersonation', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
+  });
+
   const handleImpersonateLogin = (tenant: Tenant) => {
-    // Open tenant's admin portal in new tab
-    window.open(`https://${tenant.subdomain}.playhq.app/admin`, '_blank');
+    setImpersonationDialog({ tenant, open: true });
+  };
+
+  const handleStartImpersonation = () => {
+    if (!impersonationDialog.tenant || !impersonationReason.trim()) {
+      toast({ 
+        title: 'Reason required', 
+        description: 'Please provide a reason for impersonation.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    impersonateMutation.mutate({ 
+      tenantId: impersonationDialog.tenant.id, 
+      reason: impersonationReason.trim() 
+    });
   };
 
   if (isLoading) {
@@ -390,8 +442,8 @@ export default function SuperAdminTenants() {
                         Health Profile
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleImpersonateLogin(tenant)}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Login as Admin
+                        <Eye className="w-4 h-4 mr-2" />
+                        Impersonate Admin
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleToggleStatus(tenant.id, tenant.status)}>
@@ -418,6 +470,77 @@ export default function SuperAdminTenants() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Impersonation Dialog */}
+      <Dialog open={impersonationDialog.open} onOpenChange={(open) => {
+        setImpersonationDialog({ tenant: null, open });
+        setImpersonationReason('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Impersonate Tenant Admin
+            </DialogTitle>
+            <DialogDescription>
+              You are about to impersonate an admin user for <strong>{impersonationDialog.tenant?.name}</strong>. 
+              This action will be logged and audited for security purposes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-orange-800 mb-1">Security Notice</p>
+                  <ul className="text-orange-700 space-y-1">
+                    <li>• This session will expire in 5 minutes</li>
+                    <li>• All actions will be logged and attributed to you</li>
+                    <li>• Only use for legitimate support purposes</li>
+                    <li>• Session can be revoked at any time</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="reason">Reason for Impersonation *</Label>
+              <Textarea
+                id="reason"
+                value={impersonationReason}
+                onChange={(e) => setImpersonationReason(e.target.value)}
+                placeholder="e.g., Troubleshooting payment issue reported by customer"
+                className="mt-1"
+                rows={3}
+                data-testid="textarea-impersonation-reason"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Provide a clear business justification for this impersonation session.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setImpersonationDialog({ tenant: null, open: false });
+                  setImpersonationReason('');
+                }}
+                data-testid="button-cancel-impersonation"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleStartImpersonation}
+                disabled={impersonateMutation.isPending || !impersonationReason.trim()}
+                data-testid="button-start-impersonation"
+              >
+                {impersonateMutation.isPending ? 'Starting...' : 'Start Impersonation'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Tenant Details Modal */}
       {selectedTenant && (

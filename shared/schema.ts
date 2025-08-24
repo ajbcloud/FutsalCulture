@@ -58,6 +58,9 @@ export const userStatusEnum = pgEnum("user_status", ["active", "locked"]);
 // Unsubscribe channel enum
 export const unsubscribeChannelEnum = pgEnum("unsubscribe_channel", ["email", "sms"]);
 
+// Impersonation event status enum
+export const impersonationStatusEnum = pgEnum("impersonation_status", ["issued", "active", "ended", "expired"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -889,36 +892,54 @@ export const webhookStatsHourly = pgTable("webhook_stats_hourly", {
 
 export const impersonationEvents = pgTable("impersonation_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  superAdminId: varchar("super_admin_id").notNull().references(() => users.id),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  superAdminId: varchar("super_admin_id").notNull().references(() => users.id),
   reason: text("reason").notNull(),
-  tokenJti: text("token_jti").notNull(),
+  jti: text("jti").notNull().unique(),
   startedAt: timestamp("started_at").defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
-  revokedAt: timestamp("revoked_at"),
+  usedAt: timestamp("used_at"),
+  endedAt: timestamp("ended_at"),
   ip: text("ip"),
+  userAgent: text("user_agent"),
 }, (table) => [
-  index("impersonation_events_super_admin_id_idx").on(table.superAdminId),
-  index("impersonation_events_tenant_id_idx").on(table.tenantId),
-  index("impersonation_events_started_at_idx").on(table.startedAt),
+  index("idx_imp_events_tenant_started").on(table.tenantId, table.startedAt),
+  index("idx_imp_events_super_started").on(table.superAdminId, table.startedAt),
 ]);
 
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  userId: varchar("user_id").references(() => users.id),
   actorId: varchar("actor_id").notNull(),
   actorRole: text("actor_role").notNull(),
   section: text("section").notNull(),
   action: text("action").notNull(),
   targetId: text("target_id").notNull(),
+  meta: jsonb("meta"),
   diff: jsonb("diff"),
   ip: text("ip"),
+  // Impersonation fields
+  isImpersonated: boolean("is_impersonated").default(false),
+  impersonatorId: varchar("impersonator_id").references(() => users.id),
+  impersonationEventId: varchar("impersonation_event_id").references(() => impersonationEvents.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("audit_logs_actor_id_idx").on(table.actorId),
   index("audit_logs_section_idx").on(table.section),
   index("audit_logs_action_idx").on(table.action),
   index("audit_logs_created_at_idx").on(table.createdAt),
+  index("idx_audit_impersonation").on(table.isImpersonated, table.createdAt),
+  index("audit_logs_tenant_id_idx").on(table.tenantId),
 ]);
+
+// Platform settings table for impersonation policy
+export const platformSettings = pgTable("platform_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  allowImpersonation: boolean("allow_impersonation").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Relations
 export const tenantsRelations = relations(tenants, ({ many, one }) => ({

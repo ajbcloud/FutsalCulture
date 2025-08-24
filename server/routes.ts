@@ -23,6 +23,8 @@ import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { stripeWebhookRouter } from './stripe-webhooks';
 import publicIngestionRoutes from './routes/publicIngestion';
+import { impersonationContext } from './middleware/impersonation';
+import * as impersonationController from './controllers/impersonation';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -34,6 +36,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   await setupAuth(app);
+  
+  // Impersonation context middleware (must be after auth)
+  app.use(impersonationContext);
 
   // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
   const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
@@ -121,6 +126,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update user" });
     }
   });
+
+  // Impersonation routes
+  app.get('/impersonate', impersonationController.consume);
+  app.get('/api/impersonation/status', isAuthenticated, impersonationController.status);
+  app.post('/api/impersonation/end', isAuthenticated, impersonationController.end);
 
   // Session routes
   app.get('/api/sessions', async (req: any, res) => {

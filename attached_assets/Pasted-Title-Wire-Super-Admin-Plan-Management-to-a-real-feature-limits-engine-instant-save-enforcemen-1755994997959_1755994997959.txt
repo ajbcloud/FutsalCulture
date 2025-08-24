@@ -1,0 +1,273 @@
+Title: Wire Super Admin → Plan Management to a real feature/limits engine (instant save + enforcement)
+
+Goal
+The “Feature Matrix” in Super Admin must immediately persist changes and actually gate features for all tenants on a plan. The “Plan Options / Feature Comparison Grid” must read from the same source of truth. Add a small feature/limits engine, autosave on toggle/dropdowns, optimistic UI, cache invalidation, and backend enforcement (both API checks and UI capability flags).
+
+Deliverables (acceptance)
+
+Clicking any ✓/✗ toggle or dropdown in Feature Matrix autosaves within 400 ms (loading spinner in cell, toast on error) and the state persists on refresh.
+
+Tenants on that plan gain/lose access instantly: protected API endpoints reject with feature_not_in_plan (HTTP 403) and UI hides/disables gated controls.
+
+Plan Options and the Feature Comparison Grid display exactly what’s configured.
+
+Changes are audited (who/what/when) and cached capabilities for affected tenants are invalidated.
+
+Category filter works (“Core Features”, “Communication”, etc.).
+
+No page reload is needed to see saved state (“Saved” tick in header within 1 s of last edit).
+
+Scope & structure
+
+A) Data model (migrations)
+Create a normalized, type-aware feature model. Do not hard-code in the UI.
+
+features (master list)
+
+key (pk; e.g., core.session_management)
+
+name, category (core, communication, payments_billing, analytics, integrations, support)
+
+type enum: boolean | enum | limit
+
+options_json (nullable; for enum allowed values; for limit min/max/unit/step)
+
+is_active (bool)
+
+plans (already exists; ensure fields)
+
+id, code, display_name, price_cents, rank, is_active
+
+plan_features (plan × feature mapping; one row per plan/feature)
+
+plan_id fk, feature_key fk
+
+enabled bool null (for boolean)
+
+variant text null (for enum, must be in features.options_json)
+
+limit_value int null (for limit)
+
+unique (plan_id, feature_key)
+
+tenant_overrides (optional, not in v1 unless trivial)
+
+allow future per-tenant override
+
+audit_logs add if missing:
+
+section, action, meta_json, actor_id, plan_id, feature_key
+
+Seed features with these keys and types to match current UI:
+
+Core
+
+core.session_management → enum values: manual_only, recurring, recurring_bulk
+
+core.parent_player_booking → boolean
+
+core.waitlist → enum: off, manual_only, auto_promote
+
+core.csv_export → boolean
+
+core.csv_import → boolean
+
+core.bulk_operations → boolean
+
+core.access_codes → boolean
+
+core.discount_codes → boolean
+
+Communication
+
+comm.email_notifications → boolean
+
+comm.sms_notifications → boolean
+
+comm.email_sms_gateway → boolean
+
+Payments & Billing
+
+pay.accept_online_payments → boolean
+
+pay.payment_integrations → enum: stripe_only, multiple_providers
+
+Analytics & Automation
+
+analytics.level → enum: none, basic, advanced, ai_powered
+
+Integrations
+
+integrations.calendar → boolean
+
+integrations.additional → enum: none, sendgrid_mailchimp_quickbooks, sendgrid_mailchimp_quickbooks_braintree
+
+Developer/API
+
+dev.api_access → boolean
+
+Support & Requests
+
+support.level → enum: basic, standard, priority_phone
+
+support.feature_request_queue → enum: basic, standard, priority
+
+Limits & Pricing (in the “Limits & Pricing” tab)
+
+limit.players_max → limit (int)
+
+limit.sessions_monthly → limit (int)
+
+limit.storage_gb → limit (int)
+
+B) Server APIs (Super Admin)
+All routes behind super-admin auth. Return ETags for caching.
+
+Get full matrix
+
+GET /api/super-admin/plans/:planId/features
+Returns: plan info, categories, features metadata, and current values (enabled/variant/limit_value) for this plan.
+
+Upsert a single cell (autosave)
+
+PATCH /api/super-admin/plans/:planId/features/:featureKey
+Body depends on feature type:
+
+boolean: { enabled: true|false }
+
+enum: { variant: 'value' }
+
+limit: { limitValue: number }
+Response: updated row; include updatedAt.
+
+Bulk apply (optional)
+
+PATCH /api/super-admin/plans/:planId/features with array of changes (used by “copy column”, etc.)
+
+Invalidate affected tenants
+
+After any update, publish an invalidation message (capabilities:plan:<planId>) to cache bus (Redis) and return affectedTenantsCount. Also write audit_logs entry: section='plans', action='feature_update'.
+
+C) Tenant capabilities endpoint
+One consistent place that computes effective permissions from the plan (and later overrides).
+
+GET /api/tenants/:tenantId/capabilities
+Returns: flat object keyed by feature_key → concrete value (true/false, enum string, number). Cache for 5 minutes with plan-based busting.
+
+D) Enforcement (backend gates)
+
+Introduce helpers:
+
+requireFeature(req, 'feature_key', options?) → throws 403 feature_not_in_plan
+
+getFeature(req, 'feature_key') → returns raw value (for enums/limits)
+
+Apply to all relevant controllers immediately:
+
+Session Management flows check core.session_management (manual_only vs recurring vs recurring_bulk)
+
+Waitlist endpoints check core.waitlist value
+
+CSV export/import, Bulk operations, Access/Discount codes, Payments integration, API access, etc.
+
+Add a common error shape the UI can recognize to show “Upgrade” CTA.
+
+E) Enforcement (frontend UX)
+
+Add a useCapabilities() hook (React Query) that calls the tenant capabilities endpoint once and memoizes it.
+
+Wrap gated components with:
+
+Hide/disable if capability not present.
+
+If user interacts, show “Requires {Plan} or higher” tooltip with link to Plan upgrade.
+
+F) Super Admin UI (Feature Matrix)
+
+The grid should bind each cell to the API:
+
+Boolean features show a toggle (✓/✗).
+
+Enum features show a toggle (on/off) + dropdown for the variant (enabled values from features.options_json).
+
+Limits show numeric input with min/max/step from options_json.
+
+On change, optimistic update the cell, fire PATCH to backend.
+
+Show spinner in cell while saving; revert on error with toast.
+
+Debounce 300–400 ms to group multiple quick changes.
+
+Header should display “All changes saved” within 1 s after last successful write.
+
+Category select filters the rows by features.category.
+
+Add “Copy column to…” and “Reset to defaults” actions (use bulk API).
+
+When a plan is inactive, disable editing and display a banner.
+
+G) Plan Options & Feature Comparison Grid
+
+Replace static content with data from GET /api/super-admin/plans + GET /api/super-admin/plans/:id/features.
+
+Render by category groups, show ✓/✗ or the variant label (e.g., Recurring + Bulk).
+
+Ensure the pricing cards and the comparison grid read exactly the same data the matrix writes.
+
+H) Caching & invalidation
+
+Cache capabilities per tenant key cap:tenant:<id>.
+
+On any plan_features update:
+
+Publish capabilities:plan:<planId> on Redis.
+
+Cap service flushes all cap:tenant:<id> for tenants on that plan.
+
+Add ETags to the Super Admin “get matrix” endpoint so the Feature Matrix page can revalidate cheaply.
+
+I) Audit & security
+
+Log every change: who (super admin id/email), plan id, feature key, old → new, timestamp, IP/UA.
+
+Add rate-limit: max 10 writes/second to plan features to protect DB.
+
+Feature schema is the only source of truth; UI must not allow values outside options_json.
+
+J) Testing checklist (must pass)
+
+Toggle a boolean feature → page refresh preserves value; tenant loses/gains access instantly (UI gated, APIs 403).
+
+Change an enum value (e.g., Waitlist manual_only → auto_promote) → tenant sees new behavior.
+
+Change a limit value → server enforces (limit.sessions_monthly, etc.).
+
+Feature Comparison Grid mirrors exactly the matrix.
+
+Cache invalidation success: capabilities endpoint reflects changes < 10 s for all tenants on the plan.
+
+Audit log contains each change with diff.
+
+UX polish
+
+In each row label add an info icon with feature description and what each variant means.
+
+When a change would reduce capabilities, show a confirm (“This removes access to… Continue?”) — preference toggle in settings.
+
+Add “Preview as plan” to view the app with that plan’s capabilities.
+
+Notes to devs
+
+Keep features.key stable and semantic; use dotted namespaces as above.
+
+If any existing gates are scattered, refactor them to use the new requireFeature/getFeature helpers to avoid drift.
+
+The matrix should degrade gracefully if a feature is is_active=false (hide row).
+
+Do not ship partial writes; API must validate type and allowed values atomically.
+
+Done criteria
+
+We can reliably sell, switch, and enforce plans without hotfixes. The Feature Matrix becomes the single control surface for product packaging, and the rest of the app reacts instantly.
+
+ChatGPT can make mistakes. Check important info.

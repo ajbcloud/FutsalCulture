@@ -1,0 +1,386 @@
+PASTE THIS EXACTLY INTO YOUR AGENT AS ONE TASK. UPDATE FILES IN PLACE. CREATE MISSING PATHS.
+
+Title: Implement secure Super-Admin → Tenant impersonation (token, session, audit) and wire Security & Audit page
+
+Goal
+Ship full impersonation capability with tight auditing and UX:
+
+* Super Admin can click “Impersonate” on a tenant → gets a 5-minute one-time JWT URL targeting the tenant subdomain.
+* Tenant app consumes token, creates a short, flagged session (impersonated), shows banner + Stop button.
+* Every request during impersonation is logged with impersonation context.
+* Security & Audit page shows **MFA adoption**, **Recent Impersonation Events**, and **System Activity Log** with filters.
+* Add hardening (TTL, domain match, one-time JTI, policy toggle).
+
+Tech assumptions: Node/Express server, React client, React Query; DB via SQL (Drizzle/Knex/Prisma—adapt SQL); existing `audit_logs` table and Super Admin shell.
+
+ENV VARS (add to `.env.example` and README)
+
+```
+IMPERSONATION_SECRET=***  # 32+ bytes base64 or hex preferred
+ROOT_DOMAIN=your-domain.com  # e.g. playhq.app (no protocol)
+```
+
+────────────────────────────────────────────────────────
+A) DATABASE – Migrations
+
+If tables exist, **add missing columns only**. Use your migration system.
+
+1. `impersonation_events`
+
+```sql
+create table if not exists impersonation_events (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  super_admin_id uuid not null,
+  reason text not null,
+  jti text not null unique,
+  started_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at timestamptz null,
+  ended_at timestamptz null,
+  ip text null,
+  user_agent text null
+);
+create index if not exists idx_imp_events_tenant_started on impersonation_events (tenant_id, started_at desc);
+create index if not exists idx_imp_events_super_started on impersonation_events (super_admin_id, started_at desc);
+```
+
+2. `audit_logs` – add impersonation fields if missing
+
+```sql
+alter table audit_logs
+  add column if not exists is_impersonated boolean not null default false,
+  add column if not exists impersonator_id uuid null,
+  add column if not exists impersonation_event_id uuid null;
+create index if not exists idx_audit_impersonation on audit_logs (is_impersonated, created_at desc);
+```
+
+3. Optional policy toggle in `platform_settings` (or equivalent)
+
+```sql
+alter table platform_settings add column if not exists allow_impersonation boolean not null default true;
+```
+
+────────────────────────────────────────────────────────
+B) SERVER – Controllers, Routes, Middleware
+
+File paths assume `server/…`; adjust to repo layout.
+
+1. Super Admin: **issue token** (one-time 5-min JWT)
+   `server/controllers/superAdmin/impersonate.ts`
+
+```ts
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { sql } from 'drizzle-orm';
+import { v4 as uuid } from 'uuid';
+
+const SECRET = process.env.IMPERSONATION_SECRET!;
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN!;
+
+export async function start(req: Request, res: Response) {
+  if (!SECRET || !ROOT_DOMAIN) return res.status(500).json({ error: 'server_misconfig' });
+
+  // optional platform policy check
+  const policy = await req.db.execute(sql`select allow_impersonation from platform_settings limit 1`)
+    .then(r => (r as any).rows[0]?.allow_impersonation ?? true);
+  if (!policy) return res.status(403).json({ error: 'impersonation_disabled' });
+
+  const { tenantId, reason } = req.body as { tenantId?: string; reason?: string };
+  if (!tenantId || !reason) return res.status(400).json({ error: 'tenantId and reason required' });
+
+  const tenant = await req.db.execute(sql`select id, subdomain, name from tenants where id=${tenantId} limit 1`)
+    .then(r => (r as any).rows[0]);
+  if (!tenant) return res.status(404).json({ error: 'tenant_not_found' });
+
+  const jti = uuid();
+  const now = new Date();
+  const exp = new Date(now.getTime() + 5 * 60 * 1000);
+
+  const evt = await req.db.execute(sql`
+    insert into impersonation_events (tenant_id, super_admin_id, reason, jti, started_at, expires_at, ip, user_agent)
+    values (${tenantId}, ${(req as any).user.id}, ${reason}, ${jti}, ${now}, ${exp}, ${req.ip}, ${req.get('user-agent')})
+    returning id
+  `).then(r => (r as any).rows[0]);
+
+  const token = jwt.sign(
+    { iss: 'super-admin', aud: 'tenant-app', sub: (req as any).user.id, tenantId, tenantSub: tenant.subdomain, jti, typ: 'impersonation' },
+    SECRET, { expiresIn: '5m' }
+  );
+  const url = `https://${tenant.subdomain}.${ROOT_DOMAIN}/impersonate?token=${encodeURIComponent(token)}`;
+
+  // audit
+  await req.db.execute(sql`
+    insert into audit_logs (section, action, tenant_id, user_id, is_impersonated, impersonator_id, impersonation_event_id, meta)
+    values ('impersonation','start', ${tenantId}, ${(req as any).user.id}, false, ${(req as any).user.id}, ${evt.id}, ${sql.json({ reason, jti })})
+  `);
+
+  res.json({ url, eventId: evt.id });
+}
+```
+
+2. Super Admin routes
+   `server/routes/superAdmin.ts`
+
+```ts
+import * as imp from '../controllers/superAdmin/impersonate';
+import * as sec from '../controllers/superAdmin/security';
+
+r.post('/impersonate', imp.start); // body {tenantId, reason}
+r.get('/security/impersonation/events', sec.listImpersonationEvents);
+r.get('/security/audit', sec.searchAudit);
+```
+
+3. Security list/search controllers
+   `server/controllers/superAdmin/security.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+
+export async function listImpersonationEvents(req: Request, res: Response) {
+  const { from, to, tenantId, status, q, limit } = req.query as any;
+  const rows = await req.db.execute(sql`
+    select e.id, e.started_at, e.used_at, e.ended_at, e.expires_at, e.reason, e.jti,
+           t.id as tenant_id, t.name as tenant_name, sa.id as super_admin_id, sa.email as super_admin_email,
+           case
+             when e.ended_at is not null then 'ended'
+             when e.used_at is not null and e.expires_at < now() then 'expired'
+             when e.used_at is not null then 'active'
+             else 'issued'
+           end as status
+    from impersonation_events e
+      join tenants t on t.id=e.tenant_id
+      join users sa on sa.id=e.super_admin_id
+    where 1=1
+      ${from ? sql`and e.started_at >= ${new Date(from)}` : sql``}
+      ${to ? sql`and e.started_at <= ${new Date(to)}` : sql``}
+      ${tenantId ? sql`and e.tenant_id=${tenantId}` : sql``}
+      ${status ? sql`and (case when e.ended_at is not null then 'ended'
+                                when e.used_at is not null and e.expires_at < now() then 'expired'
+                                when e.used_at is not null then 'active'
+                                else 'issued' end) = ${status}` : sql``}
+      ${q ? sql`and (t.name ilike ${'%'+q+'%'} or sa.email ilike ${'%'+q+'%'} or e.reason ilike ${'%'+q+'%'} )` : sql``}
+    order by e.started_at desc
+    limit ${Number(limit ?? 50)}
+  `).then(r => (r as any).rows);
+  res.json({ events: rows });
+}
+
+export async function searchAudit(req: Request, res: Response) {
+  const { from, to, tenantId, impersonated, impersonatorId, q, limit } = req.query as any;
+  const rows = await req.db.execute(sql`
+    select created_at, tenant_id, user_id, section, action, meta,
+           is_impersonated, impersonator_id, impersonation_event_id
+    from audit_logs
+    where 1=1
+      ${from ? sql`and created_at >= ${new Date(from)}` : sql``}
+      ${to ? sql`and created_at <= ${new Date(to)}` : sql``}
+      ${tenantId ? sql`and tenant_id=${tenantId}` : sql``}
+      ${impersonated === '1' ? sql`and is_impersonated=true` : sql``}
+      ${impersonatorId ? sql`and impersonator_id=${impersonatorId}` : sql``}
+      ${q ? sql`and (section ilike ${'%'+q+'%'} or action ilike ${'%'+q+'%'} or meta::text ilike ${'%'+q+'%'} )` : sql``}
+    order by created_at desc
+    limit ${Number(limit ?? 200)}
+  `).then(r => (r as any).rows);
+  res.json({ logs: rows });
+}
+```
+
+4. Tenant app: **consume token & create impersonated session**
+   `server/routes/tenant/impersonate.ts`
+
+```ts
+import { Router } from 'express';
+import jwt from 'jsonwebtoken';
+import { sql } from 'drizzle-orm';
+
+const SECRET = process.env.IMPERSONATION_SECRET!;
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN!;
+const r = Router();
+
+r.get('/impersonate', async (req: any, res) => {
+  const token = req.query.token as string;
+  if (!token) return res.status(400).send('Missing token');
+
+  let payload: any;
+  try { payload = jwt.verify(token, SECRET); }
+  catch { return res.status(401).send('Invalid or expired token'); }
+
+  if (payload.aud !== 'tenant-app' || payload.typ !== 'impersonation') return res.status(401).send('Invalid token');
+
+  // verify host → subdomain
+  const host = req.hostname; // e.g. futsal-culture.playhq.app
+  const expectedSuffix = `.${payload.tenantSub}.${ROOT_DOMAIN}`;
+  if (!(host.endsWith(`.${payload.tenantSub}.${ROOT_DOMAIN}`) || host === `${payload.tenantSub}.${ROOT_DOMAIN}`)) {
+    return res.status(403).send('Wrong tenant domain for token');
+  }
+
+  // fetch event and atomically mark used_once
+  const evt = await req.db.execute(sql`
+    select id, expires_at, used_at, ended_at from impersonation_events
+    where jti=${payload.jti} and tenant_id=${payload.tenantId} limit 1
+  `).then(r => (r as any).rows[0]);
+  if (!evt) return res.status(404).send('Event missing');
+  if (evt.ended_at) return res.status(410).send('Ended');
+  if (evt.used_at) return res.status(410).send('Already used');
+  if (new Date(evt.expires_at).getTime() < Date.now()) return res.status(410).send('Expired');
+
+  await req.db.execute(sql`update impersonation_events set used_at = now() where id=${evt.id} and used_at is null`);
+
+  // ensure a shadow admin / pick existing tenant admin (implement helper)
+  const adminUser = await ensureTenantShadowAdmin(req.db, payload.tenantId);
+
+  // create session with flags
+  const sessionId = await createSession({
+    userId: adminUser.id,
+    tenantId: payload.tenantId,
+    flags: { isImpersonated: true, impersonatorId: payload.sub, eventId: evt.id }
+  });
+
+  res.cookie('tenant_session', sessionId, {
+    httpOnly: true, secure: true, sameSite: 'lax', domain: `.${ROOT_DOMAIN}`, path: '/', maxAge: 60 * 60 * 1000
+  });
+
+  // audit used
+  await req.db.execute(sql`
+    insert into audit_logs (section, action, tenant_id, user_id, is_impersonated, impersonator_id, impersonation_event_id)
+    values ('impersonation','used', ${payload.tenantId}, ${adminUser.id}, true, ${payload.sub}, ${evt.id})
+  `);
+
+  res.redirect('/dashboard'); // tenant landing
+});
+
+export default r;
+```
+
+Register this router on the tenant app server:
+`app.use('/', tenantImpersonateRoutes);`
+
+5. Tenant middleware to stamp impersonation on every request
+   `server/middleware/impersonationContext.ts`
+
+```ts
+export function impersonationContext(req: any, _res: any, next: any) {
+  const s = req.session; // however your session is loaded
+  if (s?.flags?.isImpersonated) {
+    req.impersonation = { is: true, impersonatorId: s.flags.impersonatorId, eventId: s.flags.eventId };
+  }
+  next();
+}
+```
+
+Add before your routers; update your centralized `logAudit(...)` to include:
+
+```ts
+is_impersonated: !!req.impersonation?.is,
+impersonator_id: req.impersonation?.impersonatorId ?? null,
+impersonation_event_id: req.impersonation?.eventId ?? null,
+```
+
+6. **End/Stop impersonation** endpoint
+   `server/controllers/tenant/impersonation.ts`
+
+```ts
+import { Request, Response } from 'express';
+import { sql } from 'drizzle-orm';
+
+export async function end(req: any, res: Response) {
+  if (!req.session?.flags?.isImpersonated) return res.status(200).json({ ok: true });
+  const eventId = req.session.flags.eventId;
+  await req.db.execute(sql`update impersonation_events set ended_at = now() where id=${eventId} and ended_at is null`);
+  await req.audit({ section: 'impersonation', action: 'end' });
+  await req.sessionStore.destroy(req.session.id);
+  res.clearCookie('tenant_session', { path: '/' });
+  res.json({ ok: true });
+}
+```
+
+Route: `r.post('/api/tenant/impersonation/end', end);`
+
+────────────────────────────────────────────────────────
+C) CLIENT – Super Admin UI & Tenant Banner
+
+1. Tenants table: add **Impersonate** action
+
+* Button opens modal: textarea “Reason (required)”
+* `POST /api/super-admin/impersonate` with `{tenantId, reason}`
+* On success: `window.open(res.url, '_blank', 'noopener');`
+
+2. Tenant app banner (top, fixed)
+
+* Visible when `session.flags.isImpersonated === true`
+* Text: “Impersonating **{TenantName}** — all actions are audited.”
+* Button: **Stop** → `POST /api/tenant/impersonation/end` → reload to login.
+
+3. Security & Audit page (the one in your screenshot)
+   Wire data sources:
+
+* **MFA Adoption** – keep existing logic.
+
+* **Recent Impersonation Events** (card/table):
+  Fetch from `/api/super-admin/security/impersonation/events?from=&to=&tenantId=&status=&q=&limit=`.
+  Show KPI chips (counts by status). Table cols: Started, Tenant, Super Admin, Status, Duration, Reason, Actions (open tenant, copy JTI).
+
+* **System Activity Log**:
+  Fetch from `/api/super-admin/security/audit?...`
+  Filters: date range, tenant, **Impersonation only** (toggle sets `impersonated=1`), **By me** (sets `impersonatorId=currentSuperAdminId`), free-text search.
+
+Use existing DataTable and FilterBar components for consistency.
+
+────────────────────────────────────────────────────────
+D) SECURITY HARDENING
+
+* Token is **one-time** (requires `used_at is null` then set) and 5-minute TTL.
+* Verify **subdomain → payload.tenantSub** matches `Host`.
+* Require **reason** and log it.
+* Rate-limit /super-admin/impersonate if middleware exists.
+* Surface platform toggle **allow\_impersonation** in Settings → Security & Audit.
+* Add alert chip on Security page if any **Active** events exceed 2 hours (lingering sessions).
+
+────────────────────────────────────────────────────────
+E) ACCEPTANCE TESTS (manual)
+
+* From Tenants table, click **Impersonate**, enter reason; new tab opens on the tenant domain, banner visible.
+* Perform a few actions → System Activity Log shows them with `is_impersonated=true` and your super admin as `impersonator_id`.
+* Security page → Recent Impersonation Events lists **Issued**, **Active**, **Ended** with correct durations.
+* Clicking **Stop** ends session; event shows `ended_at`.
+* Trying to reuse the same URL after use returns “Already used”.
+* Token opened on the **wrong subdomain** returns 403.
+
+────────────────────────────────────────────────────────
+F) FILES TO ADD/TOUCH (summary)
+
+Server
+
+* `server/controllers/superAdmin/impersonate.ts` (NEW)
+* `server/controllers/superAdmin/security.ts` (NEW)
+* `server/routes/superAdmin.ts` (UPDATE: add routes)
+* `server/routes/tenant/impersonate.ts` (NEW)
+* `server/controllers/tenant/impersonation.ts` (NEW)
+* `server/middleware/impersonationContext.ts` (NEW)
+* `server/audit/logger.ts` or wherever audit is handled (UPDATE: include impersonation fields)
+* DB migrations for `impersonation_events` and `audit_logs` fields (NEW)
+
+Client (Super Admin)
+
+* Tenants table actions (UPDATE): add “Impersonate” modal + POST flow
+* Security & Audit view (UPDATE): wire events list + audit search & filters
+
+Client (Tenant)
+
+* Global banner (NEW), Stop button calling `/api/tenant/impersonation/end`
+
+────────────────────────────────────────────────────────
+G) NOTES / TODO COMMENTS TO LEAVE IN CODE
+
+* If multiple tenant subdomain formats exist, adjust host check accordingly.
+* If `ensureTenantShadowAdmin` / `createSession` helpers don’t exist, stub them near current auth/session helpers and document assumptions.
+* Consider auto-ending impersonation on idle > 60m via session TTL.
+* Add export (CSV) in Security page for audit logs (next sprint).
+
+When complete, reply with:
+
+1. Migration IDs and SQL.
+2. List of files changed/added.
+3. Screenshots: (a) Tenants table impersonate action, (b) Tenant banner, (c) Security & Audit with Recent Impersonation Events populated, (d) System Activity Log with “Impersonation only” filter applied.

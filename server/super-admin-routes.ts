@@ -613,6 +613,28 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Impersonation endpoints
+  app.post('/api/super-admin/impersonate', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { start } = await import('./controllers/superAdmin/impersonate');
+    return start(req, res);
+  });
+
+  // Security and Audit endpoints
+  app.get('/api/super-admin/security/impersonation/events', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { listImpersonationEvents } = await import('./controllers/superAdmin/security');
+    return listImpersonationEvents(req, res);
+  });
+
+  app.get('/api/super-admin/security/audit', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { searchAudit } = await import('./controllers/superAdmin/security');
+    return searchAudit(req, res);
+  });
+
+  app.post('/api/super-admin/security/impersonation/:id/revoke', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { revokeImpersonation } = await import('./controllers/superAdmin/security');
+    return revokeImpersonation(req, res);
+  });
+
   // KPI endpoints
   app.get('/api/super-admin/kpi/overview', isAuthenticated, isSuperAdmin, async (req: any, res) => {
     req.db = req.app.db; // Pass database connection
