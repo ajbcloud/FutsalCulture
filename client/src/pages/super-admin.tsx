@@ -22,6 +22,7 @@ import SuperAdminDunning from "@/pages/super-admin/dunning";
 import IntegrationsHealth from "@/pages/super-admin/integrations-health";
 import CommsDeliverability from "@/pages/super-admin/comms";
 import SecurityAudit from "@/pages/super-admin/security";
+import PlanManagement from "@/pages/super-admin/plan-management";
 
 import { 
   Building2, 
@@ -44,7 +45,8 @@ import {
   TrendingUp,
   Webhook,
   Mail,
-  Shield
+  Shield,
+  Crown
 } from "lucide-react";
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
@@ -73,6 +75,7 @@ export default function SuperAdminPage() {
   // Navigation sections
   const companySection = [
     { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
+    { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: location === "/super-admin/plan-management" },
     { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: location === "/super-admin/dunning" },
@@ -99,6 +102,8 @@ export default function SuperAdminPage() {
         return <SuperAdminTenants />;
       case "/super-admin/analytics":
         return <Analytics />;
+      case "/super-admin/plan-management":
+        return <PlanManagement />;
       case "/super-admin/platform-billing":
         return <PlatformBilling />;
       case "/super-admin/dunning":

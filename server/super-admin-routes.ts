@@ -311,6 +311,29 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Plan Management Routes
+  app.get('/api/super-admin/plans', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const plans = await storage.getSuperAdminPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+      res.status(500).json({ message: "Failed to fetch plans" });
+    }
+  });
+
+  app.put('/api/super-admin/plans/:id', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const planId = req.params.id;
+      const updates = req.body;
+      const updatedPlan = await storage.updateSuperAdminPlan(planId, updates);
+      res.json(updatedPlan);
+    } catch (error) {
+      console.error("Error updating plan:", error);
+      res.status(500).json({ message: "Failed to update plan" });
+    }
+  });
+
   // Analytics Data
   app.get('/api/super-admin/analytics', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

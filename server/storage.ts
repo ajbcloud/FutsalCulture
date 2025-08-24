@@ -2531,6 +2531,52 @@ export class DatabaseStorage implements IStorage {
     // For now, returning empty array - would need to implement progression tracking
     return [];
   }
+
+  // Plan Management Methods for Super Admin
+  async getSuperAdminPlans(): Promise<any[]> {
+    // Import plans from config and transform them to the format expected by the frontend
+    const { plans } = await import('./config/plans.config');
+    
+    return plans.map(plan => ({
+      id: plan.id,
+      name: plan.name,
+      price: plan.price,
+      playerLimit: plan.playerLimit,
+      description: `Up to ${plan.playerLimit === 'unlimited' ? 'Unlimited' : plan.playerLimit} Players`,
+      popular: plan.id === 'growth',
+      features: Object.entries(plan.features).reduce((acc, [key, feature]) => {
+        acc[key] = {
+          enabled: feature.status === 'included',
+          value: feature.description || feature.name,
+          description: feature.description
+        };
+        return acc;
+      }, {} as Record<string, any>)
+    }));
+  }
+
+  async updateSuperAdminPlan(planId: string, updates: any): Promise<any> {
+    // In a production environment, this would update a database table
+    // For now, we'll return the updated plan (you could write to a JSON file or database)
+    
+    const plans = await this.getSuperAdminPlans();
+    const planIndex = plans.findIndex(p => p.id === planId);
+    
+    if (planIndex === -1) {
+      throw new Error('Plan not found');
+    }
+    
+    const updatedPlan = {
+      ...plans[planIndex],
+      ...updates
+    };
+    
+    // Here you would normally persist the changes to a database
+    // For now, we'll just return the updated plan
+    console.log(`Plan ${planId} updated:`, updatedPlan);
+    
+    return updatedPlan;
+  }
 }
 
 export const storage = new DatabaseStorage();
