@@ -730,12 +730,12 @@ export default function PlanManagement() {
                   <SelectValue placeholder="Select a feature" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sms_notifications">SMS Notifications</SelectItem>
-                  <SelectItem value="payment_processing">Payment Processing</SelectItem>
-                  <SelectItem value="auto_promotion">Auto Promotion</SelectItem>
-                  <SelectItem value="advanced_analytics">Advanced Analytics</SelectItem>
-                  <SelectItem value="bulk_operations">Bulk Operations</SelectItem>
-                  <SelectItem value="player_limits">Player Limits</SelectItem>
+                  {Object.values(FEATURE_KEYS).map((key) => {
+                    const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return (
+                      <SelectItem key={key} value={key}>{displayName}</SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
