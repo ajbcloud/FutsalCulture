@@ -14,6 +14,7 @@ import { queryClient } from '@/lib/queryClient';
 import { Mail, MessageSquare, Users, Calendar, Clock, Send, Plus, Edit2, Trash2, Play, Pause, Filter, ChevronRight, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { SelectCommunicationCampaign } from '@shared/schema';
+import AdminLayout from '@/components/admin-layout';
 
 export default function AdminCommunications() {
   const { toast } = useToast();
@@ -204,7 +205,8 @@ export default function AdminCommunications() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
+    <AdminLayout>
+      <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Communications</h1>
         <p className="text-muted-foreground mt-2">Manage mass email and SMS campaigns for parents and players</p>
@@ -590,6 +592,7 @@ export default function AdminCommunications() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
