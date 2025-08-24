@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Plus, Edit, Trash2, Users, Calendar, DollarSign, Search, Filter } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, Users, Calendar, DollarSign, Search, Filter, LogIn } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { impersonateTenant } from "@/utils/impersonation";
 
 interface Tenant {
   id: string;
@@ -309,7 +310,16 @@ export default function SuperAdminTenants() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => impersonateTenant(tenant.id, tenant.name)}
+                          title="Impersonate tenant"
+                        >
+                          <LogIn className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setEditingTenant(tenant)}
+                          title="Edit tenant"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -317,6 +327,7 @@ export default function SuperAdminTenants() {
                           variant="ghost"
                           size="sm"
                           onClick={() => deleteTenantMutation.mutate(tenant.id)}
+                          title="Delete tenant"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

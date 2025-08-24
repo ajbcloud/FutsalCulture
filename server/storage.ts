@@ -842,13 +842,42 @@ export class DatabaseStorage implements IStorage {
     return requestsWithUserLinks;
   }
 
-  async resolveHelpRequest(id: string, adminId: string, resolutionNote: string): Promise<HelpRequest | null> {
+  async replyToHelpRequest(id: string, message: string, adminId: string): Promise<HelpRequest | null> {
+    // Get current help request
+    const [request] = await db
+      .select()
+      .from(helpRequests)
+      .where(eq(helpRequests.id, id));
+    
+    if (!request) return null;
+
+    // Update reply history
+    const replyHistory = request.replyHistory || [];
+    replyHistory.push({
+      message,
+      repliedAt: new Date().toISOString(),
+      repliedBy: adminId
+    });
+
+    // Update the help request
+    const [result] = await db.update(helpRequests)
+      .set({
+        status: 'replied',
+        replyHistory
+      })
+      .where(eq(helpRequests.id, id))
+      .returning();
+    
+    return result || null;
+  }
+
+  async resolveHelpRequest(id: string, adminId: string, resolutionNote?: string): Promise<HelpRequest | null> {
     const [result] = await db.update(helpRequests)
       .set({
         resolved: true,
         status: 'resolved',
         resolvedBy: adminId,
-        resolutionNote,
+        resolutionNote: resolutionNote || '',
         resolvedAt: new Date()
       })
       .where(eq(helpRequests.id, id))

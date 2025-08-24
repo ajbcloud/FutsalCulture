@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { HelpCircle, Search, Filter, Building2, User, Mail, Clock, MessageSquare } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { HelpCircle, Search, Filter, Building2, User, Mail, Clock, MessageSquare, Reply, CheckCircle, Eye, ExternalLink } from "lucide-react";
+import { impersonateTenant } from "@/utils/impersonation";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface HelpRequest {
   id: string;
@@ -34,6 +40,12 @@ export default function SuperAdminHelpRequests() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<HelpRequest | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [viewingRequest, setViewingRequest] = useState<HelpRequest | null>(null);
+  const [resolveWithReply, setResolveWithReply] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch tenants for filter
   const { data: tenants = [] } = useQuery({
@@ -314,16 +326,22 @@ export default function SuperAdminHelpRequests() {
                 <TableHead>Replies</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Resolved</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {helpRequests.map((request) => (
                 <TableRow key={request.id}>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{request.tenantName}</span>
-                    </div>
+                    <button
+                      onClick={() => impersonateTenant(request.tenantId, request.tenantName)}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors group"
+                      title="Click to impersonate this tenant"
+                    >
+                      <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                      <span className="font-medium underline decoration-dotted">{request.tenantName}</span>
+                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   </TableCell>
                   <TableCell>
                     <div>
@@ -379,6 +397,38 @@ export default function SuperAdminHelpRequests() {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setViewingRequest(request)}
+                        title="View details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {request.status !== "resolved" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedRequest(request)}
+                            title="Reply to request"
+                          >
+                            <Reply className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResolve(request)}
+                            title="Mark as resolved"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -393,6 +443,215 @@ export default function SuperAdminHelpRequests() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reply Dialog */}
+      <Dialog open={!!selectedRequest} onOpenChange={() => {
+        setSelectedRequest(null);
+        setReplyMessage("");
+        setResolveWithReply(false);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reply to Help Request</DialogTitle>
+            <DialogDescription>
+              From: {selectedRequest?.submitterName} ({selectedRequest?.submitterEmail})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Subject</Label>
+              <p className="text-sm text-muted-foreground mt-1">{selectedRequest?.subject}</p>
+            </div>
+            <div>
+              <Label>Original Message</Label>
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap bg-muted p-3 rounded">
+                {selectedRequest?.message}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="reply">Your Reply</Label>
+              <Textarea
+                id="reply"
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Type your reply here..."
+                className="min-h-[100px] mt-1"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="resolve"
+                checked={resolveWithReply}
+                onChange={(e) => setResolveWithReply(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="resolve" className="cursor-pointer">
+                Mark as resolved after sending reply
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setSelectedRequest(null);
+              setReplyMessage("");
+              setResolveWithReply(false);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={() => handleSendReply()} disabled={!replyMessage.trim()}>
+              Send Reply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={!!viewingRequest} onOpenChange={() => setViewingRequest(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Help Request Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Tenant</Label>
+                <button
+                  onClick={() => {
+                    if (viewingRequest) {
+                      impersonateTenant(viewingRequest.tenantId, viewingRequest.tenantName);
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline decoration-dotted flex items-center gap-1 mt-1"
+                >
+                  {viewingRequest?.tenantName}
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <div className="mt-1">
+                  {viewingRequest && getStatusBadge(viewingRequest.status)}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Submitter</Label>
+                <p className="text-sm text-muted-foreground mt-1">{viewingRequest?.submitterName}</p>
+                <p className="text-xs text-muted-foreground">{viewingRequest?.submitterEmail}</p>
+              </div>
+              <div>
+                <Label>Submitted</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {viewingRequest && new Date(viewingRequest.submittedAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Category</Label>
+                <div className="mt-1">
+                  {viewingRequest && getCategoryBadge(viewingRequest.category)}
+                </div>
+              </div>
+              <div>
+                <Label>Priority</Label>
+                <div className="mt-1">
+                  {viewingRequest && getPriorityBadge(viewingRequest.priority)}
+                </div>
+              </div>
+              <div>
+                <Label>Replies</Label>
+                <p className="text-sm text-muted-foreground mt-1">{viewingRequest?.replyCount || 0}</p>
+              </div>
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <p className="text-sm font-medium mt-1">{viewingRequest?.subject}</p>
+            </div>
+            <div>
+              <Label>Message</Label>
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap bg-muted p-3 rounded">
+                {viewingRequest?.message}
+              </p>
+            </div>
+            {viewingRequest?.resolvedAt && (
+              <div>
+                <Label>Resolution</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Resolved on {new Date(viewingRequest.resolvedAt).toLocaleString()}
+                  {viewingRequest.resolvedBy && ` by ${viewingRequest.resolvedBy}`}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingRequest(null)}>
+              Close
+            </Button>
+            {viewingRequest?.status !== "resolved" && (
+              <>
+                <Button variant="outline" onClick={() => {
+                  setSelectedRequest(viewingRequest);
+                  setViewingRequest(null);
+                }}>
+                  Reply
+                </Button>
+                <Button onClick={() => {
+                  handleResolve(viewingRequest);
+                  setViewingRequest(null);
+                }}>
+                  Mark Resolved
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
+  // Handler functions
+  async function handleSendReply() {
+    if (!selectedRequest || !replyMessage.trim()) return;
+    
+    try {
+      const response = await apiRequest('POST', `/api/super-admin/help-requests/${selectedRequest.id}/reply`, {
+        message: replyMessage,
+        resolveWithReply
+      });
+      
+      if (response) {
+        toast({ 
+          title: resolveWithReply ? "Reply sent and request resolved" : "Reply sent successfully" 
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/super-admin/help-requests"] });
+        setSelectedRequest(null);
+        setReplyMessage("");
+        setResolveWithReply(false);
+      }
+    } catch (error) {
+      toast({ 
+        title: "Failed to send reply", 
+        variant: "destructive" 
+      });
+    }
+  }
+
+  async function handleResolve(request: HelpRequest) {
+    try {
+      const response = await apiRequest('PATCH', `/api/super-admin/help-requests/${request.id}/resolve`, {});
+      
+      if (response) {
+        toast({ title: "Request marked as resolved" });
+        queryClient.invalidateQueries({ queryKey: ["/api/super-admin/help-requests"] });
+      }
+    } catch (error) {
+      toast({ 
+        title: "Failed to resolve request", 
+        variant: "destructive" 
+      });
+    }
+  }
 }

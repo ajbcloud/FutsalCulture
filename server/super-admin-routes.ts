@@ -2,9 +2,18 @@ import type { Express } from "express";
 import { storage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import crypto from 'crypto';
 
 // Hardcoded super admin failsafe - cannot be removed or modified by any database operation
 const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Replit username for failsafe admin
+
+// Store active impersonation sessions in memory (in production, use Redis or DB)
+const impersonationSessions = new Map<string, {
+  superAdminId: string;
+  tenantId: string;
+  createdAt: Date;
+  expiresAt: Date;
+}>();
 
 // Middleware to check super admin access with hardcoded failsafe
 async function isSuperAdmin(req: any, res: any, next: any) {
@@ -698,5 +707,96 @@ export function setupSuperAdminRoutes(app: Express) {
     req.db = req.app.db;
     const { dashboard } = await import('./controllers/superAdmin/dunning');
     return dashboard(req, res);
+  });
+
+  // Impersonation routes
+  app.post('/api/super-admin/impersonate', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.body;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID is required' });
+      }
+
+      // Generate session token
+      const sessionToken = crypto.randomBytes(32).toString('hex');
+      
+      // Store session (expires in 4 hours)
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+      
+      impersonationSessions.set(sessionToken, {
+        superAdminId: req.user?.claims?.sub || req.user?.id,
+        tenantId,
+        createdAt: now,
+        expiresAt
+      });
+
+      // Clean up expired sessions
+      for (const [token, session] of impersonationSessions.entries()) {
+        if (session.expiresAt < now) {
+          impersonationSessions.delete(token);
+        }
+      }
+
+      res.json({ 
+        sessionToken,
+        expiresAt
+      });
+    } catch (error) {
+      console.error('Impersonation error:', error);
+      res.status(500).json({ error: 'Failed to create impersonation session' });
+    }
+  });
+
+  // End impersonation session
+  app.post('/api/super-admin/impersonate/end', isAuthenticated, async (req, res) => {
+    try {
+      const { sessionToken } = req.body;
+      
+      if (sessionToken && impersonationSessions.has(sessionToken)) {
+        impersonationSessions.delete(sessionToken);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('End impersonation error:', error);
+      res.status(500).json({ error: 'Failed to end impersonation session' });
+    }
+  });
+
+  // Reply to help request
+  app.post('/api/super-admin/help-requests/:id/reply', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { message, resolveWithReply } = req.body;
+      
+      // Reply to the help request
+      await storage.replyToHelpRequest(id, message, req.user?.claims?.sub || 'super-admin');
+      
+      // Optionally resolve the request
+      if (resolveWithReply) {
+        await storage.resolveHelpRequest(id, req.user?.claims?.sub || 'super-admin');
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Reply to help request error:', error);
+      res.status(500).json({ error: 'Failed to reply to help request' });
+    }
+  });
+
+  // Resolve help request
+  app.patch('/api/super-admin/help-requests/:id/resolve', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await storage.resolveHelpRequest(id, req.user?.claims?.sub || 'super-admin');
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Resolve help request error:', error);
+      res.status(500).json({ error: 'Failed to resolve help request' });
+    }
   });
 }
