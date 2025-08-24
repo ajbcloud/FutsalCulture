@@ -2713,6 +2713,52 @@ export class DatabaseStorage implements IStorage {
     return updatedPlan;
   }
 
+  // Consent template operations
+  async getConsentTemplates(tenantId: string): Promise<any[]> {
+    const templates = await db
+      .select()
+      .from(consentTemplates)
+      .where(and(
+        eq(consentTemplates.tenantId, tenantId),
+        eq(consentTemplates.isActive, true)
+      ))
+      .orderBy(consentTemplates.templateType, consentTemplates.createdAt);
+    return templates;
+  }
+
+  async getConsentTemplate(id: string): Promise<any | null> {
+    const [template] = await db
+      .select()
+      .from(consentTemplates)
+      .where(eq(consentTemplates.id, id));
+    return template || null;
+  }
+
+  async createConsentTemplate(data: any): Promise<any> {
+    const [template] = await db
+      .insert(consentTemplates)
+      .values(data)
+      .returning();
+    return template;
+  }
+
+  async deactivateConsentTemplate(tenantId: string, templateType: string): Promise<void> {
+    await db
+      .update(consentTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(consentTemplates.tenantId, tenantId),
+        eq(consentTemplates.templateType, templateType),
+        eq(consentTemplates.isActive, true)
+      ));
+  }
+
+  async deleteConsentTemplate(id: string): Promise<void> {
+    await db
+      .delete(consentTemplates)
+      .where(eq(consentTemplates.id, id));
+  }
+
   // Tenant feature override operations
   async getTenantFeatureOverrides(tenantId?: string): Promise<any[]> {
     try {

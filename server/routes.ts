@@ -27,6 +27,7 @@ import { impersonationContext } from './middleware/impersonation';
 import * as impersonationController from './controllers/impersonation';
 import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
 import { setupBetaOnboardingRoutes } from './beta-onboarding-routes';
+import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {

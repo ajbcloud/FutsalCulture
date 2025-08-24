@@ -2221,6 +2221,27 @@ export const parentPlayerLinks = pgTable("parent_player_links", {
   index("parent_player_links_player_idx").on(table.playerId),
 ]);
 
+// Consent form templates
+export const consentTemplates = pgTable("consent_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  templateType: varchar("template_type").notNull(), // medical, liability, photo, privacy
+  title: varchar("title").notNull(),
+  content: text("content"), // HTML/markdown content
+  filePath: varchar("file_path"), // Object storage path for uploaded document
+  fileName: varchar("file_name"),
+  fileSize: integer("file_size"),
+  isCustom: boolean("is_custom").notNull().default(false), // true for uploaded, false for default
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("consent_templates_tenant_idx").on(table.tenantId),
+  index("consent_templates_type_idx").on(table.templateType),
+  uniqueIndex("consent_templates_unique").on(table.tenantId, table.templateType, table.isActive),
+]);
+
 // Beta onboarding schema exports
 export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
   id: true,
@@ -2248,10 +2269,18 @@ export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({
   createdAt: true,
 });
 
+export const insertConsentTemplateSchema = createInsertSchema(consentTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Beta onboarding types
 export type TenantUser = typeof tenantUsers.$inferSelect;
 export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
 export type Invite = typeof invites.$inferSelect;
+export type ConsentTemplate = typeof consentTemplates.$inferSelect;
+export type InsertConsentTemplate = z.infer<typeof insertConsentTemplateSchema>;
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;

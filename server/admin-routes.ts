@@ -7,6 +7,8 @@ import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import { loadTenantMiddleware } from "./feature-middleware";
 import { hasFeature } from "../shared/feature-flags";
 import Stripe from "stripe";
+import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
+import { setObjectAclPolicy } from './objectAcl';
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -3881,6 +3883,75 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         success: false, 
         error: `Failed to test ${req.params.provider} integration` 
       });
+    }
+  });
+
+  // Consent Template Management Routes
+  app.get('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      // For now, return empty array since we don't have the table yet
+      // This will be updated when the consent system is fully implemented
+      res.json([]);
+    } catch (error) {
+      console.error('Error fetching consent templates:', error);
+      res.status(500).json({ error: 'Failed to fetch consent templates' });
+    }
+  });
+
+  app.post('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const userId = (req as any).currentUser?.id;
+      const { templateType, content, filePath } = req.body;
+
+      if (!templateType) {
+        return res.status(400).json({ error: 'Template type is required' });
+      }
+
+      // For now, return a mock response
+      // This will be updated when the consent system is fully implemented
+      res.json({
+        id: 'mock-id',
+        tenantId,
+        templateType,
+        title: `Custom ${templateType} Consent Form`,
+        content,
+        filePath,
+        isCustom: true,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error creating consent template:', error);
+      res.status(500).json({ error: 'Failed to create consent template' });
+    }
+  });
+
+  app.post('/api/admin/consent-templates/upload', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      res.status(500).json({ error: 'Failed to get upload URL' });
+    }
+  });
+
+  app.delete('/api/admin/consent-templates/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // For now, return success
+      // This will be updated when the consent system is fully implemented
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting consent template:', error);
+      res.status(500).json({ error: 'Failed to delete consent template' });
     }
   });
 }

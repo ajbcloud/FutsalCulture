@@ -27,7 +27,7 @@ import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
 import AgePolicySettings from '../../components/admin/AgePolicySettings';
-// Remove unused import
+import ConsentTemplateSettings from '../../components/admin/ConsentTemplateSettings';
 
 interface LocationData {
   name: string;
@@ -909,12 +909,18 @@ export default function AdminSettings() {
             >
               Age Policy
             </TabsTrigger>
+            <TabsTrigger 
+              value="consent-forms" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Consent Forms
+            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-7 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-8 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -935,6 +941,9 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="age-policy" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Age Policy
+            </TabsTrigger>
+            <TabsTrigger value="consent-forms" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Consent Forms
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2397,6 +2406,11 @@ export default function AdminSettings() {
         {/* Age Policy Tab */}
         <TabsContent value="age-policy" className="space-y-6">
           <AgePolicySettings />
+        </TabsContent>
+
+        {/* Consent Forms Tab */}
+        <TabsContent value="consent-forms" className="space-y-6">
+          <ConsentTemplateSettings />
         </TabsContent>
         </Tabs>
       </AdminLayout>
