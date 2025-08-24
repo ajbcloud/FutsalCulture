@@ -259,7 +259,7 @@ export default function PlanManagement() {
 
   // Handle tenant override
   const handleTenantOverride = useCallback((tenantId: string, featureKey: string, value: any) => {
-    apiRequest('/api/super-admin/tenant-overrides', 'POST', {
+    apiRequest('POST', '/api/super-admin/tenant-overrides', {
       tenantId,
       featureKey,
       ...value
