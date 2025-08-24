@@ -19,11 +19,13 @@ import {
   Filter,
   ChevronDown,
   Check,
-  Search
+  Search,
+  MapPin
 } from "lucide-react";
 import { get, apiRequest } from "@/lib/queryClient";
 import { addDays, subDays, format } from "date-fns";
 import { DateRange } from "react-day-picker";
+import USMap from "./us-map";
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -33,10 +35,12 @@ interface AnalyticsData {
   totalSessions: number;
   weeklySessions: number;
   activeTenants: number;
+  uniqueStatesCount: number;
   revenueGrowth: number;
   playersGrowth: number;
   sessionsGrowth: number;
   tenantGrowth: number;
+  statesGrowth: number;
   revenueByTenant: Array<{
     tenantId: string;
     tenantName: string;
@@ -101,6 +105,14 @@ export default function SuperAdminAnalytics() {
         params.append('gender', genderFilter);
       }
       const response = await apiRequest('GET', `/api/super-admin/analytics?${params.toString()}`);
+      return await response.json();
+    }
+  });
+
+  const { data: geographicData } = useQuery({
+    queryKey: ['/api/super-admin/geographic-analytics'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/super-admin/geographic-analytics');
       return await response.json();
     }
   });
@@ -329,7 +341,7 @@ export default function SuperAdminAnalytics() {
         </Card>
 
         {/* Global KPIs */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -473,7 +485,107 @@ export default function SuperAdminAnalytics() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-5 h-5 text-teal-600" />
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-sm font-medium text-muted-foreground">US States</p>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="w-3 h-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Number of unique US states with active tenants</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-2xl font-bold">{geographicData?.uniqueStatesCount || 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {(analytics?.statesGrowth || 0) >= 0 ? (
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    (analytics?.statesGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatGrowth(analytics?.statesGrowth || 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* US Geographic Distribution */}
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Geographic Distribution</CardTitle>
+            <CardDescription>Tenant distribution across US states (US-only for compliance)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {geographicData?.tenantsByState ? (
+              <div className="space-y-6">
+                <USMap 
+                  data={geographicData.tenantsByState} 
+                  title="Tenant Distribution by State"
+                  className="mb-6"
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Top States */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Top 5 States by Tenant Count</h4>
+                    <div className="space-y-2">
+                      {geographicData.topStates?.map((state: any, index: number) => (
+                        <div key={state.state} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline">#{index + 1}</Badge>
+                            <span className="font-medium">{state.state}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {state.count} tenant{state.count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Quick Stats */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Geographic Summary</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm">Total US Tenants</span>
+                        <span className="font-medium">{geographicData.totalUSTenants}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm">States Covered</span>
+                        <span className="font-medium">{geographicData.uniqueStatesCount}/50</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                        <span className="text-sm">Coverage</span>
+                        <span className="font-medium">
+                          {Math.round((geographicData.uniqueStatesCount / 50) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading geographic data...
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Revenue by Tenant */}
         <Card>

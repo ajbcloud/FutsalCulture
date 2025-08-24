@@ -82,6 +82,10 @@ export const tenants = pgTable("tenants", {
   planLevel: planLevelEnum("plan_level").default("core"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  // Geographic location fields for US map visualization
+  city: text("city"),
+  state: text("state"),
+  country: text("country").default("US"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

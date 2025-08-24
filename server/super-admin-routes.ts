@@ -214,6 +214,17 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Geographic Analytics - Tenant Distribution by State (US only)
+  app.get('/api/super-admin/geographic-analytics', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const geoAnalytics = await storage.getTenantGeographicAnalytics();
+      res.json(geoAnalytics);
+    } catch (error) {
+      console.error("Error fetching geographic analytics:", error);
+      res.status(500).json({ message: "Failed to fetch geographic analytics" });
+    }
+  });
+
   // Tenant Details
   app.get('/api/super-admin/tenants/:id/details', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
