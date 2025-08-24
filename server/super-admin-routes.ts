@@ -635,6 +635,32 @@ export function setupSuperAdminRoutes(app: Express) {
     return revokeImpersonation(req, res);
   });
 
+  // Feature Management endpoints
+  app.get('/api/super-admin/plans/:planCode/features', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getPlanFeatures } = await import('./controllers/superAdmin/featureManagement');
+    return getPlanFeatures(req, res);
+  });
+
+  app.patch('/api/super-admin/plans/:planCode/features/:featureKey', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { updatePlanFeature } = await import('./controllers/superAdmin/featureManagement');
+    return updatePlanFeature(req, res);
+  });
+
+  app.patch('/api/super-admin/plans/:planCode/features', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { bulkUpdatePlanFeatures } = await import('./controllers/superAdmin/featureManagement');
+    return bulkUpdatePlanFeatures(req, res);
+  });
+
+  app.get('/api/super-admin/plans/comparison', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getPlansComparison } = await import('./controllers/superAdmin/featureManagement');
+    return getPlansComparison(req, res);
+  });
+
+  app.get('/api/super-admin/features/audit', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getFeatureAuditLog } = await import('./controllers/superAdmin/featureManagement');
+    return getFeatureAuditLog(req, res);
+  });
+
   // KPI endpoints
   app.get('/api/super-admin/kpi/overview', isAuthenticated, isSuperAdmin, async (req: any, res) => {
     req.db = req.app.db; // Pass database connection

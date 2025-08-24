@@ -1818,3 +1818,121 @@ export const insertCommunicationLogSchema = createInsertSchema(communicationLogs
 });
 export type InsertCommunicationLog = z.infer<typeof insertCommunicationLogSchema>;
 export type SelectCommunicationLog = typeof communicationLogs.$inferSelect;
+
+// Features Engine Tables
+export const features = pgTable('features', {
+  key: varchar('key').primaryKey(), // e.g., 'core.session_management'
+  name: text('name').notNull(),
+  category: text('category').notNull(), // 'core', 'communication', 'payments_billing', 'analytics', 'integrations', 'support', 'limits'
+  type: text('type').notNull(), // 'boolean', 'enum', 'limit'
+  description: text('description'),
+  optionsJson: jsonb('options_json').$type<{
+    values?: string[]; // For enum types
+    min?: number; // For limit types
+    max?: number;
+    unit?: string;
+    step?: number;
+  }>(),
+  isActive: boolean('is_active').notNull().default(true),
+  displayOrder: integer('display_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+}, (table) => [
+  index("features_category_idx").on(table.category),
+  index("features_is_active_idx").on(table.isActive),
+]);
+
+export const planFeatures = pgTable('plan_features', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  planCode: text('plan_code').notNull().references(() => planCatalog.code, { onDelete: 'cascade' }),
+  featureKey: varchar('feature_key').notNull().references(() => features.key, { onDelete: 'cascade' }),
+  enabled: boolean('enabled'), // For boolean features
+  variant: text('variant'), // For enum features (must be in features.options_json.values)
+  limitValue: integer('limit_value'), // For limit features
+  metadata: jsonb('metadata').$type<Record<string, any>>(), // Additional configuration
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  updatedBy: varchar('updated_by').references(() => users.id, { onDelete: 'set null' })
+}, (table) => [
+  uniqueIndex("plan_features_unique").on(table.planCode, table.featureKey),
+  index("plan_features_plan_code_idx").on(table.planCode),
+  index("plan_features_feature_key_idx").on(table.featureKey),
+]);
+
+// Tenant-specific feature overrides (optional)
+export const tenantFeatureOverrides = pgTable('tenant_feature_overrides', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  featureKey: varchar('feature_key').notNull().references(() => features.key, { onDelete: 'cascade' }),
+  enabled: boolean('enabled'), // For boolean features
+  variant: text('variant'), // For enum features
+  limitValue: integer('limit_value'), // For limit features
+  reason: text('reason'), // Why this override was applied
+  expiresAt: timestamp('expires_at', { withTimezone: true }), // Optional expiration
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  createdBy: varchar('created_by').references(() => users.id, { onDelete: 'set null' })
+}, (table) => [
+  uniqueIndex("tenant_feature_overrides_unique").on(table.tenantId, table.featureKey),
+  index("tenant_feature_overrides_tenant_id_idx").on(table.tenantId),
+  index("tenant_feature_overrides_expires_at_idx").on(table.expiresAt),
+]);
+
+// Feature change history for audit
+export const featureAuditLog = pgTable('feature_audit_log', {
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  entityType: text('entity_type').notNull(), // 'plan' or 'tenant'
+  entityId: varchar('entity_id').notNull(), // planId or tenantId
+  featureKey: varchar('feature_key').notNull(),
+  oldValue: jsonb('old_value').$type<{
+    enabled?: boolean;
+    variant?: string;
+    limitValue?: number;
+  }>(),
+  newValue: jsonb('new_value').$type<{
+    enabled?: boolean;
+    variant?: string;
+    limitValue?: number;
+  }>().notNull(),
+  changedBy: varchar('changed_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  changeReason: text('change_reason'),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => [
+  index("feature_audit_entity_idx").on(table.entityType, table.entityId),
+  index("feature_audit_feature_key_idx").on(table.featureKey),
+  index("feature_audit_changed_by_idx").on(table.changedBy),
+  index("feature_audit_created_at_idx").on(table.createdAt),
+]);
+
+export const insertFeatureSchema = createInsertSchema(features).omit({
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertPlanFeatureSchema = createInsertSchema(planFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertTenantFeatureOverrideSchema = createInsertSchema(tenantFeatureOverrides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertFeatureAuditLogSchema = createInsertSchema(featureAuditLog).omit({
+  id: true,
+  createdAt: true
+});
+
+export type Feature = typeof features.$inferSelect;
+export type InsertFeature = z.infer<typeof insertFeatureSchema>;
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = z.infer<typeof insertPlanFeatureSchema>;
+export type TenantFeatureOverride = typeof tenantFeatureOverrides.$inferSelect;
+export type InsertTenantFeatureOverride = z.infer<typeof insertTenantFeatureOverrideSchema>;
+export type FeatureAuditLog = typeof featureAuditLog.$inferSelect;
+export type InsertFeatureAuditLog = z.infer<typeof insertFeatureAuditLogSchema>;

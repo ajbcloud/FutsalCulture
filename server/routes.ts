@@ -132,6 +132,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/impersonation/status', isAuthenticated, impersonationController.status);
   app.post('/api/impersonation/end', isAuthenticated, impersonationController.end);
 
+  // Tenant capabilities routes
+  app.get('/api/tenant/capabilities', isAuthenticated, async (req: any, res) => {
+    const { getTenantCapabilities } = await import('./controllers/tenant/capabilities');
+    return getTenantCapabilities(req, res);
+  });
+
+  app.get('/api/tenant/capabilities/:featureKey', isAuthenticated, async (req: any, res) => {
+    const { checkCapability } = await import('./controllers/tenant/capabilities');
+    return checkCapability(req, res);
+  });
+
   // Session routes
   app.get('/api/sessions', async (req: any, res) => {
     try {
