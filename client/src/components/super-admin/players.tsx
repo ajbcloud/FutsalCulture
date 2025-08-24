@@ -43,10 +43,10 @@ export default function SuperAdminPlayers() {
     const searchParam = urlParams.get('search');
     const filterParam = urlParams.get('filter');
     
-    if (searchParam && !searchQuery) {
+    if (searchParam) {
       setSearchQuery(searchParam);
     }
-    if (filterParam && !searchQuery) {
+    if (filterParam) {
       setSearchQuery(filterParam);
     }
   }, [location]);

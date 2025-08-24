@@ -53,7 +53,7 @@ import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 export default function SuperAdminPage() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Redirect if not super admin
@@ -72,32 +72,38 @@ export default function SuperAdminPage() {
     );
   }
 
+  // Get base path without query parameters for navigation
+  const basePath = location.split('?')[0];
+  
   // Navigation sections
   const companySection = [
-    { name: "Overview", href: "/super-admin", icon: Home, current: location === "/super-admin" },
-    { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: location === "/super-admin/plan-management" },
-    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: location === "/super-admin/analytics" },
-    { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: location === "/super-admin/platform-billing" },
-    { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: location === "/super-admin/dunning" },
-    { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: location === "/super-admin/integrations-health" },
-    { name: "Comms Deliverability", href: "/super-admin/comms", icon: Mail, current: location === "/super-admin/comms" },
-    { name: "Security & Audit", href: "/super-admin/security", icon: Shield, current: location === "/super-admin/security" },
-    { name: "Settings", href: "/super-admin/settings", icon: Settings, current: location === "/super-admin/settings" },
+    { name: "Overview", href: "/super-admin", icon: Home, current: basePath === "/super-admin" },
+    { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: basePath === "/super-admin/plan-management" },
+    { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: basePath === "/super-admin/analytics" },
+    { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
+    { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
+    { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
+    { name: "Comms Deliverability", href: "/super-admin/comms", icon: Mail, current: basePath === "/super-admin/comms" },
+    { name: "Security & Audit", href: "/super-admin/security", icon: Shield, current: basePath === "/super-admin/security" },
+    { name: "Settings", href: "/super-admin/settings", icon: Settings, current: basePath === "/super-admin/settings" },
   ];
 
   const clientActivitySection = [
-    { name: "Tenants", href: "/super-admin/tenants", icon: Building2, current: location === "/super-admin/tenants" },
-    { name: "Sessions", href: "/super-admin/sessions", icon: Calendar, current: location === "/super-admin/sessions" },
-    { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: location === "/super-admin/payments" },
-    { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: location === "/super-admin/registrations" },
-    { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: location === "/super-admin/parents" },
-    { name: "Players", href: "/super-admin/players", icon: Shirt, current: location === "/super-admin/players" },
-    { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: location === "/super-admin/help" },
+    { name: "Tenants", href: "/super-admin/tenants", icon: Building2, current: basePath === "/super-admin/tenants" },
+    { name: "Sessions", href: "/super-admin/sessions", icon: Calendar, current: basePath === "/super-admin/sessions" },
+    { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: basePath === "/super-admin/payments" },
+    { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: basePath === "/super-admin/registrations" },
+    { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: basePath === "/super-admin/parents" },
+    { name: "Players", href: "/super-admin/players", icon: Shirt, current: basePath === "/super-admin/players" },
+    { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: basePath === "/super-admin/help" },
   ];
 
   // Render current page content
   const renderPageContent = () => {
-    switch (location) {
+    // Get base path without query parameters
+    const basePath = location.split('?')[0];
+    
+    switch (basePath) {
       case "/super-admin/tenants":
         return <SuperAdminTenants />;
       case "/super-admin/analytics":

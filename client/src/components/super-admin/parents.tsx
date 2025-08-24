@@ -117,10 +117,10 @@ export default function SuperAdminParents() {
     const filterParam = urlParams.get('filter');
     const parentIdParam = urlParams.get('parentId');
     
-    if (searchParam && !searchQuery) {
+    if (searchParam) {
       setSearchQuery(searchParam);
     }
-    if (filterParam && !searchQuery) {
+    if (filterParam) {
       setSearchQuery(filterParam);
     }
     if (parentIdParam) {
@@ -128,7 +128,7 @@ export default function SuperAdminParents() {
       setExpandedParentIds(prev => new Set(prev).add(parentIdParam));
       loadPlayersForParent(parentIdParam);
     }
-  }, [location, searchQuery]);
+  }, [location]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -428,7 +428,7 @@ export default function SuperAdminParents() {
                                           <div className="flex-1">
                                             {/* Clickable player name linking to players page */}
                                             <Link 
-                                              href={`/super-admin/players?search=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
+                                              href={`/super-admin/players?filter=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
                                               className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
                                             >
                                               {player.firstName} {player.lastName}
