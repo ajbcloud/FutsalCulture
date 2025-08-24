@@ -13,7 +13,7 @@ import { eq, and, gte, lte, count, sql, desc, sum, isNotNull } from 'drizzle-orm
 
 // Validation schemas
 const analyticsQuerySchema = z.object({
-  lane: z.enum(['platform', 'commerce']),
+  lane: z.enum(['platform', 'commerce', 'kpis']),
   status: z.enum(['all', 'paid', 'pending', 'refunded']).default('all'),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
@@ -68,6 +68,20 @@ export async function overview(req: Request, res: Response) {
       };
       
       res.json(platformData);
+    } else if (lane === 'kpis') {
+      // KPI Dashboard - combination of both platform and commerce data
+      const kpiData = {
+        totalRevenue: 189700 + 45320, // Platform + Commerce
+        mrr: 189700 / 100,
+        activeTenants: 8,
+        totalPlayers: 156,
+        monthlyGrowth: 15.2,
+        commerceRevenue: 45320,
+        failedPayments: 12,
+        refundCount: 3
+      };
+      
+      res.json(kpiData);
     } else {
       // Commerce Revenue (parent-to-tenant payments)
       let whereConditions = [];
@@ -208,6 +222,28 @@ export async function series(req: Request, res: Response) {
       }
       
       res.json({ series: mockSeries });
+    } else if (lane === 'kpis') {
+      // KPI series - mock combined data
+      const kpiSeries = [];
+      const current = new Date(startDate);
+      
+      while (current <= endDate) {
+        kpiSeries.push({
+          date: current.toISOString().split('T')[0],
+          revenue: Math.floor(Math.random() * 3000) + 2000, // Combined revenue
+          registrations: Math.floor(Math.random() * 10) + 5
+        });
+        
+        if (interval === 'week') {
+          current.setDate(current.getDate() + 7);
+        } else if (interval === 'month') {
+          current.setMonth(current.getMonth() + 1);
+        } else {
+          current.setDate(current.getDate() + 1);
+        }
+      }
+      
+      res.json({ series: kpiSeries });
     } else {
       // Commerce series from real payments + registrations data
       let dateFormat = 'YYYY-MM-DD';
@@ -316,6 +352,25 @@ export async function byTenant(req: Request, res: Response) {
       ];
       
       const filteredRows = tenantId ? allRows.filter(r => r.tenantId === tenantId) : allRows;
+      const rows = filteredRows.slice(offset, offset + pageSize);
+      
+      res.json({
+        rows,
+        page,
+        pageSize,
+        totalRows: filteredRows.length
+      });
+    } else if (lane === 'kpis') {
+      // KPI tenant breakdown - mock combined data
+      const kpiRows = [
+        { tenantId: 'tenant-1', tenantName: 'Elite Footwork Academy', revenue: 52400, transactions: 45, failed: 1, refunds: 0 },
+        { tenantId: 'tenant-2', tenantName: 'Metro Futsal', revenue: 41200, transactions: 38, failed: 0, refunds: 1 },
+        { tenantId: 'tenant-3', tenantName: 'Futsal Culture', revenue: 28700, transactions: 32, failed: 2, refunds: 0 },
+        { tenantId: 'tenant-4', tenantName: 'City Soccer Club', revenue: 21800, transactions: 28, failed: 0, refunds: 0 },
+        { tenantId: 'tenant-5', tenantName: 'Youth Development FC', revenue: 15200, transactions: 19, failed: 1, refunds: 1 }
+      ];
+      
+      const filteredRows = tenantId ? kpiRows.filter(r => r.tenantId === tenantId) : kpiRows;
       const rows = filteredRows.slice(offset, offset + pageSize);
       
       res.json({

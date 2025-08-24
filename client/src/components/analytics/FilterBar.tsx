@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { themeClasses } from '@/lib/ui/theme';
-import { Calendar, Filter, X, RotateCcw } from 'lucide-react';
+import { Calendar, Filter, X, RotateCcw, CalendarDays } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface FilterBarProps {
   tenantId: string;
@@ -21,10 +24,11 @@ interface FilterBarProps {
   'data-testid'?: string;
 }
 
-const quickRanges = [
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
+const dateRangeOptions = [
+  { label: 'Last 7 days', value: '7days', days: 7 },
+  { label: 'Last 30 days', value: '30days', days: 30 },
+  { label: 'Last 90 days', value: '90days', days: 90 },
+  { label: 'Custom range', value: 'custom', days: null },
 ];
 
 const statusOptions = [
@@ -46,30 +50,72 @@ export default function FilterBar({
   className = '',
   'data-testid': testId
 }: FilterBarProps) {
-  const [customFrom, setCustomFrom] = useState(dateFrom);
-  const [customTo, setCustomTo] = useState(dateTo);
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('30days');
+  const [isCustomCalendarOpen, setIsCustomCalendarOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(dateFrom ? new Date(dateFrom) : undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(dateTo ? new Date(dateTo) : undefined);
 
   // Sync with external changes
   useEffect(() => {
-    setCustomFrom(dateFrom);
-    setCustomTo(dateTo);
+    setCustomFrom(dateFrom ? new Date(dateFrom) : undefined);
+    setCustomTo(dateTo ? new Date(dateTo) : undefined);
+    
+    // Auto-detect which range is selected based on dates
+    if (dateFrom && dateTo) {
+      const from = new Date(dateFrom);
+      const to = new Date(dateTo);
+      const diffTime = Math.abs(to.getTime() - from.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 7) {
+        setSelectedDateRange('7days');
+      } else if (diffDays <= 30) {
+        setSelectedDateRange('30days');
+      } else if (diffDays <= 90) {
+        setSelectedDateRange('90days');
+      } else {
+        setSelectedDateRange('custom');
+      }
+    }
   }, [dateFrom, dateTo]);
 
-  const handleQuickRange = (days: number) => {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - days);
+  const handleDateRangeChange = (value: string) => {
+    setSelectedDateRange(value);
     
-    const fromStr = from.toISOString().split('T')[0];
-    const toStr = to.toISOString().split('T')[0];
+    if (value === 'custom') {
+      setIsCustomCalendarOpen(true);
+      return;
+    }
     
-    setCustomFrom(fromStr);
-    setCustomTo(toStr);
-    onDateRangeChange(fromStr, toStr);
+    const option = dateRangeOptions.find(opt => opt.value === value);
+    if (option && option.days) {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - option.days);
+      
+      const fromStr = from.toISOString().split('T')[0];
+      const toStr = to.toISOString().split('T')[0];
+      
+      setCustomFrom(from);
+      setCustomTo(to);
+      onDateRangeChange(fromStr, toStr);
+    }
   };
 
-  const handleCustomDateChange = () => {
-    onDateRangeChange(customFrom, customTo);
+  const handleCustomDateApply = () => {
+    if (customFrom && customTo) {
+      const fromStr = customFrom.toISOString().split('T')[0];
+      const toStr = customTo.toISOString().split('T')[0];
+      onDateRangeChange(fromStr, toStr);
+    }
+    setIsCustomCalendarOpen(false);
+  };
+
+  const getDateRangeLabel = () => {
+    if (selectedDateRange === 'custom' && customFrom && customTo) {
+      return `${format(customFrom, 'MMM d')} - ${format(customTo, 'MMM d, yyyy')}`;
+    }
+    return dateRangeOptions.find(opt => opt.value === selectedDateRange)?.label || 'Select range';
   };
 
   const getSummaryText = () => {
@@ -146,8 +192,8 @@ export default function FilterBar({
             )}
           </div>
 
-          {/* Filter controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {/* Filter controls - Consolidated layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Tenant selector */}
             <div className="space-y-1">
               <label className={`${themeClasses.textLabel} block`}>
@@ -185,71 +231,82 @@ export default function FilterBar({
               </Select>
             </div>
 
-            {/* Quick date ranges */}
+            {/* Consolidated Date Range selector */}
             <div className="space-y-1">
               <label className={`${themeClasses.textLabel} block`}>
-                Quick Range
+                Date Range
               </label>
-              <div className="flex gap-1">
-                {quickRanges.map((range) => (
-                  <Button
-                    key={range.days}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickRange(range.days)}
-                    className="text-xs bg-[#0f1319] border-[#1f2733] hover:bg-[#1f2733]"
-                  >
-                    {range.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
+              <div className="flex gap-2">
+                <Select value={selectedDateRange} onValueChange={handleDateRangeChange}>
+                  <SelectTrigger className="bg-[#0f1319] border-[#1f2733] flex-1">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="w-4 h-4" />
+                        <span className="truncate">{getDateRangeLabel()}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#11161d] border-[#1f2733]">
+                    {dateRangeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            {/* Custom from date */}
-            <div className="space-y-1">
-              <label className={`${themeClasses.textLabel} block`}>
-                From Date
-              </label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  onBlur={handleCustomDateChange}
-                  className="bg-[#0f1319] border-[#1f2733] pr-10"
-                />
-                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#a9b4c2] pointer-events-none" />
+                {/* Custom Calendar Popover */}
+                {selectedDateRange === 'custom' && (
+                  <Popover open={isCustomCalendarOpen} onOpenChange={setIsCustomCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="bg-[#0f1319] border-[#1f2733] hover:bg-[#1f2733] px-3"
+                      >
+                        <Calendar className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-[#11161d] border-[#1f2733]" align="start">
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-2">
+                          <label className={`${themeClasses.textLabel} text-sm`}>From Date</label>
+                          <CalendarComponent
+                            mode="single"
+                            selected={customFrom}
+                            onSelect={setCustomFrom}
+                            className="rounded-md border border-[#1f2733]"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className={`${themeClasses.textLabel} text-sm`}>To Date</label>
+                          <CalendarComponent
+                            mode="single"
+                            selected={customTo}
+                            onSelect={setCustomTo}
+                            className="rounded-md border border-[#1f2733]"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleCustomDateApply}
+                            className="flex-1 bg-[#10b981] hover:bg-[#059669] text-white"
+                            disabled={!customFrom || !customTo}
+                          >
+                            Apply Range
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsCustomCalendarOpen(false)}
+                            className="bg-[#0f1319] border-[#1f2733] hover:bg-[#1f2733]"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
-            </div>
-
-            {/* Custom to date */}
-            <div className="space-y-1">
-              <label className={`${themeClasses.textLabel} block`}>
-                To Date
-              </label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  onBlur={handleCustomDateChange}
-                  className="bg-[#0f1319] border-[#1f2733] pr-10"
-                />
-                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#a9b4c2] pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Apply button */}
-            <div className="space-y-1">
-              <label className={`${themeClasses.textLabel} block opacity-0`}>
-                Action
-              </label>
-              <Button
-                onClick={handleCustomDateChange}
-                className="w-full bg-[#10b981] hover:bg-[#059669] text-white"
-              >
-                Apply
-              </Button>
             </div>
           </div>
         </div>
