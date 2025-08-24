@@ -1291,6 +1291,9 @@ export function setupAdminRoutes(app: any) {
         paymentId: signups.paymentId,
         paymentProvider: signups.paymentProvider,
         paymentIntentId: signups.paymentIntentId,
+        refunded: signups.refunded,
+        refundReason: signups.refundReason,
+        refundedAt: signups.refundedAt,
         createdAt: signups.createdAt,
         updatedAt: signups.updatedAt,
       })
@@ -1326,6 +1329,9 @@ export function setupAdminRoutes(app: any) {
         paymentId: session.paymentId,
         paymentProvider: session.paymentProvider,
         paymentIntentId: session.paymentIntentId,
+        refunded: session.refunded || false,
+        refundReason: session.refundReason,
+        refundedAt: session.refundedAt,
         createdAt: session.createdAt,
       }));
 

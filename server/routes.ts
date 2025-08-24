@@ -698,12 +698,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessions: sessionHistory.map(session => ({
           ...session,
           date: session.date.toISOString().split('T')[0], // Format date
-          time: session.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          time: session.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          refunded: session.refunded || false,
+          refundReason: session.refundReason,
+          refundedAt: session.refundedAt
         })),
         total,
         page: pageNum,
         limit: limitNum,
-        totalPages,
+        totalPages: Math.ceil(total / limitNum),
       });
     } catch (error) {
       console.error("Error fetching admin player session history:", error);
@@ -778,7 +781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endTime: futsalSessions.endTime,
         location: futsalSessions.location,
         paid: signups.paid,
+        paymentId: signups.paymentId,
         paymentProvider: signups.paymentProvider,
+        refunded: signups.refunded,
+        refundReason: signups.refundReason,
+        refundedAt: signups.refundedAt,
         createdAt: signups.createdAt,
         updatedAt: signups.updatedAt,
       })
@@ -808,9 +815,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           minute: '2-digit',
           hour12: true 
         })}`,
+        sessionDate: new Date(session.startTime).toISOString().split('T')[0], // YYYY-MM-DD format
+        sessionStartTime: new Date(session.startTime).toTimeString().split(' ')[0], // HH:MM:SS format
         location: session.location,
         paid: session.paid,
+        paymentId: session.paymentId,
         paymentProvider: session.paymentProvider,
+        refunded: session.refunded || false,
+        refundReason: session.refundReason,
+        refundedAt: session.refundedAt,
         createdAt: session.createdAt,
       }));
 
