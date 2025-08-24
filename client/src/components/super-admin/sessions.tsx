@@ -232,75 +232,135 @@ export default function SuperAdminSessions() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Session</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Age Group</TableHead>
-                <TableHead>Gender</TableHead>
-                <TableHead>Capacity</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{session.tenantName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{session.title}</p>
-                      <p className="text-sm text-muted-foreground">ID: {session.id}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tenant</TableHead>
+                  <TableHead>Session</TableHead>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Age Group</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Capacity</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessions.map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{session.tenantName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div>
-                        <p>{new Date(session.date).toLocaleDateString()}</p>
-                        <p className="text-sm text-muted-foreground">{session.time}</p>
+                        <p className="font-medium">{session.title}</p>
+                        <p className="text-sm text-muted-foreground">ID: {session.id}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p>{new Date(session.date).toLocaleDateString()}</p>
+                          <p className="text-sm text-muted-foreground">{session.time}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>{session.location}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{session.ageGroup}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{session.gender}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className={session.signedUp >= session.capacity ? "text-red-600 font-medium" : ""}>
+                          {session.signedUp}/{session.capacity}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">${(session.price / 100).toFixed(2)}</span>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(session.status)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {sessions.map((session) => (
+              <Card key={session.id} className="p-4">
+                <div className="space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base">{session.title}</h3>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">{session.tenantName}</span>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>{session.location}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{session.ageGroup}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{session.gender}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className={session.signedUp >= session.capacity ? "text-red-600 font-medium" : ""}>
-                        {session.signedUp}/{session.capacity}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">${(session.price / 100).toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell>
                     {getStatusBadge(session.status)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
+                  </div>
+
+                  {/* Date and Location */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{new Date(session.date).toLocaleDateString()}</p>
+                          <p className="text-xs text-muted-foreground">{session.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{session.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline">{session.ageGroup}</Badge>
+                      <Badge variant="secondary">{session.gender}</Badge>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold">${(session.price / 100).toFixed(2)}</p>
+                      <div className="flex items-center space-x-1 text-sm">
+                        <Users className="w-3 h-3 text-muted-foreground" />
+                        <span className={session.signedUp >= session.capacity ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                          {session.signedUp}/{session.capacity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
           {sessions.length === 0 && (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

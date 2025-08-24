@@ -253,36 +253,110 @@ export default function SuperAdminTenants() {
         </CardContent>
       </Card>
 
-      {/* Tenants Table */}
+      {/* Tenants - Desktop Table / Mobile Cards */}
       <Card>
         <CardHeader>
           <CardTitle>All Tenants ({filteredTenants.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Subdomain</TableHead>
-                  <TableHead>Contact Email</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Admins</TableHead>
-                  <TableHead>Players</TableHead>
-                  <TableHead>Sessions</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTenants.map((tenant: Tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{tenant.subdomain}</TableCell>
-                    <TableCell>{tenant.contactEmail}</TableCell>
-                    <TableCell>
+          {/* Desktop Table */}
+          <div className="hidden lg:block">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Subdomain</TableHead>
+                    <TableHead>Contact Email</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Admins</TableHead>
+                    <TableHead>Players</TableHead>
+                    <TableHead>Sessions</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTenants.map((tenant: Tenant) => (
+                    <TableRow key={tenant.id}>
+                      <TableCell className="font-medium">{tenant.name}</TableCell>
+                      <TableCell>{tenant.subdomain}</TableCell>
+                      <TableCell>{tenant.contactEmail}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          tenant.planLevel === 'elite' ? 'default' : 
+                          tenant.planLevel === 'growth' ? 'secondary' : 
+                          'outline'
+                        } className={
+                          tenant.planLevel === 'elite' ? 'bg-purple-600 text-white' : 
+                          tenant.planLevel === 'growth' ? 'bg-blue-600 text-white' : 
+                          'bg-gray-600 text-white'
+                        }>
+                          {tenant.planLevel?.toUpperCase() || 'CORE'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
+                          {tenant.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{Number(tenant.adminCount) || 0}</TableCell>
+                      <TableCell>{Number(tenant.playerCount) || 0}</TableCell>
+                      <TableCell>{Number(tenant.sessionCount) || 0}</TableCell>
+                      <TableCell>${(Number(tenant.revenue) || 0).toFixed(2)}</TableCell>
+                      <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => impersonateTenant(tenant.id, tenant.name)}
+                            title="Impersonate tenant"
+                          >
+                            <LogIn className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingTenant(tenant)}
+                            title="Edit tenant"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteTenantMutation.mutate(tenant.id)}
+                            title="Delete tenant"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {filteredTenants.map((tenant: Tenant) => (
+              <Card key={tenant.id} className="p-4">
+                <div className="space-y-3">
+                  {/* Header with name and status */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-base">{tenant.name}</h3>
+                      <p className="text-sm text-muted-foreground">{tenant.subdomain}</p>
+                    </div>
+                    <div className="flex flex-col items-end space-y-1">
+                      <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
+                        {tenant.status}
+                      </Badge>
                       <Badge variant={
                         tenant.planLevel === 'elite' ? 'default' : 
                         tenant.planLevel === 'growth' ? 'secondary' : 
@@ -294,50 +368,72 @@ export default function SuperAdminTenants() {
                       }>
                         {tenant.planLevel?.toUpperCase() || 'CORE'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
-                        {tenant.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{Number(tenant.adminCount) || 0}</TableCell>
-                    <TableCell>{Number(tenant.playerCount) || 0}</TableCell>
-                    <TableCell>{Number(tenant.sessionCount) || 0}</TableCell>
-                    <TableCell>${(Number(tenant.revenue) || 0).toFixed(2)}</TableCell>
-                    <TableCell>{new Date(tenant.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => impersonateTenant(tenant.id, tenant.name)}
-                          title="Impersonate tenant"
-                        >
-                          <LogIn className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingTenant(tenant)}
-                          title="Edit tenant"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteTenantMutation.mutate(tenant.id)}
-                          title="Delete tenant"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  </div>
+
+                  {/* Contact info */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Contact</p>
+                    <p className="text-sm">{tenant.contactEmail}</p>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-lg font-semibold">{Number(tenant.playerCount) || 0}</p>
+                      <p className="text-xs text-muted-foreground">Players</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold">{Number(tenant.sessionCount) || 0}</p>
+                      <p className="text-xs text-muted-foreground">Sessions</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold">${(Number(tenant.revenue) || 0).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">Revenue</p>
+                    </div>
+                  </div>
+
+                  {/* Additional info */}
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{Number(tenant.adminCount) || 0} Admins</span>
+                    <span>Created {new Date(tenant.createdAt).toLocaleDateString()}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end space-x-2 pt-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => impersonateTenant(tenant.id, tenant.name)}
+                      title="Impersonate tenant"
+                    >
+                      <LogIn className="w-4 h-4 mr-1" />
+                      Login
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingTenant(tenant)}
+                      title="Edit tenant"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteTenantMutation.mutate(tenant.id)}
+                      title="Delete tenant"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
+
           {filteredTenants.length === 0 && (
             <div className="text-center py-8">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

@@ -160,9 +160,9 @@ export default function SuperAdminOverview() {
         </div>
         
         {/* Quick Filters */}
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Select tenant" />
             </SelectTrigger>
             <SelectContent>
@@ -175,11 +175,13 @@ export default function SuperAdminOverview() {
             </SelectContent>
           </Select>
           
-          <DatePickerWithRange
-            date={dateRange}
-            setDate={setDateRange}
-            placeholder="Select date range"
-          />
+          <div className="w-full sm:w-auto">
+            <DatePickerWithRange
+              date={dateRange}
+              setDate={setDateRange}
+              placeholder="Select date range"
+            />
+          </div>
         </div>
       </div>
 

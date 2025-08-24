@@ -490,13 +490,13 @@ export default function SuperAdminSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Platform Settings</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Platform Settings</h2>
           <p className="text-muted-foreground">Configure platform-wide policies and tenant defaults</p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:justify-end">
           {saveStatus.type === 'saving' && (
             <Badge variant="secondary">
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -519,22 +519,26 @@ export default function SuperAdminSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="policies">
-            <Shield className="h-4 w-4 mr-2" />
-            Policies
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+          <TabsTrigger value="policies" className="text-xs sm:text-sm">
+            <Shield className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Policies</span>
+            <span className="sm:hidden">Policy</span>
           </TabsTrigger>
-          <TabsTrigger value="tenant-defaults">
-            <Package className="h-4 w-4 mr-2" />
-            Tenant Defaults
+          <TabsTrigger value="tenant-defaults" className="text-xs sm:text-sm">
+            <Package className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Tenant Defaults</span>
+            <span className="sm:hidden">Defaults</span>
           </TabsTrigger>
-          <TabsTrigger value="integrations">
-            <Server className="h-4 w-4 mr-2" />
-            Integrations
+          <TabsTrigger value="integrations" className="text-xs sm:text-sm">
+            <Server className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Integrations</span>
+            <span className="sm:hidden">Integr.</span>
           </TabsTrigger>
-          <TabsTrigger value="user-management">
-            <Users className="h-4 w-4 mr-2" />
-            User Management
+          <TabsTrigger value="user-management" className="text-xs sm:text-sm">
+            <Users className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">User Management</span>
+            <span className="sm:hidden">Users</span>
           </TabsTrigger>
         </TabsList>
 
