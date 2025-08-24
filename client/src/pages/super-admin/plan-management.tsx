@@ -329,7 +329,8 @@ export default function PlanManagement() {
             return 'manual_only';
           case 'core.waitlist_management':
           case 'waitlist_management':
-            return 'disabled';
+          case 'core.waitlist':
+            return 'off';
           case 'integrations.payment_gateway':
           case 'payment_gateway':
           case 'payment_integrations':
@@ -404,10 +405,11 @@ export default function PlanManagement() {
               return ['none', 'basic', 'advanced', 'ai_powered'];
             case 'core.session_management':
             case 'session_management':
-              return ['manual_only', 'recurring_auto'];
+              return ['manual_only', 'recurring', 'recurring_bulk'];
             case 'core.waitlist_management':
             case 'waitlist_management':
-              return ['disabled', 'manual_only', 'auto_payments'];
+            case 'core.waitlist':
+              return ['off', 'manual_only', 'auto_promote'];
             case 'comm.email_gateway':
             case 'email_gateway':
               return ['sendgrid', 'mailgun', 'custom'];
@@ -742,10 +744,11 @@ export default function PlanManagement() {
                                 return ['none', 'basic', 'advanced', 'ai_powered'];
                               case 'core.session_management':
                               case 'session_management':
-                                return ['manual_only', 'recurring_auto'];
+                                return ['manual_only', 'recurring', 'recurring_bulk'];
                               case 'core.waitlist_management':
                               case 'waitlist_management':
-                                return ['disabled', 'manual_only', 'auto_payments'];
+                              case 'core.waitlist':
+                                return ['off', 'manual_only', 'auto_promote'];
                               case 'comm.email_gateway':
                               case 'email_gateway':
                                 return ['sendgrid', 'mailgun', 'custom'];
@@ -795,7 +798,8 @@ export default function PlanManagement() {
                                   return 'manual_only';
                                 case 'core.waitlist_management':
                                 case 'waitlist_management':
-                                  return 'disabled';
+                                case 'core.waitlist':
+                                  return 'off';
                                 case 'integrations.payment_gateway':
                                 case 'payment_gateway':
                                 case 'payment_integrations':
