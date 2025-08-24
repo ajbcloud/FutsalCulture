@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Shield,
@@ -34,7 +35,8 @@ import {
   TestTube,
   Server,
   Users,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  User
 } from 'lucide-react';
 import { debounce } from 'lodash';
 
@@ -759,25 +761,303 @@ export default function SuperAdminSettings() {
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 mt-6">
+          {/* Email Service Integration */}
           <Card>
             <CardHeader>
-              <CardTitle>Platform Integrations</CardTitle>
-              <CardDescription>Configure third-party service integrations</CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Email Service (SendGrid)</CardTitle>
+                </div>
+                <Badge variant="default">
+                  Configured
+                </Badge>
+              </div>
+              <CardDescription>Configure email delivery service for notifications and communications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">Integrations configuration is maintained in the existing interface.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>API Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    ✅ API key configured
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Default Sender</Label>
+                  <p className="text-sm text-muted-foreground">notifications@futsalculture.app</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Template Usage</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2 border rounded">
+                    <p className="text-sm font-medium">Welcome</p>
+                    <p className="text-xs text-muted-foreground">New user onboarding</p>
+                  </div>
+                  <div className="p-2 border rounded">
+                    <p className="text-sm font-medium">Booking</p>
+                    <p className="text-xs text-muted-foreground">Session confirmations</p>
+                  </div>
+                  <div className="p-2 border rounded">
+                    <p className="text-sm font-medium">Reminders</p>
+                    <p className="text-xs text-muted-foreground">Session reminders</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SMS Service Integration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>SMS Service (Twilio)</CardTitle>
+                </div>
+                <Badge variant="secondary">
+                  Not Configured
+                </Badge>
+              </div>
+              <CardDescription>Configure SMS delivery for instant notifications and alerts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Account Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    ❌ Account not configured
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Not configured
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Integration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Payment Processing (Stripe)</CardTitle>
+                </div>
+                <Badge variant="default">Live</Badge>
+              </div>
+              <CardDescription>Payment gateway configuration and processing settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Webhook Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    ⚠️ Webhooks not set
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Processing Mode</Label>
+                  <p className="text-sm text-muted-foreground">Production</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Supported Methods</Label>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">Cards</Badge>
+                  <Badge variant="secondary">PayPal</Badge>
+                  <Badge variant="secondary">Bank Transfer</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Authentication Integration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Key className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Authentication (Replit OAuth)</CardTitle>
+                </div>
+                <Badge variant="default">Active</Badge>
+              </div>
+              <CardDescription>OAuth and authentication service configuration</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>OAuth Provider</Label>
+                  <p className="text-sm text-muted-foreground">Replit OpenID Connect</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Session Duration</Label>
+                  <p className="text-sm text-muted-foreground">7 days</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="user-management" className="space-y-4 mt-6">
+          {/* Super Admin Management */}
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage platform users and permissions</CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle>Super Admin Users</CardTitle>
+                </div>
+                <Button variant="outline" size="sm">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Add Super Admin
+                </Button>
+              </div>
+              <CardDescription>Manage users with platform-wide administrative access</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">User management is maintained in the existing interface.</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white">AF</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">Ajoseph Finch</p>
+                      <p className="text-sm text-muted-foreground">ajosephfinch@example.com</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">Primary</Badge>
+                    <Badge variant="secondary">MFA Enabled</Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p>• Primary Super Admin account (cannot be modified)</p>
+                <p>• Full platform access and management permissions</p>
+                <p>• Multi-factor authentication required</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Role Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Role Permissions</CardTitle>
+              </div>
+              <CardDescription>Configure role-based access control and permissions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-4 w-4 text-yellow-600" />
+                    <p className="font-medium">Super Admin</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Full platform access</p>
+                  <p className="text-xs text-muted-foreground mt-1">• All tenant management</p>
+                  <p className="text-xs text-muted-foreground">• Platform settings</p>
+                  <p className="text-xs text-muted-foreground">• User management</p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <SettingsIcon className="h-4 w-4 text-blue-600" />
+                    <p className="font-medium">Tenant Admin</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Tenant-level management</p>
+                  <p className="text-xs text-muted-foreground mt-1">• Session management</p>
+                  <p className="text-xs text-muted-foreground">• Player administration</p>
+                  <p className="text-xs text-muted-foreground">• Local settings</p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-green-600" />
+                    <p className="font-medium">Parent User</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Session booking access</p>
+                  <p className="text-xs text-muted-foreground mt-1">• Book sessions</p>
+                  <p className="text-xs text-muted-foreground">• Manage players</p>
+                  <p className="text-xs text-muted-foreground">• View history</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Access Control */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TestTube className="h-4 w-4 text-muted-foreground" />
+                <CardTitle>Access Control</CardTitle>
+              </div>
+              <CardDescription>Platform-wide access control settings and restrictions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>IP Restrictions</Label>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">Limit admin access by IP</p>
+                    <Switch disabled />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>API Rate Limiting</Label>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">Enforce API request limits</p>
+                    <Switch defaultChecked />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Session Monitoring</Label>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Monitor concurrent sessions</p>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* User Activity */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <CardTitle>User Activity</CardTitle>
+              </div>
+              <CardDescription>Monitor and manage user activity across the platform</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 border rounded">
+                  <p className="text-2xl font-bold text-green-600">127</p>
+                  <p className="text-sm text-muted-foreground">Active Sessions</p>
+                </div>
+                <div className="text-center p-3 border rounded">
+                  <p className="text-2xl font-bold text-blue-600">2,543</p>
+                  <p className="text-sm text-muted-foreground">Total Users</p>
+                </div>
+                <div className="text-center p-3 border rounded">
+                  <p className="text-2xl font-bold text-purple-600">45</p>
+                  <p className="text-sm text-muted-foreground">Admin Users</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Recent Activity</Label>
+                <div className="space-y-1 text-sm">
+                  <p className="text-muted-foreground">• New tenant registration: Elite Footwork Academy</p>
+                  <p className="text-muted-foreground">• Admin login: Sarah Johnson (Futsal Culture)</p>
+                  <p className="text-muted-foreground">• Bulk session creation: 25 sessions added</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

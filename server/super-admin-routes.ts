@@ -778,6 +778,27 @@ export function setupSuperAdminRoutes(app: Express) {
     return seedAIData(req, res);
   });
 
+  // Platform Settings routes
+  app.get('/api/super-admin/settings/policies', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getPolicies } = await import('./controllers/superAdmin/platformSettings');
+    return getPolicies(req, res);
+  });
+
+  app.put('/api/super-admin/settings/policies', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { updatePolicies } = await import('./controllers/superAdmin/platformSettings');
+    return updatePolicies(req, res);
+  });
+
+  app.get('/api/super-admin/settings/tenant-defaults', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getTenantDefaults } = await import('./controllers/superAdmin/platformSettings');
+    return getTenantDefaults(req, res);
+  });
+
+  app.put('/api/super-admin/settings/tenant-defaults', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { updateTenantDefaults } = await import('./controllers/superAdmin/platformSettings');
+    return updateTenantDefaults(req, res);
+  });
+
   // Impersonation routes
   app.post('/api/super-admin/impersonate', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
