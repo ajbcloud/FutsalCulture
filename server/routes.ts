@@ -26,6 +26,7 @@ import publicIngestionRoutes from './routes/publicIngestion';
 import { impersonationContext } from './middleware/impersonation';
 import * as impersonationController from './controllers/impersonation';
 import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
+import { setupBetaOnboardingRoutes } from './beta-onboarding-routes';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1767,6 +1768,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup super admin routes
   setupSuperAdminRoutes(app);
+
+  // Setup beta onboarding routes
+  setupBetaOnboardingRoutes(app);
 
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');

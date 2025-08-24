@@ -87,6 +87,11 @@ export const tenants = pgTable("tenants", {
   state: text("state"),
   country: text("country").default("US"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Beta onboarding fields
+  slug: varchar("slug").unique(),
+  tenantCode: varchar("tenant_code").unique(),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
 });
 
 
@@ -2065,3 +2070,192 @@ export type TenantFeatureOverride = typeof tenantFeatureOverrides.$inferSelect;
 export type InsertTenantFeatureOverride = z.infer<typeof insertTenantFeatureOverrideSchema>;
 export type FeatureAuditLog = typeof featureAuditLog.$inferSelect;
 export type InsertFeatureAuditLog = z.infer<typeof insertFeatureAuditLogSchema>;
+
+// Beta Onboarding System Tables
+
+// Tenant users for role-based access control
+export const tenantUsers = pgTable("tenant_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  role: varchar("role").notNull().default("player"), // tenant_owner, coach, player, parent
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("tenant_users_unique").on(table.tenantId, table.userId),
+  index("tenant_users_tenant_idx").on(table.tenantId),
+  index("tenant_users_user_idx").on(table.userId),
+]);
+
+// Email invitations system
+export const invites = pgTable("invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  email: varchar("email").notNull(),
+  role: varchar("role").notNull(),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  invitedByUserId: varchar("invited_by_user_id").references(() => users.id).notNull(),
+  channel: varchar("channel").default("email"), // email, sms
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("invites_tenant_idx").on(table.tenantId),
+  index("invites_token_idx").on(table.token),
+  index("invites_email_idx").on(table.email),
+]);
+
+// Email verification system
+export const emailVerifications = pgTable("email_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  email: varchar("email").notNull(),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("email_verifications_user_idx").on(table.userId),
+  index("email_verifications_token_idx").on(table.token),
+]);
+
+// Subscription management (extending existing billing)
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  planKey: varchar("plan_key").notNull().default("free"), // free, paid, enterprise
+  status: varchar("status").notNull().default("inactive"), // active, inactive, canceled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("subscriptions_tenant_unique").on(table.tenantId),
+  index("subscriptions_stripe_customer_idx").on(table.stripeCustomerId),
+]);
+
+// Plan feature definitions (extending existing feature system)
+export const betaPlanFeatures = pgTable("beta_plan_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  planKey: varchar("plan_key").notNull(),
+  featureKey: varchar("feature_key").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  limitsJson: jsonb("limits_json"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("beta_plan_features_unique").on(table.planKey, table.featureKey),
+  index("beta_plan_features_plan_idx").on(table.planKey),
+]);
+
+// Audit events for compliance
+export const auditEvents = pgTable("audit_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actorUserId: varchar("actor_user_id").references(() => users.id),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  eventType: varchar("event_type").notNull(),
+  targetId: varchar("target_id"),
+  metadataJson: jsonb("metadata_json"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("audit_events_tenant_idx").on(table.tenantId),
+  index("audit_events_actor_idx").on(table.actorUserId),
+  index("audit_events_type_idx").on(table.eventType),
+  index("audit_events_created_idx").on(table.createdAt),
+]);
+
+// Parental consent records
+export const consentRecords = pgTable("consent_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  consentType: varchar("consent_type").notNull(), // registration, medical, photo
+  consentGiven: boolean("consent_given").notNull(),
+  consentDate: timestamp("consent_date").notNull(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("consent_records_player_idx").on(table.playerId),
+  index("consent_records_parent_idx").on(table.parentId),
+]);
+
+// Policy acceptance tracking
+export const userPolicyAcceptances = pgTable("user_policy_acceptances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  policyType: varchar("policy_type").notNull(), // terms, privacy, cookie
+  policyVersion: varchar("policy_version").notNull(),
+  acceptedAt: timestamp("accepted_at").notNull(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("user_policy_acceptances_unique").on(table.userId, table.policyType, table.policyVersion),
+  index("user_policy_acceptances_user_idx").on(table.userId),
+]);
+
+// Email bounce tracking
+export const emailBounces = pgTable("email_bounces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  bounceType: varchar("bounce_type").notNull(), // hard, soft, complaint
+  reason: text("reason"),
+  bouncedAt: timestamp("bounced_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("email_bounces_email_idx").on(table.email),
+  index("email_bounces_type_idx").on(table.bounceType),
+]);
+
+// Parent-player relationship linking
+export const parentPlayerLinks = pgTable("parent_player_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+  relationshipType: varchar("relationship_type").notNull().default("parent"), // parent, guardian, emergency_contact
+  isPrimary: boolean("is_primary").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("parent_player_links_unique").on(table.parentId, table.playerId),
+  index("parent_player_links_parent_idx").on(table.parentId),
+  index("parent_player_links_player_idx").on(table.playerId),
+]);
+
+// Beta onboarding schema exports
+export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInviteSchema = createInsertSchema(invites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEmailVerificationSchema = createInsertSchema(emailVerifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAuditEventSchema = createInsertSchema(auditEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Beta onboarding types
+export type TenantUser = typeof tenantUsers.$inferSelect;
+export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
+export type Invite = typeof invites.$inferSelect;
+export type InsertInvite = z.infer<typeof insertInviteSchema>;
+export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type AuditEvent = typeof auditEvents.$inferSelect;
+export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
