@@ -7,9 +7,10 @@ import {
   players,
   users,
   futsalSessions,
-  signups
+  signups,
+  auditLogs
 } from '../../../shared/schema';
-import { eq, and, gte, lte, count, sql, desc, sum, isNotNull } from 'drizzle-orm';
+import { eq, and, gte, lte, count, sql, desc, sum, isNotNull, or } from 'drizzle-orm';
 
 // Validation schemas
 const analyticsQuerySchema = z.object({
@@ -83,13 +84,51 @@ export async function overview(req: Request, res: Response) {
         revenue: planPricing[t.planLevel as keyof typeof planPricing] || 0
       }));
       
-      // Get tenants created more than 30 days ago with low activity as churn candidates
+      // Enhanced churn risk detection
+      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const churnCandidates = await db
+      
+      // 1. Tenants with no session bookings in 2+ weeks
+      const tenantsWithoutRecentSessions = await db
         .select({
           tenantId: tenants.id,
           tenantName: tenants.name,
-          createdAt: tenants.createdAt
+          createdAt: tenants.createdAt,
+          lastSessionDate: sql<Date | null>`MAX(${futsalSessions.startTime})`,
+          sessionCount: sql<number>`COUNT(${futsalSessions.id})`
+        })
+        .from(tenants)
+        .leftJoin(futsalSessions, eq(tenants.id, futsalSessions.tenantId))
+        .groupBy(tenants.id, tenants.name, tenants.createdAt)
+        .having(sql`COALESCE(MAX(${futsalSessions.startTime}), ${tenants.createdAt}) < ${twoWeeksAgo.toISOString()}`)
+        .limit(5);
+      
+      // 2. Tenants with inactive admin users (no audit log activity in 2+ weeks)
+      const tenantsWithInactiveAdmins = await db
+        .select({
+          tenantId: users.tenantId,
+          tenantName: tenants.name,
+          lastAdminActivity: sql<Date | null>`MAX(${auditLogs.createdAt})`,
+          adminCount: sql<number>`COUNT(DISTINCT CASE WHEN ${users.isAdmin} = true OR ${users.isAssistant} = true THEN ${users.id} END)`
+        })
+        .from(users)
+        .leftJoin(tenants, eq(users.tenantId, tenants.id))
+        .leftJoin(auditLogs, eq(users.id, auditLogs.actorId))
+        .where(or(
+          eq(users.isAdmin, true),
+          eq(users.isAssistant, true)
+        ))
+        .groupBy(users.tenantId, tenants.name)
+        .having(sql`COALESCE(MAX(${auditLogs.createdAt}), '1970-01-01'::timestamp) < ${twoWeeksAgo.toISOString()}`)
+        .limit(5);
+      
+      // 3. Traditional low payment activity (30+ days old, <3 payments)
+      const tenantsWithLowPaymentActivity = await db
+        .select({
+          tenantId: tenants.id,
+          tenantName: tenants.name,
+          createdAt: tenants.createdAt,
+          paymentCount: sql<number>`COUNT(${payments.id})`
         })
         .from(tenants)
         .leftJoin(payments, eq(tenants.id, payments.tenantId))
@@ -98,18 +137,73 @@ export async function overview(req: Request, res: Response) {
           isNotNull(tenants.createdAt)
         ))
         .groupBy(tenants.id, tenants.name, tenants.createdAt)
-        .having(sql`COUNT(${payments.id}) < 3`) // Less than 3 payments
+        .having(sql`COUNT(${payments.id}) < 3`)
         .limit(3);
       
-      const churnCandidatesFormatted = churnCandidates.map(c => {
-        const daysSince = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-        return {
-          tenantId: c.tenantId,
-          tenantName: c.tenantName,
-          lastPayment: c.createdAt.toISOString().split('T')[0],
-          daysSince
-        };
+      // Combine and format all churn candidates
+      const allChurnCandidates = [];
+      
+      // Add session-inactive tenants
+      tenantsWithoutRecentSessions.forEach(t => {
+        const lastActivity = t.lastSessionDate || t.createdAt;
+        const daysSince = Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24));
+        allChurnCandidates.push({
+          tenantId: t.tenantId,
+          tenantName: t.tenantName,
+          lastPayment: new Date(lastActivity).toISOString().split('T')[0],
+          daysSince,
+          reason: `No sessions created in ${daysSince} days`,
+          riskLevel: daysSince > 30 ? 'high' : 'medium'
+        });
       });
+      
+      // Add admin-inactive tenants
+      tenantsWithInactiveAdmins.forEach(t => {
+        const lastActivity = t.lastAdminActivity || new Date('1970-01-01');
+        const daysSince = Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24));
+        allChurnCandidates.push({
+          tenantId: t.tenantId,
+          tenantName: t.tenantName,
+          lastPayment: new Date(lastActivity).toISOString().split('T')[0],
+          daysSince,
+          reason: `Admin inactive for ${daysSince} days`,
+          riskLevel: daysSince > 30 ? 'high' : 'medium'
+        });
+      });
+      
+      // Add payment-inactive tenants
+      tenantsWithLowPaymentActivity.forEach(t => {
+        const daysSince = Math.floor((Date.now() - new Date(t.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        allChurnCandidates.push({
+          tenantId: t.tenantId,
+          tenantName: t.tenantName,
+          lastPayment: new Date(t.createdAt).toISOString().split('T')[0],
+          daysSince,
+          reason: `Low payment activity (${t.paymentCount} payments)`,
+          riskLevel: 'medium'
+        });
+      });
+      
+      // Remove duplicates and sort by risk level and days since activity
+      const uniqueChurnCandidates = allChurnCandidates
+        .filter((candidate, index, array) => 
+          array.findIndex(c => c.tenantId === candidate.tenantId) === index
+        )
+        .sort((a, b) => {
+          if (a.riskLevel === 'high' && b.riskLevel !== 'high') return -1;
+          if (a.riskLevel !== 'high' && b.riskLevel === 'high') return 1;
+          return b.daysSince - a.daysSince;
+        })
+        .slice(0, 5);
+      
+      const churnCandidatesFormatted = uniqueChurnCandidates.map(c => ({
+        tenantId: c.tenantId,
+        tenantName: c.tenantName,
+        lastPayment: c.lastPayment,
+        daysSince: c.daysSince,
+        reason: c.reason,
+        riskLevel: c.riskLevel
+      }));
       
       const platformData = {
         platformRevenue: totalMRR, // Monthly recurring revenue in cents
