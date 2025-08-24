@@ -311,13 +311,44 @@ export default function PlanManagement() {
       return false;
     };
     
-    // Extract variant value correctly
-    const getVariantValue = (value: any) => {
-      if (typeof value === 'string') return value;
-      if (typeof value === 'object' && value !== null) {
-        return value.variant || '';
+    // Extract variant value correctly with feature-specific defaults
+    const getVariantValue = (value: any, featureKey?: string) => {
+      if (typeof value === 'string' && value) return value;
+      if (typeof value === 'object' && value !== null && value.variant) {
+        return value.variant;
       }
-      return '';
+      
+      // Provide feature-specific defaults when no variant is set
+      if (featureKey) {
+        switch (featureKey) {
+          case 'analytics.level':
+          case 'analytics_level':
+            return 'none';
+          case 'core.session_management':
+          case 'session_management':
+            return 'manual_only';
+          case 'core.waitlist_management':
+          case 'waitlist_management':
+            return 'disabled';
+          case 'integrations.payment_gateway':
+          case 'payment_gateway':
+          case 'payment_integrations':
+            return 'none';
+          case 'integrations.additional_integrations':
+          case 'additional_integrations':
+            return 'none';
+          case 'support.level':
+          case 'support_level':
+            return 'basic';
+          case 'dev.feature_request_queue':
+          case 'feature_request_queue':
+            return 'disabled';
+          default:
+            return 'basic';
+        }
+      }
+      
+      return 'basic';
     };
     
     // Extract limit value correctly
@@ -405,7 +436,7 @@ export default function PlanManagement() {
         };
         
         const options = getEnumOptions(feature.key, feature.optionsJson?.values);
-        const currentVariantValue = getVariantValue(currentValue);
+        const currentVariantValue = getVariantValue(currentValue, feature.key);
         
         return (
           <div className="flex items-center gap-2">
@@ -744,7 +775,36 @@ export default function PlanManagement() {
                           if (feature.type === 'boolean') {
                             featureValue = value?.enabled ?? false;
                           } else if (feature.type === 'enum') {
-                            featureValue = value?.variant || value || 'basic'; // Default to 'basic' if no variant
+                            // Get feature-specific default if no variant is set
+                            const getDefaultValue = (featureKey: string) => {
+                              switch (featureKey) {
+                                case 'analytics.level':
+                                case 'analytics_level':
+                                  return 'none';
+                                case 'core.session_management':
+                                case 'session_management':
+                                  return 'manual_only';
+                                case 'core.waitlist_management':
+                                case 'waitlist_management':
+                                  return 'disabled';
+                                case 'integrations.payment_gateway':
+                                case 'payment_gateway':
+                                case 'payment_integrations':
+                                  return 'none';
+                                case 'integrations.additional_integrations':
+                                case 'additional_integrations':
+                                  return 'none';
+                                case 'support.level':
+                                case 'support_level':
+                                  return 'basic';
+                                case 'dev.feature_request_queue':
+                                case 'feature_request_queue':
+                                  return 'disabled';
+                                default:
+                                  return 'basic';
+                              }
+                            };
+                            featureValue = value?.variant || value || getDefaultValue(featureKey);
                           } else if (feature.type === 'limit') {
                             featureValue = value?.limitValue ?? 0;
                           }
