@@ -4146,8 +4146,21 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       res.setHeader('Content-Disposition', `attachment; filename="${templateType}-consent-preview.pdf"`);
       res.setHeader('Content-Length', document.pdfBuffer.length);
       
-      // Send the PDF buffer
-      res.send(document.pdfBuffer);
+      // Check if this is actually a PDF or HTML fallback
+      const isPDF = document.pdfBuffer[0] === 0x25 && 
+                    document.pdfBuffer[1] === 0x50 && 
+                    document.pdfBuffer[2] === 0x44 && 
+                    document.pdfBuffer[3] === 0x46; // %PDF
+      
+      if (isPDF) {
+        // Send as PDF
+        res.send(document.pdfBuffer);
+      } else {
+        // Send as HTML for fallback case
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${templateType}-consent-preview.html"`);
+        res.send(document.pdfBuffer);
+      }
       
     } catch (error) {
       console.error('Error generating preview PDF:', error);
