@@ -3905,8 +3905,16 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   app.post('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
+      
+      // If there's a filePath, normalize it
+      let templateBody = { ...req.body };
+      if (templateBody.filePath) {
+        const objectStorageService = new ObjectStorageService();
+        templateBody.filePath = objectStorageService.normalizeObjectEntityPath(templateBody.filePath);
+      }
+      
       const templateData = insertConsentTemplateSchema.parse({
-        ...req.body,
+        ...templateBody,
         tenantId
       });
 

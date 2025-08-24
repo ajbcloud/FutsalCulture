@@ -205,9 +205,22 @@ export default function ConsentTemplateSettings() {
   // Upload file mutation
   const uploadMutation = useMutation({
     mutationFn: async ({ templateType, fileUrl }: { templateType: string; fileUrl: string }) => {
+      // Get the appropriate title based on template type
+      const templateTitles: Record<string, string> = {
+        medical: "Medical Information Release Form",
+        liability: "Liability Waiver",
+        photo: "Photo/Video Release",
+        privacy: "Privacy Policy Consent"
+      };
+      
+      // Extract filename from URL for display
+      const fileName = fileUrl.split('/').pop() || 'custom-template.pdf';
+      
       return apiRequest("/api/admin/consent-templates", "POST", {
         templateType,
+        title: templateTitles[templateType] || `Custom ${templateType} Template`,
         filePath: fileUrl,
+        fileName: fileName,
         isCustom: true,
       });
     },
@@ -230,8 +243,17 @@ export default function ConsentTemplateSettings() {
   // Save custom content mutation
   const saveContentMutation = useMutation({
     mutationFn: async ({ templateType, content }: { templateType: string; content: string }) => {
+      // Get the appropriate title based on template type
+      const templateTitles: Record<string, string> = {
+        medical: "Medical Information Release Form",
+        liability: "Liability Waiver",
+        photo: "Photo/Video Release",
+        privacy: "Privacy Policy Consent"
+      };
+      
       return apiRequest("/api/admin/consent-templates", "POST", {
         templateType,
+        title: templateTitles[templateType] || `Custom ${templateType} Template`,
         content,
         isCustom: true,
       });
