@@ -121,6 +121,7 @@ export default function SuperAdminParents() {
       setSearchQuery(searchParam);
     }
     if (filterParam) {
+      // When filter is passed, set it as search query to find the specific parent
       setSearchQuery(filterParam);
     }
     if (parentIdParam) {

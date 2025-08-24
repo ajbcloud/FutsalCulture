@@ -1,11 +1,27 @@
 import { Request, Response } from 'express';
-import { pageParams, wrapRows } from '../../lib/pagination';
+import { storage } from '../../storage';
 
 export async function list(req: Request, res: Response) {
-  const { page, pageSize } = pageParams(req.query);
-  const rows = [
-    { id: 'pl1', tenant: 'Futsal Culture', player: 'Harper Brind', ageGroup: 'U12', gender: 'Girls', parent: 'Atticus Brind', registeredAt: '2025-07-28T20:33:00Z', totalBookings: 0, portalAccess: 'disabled', bookingPermission: 'restricted', lastActivity: '2025-07-28T20:33:00Z' },
-  ];
-  console.log(`Super Admin: players list retrieved by ${(req as any).user?.id || 'unknown'}`);
-  res.json(wrapRows(rows, page, pageSize, rows.length));
+  try {
+    const { tenantId, search, ageGroup, gender, portalAccess, dateFrom, dateTo, parentId } = req.query;
+    
+    const filters = {
+      tenantId: tenantId as string,
+      search: search as string,
+      ageGroup: ageGroup as string,
+      gender: gender as string,
+      portalAccess: portalAccess as string,
+      dateFrom: dateFrom as string,
+      dateTo: dateTo as string,
+      parentId: parentId as string,
+    };
+    
+    const players = await storage.getSuperAdminPlayers(filters);
+    
+    console.log(`Super Admin: ${players.length} players retrieved by ${(req as any).user?.id || 'unknown'}`);
+    res.json(players);
+  } catch (error) {
+    console.error('Error fetching super admin players:', error);
+    res.status(500).json({ message: 'Failed to fetch players' });
+  }
 }

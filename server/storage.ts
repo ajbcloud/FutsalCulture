@@ -1192,8 +1192,38 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]> {
-    let query = db.select({
+  async getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
+    const conditions = [eq(users.isAdmin, false)]; // Start with base condition
+    
+    if (filters?.tenantId && filters.tenantId !== 'all') {
+      conditions.push(eq(users.tenantId, filters.tenantId));
+    }
+    if (filters?.status && filters.status !== 'all') {
+      if (filters.status === 'active') {
+        conditions.push(eq(users.isApproved, true));
+      } else if (filters.status === 'pending') {
+        conditions.push(eq(users.isApproved, false));
+      }
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(users.firstName, `%${filters.search}%`),
+          ilike(users.lastName, `%${filters.search}%`),
+          ilike(users.email, `%${filters.search}%`),
+          ilike(tenants.name, `%${filters.search}%`),
+          sql`${users.firstName} || ' ' || ${users.lastName} ILIKE ${'%' + filters.search + '%'}`
+        )
+      );
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(users.createdAt, new Date(filters.dateFrom)));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(users.createdAt, new Date(filters.dateTo)));
+    }
+
+    const query = db.select({
       id: users.id,
       tenantId: users.tenantId,
       tenantName: tenants.name,
@@ -1212,25 +1242,9 @@ export class DatabaseStorage implements IStorage {
     .from(users)
     .leftJoin(tenants, eq(users.tenantId, tenants.id))
     .leftJoin(players, eq(users.id, players.parentId))
-    .where(eq(users.isAdmin, false)) // Only get parent accounts, not admin accounts
+    .where(and(...conditions))
     .groupBy(users.id, tenants.name, users.updatedAt)
     .orderBy(desc(users.createdAt));
-
-    const conditions = [];
-    if (filters?.tenantId && filters.tenantId !== 'all') {
-      conditions.push(eq(users.tenantId, filters.tenantId));
-    }
-    if (filters?.status && filters.status !== 'all') {
-      if (filters.status === 'active') {
-        conditions.push(eq(users.isApproved, true));
-      } else if (filters.status === 'pending') {
-        conditions.push(eq(users.isApproved, false));
-      }
-    }
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
 
     return await query;
   }

@@ -47,6 +47,7 @@ export default function SuperAdminPlayers() {
       setSearchQuery(searchParam);
     }
     if (filterParam) {
+      // When filter is passed, set it as search query to find the specific player
       setSearchQuery(filterParam);
     }
   }, [location]);
