@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -154,18 +154,18 @@ export default function PlanManagement() {
     enabled: activeTab === 'tenant-overrides'
   });
 
-  // Fetch all available features from database
-  const { data: allFeatures = [] } = useQuery<Feature[]>({
-    queryKey: ['/api/super-admin/features'],
-    queryFn: async () => {
-      const response = await fetch('/api/super-admin/features', {
-        credentials: 'include'
-      });
-      if (!response.ok) return [];
-      return response.json();
-    },
-    enabled: activeTab === 'tenant-overrides'
-  });
+  // Extract available features from comparison data for tenant overrides
+  const allFeatures = useMemo(() => {
+    if (!comparisonData?.comparison) return [];
+    
+    return Object.entries(comparisonData.comparison).map(([featureKey, feature]) => ({
+      key: featureKey,
+      name: feature.name,
+      category: feature.category,
+      type: feature.type as 'boolean' | 'enum' | 'limit',
+      displayOrder: 0
+    }));
+  }, [comparisonData]);
 
   // Fetch features for selected plan
   const { data: planData, isLoading: loadingPlan, refetch: refetchPlan } = useQuery({
