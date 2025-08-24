@@ -1,0 +1,217 @@
+Objective
+Replace the current Analytics page UI with a modern, spacious, highly legible design while keeping all existing analytics endpoints and filters. The result should feel like a premium SaaS admin: clear hierarchy, roomy layout, elegant charts, delightful micro-interactions, and strong a11y.
+
+Non-goals
+Do not change the analytics back-end queries or schema. This is a UI/UX modernization plus lightweight UI components.
+
+Deliverables (acceptance)
+
+New Analytics v2 route (feature flag analytics_modern=true) that renders a modern layout with the same filters and data.
+
+Sticky FilterBar (Tenant / Status / Date range) that controls all charts & tables instantly.
+
+KPI cards with large numbers, deltas (▲▼ with %), mini sparklines, and icons.
+
+Refreshed tabs: Platform · Client Commerce · Company KPIs (sub-tabs: Overview, Revenue Trends, By Tenant, Platform Health).
+
+Consistent charting system (Recharts) with shared tooltip/legend styles and smooth transitions.
+
+Responsive 12-column grid; no cramped blocks; clear spacing and typography.
+
+Proper loading skeletons, empty states, and error states.
+
+A11y: keyboard focus, semantic regions, WCAG-AA contrast.
+
+Zero layout shift; Lighthouse Performance ≥ 85 on desktop for this route.
+
+Screenshots (desktop) of each tab with 30-day filter applied.
+
+Visual direction & tokens
+
+Update Tailwind/shadcn tokens (do not break the rest of the app):
+
+Colors (dark theme first)
+
+Background: #0b0f14 (base), Surface: #11161d, Muted surface: #0f1319, Border: #1f2733.
+
+Text: #e6edf3 (primary), #a9b4c2 (secondary).
+
+Accent: emerald/cyan blend for highlights (#10b981 primary, #06b6d4 secondary).
+
+Success #22c55e, Warning #f59e0b, Danger #ef4444, Info #3b82f6.
+
+Radii & shadows
+
+Cards: rounded-2xl, Inputs: rounded-xl, Buttons: rounded-xl.
+
+Shadows: soft “elevation” (shadow-[0_8px_30px_rgba(0,0,0,0.25)]), hover raise by +1 level.
+
+Borders: border-[1.5px] using the Border token.
+
+Typography
+
+Inter (or system): headings font-semibold, card numbers text-3xl/4xl, labels text-sm uppercase tracking-wide.
+
+Add a ui/theme.ts with exported tokens for spacing (24/32px gutters), radii, shadows, and z-layers. Configure Tailwind extend to include these as utilities.
+
+Layout & navigation
+
+Keep left rail nav.
+
+Main page uses a sticky FilterBar at the top (blurred surface “glass” style).
+
+Below filters, a tab row with pill tabs.
+
+Content uses a 12-column responsive grid:
+
+Desktop: KPI row (4–5 cards), then 2-wide panels;
+
+Mobile: single column stacking.
+
+Reusable components (create once under client/src/components/analytics/)
+
+StatCard.tsx
+
+Props: title, value, delta (number, sign), deltaLabel, sparkData?, icon?, hint?.
+
+Big value, small label, right-aligned delta badge (▲ green / ▼ red), tiny sparkline underneath.
+
+TimeSeriesCard.tsx
+
+Wraps a Recharts Area/Line/Bar with shared tooltip, legend, grid, formatters.
+
+Props: title, series[], intervalToggle (Day/Week/Month).
+
+RankingTable.tsx
+
+Sticky header, zebra rows, sortable, optional right-aligned value column.
+
+Props: title, rows, columns, onExportCSV.
+
+HealthList.tsx
+
+For failed payments, error spikes, deliverability alerts; shows severity badge, tenant, link to drill-down.
+
+EmptyState.tsx / ErrorState.tsx / Skeletons
+
+Consistent messages and actions.
+
+DeltaBadge.tsx
+
+Small ▲▼ icon with +/– %, color-coded, accessible aria-label.
+
+All components must support a11y, keyboard focus, and skeleton mode.
+
+Page composition (same data, new UI)
+
+Tabs → sub-tabs (persist selections in query params)
+
+Platform → Overview
+
+KPI row: Platform Revenue, MRR, ARR, Active Tenants, Churn % (if available).
+
+TimeSeriesCard: “Revenue Over Time” (platform only).
+
+RankingTable: “Top Tenants by Platform Revenue”.
+
+HealthList: “Failed Payments (Platform)”.
+
+Platform → Revenue Trends
+
+Stacked area: Plan mix or revenue components.
+
+Bar chart: New vs Churned tenants by week.
+
+Platform → By Tenant
+
+RankingTable with search, sort, export CSV.
+
+Platform → Platform Health
+
+Health KPIs: failed payments, API p95, email/SMS bounce rate.
+
+HealthList items with links to Integrations Health / Comms Deliverability.
+
+Client Commerce → Overview
+
+KPI row: GTV, Net Revenue, Refunds, Active Players, Registrations.
+
+TimeSeriesCard: “Commerce Revenue Over Time” (stacked by method Stripe/Venmo).
+
+RankingTable: “Top Tenants by Commerce Revenue”.
+
+HealthList: “Failed Commerce Payments”.
+
+Company KPIs (rollup)
+
+Combined MRR/ARR, blended CAC/LTV (if available), cohort chart placeholder.
+
+Interactions
+
+Hover elevations, subtle transitions, tooltips for every metric (explain calculation).
+
+Legend toggles show/hide series.
+
+Chart axes & numbers formatted using platform currency & locale.
+
+All cards are deep-linked: clicking opens the relevant sub-tab with filters preserved.
+
+FilterBar (sticky)
+
+Controls: Tenant (All / specific), Status (All Data | Platform | Client Commerce), From / To (quick ranges 7/30/90d + custom).
+
+URL-synced via query params; changes refetch React Query keys.
+
+Include a compact summary pill (“All Tenants · Last 30d · All Data”).
+
+Provide reset button.
+
+Micro-interactions & states
+
+Loading: skeleton lines/blocks matching card sizes.
+
+Empty: friendly illustrations/text + “Adjust filters” action.
+
+Error: concise text + “Retry” button; log to telemetry.
+
+Focus rings for keyboard users; skip-to-content link.
+
+Performance
+
+Lazy-load chart bundles per sub-tab (code splitting).
+
+Virtualize long tables (top tenants) with react-virtual.
+
+React Query staleTime 30–60s; handle ETags if server returns them.
+
+Avoid heavy shadows on mobile; prefer borders.
+
+Implementation notes
+
+Create client/src/pages/super-admin/analytics-v2/ and gate with ?modern=1 or analytics_modern=true. Keep v1 until approval.
+
+Use shadcn/ui for buttons, tabs, input primitives; lucide-react icons.
+
+Centralize formatters (formatCurrency, formatPercent, formatShortNumber) and chart palette (/analytics/palette.ts).
+
+Ensure all number sources are typed; no NaN—fallback to 0 + muted delta “–”.
+
+Keep test ids (data-testid) on KPI values and charts for e2e.
+
+Done checklist
+
+ New Analytics v2 renders with modern theme, spacing, and components.
+
+ Filters sticky and reflected across all blocks.
+
+ KPI cards show deltas + sparklines; charts share a consistent style.
+
+ Tables sortable, exportable; Health lists link to drill-downs.
+
+ A11y checks (keyboard/focus/contrast) pass.
+
+ Performance ≥ 85 Lighthouse (desktop).
+
+ Screenshot set attached for Overview/Revenue Trends/By Tenant/Platform Health and Commerce Overview (30-day filter).
+
+If any existing endpoints are missing fields needed for deltas/sparklines, compute deltas client-side from the returned time series—do not change the API in this task.

@@ -17,6 +17,7 @@ import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
 import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 import Analytics from "@/pages/super-admin/analytics";
+import AnalyticsV2 from "@/pages/super-admin/analytics-v2";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 import SuperAdminDunning from "@/pages/super-admin/dunning";
 import IntegrationsHealth from "@/pages/super-admin/integrations-health";
@@ -80,6 +81,7 @@ export default function SuperAdminPage() {
     { name: "Overview", href: "/super-admin", icon: Home, current: basePath === "/super-admin" },
     { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: basePath === "/super-admin/plan-management" },
     { name: "Analytics", href: "/super-admin/analytics", icon: BarChart3, current: basePath === "/super-admin/analytics" },
+    { name: "Analytics v2 🚀", href: "/super-admin/analytics-v2", icon: BarChart3, current: basePath.startsWith("/super-admin/analytics-v2") },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
@@ -108,6 +110,8 @@ export default function SuperAdminPage() {
         return <SuperAdminTenants />;
       case "/super-admin/analytics":
         return <Analytics />;
+      case "/super-admin/analytics-v2":
+        return <AnalyticsV2 />;
       case "/super-admin/plan-management":
         return <PlanManagement />;
       case "/super-admin/platform-billing":
