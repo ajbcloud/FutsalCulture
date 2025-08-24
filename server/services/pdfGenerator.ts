@@ -1,6 +1,28 @@
 import puppeteer from 'puppeteer';
 import crypto from 'crypto';
 import { ObjectStorageService } from '../objectStorage';
+import { db } from '../db';
+import { systemSettings } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
+export interface CompanySettings {
+  businessName: string;
+  businessLogo?: string;
+  contactEmail: string;
+  supportEmail: string;
+  supportPhone: string;
+  supportHours: string;
+  supportLocation: string;
+  availableLocations: Array<{
+    name: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state?: string;
+    postalCode?: string;
+    country: string;
+  }>;
+}
 
 export interface ConsentFormData {
   tenantId: string;
@@ -14,6 +36,7 @@ export interface ConsentFormData {
   signedAt: Date;
   ipAddress?: string;
   userAgent?: string;
+  companySettings?: CompanySettings;
 }
 
 export interface GeneratedDocument {
@@ -24,6 +47,54 @@ export interface GeneratedDocument {
 }
 
 export class PDFGeneratorService {
+  
+  private async fetchCompanySettings(tenantId: string): Promise<CompanySettings> {
+    // Get system settings from database for this tenant
+    const settings = await db.select()
+      .from(systemSettings)
+      .where(eq(systemSettings.tenantId, tenantId));
+    
+    const settingsMap = settings.reduce((acc, setting) => {
+      let value: any = setting.value;
+      // Parse boolean values
+      if (value === 'true') value = true;
+      if (value === 'false') value = false;
+      // Parse numeric values
+      if (!isNaN(Number(value))) value = Number(value);
+      // Parse JSON arrays (for availableLocations)
+      if (setting.key === 'availableLocations' && typeof value === 'string') {
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          // If parsing fails, create simple location objects
+          value = value.split(',').map((s: string) => ({
+            name: s.trim(),
+            addressLine1: s.trim(),
+            city: '',
+            country: 'US'
+          })).filter((s: any) => s.name);
+        }
+      }
+      
+      acc[setting.key] = value;
+      return acc;
+    }, {} as any);
+
+    // Default settings with fallbacks
+    return {
+      businessName: settingsMap.businessName || "Futsal Culture",
+      businessLogo: settingsMap.businessLogo || "",
+      contactEmail: settingsMap.contactEmail || "admin@futsalculture.com",
+      supportEmail: settingsMap.supportEmail || "support@futsalculture.com",
+      supportPhone: settingsMap.supportPhone || "(555) 123-GOAL",
+      supportHours: settingsMap.supportHours || "Monday - Friday",
+      supportLocation: settingsMap.supportLocation || "South Florida",
+      availableLocations: settingsMap.availableLocations || [
+        { name: "Main Location", addressLine1: "123 Sports Avenue", city: "Miami", state: "FL", country: "US" }
+      ],
+    };
+  }
+
   private async generateConsentPDF(data: ConsentFormData): Promise<Buffer> {
     const browser = await puppeteer.launch({
       headless: true,
@@ -70,6 +141,44 @@ export class PDFGeneratorService {
 
   private generateConsentHTML(data: ConsentFormData): string {
     const signatureHash = this.generateDigitalSignature(data);
+    const company = data.companySettings;
+    
+    // Process template content with merge fields
+    let processedContent = data.templateContent;
+    if (company) {
+      // Replace merge fields in template content
+      processedContent = processedContent
+        .replace(/\{\{COMPANY_NAME\}\}/g, company.businessName)
+        .replace(/\{\{CONTACT_EMAIL\}\}/g, company.contactEmail)
+        .replace(/\{\{SUPPORT_EMAIL\}\}/g, company.supportEmail)
+        .replace(/\{\{SUPPORT_PHONE\}\}/g, company.supportPhone)
+        .replace(/\{\{SUPPORT_HOURS\}\}/g, company.supportHours)
+        .replace(/\{\{SUPPORT_LOCATION\}\}/g, company.supportLocation)
+        .replace(/\{\{PLAYER_NAME\}\}/g, data.playerName)
+        .replace(/\{\{PARENT_NAME\}\}/g, data.parentName)
+        .replace(/\{\{DATE_SIGNED\}\}/g, data.signedAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long', 
+          day: 'numeric'
+        }));
+
+      // Add primary business address if available
+      if (company.availableLocations && company.availableLocations.length > 0) {
+        const primaryLocation = company.availableLocations[0];
+        const fullAddress = [
+          primaryLocation.addressLine1,
+          primaryLocation.addressLine2,
+          `${primaryLocation.city}${primaryLocation.state ? ', ' + primaryLocation.state : ''}${primaryLocation.postalCode ? ' ' + primaryLocation.postalCode : ''}`,
+          primaryLocation.country
+        ].filter(Boolean).join(', ');
+        
+        processedContent = processedContent
+          .replace(/\{\{COMPANY_ADDRESS\}\}/g, fullAddress)
+          .replace(/\{\{COMPANY_CITY\}\}/g, primaryLocation.city)
+          .replace(/\{\{COMPANY_STATE\}\}/g, primaryLocation.state || '')
+          .replace(/\{\{COMPANY_POSTAL_CODE\}\}/g, primaryLocation.postalCode || '');
+      }
+    }
     
     return `
       <!DOCTYPE html>
@@ -86,6 +195,29 @@ export class PDFGeneratorService {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+          }
+          .letterhead {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2563eb;
+          }
+          .letterhead-logo {
+            max-height: 80px;
+            max-width: 300px;
+            object-fit: contain;
+            margin-bottom: 10px;
+          }
+          .letterhead-company-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 5px;
+          }
+          .letterhead-contact {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
           }
           .header {
             border-bottom: 2px solid #333;
@@ -161,6 +293,18 @@ export class PDFGeneratorService {
         </style>
       </head>
       <body>
+        <!-- Company Letterhead -->
+        <div class="letterhead">
+          ${company?.businessLogo ? 
+            `<img src="${company.businessLogo}" alt="${company.businessName}" class="letterhead-logo" />` : 
+            `<div class="letterhead-company-name">${company?.businessName || 'Futsal Culture'}</div>`
+          }
+          <div class="letterhead-contact">
+            ${company?.contactEmail || ''} ${company?.supportPhone ? '• ' + company.supportPhone : ''}<br>
+            ${company?.supportLocation || ''}
+          </div>
+        </div>
+
         <div class="header">
           <div class="title">${data.templateTitle}</div>
           <div>Official Consent Document</div>
@@ -192,7 +336,7 @@ export class PDFGeneratorService {
 
         <div class="content">
           <div class="consent-content">
-            ${data.templateContent}
+            ${processedContent}
           </div>
         </div>
 
@@ -242,6 +386,11 @@ export class PDFGeneratorService {
   }
 
   public async generateAndStoreConsentDocument(data: ConsentFormData): Promise<GeneratedDocument> {
+    // Fetch company settings if not provided
+    if (!data.companySettings) {
+      data.companySettings = await this.fetchCompanySettings(data.tenantId);
+    }
+    
     // Generate PDF
     const pdfBuffer = await this.generateConsentPDF(data);
     
