@@ -48,6 +48,7 @@ import {
   Loader2,
   Grid
 } from 'lucide-react';
+import { FEATURE_KEYS } from '@shared/schema';
 
 // Category icons
 const categoryIcons: Record<string, any> = {
@@ -730,8 +731,8 @@ export default function PlanManagement() {
                   <SelectValue placeholder="Select a feature" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(FEATURE_KEYS).map((key) => {
-                    const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  {Object.values(FEATURE_KEYS).map((key: string) => {
+                    const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                     return (
                       <SelectItem key={key} value={key}>{displayName}</SelectItem>
                     );
