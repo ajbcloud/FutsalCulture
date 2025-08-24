@@ -105,38 +105,38 @@ export default function SuperAdminPage() {
     // Get base path without query parameters
     const basePath = location.split('?')[0];
     
-    switch (basePath) {
-      case "/super-admin/tenants":
+    switch (true) {
+      case basePath === "/super-admin/tenants":
         return <SuperAdminTenants />;
-      case "/super-admin/analytics":
+      case basePath === "/super-admin/analytics":
         return <Analytics />;
-      case "/super-admin/analytics-v2":
+      case basePath.startsWith("/super-admin/analytics-v2"):
         return <AnalyticsV2 />;
-      case "/super-admin/plan-management":
+      case basePath === "/super-admin/plan-management":
         return <PlanManagement />;
-      case "/super-admin/platform-billing":
+      case basePath === "/super-admin/platform-billing":
         return <PlatformBilling />;
-      case "/super-admin/dunning":
+      case basePath === "/super-admin/dunning":
         return <SuperAdminDunning />;
-      case "/super-admin/integrations-health":
+      case basePath === "/super-admin/integrations-health":
         return <IntegrationsHealth />;
-      case "/super-admin/comms":
+      case basePath === "/super-admin/comms":
         return <CommsDeliverability />;
-      case "/super-admin/security":
+      case basePath === "/super-admin/security":
         return <SecurityAudit />;
-      case "/super-admin/settings":
+      case basePath === "/super-admin/settings":
         return <SuperAdminSettings />;
-      case "/super-admin/sessions":
+      case basePath === "/super-admin/sessions":
         return <SuperAdminSessions />;
-      case "/super-admin/payments":
+      case basePath === "/super-admin/payments":
         return <SuperAdminPayments />;
-      case "/super-admin/registrations":
+      case basePath === "/super-admin/registrations":
         return <SuperAdminRegistrations />;
-      case "/super-admin/parents":
+      case basePath === "/super-admin/parents":
         return <SuperAdminParents />;
-      case "/super-admin/players":
+      case basePath === "/super-admin/players":
         return <SuperAdminPlayers />;
-      case "/super-admin/help":
+      case basePath === "/super-admin/help":
         return <SuperAdminHelpRequests />;
       default:
         return <SuperAdminOverview />;

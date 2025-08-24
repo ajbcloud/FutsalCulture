@@ -105,6 +105,8 @@ function Router() {
               <>
                 <Route path="/super-admin" component={SuperAdmin} />
                 <Route path="/super-admin/:page" component={SuperAdmin} />
+                <Route path="/super-admin/:page/:tab" component={SuperAdmin} />
+                <Route path="/super-admin/:page/:tab/:subTab" component={SuperAdmin} />
               </>
             )}
           </>
