@@ -12,6 +12,7 @@ import { ObjectUploader } from "../ObjectUploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import type { UploadResult } from '@uppy/core';
 
 interface ConsentTemplate {
@@ -337,6 +338,33 @@ export default function ConsentTemplateSettings() {
     },
   });
 
+  const toggleTemplateMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const response = await apiRequest(`/api/admin/consent-templates/${id}/toggle`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
+      toast({
+        title: "Template updated",
+        description: "Template status has been changed successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update template status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileUpload = (templateType: string) => async () => {
     const response = await fetch("/api/admin/consent-templates/upload", {
       method: "POST",
@@ -355,6 +383,14 @@ export default function ConsentTemplateSettings() {
 
   const getActiveTemplate = (templateType: string) => {
     return Array.isArray(templates) ? templates.find(t => t.templateType === templateType && t.isActive) : undefined;
+  };
+
+  const getAllTemplatesForType = (templateType: string) => {
+    return Array.isArray(templates) ? templates.filter(t => t.templateType === templateType) : [];
+  };
+
+  const handleToggleTemplate = (template: ConsentTemplate) => {
+    toggleTemplateMutation.mutate({ id: template.id, isActive: !template.isActive });
   };
 
   const handleEditContent = (templateType: string) => {
@@ -466,6 +502,7 @@ export default function ConsentTemplateSettings() {
         <CardContent className="space-y-6">
           {TEMPLATE_TYPES.map((type) => {
             const activeTemplate = getActiveTemplate(type.key);
+            const allTemplates = getAllTemplatesForType(type.key);
             const isEditing = editingTemplate === type.key;
             
             return (
@@ -476,15 +513,43 @@ export default function ConsentTemplateSettings() {
                       <CardTitle className="text-lg">{type.label}</CardTitle>
                       <CardDescription>{type.description}</CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {activeTemplate?.isCustom && (
                         <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
                           Custom
                         </span>
                       )}
-                      <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 rounded text-xs font-medium">
-                        {activeTemplate ? 'Active' : 'Default'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          activeTemplate ? 
+                            'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 
+                            'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        }`}>
+                          {activeTemplate ? 'Required' : 'Optional'}
+                        </span>
+                        {allTemplates.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Enable:</span>
+                            <Switch
+                              checked={Boolean(activeTemplate)}
+                              onCheckedChange={(checked) => {
+                                if (allTemplates.length > 0) {
+                                  const template = allTemplates[0]; // Get the most recent template
+                                  if (checked && !activeTemplate) {
+                                    // Activate the template
+                                    handleToggleTemplate({ ...template, isActive: false });
+                                  } else if (!checked && activeTemplate) {
+                                    // Deactivate the template
+                                    handleToggleTemplate(activeTemplate);
+                                  }
+                                }
+                              }}
+                              disabled={toggleTemplateMutation.isPending}
+                              data-testid={`switch-${type.key}`}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

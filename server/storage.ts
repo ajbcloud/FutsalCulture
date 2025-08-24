@@ -230,16 +230,20 @@ export interface IStorage {
 
   // Consent document management
   getConsentTemplates(tenantId: string): Promise<ConsentTemplate[]>;
+  getAllConsentTemplates(tenantId: string): Promise<ConsentTemplate[]>;
   getConsentTemplate(id: string, tenantId: string): Promise<ConsentTemplate | undefined>;
   createConsentTemplate(template: InsertConsentTemplate): Promise<ConsentTemplate>;
   updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>): Promise<ConsentTemplate>;
   deactivateConsentTemplate(id: string, tenantId: string): Promise<void>;
+  toggleConsentTemplate(id: string, tenantId: string, isActive: boolean): Promise<ConsentTemplate>;
   
   createConsentDocument(document: InsertConsentDocument): Promise<ConsentDocument>;
   getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined>;
   getConsentDocumentsByPlayer(playerId: string, tenantId: string): Promise<ConsentDocument[]>;
   getConsentDocumentsByParent(parentId: string, tenantId: string): Promise<ConsentDocument[]>;
   getAllConsentDocuments(tenantId: string): Promise<ConsentDocument[]>;
+  getRequiredConsentTemplates(tenantId: string): Promise<ConsentTemplate[]>;
+  checkMissingConsentForms(playerId: string, parentId: string, tenantId: string): Promise<ConsentTemplate[]>;
   
   createConsentSignature(signature: InsertConsentSignature): Promise<ConsentSignature>;
   getConsentSignaturesByDocument(documentId: string): Promise<ConsentSignature[]>;
@@ -2947,6 +2951,31 @@ export class DatabaseStorage implements IStorage {
       .orderBy(consentTemplates.templateType, desc(consentTemplates.version));
   }
 
+  async getAllConsentTemplates(tenantId: string): Promise<ConsentTemplate[]> {
+    return await db
+      .select()
+      .from(consentTemplates)
+      .where(eq(consentTemplates.tenantId, tenantId))
+      .orderBy(consentTemplates.templateType, desc(consentTemplates.version));
+  }
+
+  async toggleConsentTemplate(id: string, tenantId: string, isActive: boolean): Promise<ConsentTemplate> {
+    const [updatedTemplate] = await db
+      .update(consentTemplates)
+      .set({
+        isActive,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(consentTemplates.id, id),
+          eq(consentTemplates.tenantId, tenantId)
+        )
+      )
+      .returning();
+    return updatedTemplate;
+  }
+
   async getConsentTemplate(id: string, tenantId: string): Promise<ConsentTemplate | undefined> {
     const [template] = await db
       .select()
@@ -3287,6 +3316,44 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(consentDocuments.signedAt));
+  }
+
+  async getRequiredConsentTemplates(tenantId: string): Promise<ConsentTemplate[]> {
+    return await db
+      .select()
+      .from(consentTemplates)
+      .where(
+        and(
+          eq(consentTemplates.tenantId, tenantId),
+          eq(consentTemplates.isActive, true)
+        )
+      )
+      .orderBy(consentTemplates.templateType);
+  }
+
+  async checkMissingConsentForms(playerId: string, parentId: string, tenantId: string): Promise<ConsentTemplate[]> {
+    // Get all required consent templates for this tenant
+    const requiredTemplates = await this.getRequiredConsentTemplates(tenantId);
+    
+    // Get all consent documents for this player
+    const existingDocuments = await db
+      .select({
+        templateType: consentDocuments.templateType
+      })
+      .from(consentDocuments)
+      .where(
+        and(
+          eq(consentDocuments.playerId, playerId),
+          eq(consentDocuments.parentId, parentId),
+          eq(consentDocuments.tenantId, tenantId),
+          eq(consentDocuments.isActive, true)
+        )
+      );
+    
+    const completedTypes = new Set(existingDocuments.map(doc => doc.templateType));
+    
+    // Return templates that are required but not completed
+    return requiredTemplates.filter(template => !completedTypes.has(template.templateType));
   }
 
   async getAllConsentDocuments(tenantId: string): Promise<ConsentDocument[]> {

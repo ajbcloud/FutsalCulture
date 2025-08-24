@@ -3889,11 +3889,11 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
 
   // =================== CONSENT DOCUMENT MANAGEMENT ===================
   
-  // Get all consent templates for a tenant
+  // Get all consent templates for a tenant (admin view - includes inactive)
   app.get('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-      const templates = await storage.getConsentTemplates(tenantId);
+      const templates = await storage.getAllConsentTemplates(tenantId);
       res.json(templates);
     } catch (error) {
       console.error('Error fetching consent templates:', error);
@@ -3949,6 +3949,21 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     } catch (error) {
       console.error('Error updating consent template:', error);
       res.status(400).json({ error: error.message || 'Failed to update consent template' });
+    }
+  });
+
+  // Toggle consent template active status
+  app.patch('/api/admin/consent-templates/:id/toggle', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      const template = await storage.toggleConsentTemplate(id, tenantId, isActive);
+      res.json(template);
+    } catch (error) {
+      console.error('Error toggling consent template:', error);
+      res.status(500).json({ error: 'Failed to toggle consent template' });
     }
   });
 
@@ -4166,6 +4181,20 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     } catch (error) {
       console.error('Error generating preview PDF:', error);
       res.status(500).json({ error: 'Failed to generate preview PDF' });
+    }
+  });
+
+  // Check missing consent forms for a player
+  app.get('/api/admin/consent/missing/:playerId/:parentId', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { playerId, parentId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
+      res.json(missingForms);
+    } catch (error) {
+      console.error('Error checking missing consent forms:', error);
+      res.status(500).json({ error: 'Failed to check missing consent forms' });
     }
   });
 

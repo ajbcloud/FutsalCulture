@@ -120,6 +120,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check missing consent forms for a player (public endpoint for users)
+  app.get('/api/consent/missing/:playerId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { playerId } = req.params;
+      const parentId = req.user.claims.sub;
+      const tenantId = req.user?.tenantId;
+      
+      const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
+      res.json(missingForms);
+    } catch (error) {
+      console.error('Error checking missing consent forms:', error);
+      res.status(500).json({ error: 'Failed to check missing consent forms' });
+    }
+  });
+
   app.put('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1124,6 +1139,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.checkExistingSignup(playerId, sessionId);
       if (existing) {
         return res.status(400).json({ message: "Player already signed up for this session" });
+      }
+      
+      // Check for missing consent forms
+      const parentId = req.user.claims.sub;
+      const tenantId = req.user?.tenantId;
+      
+      try {
+        const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
+        if (missingForms.length > 0) {
+          const formTitles = missingForms.map(f => f.title).join(', ');
+          return res.status(400).json({ 
+            message: `Please complete the following consent forms before booking: ${formTitles}`,
+            missingConsentForms: missingForms
+          });
+        }
+      } catch (error) {
+        console.error('Error checking consent forms during signup:', error);
+        // Don't block signup if consent check fails
       }
       
       // Check session capacity
