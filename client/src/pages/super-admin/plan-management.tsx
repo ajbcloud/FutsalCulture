@@ -344,7 +344,8 @@ export default function PlanManagement() {
             return 'basic';
           case 'dev.feature_request_queue':
           case 'feature_request_queue':
-            return 'disabled';
+          case 'support.feature_request_queue':
+            return 'basic';
           default:
             return 'basic';
         }
@@ -421,10 +422,11 @@ export default function PlanManagement() {
               return ['none', 'sendgrid_mailchimp_quickbooks', 'sendgrid_mailchimp_quickbooks_braintree'];
             case 'support.level':
             case 'support_level':
-              return ['basic', 'standard', 'priority_direct'];
+              return ['basic', 'standard', 'priority_phone'];
             case 'dev.feature_request_queue':
             case 'feature_request_queue':
-              return ['disabled', 'standard', 'priority_queue'];
+            case 'support.feature_request_queue':
+              return ['basic', 'standard', 'priority'];
             case 'comm.notification_channels':
             case 'notification_channels':
               return ['email', 'sms', 'both'];
@@ -758,10 +760,11 @@ export default function PlanManagement() {
                                 return ['none', 'sendgrid_mailchimp_quickbooks', 'sendgrid_mailchimp_quickbooks_braintree'];
                               case 'support.level':
                               case 'support_level':
-                                return ['basic', 'standard', 'priority_direct'];
+                                return ['basic', 'standard', 'priority_phone'];
                               case 'dev.feature_request_queue':
                               case 'feature_request_queue':
-                                return ['disabled', 'standard', 'priority_queue'];
+                              case 'support.feature_request_queue':
+                                return ['basic', 'standard', 'priority'];
                               case 'comm.notification_channels':
                               case 'notification_channels':
                                 return ['email', 'sms', 'both'];
@@ -807,7 +810,8 @@ export default function PlanManagement() {
                                   return 'basic';
                                 case 'dev.feature_request_queue':
                                 case 'feature_request_queue':
-                                  return 'disabled';
+                                case 'support.feature_request_queue':
+                                  return 'basic';
                                 default:
                                   return 'basic';
                               }
