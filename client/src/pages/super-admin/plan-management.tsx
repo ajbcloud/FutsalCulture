@@ -366,6 +366,7 @@ export default function PlanManagement() {
           // Common fallback options based on feature type
           switch (featureKey) {
             case 'analytics.level':
+            case 'analytics_level':
               return ['none', 'basic', 'advanced', 'ai_powered'];
             case 'core.session_management':
             case 'session_management':
@@ -378,7 +379,26 @@ export default function PlanManagement() {
               return ['sendgrid', 'mailgun', 'custom'];
             case 'integrations.payment_gateway':
             case 'payment_gateway':
+            case 'payment_integrations':
               return ['stripe', 'braintree', 'both'];
+            case 'integrations.additional_integrations':
+            case 'additional_integrations':
+              return ['none', 'basic', 'advanced', 'enterprise'];
+            case 'support.level':
+            case 'support_level':
+              return ['basic', 'priority', 'dedicated'];
+            case 'dev.feature_request_queue':
+            case 'feature_request_queue':
+              return ['disabled', 'basic', 'advanced'];
+            case 'comm.notification_channels':
+            case 'notification_channels':
+              return ['email', 'sms', 'both'];
+            case 'integrations.accounting':
+            case 'accounting_integration':
+              return ['none', 'quickbooks', 'xero', 'custom'];
+            case 'analytics.reporting':
+            case 'reporting_level':
+              return ['basic', 'advanced', 'custom'];
             default:
               return ['basic', 'advanced', 'premium'];
           }
@@ -681,6 +701,7 @@ export default function PlanManagement() {
                           const getEnumOptionsForComparison = (featureKey: string) => {
                             switch (featureKey) {
                               case 'analytics.level':
+                              case 'analytics_level':
                                 return ['none', 'basic', 'advanced', 'ai_powered'];
                               case 'core.session_management':
                               case 'session_management':
@@ -693,7 +714,26 @@ export default function PlanManagement() {
                                 return ['sendgrid', 'mailgun', 'custom'];
                               case 'integrations.payment_gateway':
                               case 'payment_gateway':
+                              case 'payment_integrations':
                                 return ['stripe', 'braintree', 'both'];
+                              case 'integrations.additional_integrations':
+                              case 'additional_integrations':
+                                return ['none', 'basic', 'advanced', 'enterprise'];
+                              case 'support.level':
+                              case 'support_level':
+                                return ['basic', 'priority', 'dedicated'];
+                              case 'dev.feature_request_queue':
+                              case 'feature_request_queue':
+                                return ['disabled', 'basic', 'advanced'];
+                              case 'comm.notification_channels':
+                              case 'notification_channels':
+                                return ['email', 'sms', 'both'];
+                              case 'integrations.accounting':
+                              case 'accounting_integration':
+                                return ['none', 'quickbooks', 'xero', 'custom'];
+                              case 'analytics.reporting':
+                              case 'reporting_level':
+                                return ['basic', 'advanced', 'custom'];
                               default:
                                 return ['basic', 'advanced', 'premium'];
                             }
