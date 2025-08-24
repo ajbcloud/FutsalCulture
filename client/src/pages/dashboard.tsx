@@ -71,19 +71,6 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: consentDocuments = [], isLoading: consentLoading } = useQuery<Array<{
-    id: string;
-    templateId: string;
-    templateType: string;
-    templateTitle: string;
-    subjectName: string;
-    subjectRole: string;
-    signedAt: Date;
-    signatureData: any;
-  }>>({
-    queryKey: ["/api/parent/consent-documents"],
-    enabled: isAuthenticated,
-  });
 
   // All useMutation hooks (always called in same order)
   const deletePlayerMutation = useMutation({
@@ -426,74 +413,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Consent Documents Section */}
-      <section className="py-6 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Consent Documents</h2>
-              <p className="text-muted-foreground mt-1">View and download your signed consent forms</p>
-            </div>
-          </div>
-
-          {consentLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : consentDocuments.length === 0 ? (
-            <Card className="bg-card border border-border">
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">No consent documents found.</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Consent documents will appear here after signing them during registration.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {consentDocuments.map((document) => (
-                <Card key={document.id} className="bg-card border border-border">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                      <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-                        📄
-                      </div>
-                      {document.templateTitle}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {document.templateType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Signed for:</span>
-                      <span className="font-medium text-foreground">{document.subjectName}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Role:</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {document.subjectRole === 'player' ? 'Player' : 'Parent'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Signed:</span>
-                      <span className="text-foreground">
-                        {format(new Date(document.signedAt), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                    <div className="pt-3 border-t border-border">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Digital signature:</span>
-                        <span className="font-mono">{document.signatureData?.signedName || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Player Management Section - Mobile First */}
       <section className="py-6 bg-background sm:py-8">

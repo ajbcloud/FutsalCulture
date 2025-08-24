@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3 } from "lucide-react";
 import { NotificationPreferences } from "@shared/schema";
+import { format } from "date-fns";
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -35,6 +36,21 @@ export default function Profile() {
   // Notification preferences query
   const { data: notificationPrefs, isLoading: prefsLoading } = useQuery<NotificationPreferences>({
     queryKey: ["/api/notification-preferences"],
+    enabled: isAuthenticated,
+  });
+
+  // Consent documents query
+  const { data: consentDocuments = [], isLoading: consentLoading } = useQuery<Array<{
+    id: string;
+    templateId: string;
+    templateType: string;
+    templateTitle: string;
+    subjectName: string;
+    subjectRole: string;
+    signedAt: Date;
+    signatureData: any;
+  }>>({
+    queryKey: ["/api/parent/consent-documents"],
     enabled: isAuthenticated,
   });
 
@@ -495,6 +511,72 @@ export default function Profile() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Consent Documents Section */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
+                <Shield className="w-5 h-5 mr-2" />
+                Consent Documents
+              </h3>
+              <p className="text-muted-foreground">View and download your signed consent forms</p>
+              
+              {consentLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : consentDocuments.length === 0 ? (
+                <Card className="bg-card border border-border">
+                  <CardContent className="text-center py-8">
+                    <p className="text-muted-foreground">No consent documents found.</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Consent documents will appear here after signing them during registration.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {consentDocuments.map((document) => (
+                    <Card key={document.id} className="bg-card border border-border">
+                      <CardHeader>
+                        <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                            📄
+                          </div>
+                          {document.templateTitle}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {document.templateType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Signed for:</span>
+                          <span className="font-medium text-foreground">{document.subjectName}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Role:</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {document.subjectRole === 'player' ? 'Player' : 'Parent'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Signed:</span>
+                          <span className="text-foreground">
+                            {format(new Date(document.signedAt), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        <div className="pt-3 border-t border-border">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Digital signature:</span>
+                            <span className="font-mono">{document.signatureData?.signedName || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Parent 2 Section */}
