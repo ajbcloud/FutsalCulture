@@ -691,6 +691,22 @@ export function setupSuperAdminRoutes(app: Express) {
     return getFeatureAuditLog(req, res);
   });
 
+  // Analytics v2 endpoints (that the frontend expects)
+  app.get('/api/super-admin/analytics/overview', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { overview } = await import('./controllers/superAdmin/analytics');
+    return overview(req, res);
+  });
+
+  app.get('/api/super-admin/analytics/series', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { series } = await import('./controllers/superAdmin/detailedAnalytics');
+    return series(req, res);
+  });
+
+  app.get('/api/super-admin/analytics/by-tenant', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { byTenant } = await import('./controllers/superAdmin/detailedAnalytics');
+    return byTenant(req, res);
+  });
+
   // KPI endpoints
   app.get('/api/super-admin/kpi/overview', isAuthenticated, isSuperAdmin, async (req: any, res) => {
     req.db = req.app.db; // Pass database connection
