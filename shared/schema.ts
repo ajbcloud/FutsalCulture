@@ -2242,6 +2242,75 @@ export const consentTemplates = pgTable("consent_templates", {
   uniqueIndex("consent_templates_unique").on(table.tenantId, table.templateType, table.isActive),
 ]);
 
+// Signed consent documents
+export const consentDocuments = pgTable("consent_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  templateId: varchar("template_id").references(() => consentTemplates.id).notNull(),
+  templateType: varchar("template_type").notNull(), // medical, liability, photo, privacy
+  documentTitle: varchar("document_title").notNull(),
+  documentVersion: integer("document_version").notNull().default(1),
+  pdfFilePath: varchar("pdf_file_path").notNull(), // Object storage path for generated PDF
+  pdfFileName: varchar("pdf_file_name").notNull(),
+  pdfFileSize: integer("pdf_file_size"),
+  signedAt: timestamp("signed_at").notNull(),
+  signerIpAddress: varchar("signer_ip_address"),
+  signerUserAgent: text("signer_user_agent"),
+  digitalSignature: text("digital_signature"), // Hash of document + signer info
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("consent_documents_tenant_idx").on(table.tenantId),
+  index("consent_documents_player_idx").on(table.playerId),
+  index("consent_documents_parent_idx").on(table.parentId),
+  index("consent_documents_template_idx").on(table.templateId),
+  index("consent_documents_signed_idx").on(table.signedAt),
+]);
+
+// Consent document signatures tracking
+export const consentSignatures = pgTable("consent_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").references(() => consentDocuments.id).notNull(),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  templateType: varchar("template_type").notNull(),
+  signatureMethod: varchar("signature_method").notNull().default("electronic"), // electronic, digital
+  signatureData: jsonb("signature_data"), // Store signature metadata
+  consentGiven: boolean("consent_given").notNull(),
+  signedAt: timestamp("signed_at").notNull(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  browserFingerprint: text("browser_fingerprint"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("consent_signatures_document_idx").on(table.documentId),
+  index("consent_signatures_tenant_idx").on(table.tenantId),
+  index("consent_signatures_player_idx").on(table.playerId),
+  index("consent_signatures_parent_idx").on(table.parentId),
+  index("consent_signatures_signed_idx").on(table.signedAt),
+]);
+
+// Document access audit trail
+export const consentDocumentAccess = pgTable("consent_document_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").references(() => consentDocuments.id).notNull(),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  accessedBy: varchar("accessed_by").references(() => users.id).notNull(),
+  accessType: varchar("access_type").notNull(), // view, download, share
+  accessedAt: timestamp("accessed_at").defaultNow().notNull(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  accessDetails: jsonb("access_details"), // Additional metadata
+}, (table) => [
+  index("consent_access_document_idx").on(table.documentId),
+  index("consent_access_tenant_idx").on(table.tenantId),
+  index("consent_access_user_idx").on(table.accessedBy),
+  index("consent_access_time_idx").on(table.accessedAt),
+]);
+
 // Beta onboarding schema exports
 export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
   id: true,
@@ -2275,12 +2344,32 @@ export const insertConsentTemplateSchema = createInsertSchema(consentTemplates).
   updatedAt: true,
 });
 
+export const insertConsentDocumentSchema = createInsertSchema(consentDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConsentSignatureSchema = createInsertSchema(consentSignatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConsentDocumentAccessSchema = createInsertSchema(consentDocumentAccess).omit({
+  id: true,
+});
+
 // Beta onboarding types
 export type TenantUser = typeof tenantUsers.$inferSelect;
 export type InsertTenantUser = z.infer<typeof insertTenantUserSchema>;
 export type Invite = typeof invites.$inferSelect;
 export type ConsentTemplate = typeof consentTemplates.$inferSelect;
 export type InsertConsentTemplate = z.infer<typeof insertConsentTemplateSchema>;
+export type ConsentDocument = typeof consentDocuments.$inferSelect;
+export type InsertConsentDocument = z.infer<typeof insertConsentDocumentSchema>;
+export type ConsentSignature = typeof consentSignatures.$inferSelect;
+export type InsertConsentSignature = z.infer<typeof insertConsentSignatureSchema>;
+export type ConsentDocumentAccess = typeof consentDocumentAccess.$inferSelect;
+export type InsertConsentDocumentAccess = z.infer<typeof insertConsentDocumentAccessSchema>;
 export type InsertInvite = z.infer<typeof insertInviteSchema>;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;

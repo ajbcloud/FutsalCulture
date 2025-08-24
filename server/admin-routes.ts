@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots, tenants } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots, tenants, consentTemplates, insertConsentTemplateSchema, insertConsentDocumentSchema, insertConsentSignatureSchema } from "@shared/schema";
 import { eq, sql, and, or, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import { loadTenantMiddleware } from "./feature-middleware";
@@ -9,6 +9,7 @@ import { hasFeature } from "../shared/feature-flags";
 import Stripe from "stripe";
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
+import { PDFGeneratorService } from './services/pdfGenerator';
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -3886,55 +3887,42 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     }
   });
 
-  // Consent Template Management Routes
+  // =================== CONSENT DOCUMENT MANAGEMENT ===================
+  
+  // Get all consent templates for a tenant
   app.get('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-      
-      // For now, return empty array since we don't have the table yet
-      // This will be updated when the consent system is fully implemented
-      res.json([]);
+      const templates = await storage.getConsentTemplates(tenantId);
+      res.json(templates);
     } catch (error) {
       console.error('Error fetching consent templates:', error);
       res.status(500).json({ error: 'Failed to fetch consent templates' });
     }
   });
 
+  // Create or update consent template
   app.post('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-      const userId = (req as any).currentUser?.id;
-      const { templateType, content, filePath } = req.body;
-
-      if (!templateType) {
-        return res.status(400).json({ error: 'Template type is required' });
-      }
-
-      // For now, return a mock response
-      // This will be updated when the consent system is fully implemented
-      res.json({
-        id: 'mock-id',
-        tenantId,
-        templateType,
-        title: `Custom ${templateType} Consent Form`,
-        content,
-        filePath,
-        isCustom: true,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      const templateData = insertConsentTemplateSchema.parse({
+        ...req.body,
+        tenantId
       });
+
+      const template = await storage.createConsentTemplate(templateData);
+      res.json(template);
     } catch (error) {
       console.error('Error creating consent template:', error);
-      res.status(500).json({ error: 'Failed to create consent template' });
+      res.status(400).json({ error: error.message || 'Failed to create consent template' });
     }
   });
 
+  // Get upload URL for consent template files
   app.post('/api/admin/consent-templates/upload', requireAdmin, async (req: Request, res: Response) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      
       res.json({ uploadURL });
     } catch (error) {
       console.error('Error getting upload URL:', error);
@@ -3942,16 +3930,336 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     }
   });
 
+  // Update consent template
+  app.put('/api/admin/consent-templates/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      const template = await storage.updateConsentTemplate(id, req.body);
+      res.json(template);
+    } catch (error) {
+      console.error('Error updating consent template:', error);
+      res.status(400).json({ error: error.message || 'Failed to update consent template' });
+    }
+  });
+
+  // Deactivate consent template
   app.delete('/api/admin/consent-templates/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
       
-      // For now, return success
-      // This will be updated when the consent system is fully implemented
+      await storage.deactivateConsentTemplate(id, tenantId);
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting consent template:', error);
       res.status(500).json({ error: 'Failed to delete consent template' });
+    }
+  });
+
+  // Get all consent documents for admin view
+  app.get('/api/admin/consent-documents', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const documents = await storage.getAllConsentDocuments(tenantId);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching consent documents:', error);
+      res.status(500).json({ error: 'Failed to fetch consent documents' });
+    }
+  });
+
+  // Sign consent documents for a player (called during signup)
+  app.post('/api/consent/sign', async (req: Request, res: Response) => {
+    try {
+      const { playerId, parentId, templateTypes, signatureData, consentGiven } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      const userAgent = req.get('User-Agent') || '';
+      const ipAddress = req.ip || '';
+
+      if (!playerId || !parentId || !templateTypes || !Array.isArray(templateTypes)) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const pdfGenerator = new PDFGeneratorService();
+      const results = [];
+
+      // Get player and parent info for PDF generation
+      const player = await storage.getPlayer(playerId, tenantId);
+      const parent = await storage.getUser(parentId);
+
+      if (!player || !parent) {
+        return res.status(404).json({ error: 'Player or parent not found' });
+      }
+
+      // Process each consent type
+      for (const templateType of templateTypes) {
+        // Get the active template for this type
+        const templates = await storage.getConsentTemplates(tenantId);
+        const template = templates.find(t => t.templateType === templateType && t.isActive);
+
+        if (!template) {
+          console.warn(`No active template found for type: ${templateType}`);
+          continue;
+        }
+
+        // Generate PDF document
+        const pdfData = await pdfGenerator.generateAndStoreConsentDocument({
+          tenantId,
+          playerId,
+          playerName: `${player.firstName} ${player.lastName}`,
+          parentId,
+          parentName: `${parent.firstName} ${parent.lastName}`,
+          templateType,
+          templateTitle: template.title,
+          templateContent: template.content || `Default ${templateType} consent form content`,
+          signedAt: new Date(),
+          ipAddress,
+          userAgent
+        });
+
+        // Create consent document record
+        const documentData = insertConsentDocumentSchema.parse({
+          tenantId,
+          playerId,
+          parentId,
+          templateId: template.id,
+          templateType,
+          documentTitle: template.title,
+          documentVersion: template.version,
+          pdfFilePath: pdfData.filePath,
+          pdfFileName: pdfData.fileName,
+          pdfFileSize: pdfData.pdfBuffer.length,
+          signedAt: new Date(),
+          signerIpAddress: ipAddress,
+          signerUserAgent: userAgent,
+          digitalSignature: pdfData.digitalSignature
+        });
+
+        const document = await storage.createConsentDocument(documentData);
+
+        // Create signature record
+        const signatureRecord = insertConsentSignatureSchema.parse({
+          documentId: document.id,
+          tenantId,
+          playerId,
+          parentId,
+          templateType,
+          signatureMethod: 'electronic',
+          signatureData: signatureData || {},
+          consentGiven: consentGiven || true,
+          signedAt: new Date(),
+          ipAddress,
+          userAgent
+        });
+
+        await storage.createConsentSignature(signatureRecord);
+        results.push({ templateType, documentId: document.id, status: 'signed' });
+      }
+
+      res.json({ success: true, results });
+    } catch (error) {
+      console.error('Error signing consent documents:', error);
+      res.status(500).json({ error: 'Failed to sign consent documents' });
+    }
+  });
+
+  // Get consent documents for a specific player
+  app.get('/api/consent/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { playerId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      const userId = (req as any).currentUser?.id;
+
+      const documents = await storage.getConsentDocumentsByPlayer(playerId, tenantId);
+      
+      // Log access for audit trail
+      for (const doc of documents) {
+        await storage.logConsentDocumentAccess({
+          documentId: doc.id,
+          tenantId,
+          accessedBy: userId,
+          accessType: 'view',
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          accessDetails: { context: 'player_view', playerId }
+        });
+      }
+
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching player consent documents:', error);
+      res.status(500).json({ error: 'Failed to fetch consent documents' });
+    }
+  });
+
+  // Get consent documents for current parent (their children)
+  app.get('/api/consent/parent', async (req: Request, res: Response) => {
+    try {
+      const parentId = (req as any).currentUser?.id;
+      const tenantId = (req as any).currentUser?.tenantId;
+
+      const documents = await storage.getConsentDocumentsByParent(parentId, tenantId);
+      
+      // Log access for audit trail
+      for (const doc of documents) {
+        await storage.logConsentDocumentAccess({
+          documentId: doc.id,
+          tenantId,
+          accessedBy: parentId,
+          accessType: 'view',
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          accessDetails: { context: 'parent_view', playerId: doc.playerId }
+        });
+      }
+
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching parent consent documents:', error);
+      res.status(500).json({ error: 'Failed to fetch consent documents' });
+    }
+  });
+
+  // Download/serve a specific consent document PDF
+  app.get('/api/consent/document/:documentId/download', async (req: Request, res: Response) => {
+    try {
+      const { documentId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      const userId = (req as any).currentUser?.id;
+
+      const document = await storage.getConsentDocument(documentId, tenantId);
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Check access permissions (admin, parent, or player 13+)
+      const isAdmin = (req as any).currentUser?.isAdmin;
+      const isParent = document.parentId === userId;
+      
+      // For player access, check if user is the player and over 13
+      let isAuthorizedPlayer = false;
+      if (!isAdmin && !isParent) {
+        const player = await storage.getPlayer(document.playerId, tenantId);
+        if (player && player.parentId === userId) {
+          // Allow access if it's the player's parent
+          isAuthorizedPlayer = true;
+        } else if (player && calculateAge(new Date(player.birthDate)) >= MINIMUM_PORTAL_AGE) {
+          // TODO: Check if user is actually the player (would need player authentication)
+          // For now, we'll skip this check
+        }
+      }
+
+      if (!isAdmin && !isParent && !isAuthorizedPlayer) {
+        return res.status(403).json({ error: 'Unauthorized to access this document' });
+      }
+
+      // Log document access
+      await storage.logConsentDocumentAccess({
+        documentId: document.id,
+        tenantId,
+        accessedBy: userId,
+        accessType: 'download',
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        accessDetails: { context: 'document_download', fileName: document.pdfFileName }
+      });
+
+      // Get the document from object storage
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(document.pdfFilePath);
+      
+      // Set appropriate headers for PDF download
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${document.pdfFileName}"`,
+        'Cache-Control': 'private, no-cache'
+      });
+
+      // Stream the file
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error('Error downloading consent document:', error);
+      if (error instanceof ObjectNotFoundError) {
+        res.status(404).json({ error: 'Document file not found' });
+      } else {
+        res.status(500).json({ error: 'Failed to download document' });
+      }
+    }
+  });
+
+  // Get audit trail for a consent document
+  app.get('/api/admin/consent-documents/:documentId/audit', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { documentId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+
+      // Verify document belongs to tenant
+      const document = await storage.getConsentDocument(documentId, tenantId);
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      const auditLog = await storage.getConsentDocumentAccessLog(documentId);
+      res.json(auditLog);
+    } catch (error) {
+      console.error('Error fetching document audit trail:', error);
+      res.status(500).json({ error: 'Failed to fetch audit trail' });
+    }
+  });
+
+  // Get consent signatures for a document
+  app.get('/api/admin/consent-documents/:documentId/signatures', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { documentId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+
+      // Verify document belongs to tenant
+      const document = await storage.getConsentDocument(documentId, tenantId);
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      const signatures = await storage.getConsentSignaturesByDocument(documentId);
+      res.json(signatures);
+    } catch (error) {
+      console.error('Error fetching document signatures:', error);
+      res.status(500).json({ error: 'Failed to fetch signatures' });
+    }
+  });
+
+  // Check consent status for a player (used during signup validation)
+  app.get('/api/consent/status/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { playerId } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+
+      const documents = await storage.getConsentDocumentsByPlayer(playerId, tenantId);
+      const signatures = await storage.getConsentSignaturesByPlayer(playerId, tenantId);
+
+      // Group by template type to see what's been signed
+      const signedTypes = new Set(signatures.filter(s => s.consentGiven).map(s => s.templateType));
+      const requiredTypes = ['medical', 'liability', 'photo', 'privacy']; // configurable per tenant
+
+      const status = {
+        playerId,
+        signedDocuments: documents.length,
+        totalSignatures: signatures.length,
+        consentTypes: {
+          medical: signedTypes.has('medical'),
+          liability: signedTypes.has('liability'),
+          photo: signedTypes.has('photo'),
+          privacy: signedTypes.has('privacy')
+        },
+        allRequiredSigned: requiredTypes.every(type => signedTypes.has(type)),
+        lastSigned: signatures.length > 0 ? Math.max(...signatures.map(s => new Date(s.signedAt).getTime())) : null
+      };
+
+      res.json(status);
+    } catch (error) {
+      console.error('Error checking consent status:', error);
+      res.status(500).json({ error: 'Failed to check consent status' });
     }
   });
 }

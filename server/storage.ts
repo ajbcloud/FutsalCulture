@@ -22,6 +22,10 @@ import {
   planFeatures,
   tenantFeatureOverrides,
   featureAuditLog,
+  consentTemplates,
+  consentDocuments,
+  consentSignatures,
+  consentDocumentAccess,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -50,6 +54,14 @@ import {
   type LeaveWaitlist,
   type PromoteWaitlist,
   type WaitlistSettings,
+  type ConsentTemplate,
+  type InsertConsentTemplate,
+  type ConsentDocument,
+  type InsertConsentDocument,
+  type ConsentSignature,
+  type InsertConsentSignature,
+  type ConsentDocumentAccess,
+  type InsertConsentDocumentAccess,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -215,6 +227,26 @@ export interface IStorage {
   
   getPlayerDevelopmentAnalytics(tenantId: string, filters?: { playerId?: string; startDate?: string; endDate?: string; skillCategoryId?: string }): Promise<any>;
   getPlayerProgressSnapshots(playerId: string, tenantId: string, filters?: { startDate?: string; endDate?: string; skillId?: string }): Promise<any[]>;
+
+  // Consent document management
+  getConsentTemplates(tenantId: string): Promise<ConsentTemplate[]>;
+  getConsentTemplate(id: string, tenantId: string): Promise<ConsentTemplate | undefined>;
+  createConsentTemplate(template: InsertConsentTemplate): Promise<ConsentTemplate>;
+  updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>): Promise<ConsentTemplate>;
+  deactivateConsentTemplate(id: string, tenantId: string): Promise<void>;
+  
+  createConsentDocument(document: InsertConsentDocument): Promise<ConsentDocument>;
+  getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined>;
+  getConsentDocumentsByPlayer(playerId: string, tenantId: string): Promise<ConsentDocument[]>;
+  getConsentDocumentsByParent(parentId: string, tenantId: string): Promise<ConsentDocument[]>;
+  getAllConsentDocuments(tenantId: string): Promise<ConsentDocument[]>;
+  
+  createConsentSignature(signature: InsertConsentSignature): Promise<ConsentSignature>;
+  getConsentSignaturesByDocument(documentId: string): Promise<ConsentSignature[]>;
+  getConsentSignaturesByPlayer(playerId: string, tenantId: string): Promise<ConsentSignature[]>;
+  
+  logConsentDocumentAccess(access: InsertConsentDocumentAccess): Promise<ConsentDocumentAccess>;
+  getConsentDocumentAccessLog(documentId: string): Promise<ConsentDocumentAccess[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2899,6 +2931,175 @@ export class DatabaseStorage implements IStorage {
       console.error('Error removing tenant feature override:', error);
       throw error;
     }
+  }
+
+  // Consent document management implementation
+  async getConsentTemplates(tenantId: string): Promise<ConsentTemplate[]> {
+    return await db
+      .select()
+      .from(consentTemplates)
+      .where(
+        and(
+          eq(consentTemplates.tenantId, tenantId),
+          eq(consentTemplates.isActive, true)
+        )
+      )
+      .orderBy(consentTemplates.templateType, desc(consentTemplates.version));
+  }
+
+  async getConsentTemplate(id: string, tenantId: string): Promise<ConsentTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(consentTemplates)
+      .where(
+        and(
+          eq(consentTemplates.id, id),
+          eq(consentTemplates.tenantId, tenantId)
+        )
+      );
+    return template;
+  }
+
+  async createConsentTemplate(template: InsertConsentTemplate): Promise<ConsentTemplate> {
+    const [newTemplate] = await db
+      .insert(consentTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>): Promise<ConsentTemplate> {
+    const [updatedTemplate] = await db
+      .update(consentTemplates)
+      .set({
+        ...template,
+        updatedAt: new Date()
+      })
+      .where(eq(consentTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deactivateConsentTemplate(id: string, tenantId: string): Promise<void> {
+    await db
+      .update(consentTemplates)
+      .set({
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(consentTemplates.id, id),
+          eq(consentTemplates.tenantId, tenantId)
+        )
+      );
+  }
+
+  async createConsentDocument(document: InsertConsentDocument): Promise<ConsentDocument> {
+    const [newDocument] = await db
+      .insert(consentDocuments)
+      .values(document)
+      .returning();
+    return newDocument;
+  }
+
+  async getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined> {
+    const [document] = await db
+      .select()
+      .from(consentDocuments)
+      .where(
+        and(
+          eq(consentDocuments.id, id),
+          eq(consentDocuments.tenantId, tenantId)
+        )
+      );
+    return document;
+  }
+
+  async getConsentDocumentsByPlayer(playerId: string, tenantId: string): Promise<ConsentDocument[]> {
+    return await db
+      .select()
+      .from(consentDocuments)
+      .where(
+        and(
+          eq(consentDocuments.playerId, playerId),
+          eq(consentDocuments.tenantId, tenantId),
+          eq(consentDocuments.isActive, true)
+        )
+      )
+      .orderBy(desc(consentDocuments.signedAt));
+  }
+
+  async getConsentDocumentsByParent(parentId: string, tenantId: string): Promise<ConsentDocument[]> {
+    return await db
+      .select()
+      .from(consentDocuments)
+      .where(
+        and(
+          eq(consentDocuments.parentId, parentId),
+          eq(consentDocuments.tenantId, tenantId),
+          eq(consentDocuments.isActive, true)
+        )
+      )
+      .orderBy(desc(consentDocuments.signedAt));
+  }
+
+  async getAllConsentDocuments(tenantId: string): Promise<ConsentDocument[]> {
+    return await db
+      .select()
+      .from(consentDocuments)
+      .where(
+        and(
+          eq(consentDocuments.tenantId, tenantId),
+          eq(consentDocuments.isActive, true)
+        )
+      )
+      .orderBy(desc(consentDocuments.signedAt));
+  }
+
+  async createConsentSignature(signature: InsertConsentSignature): Promise<ConsentSignature> {
+    const [newSignature] = await db
+      .insert(consentSignatures)
+      .values(signature)
+      .returning();
+    return newSignature;
+  }
+
+  async getConsentSignaturesByDocument(documentId: string): Promise<ConsentSignature[]> {
+    return await db
+      .select()
+      .from(consentSignatures)
+      .where(eq(consentSignatures.documentId, documentId))
+      .orderBy(desc(consentSignatures.signedAt));
+  }
+
+  async getConsentSignaturesByPlayer(playerId: string, tenantId: string): Promise<ConsentSignature[]> {
+    return await db
+      .select()
+      .from(consentSignatures)
+      .where(
+        and(
+          eq(consentSignatures.playerId, playerId),
+          eq(consentSignatures.tenantId, tenantId)
+        )
+      )
+      .orderBy(desc(consentSignatures.signedAt));
+  }
+
+  async logConsentDocumentAccess(access: InsertConsentDocumentAccess): Promise<ConsentDocumentAccess> {
+    const [newAccess] = await db
+      .insert(consentDocumentAccess)
+      .values(access)
+      .returning();
+    return newAccess;
+  }
+
+  async getConsentDocumentAccessLog(documentId: string): Promise<ConsentDocumentAccess[]> {
+    return await db
+      .select()
+      .from(consentDocumentAccess)
+      .where(eq(consentDocumentAccess.documentId, documentId))
+      .orderBy(desc(consentDocumentAccess.accessedAt));
   }
 }
 
