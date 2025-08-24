@@ -624,6 +624,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Consent documents for parent - get all signed consent forms
+  app.get('/api/parent/consent-documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      
+      // Get user's tenant information
+      const user = await storage.getUser(parentId);
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      const signedConsents = await storage.getSignedConsentsByParent(parentId, user.tenantId);
+      res.json(signedConsents);
+    } catch (error) {
+      console.error("Error fetching parent consent documents:", error);
+      res.status(500).json({ message: "Failed to fetch consent documents" });
+    }
+  });
+
   // Admin session history endpoint for players
   app.get('/api/admin/players/:id/session-history', isAuthenticated, async (req: any, res) => {
     try {

@@ -3003,6 +3003,80 @@ export class DatabaseStorage implements IStorage {
     return newDocument;
   }
 
+  async getSignedConsentsByParent(parentId: string, tenantId: string): Promise<Array<{
+    id: string;
+    templateId: string;
+    templateType: string;
+    templateTitle: string;
+    subjectName: string;
+    subjectRole: string;
+    signedAt: Date;
+    signatureData: any;
+  }>> {
+    const results = await db
+      .select({
+        id: consentSignatures.id,
+        templateId: consentSignatures.templateId,
+        templateType: consentTemplates.templateType,
+        templateTitle: consentTemplates.title,
+        subjectId: consentSignatures.subjectId,
+        subjectRole: consentSignatures.subjectRole,
+        signedAt: consentSignatures.signedAt,
+        signatureData: consentSignatures.signatureData,
+        // Get player or parent name based on subject role
+        playerFirstName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'player' THEN players.first_name ELSE NULL END`,
+        playerLastName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'player' THEN players.last_name ELSE NULL END`,
+        parentFirstName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'parent' THEN users.first_name ELSE NULL END`,
+        parentLastName: sql<string>`CASE WHEN ${consentSignatures.subjectRole} = 'parent' THEN users.last_name ELSE NULL END`,
+      })
+      .from(consentSignatures)
+      .innerJoin(consentTemplates, eq(consentSignatures.templateId, consentTemplates.id))
+      .leftJoin(players, and(
+        eq(consentSignatures.subjectId, players.id),
+        eq(consentSignatures.subjectRole, 'player')
+      ))
+      .leftJoin(users, and(
+        eq(consentSignatures.subjectId, users.id),
+        eq(consentSignatures.subjectRole, 'parent')
+      ))
+      .where(
+        and(
+          eq(consentSignatures.tenantId, tenantId),
+          or(
+            // Parent signed for themselves
+            and(
+              eq(consentSignatures.signedById, parentId),
+              eq(consentSignatures.subjectRole, 'parent')
+            ),
+            // Parent signed for their player
+            and(
+              eq(consentSignatures.signedById, parentId),
+              eq(consentSignatures.subjectRole, 'player'),
+              // Verify the player belongs to this parent
+              or(
+                eq(players.parentId, parentId),
+                eq(players.parent2Id, parentId)
+              )
+            )
+          )
+        )
+      )
+      .orderBy(desc(consentSignatures.signedAt));
+
+    return results.map(result => ({
+      id: result.id,
+      templateId: result.templateId,
+      templateType: result.templateType,
+      templateTitle: result.templateTitle,
+      subjectName: result.subjectRole === 'player' 
+        ? `${result.playerFirstName} ${result.playerLastName}`.trim()
+        : `${result.parentFirstName} ${result.parentLastName}`.trim(),
+      subjectRole: result.subjectRole,
+      signedAt: result.signedAt,
+      signatureData: result.signatureData,
+    }));
+  }
+
   async getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined> {
     const [document] = await db
       .select()
