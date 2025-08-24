@@ -717,6 +717,17 @@ export class DatabaseStorage implements IStorage {
         .where(eq(payments.signupId, paymentId))
         .returning();
 
+      // ALSO update the signups table to set refunded = true
+      await tx
+        .update(signups)
+        .set({
+          refunded: true,
+          refundedAt: new Date(),
+          refundReason: reason,
+          refundTransactionId: updatedPayment.id,
+        })
+        .where(eq(signups.id, paymentId));
+
       return updatedPayment;
     });
   }
