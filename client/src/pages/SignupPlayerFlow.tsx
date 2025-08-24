@@ -92,14 +92,11 @@ export default function SignupPlayerFlow() {
     setLoading(true);
     try {
       // Create player account
-      const response = await apiRequest("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          ...playerData,
-          dateOfBirth: dob,
-          role: "player",
-          parentContact: isTeen ? parentContact : undefined,
-        }),
+      const response = await apiRequest("/api/auth/register", "POST", {
+        ...playerData,
+        dateOfBirth: dob,
+        role: "player",
+        parentContact: isTeen ? parentContact : undefined,
       });
       
       // Note: Consent documents are already signed and stored via the ConsentDocumentModal
@@ -107,13 +104,10 @@ export default function SignupPlayerFlow() {
       
       // If teen, send notification to parent
       if (isTeen && parentContact.parentEmail) {
-        await apiRequest("/api/notifications/parent-consent", {
-          method: "POST",
-          body: JSON.stringify({
-            playerId: response.id,
-            parentEmail: parentContact.parentEmail,
-            parentName: parentContact.parentName,
-          }),
+        await apiRequest("/api/notifications/parent-consent", "POST", {
+          playerId: response.id,
+          parentEmail: parentContact.parentEmail,
+          parentName: parentContact.parentName,
         });
       }
       
@@ -357,7 +351,7 @@ export default function SignupPlayerFlow() {
                     {playerData.firstName} {playerData.lastName} • {playerData.email}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Born: {new Date(dob).toLocaleDateString()} • {playerData.gender}
+                    Born: {dob ? new Date(dob).toLocaleDateString() : 'Not provided'} • {playerData.gender}
                   </p>
                 </div>
                 
@@ -413,7 +407,7 @@ export default function SignupPlayerFlow() {
           playerData={{
             firstName: playerData.firstName,
             lastName: playerData.lastName,
-            birthDate: dob
+            birthDate: dob || ''
           }}
           parentData={isTeen && parentContact.parentName ? {
             firstName: parentContact.parentName.split(' ')[0] || '',
