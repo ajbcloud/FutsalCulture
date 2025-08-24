@@ -370,26 +370,26 @@ export default function PlanManagement() {
               return ['none', 'basic', 'advanced', 'ai_powered'];
             case 'core.session_management':
             case 'session_management':
-              return ['basic', 'advanced', 'premium'];
+              return ['manual_only', 'recurring_auto'];
             case 'core.waitlist_management':
             case 'waitlist_management':
-              return ['disabled', 'basic', 'advanced'];
+              return ['disabled', 'manual_only', 'auto_payments'];
             case 'comm.email_gateway':
             case 'email_gateway':
               return ['sendgrid', 'mailgun', 'custom'];
             case 'integrations.payment_gateway':
             case 'payment_gateway':
             case 'payment_integrations':
-              return ['stripe', 'braintree', 'both'];
+              return ['none', 'stripe_only', 'stripe_braintree_more'];
             case 'integrations.additional_integrations':
             case 'additional_integrations':
-              return ['none', 'basic', 'advanced', 'enterprise'];
+              return ['none', 'quickbooks', 'quickbooks_more'];
             case 'support.level':
             case 'support_level':
-              return ['basic', 'priority', 'dedicated'];
+              return ['basic', 'standard', 'priority_direct'];
             case 'dev.feature_request_queue':
             case 'feature_request_queue':
-              return ['disabled', 'basic', 'advanced'];
+              return ['disabled', 'standard', 'priority_queue'];
             case 'comm.notification_channels':
             case 'notification_channels':
               return ['email', 'sms', 'both'];
@@ -705,26 +705,26 @@ export default function PlanManagement() {
                                 return ['none', 'basic', 'advanced', 'ai_powered'];
                               case 'core.session_management':
                               case 'session_management':
-                                return ['basic', 'advanced', 'premium'];
+                                return ['manual_only', 'recurring_auto'];
                               case 'core.waitlist_management':
                               case 'waitlist_management':
-                                return ['disabled', 'basic', 'advanced'];
+                                return ['disabled', 'manual_only', 'auto_payments'];
                               case 'comm.email_gateway':
                               case 'email_gateway':
                                 return ['sendgrid', 'mailgun', 'custom'];
                               case 'integrations.payment_gateway':
                               case 'payment_gateway':
                               case 'payment_integrations':
-                                return ['stripe', 'braintree', 'both'];
+                                return ['none', 'stripe_only', 'stripe_braintree_more'];
                               case 'integrations.additional_integrations':
                               case 'additional_integrations':
-                                return ['none', 'basic', 'advanced', 'enterprise'];
+                                return ['none', 'quickbooks', 'quickbooks_more'];
                               case 'support.level':
                               case 'support_level':
-                                return ['basic', 'priority', 'dedicated'];
+                                return ['basic', 'standard', 'priority_direct'];
                               case 'dev.feature_request_queue':
                               case 'feature_request_queue':
-                                return ['disabled', 'basic', 'advanced'];
+                                return ['disabled', 'standard', 'priority_queue'];
                               case 'comm.notification_channels':
                               case 'notification_channels':
                                 return ['email', 'sms', 'both'];
