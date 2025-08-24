@@ -172,6 +172,14 @@ export interface IStorage {
   getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string }): Promise<any[]>;
   getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; parentId?: string }): Promise<any[]>;
   getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]>;
+  getHelpRequestsForTenant(tenantId: string): Promise<HelpRequest[]>;
+  replyToHelpRequest(id: string, message: string, adminId: string): Promise<HelpRequest | null>;
+  resolveHelpRequest(id: string, adminId: string, resolutionNote?: string): Promise<HelpRequest | null>;
+  
+  // Tenant feature override operations
+  getTenantFeatureOverrides(tenantId?: string): Promise<any[]>;
+  setTenantFeatureOverride(tenantId: string, featureKey: string, override: any): Promise<void>;
+  removeTenantFeatureOverride(tenantId: string, featureKey: string): Promise<void>;
   
   // Player Development operations
   getDevSkillCategories(tenantId: string): Promise<any[]>;
@@ -2605,6 +2613,102 @@ export class DatabaseStorage implements IStorage {
     console.log(`Plan ${planId} updated:`, updatedPlan);
     
     return updatedPlan;
+  }
+
+  // Tenant feature override operations
+  async getTenantFeatureOverrides(tenantId?: string): Promise<any[]> {
+    try {
+      const query = db
+        .select({
+          id: tenantFeatureOverrides.id,
+          tenantId: tenantFeatureOverrides.tenantId,
+          tenantName: tenants.name,
+          featureKey: tenantFeatureOverrides.featureKey,
+          enabled: tenantFeatureOverrides.enabled,
+          variant: tenantFeatureOverrides.variant,
+          limitValue: tenantFeatureOverrides.limitValue,
+          reason: tenantFeatureOverrides.reason,
+          expiresAt: tenantFeatureOverrides.expiresAt,
+          createdAt: tenantFeatureOverrides.createdAt,
+          updatedAt: tenantFeatureOverrides.updatedAt
+        })
+        .from(tenantFeatureOverrides)
+        .leftJoin(tenants, eq(tenantFeatureOverrides.tenantId, tenants.id));
+      
+      if (tenantId) {
+        return await query.where(eq(tenantFeatureOverrides.tenantId, tenantId));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('Error fetching tenant feature overrides:', error);
+      return [];
+    }
+  }
+
+  async setTenantFeatureOverride(tenantId: string, featureKey: string, override: any): Promise<void> {
+    try {
+      // Check if override exists
+      const [existing] = await db
+        .select()
+        .from(tenantFeatureOverrides)
+        .where(
+          and(
+            eq(tenantFeatureOverrides.tenantId, tenantId),
+            eq(tenantFeatureOverrides.featureKey, featureKey)
+          )
+        );
+
+      if (existing) {
+        // Update existing override
+        await db
+          .update(tenantFeatureOverrides)
+          .set({
+            enabled: override.enabled,
+            variant: override.variant,
+            limitValue: override.limitValue,
+            reason: override.reason,
+            expiresAt: override.expiresAt ? new Date(override.expiresAt) : null,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(tenantFeatureOverrides.tenantId, tenantId),
+              eq(tenantFeatureOverrides.featureKey, featureKey)
+            )
+          );
+      } else {
+        // Create new override
+        await db.insert(tenantFeatureOverrides).values({
+          tenantId,
+          featureKey,
+          enabled: override.enabled,
+          variant: override.variant,
+          limitValue: override.limitValue,
+          reason: override.reason,
+          expiresAt: override.expiresAt ? new Date(override.expiresAt) : null
+        });
+      }
+    } catch (error) {
+      console.error('Error setting tenant feature override:', error);
+      throw error;
+    }
+  }
+
+  async removeTenantFeatureOverride(tenantId: string, featureKey: string): Promise<void> {
+    try {
+      await db
+        .delete(tenantFeatureOverrides)
+        .where(
+          and(
+            eq(tenantFeatureOverrides.tenantId, tenantId),
+            eq(tenantFeatureOverrides.featureKey, featureKey)
+          )
+        );
+    } catch (error) {
+      console.error('Error removing tenant feature override:', error);
+      throw error;
+    }
   }
 }
 

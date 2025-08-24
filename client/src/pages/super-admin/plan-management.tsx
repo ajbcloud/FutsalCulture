@@ -72,6 +72,17 @@ interface Feature {
   updatedAt?: string;
 }
 
+interface TenantOverride {
+  tenantId: string;
+  tenantName: string;
+  featureKey: string;
+  enabled?: boolean;
+  variant?: string;
+  limitValue?: number;
+  reason?: string;
+  expiresAt?: string;
+}
+
 interface Plan {
   code: string;
   name: string;
@@ -99,21 +110,46 @@ export default function PlanManagement() {
   const [isDirty, setIsDirty] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({});
   const [lastSaved, setLastSaved] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState('plan-features');
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+  const [editingFeature, setEditingFeature] = useState<{plan: string; feature: string} | null>(null);
 
   // Fetch plan comparison data
-  const { data: comparisonData, isLoading: loadingComparison } = useQuery<PlanComparison>({
+  const { data: comparisonData, isLoading: loadingComparison, refetch: refetchComparison } = useQuery<PlanComparison>({
     queryKey: ['/api/super-admin/plans/comparison'],
     staleTime: 5 * 60 * 1000
   });
 
+  // Fetch tenants for override management
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['/api/super-admin/tenants'],
+    enabled: activeTab === 'tenant-overrides'
+  });
+
+  // Fetch tenant overrides
+  const { data: tenantOverrides = [], refetch: refetchOverrides } = useQuery({
+    queryKey: ['/api/super-admin/tenant-overrides', selectedTenant],
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/tenant-overrides${selectedTenant ? `?tenantId=${selectedTenant}` : ''}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: activeTab === 'tenant-overrides'
+  });
+
   // Fetch features for selected plan
-  const { data: planData, isLoading: loadingPlan, refetch: refetchPlan } = useQuery<{
-    plan: Plan;
-    features: Record<string, Feature[]>;
-    lastModified: string;
-  }>({
+  const { data: planData, isLoading: loadingPlan, refetch: refetchPlan } = useQuery({
     queryKey: ['/api/super-admin/plans', selectedPlan, 'features'],
-    queryFn: () => apiRequest(`/api/super-admin/plans/${selectedPlan}/features`, 'GET'),
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/plans/${selectedPlan}/features`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch plan features');
+      return response.json();
+    },
     enabled: !!selectedPlan,
     staleTime: 30 * 1000
   });
@@ -163,9 +199,10 @@ export default function PlanManagement() {
   const [timeouts] = useState<Record<string, NodeJS.Timeout>>({});
 
   // Autosave handler with debouncing
-  const handleFeatureChange = useCallback((featureKey: string, value: any) => {
+  const handleFeatureChange = useCallback((featureKey: string, value: any, planCode?: string) => {
+    const targetPlan = planCode || selectedPlan;
     // Clear any existing timeout for this feature
-    const timeoutKey = `${selectedPlan}-${featureKey}`;
+    const timeoutKey = `${targetPlan}-${featureKey}`;
     if (timeouts[timeoutKey]) {
       clearTimeout(timeouts[timeoutKey]);
     }
@@ -173,13 +210,13 @@ export default function PlanManagement() {
     // Set pending change
     setPendingChanges(prev => ({
       ...prev,
-      [featureKey]: value
+      [`${targetPlan}-${featureKey}`]: value
     }));
 
     // Debounce the save
     timeouts[timeoutKey] = setTimeout(() => {
       updateFeatureMutation.mutate({
-        planCode: selectedPlan,
+        planCode: targetPlan,
         featureKey,
         value
       });
@@ -187,11 +224,32 @@ export default function PlanManagement() {
       // Clear pending change after save
       setPendingChanges(prev => {
         const newPending = { ...prev };
-        delete newPending[featureKey];
+        delete newPending[`${targetPlan}-${featureKey}`];
         return newPending;
       });
     }, 1000); // 1 second debounce
   }, [selectedPlan, updateFeatureMutation, timeouts]);
+
+  // Handle tenant override
+  const handleTenantOverride = useCallback((tenantId: string, featureKey: string, value: any) => {
+    apiRequest('/api/super-admin/tenant-overrides', 'POST', {
+      tenantId,
+      featureKey,
+      ...value
+    }).then(() => {
+      toast({
+        title: 'Override saved',
+        description: 'Tenant feature override has been applied'
+      });
+      refetchOverrides();
+    }).catch(err => {
+      toast({
+        title: 'Failed to save override',
+        description: err.message,
+        variant: 'destructive'
+      });
+    });
+  }, [toast, refetchOverrides]);
 
   // Copy features from another plan
   const handleCopyFeatures = (sourcePlan: string) => {
@@ -204,31 +262,39 @@ export default function PlanManagement() {
   };
 
   // Group features by category
-  const featuresByCategory = planData?.features || {};
+  const featuresByCategory = (planData as any)?.features || {};
 
   // Render value input based on feature type
-  const renderFeatureControl = (feature: Feature) => {
-    const currentValue = pendingChanges[feature.key] !== undefined 
-      ? pendingChanges[feature.key] 
+  const renderFeatureControl = (feature: Feature, planCode?: string, isCompact?: boolean) => {
+    const targetPlan = planCode || selectedPlan;
+    const pendingKey = `${targetPlan}-${feature.key}`;
+    const currentValue = pendingChanges[pendingKey] !== undefined 
+      ? pendingChanges[pendingKey] 
       : feature.value;
     
     const isSaving = updateFeatureMutation.isPending && 
-      updateFeatureMutation.variables?.featureKey === feature.key;
+      updateFeatureMutation.variables?.featureKey === feature.key &&
+      updateFeatureMutation.variables?.planCode === targetPlan;
     
-    const lastSaveTime = lastSaved[`${selectedPlan}-${feature.key}`];
+    const lastSaveTime = lastSaved[pendingKey];
 
     switch (feature.type) {
       case 'boolean':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-center">
             <Switch
               checked={currentValue === true}
-              onCheckedChange={(checked) => handleFeatureChange(feature.key, { enabled: checked })}
+              onCheckedChange={(checked) => handleFeatureChange(feature.key, { enabled: checked }, planCode)}
               disabled={isSaving}
+              className={isCompact ? "scale-90" : ""}
             />
-            {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-            {lastSaveTime && !isSaving && (
-              <Check className="h-3 w-3 text-green-500" />
+            {!isCompact && (
+              <>
+                {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                {lastSaveTime && !isSaving && (
+                  <Check className="h-3 w-3 text-green-500" />
+                )}
+              </>
             )}
           </div>
         );
@@ -239,10 +305,10 @@ export default function PlanManagement() {
           <div className="flex items-center gap-2">
             <Select
               value={currentValue || ''}
-              onValueChange={(value) => handleFeatureChange(feature.key, { variant: value })}
+              onValueChange={(value) => handleFeatureChange(feature.key, { variant: value }, planCode)}
               disabled={isSaving}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className={isCompact ? "w-[120px]" : "w-[180px]"}>
                 <SelectValue placeholder="Select option" />
               </SelectTrigger>
               <SelectContent>
@@ -253,8 +319,8 @@ export default function PlanManagement() {
                 ))}
               </SelectContent>
             </Select>
-            {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-            {lastSaveTime && !isSaving && (
+            {!isCompact && isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+            {!isCompact && lastSaveTime && !isSaving && (
               <Check className="h-3 w-3 text-green-500" />
             )}
           </div>
@@ -268,15 +334,15 @@ export default function PlanManagement() {
             <Input
               type="number"
               value={currentValue || 0}
-              onChange={(e) => handleFeatureChange(feature.key, { limitValue: parseInt(e.target.value) })}
+              onChange={(e) => handleFeatureChange(feature.key, { limitValue: parseInt(e.target.value) }, planCode)}
               min={0}
               max={maxValue}
-              className="w-[120px]"
+              className={isCompact ? "w-[80px]" : "w-[120px]"}
               disabled={isSaving}
             />
-            {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
-            {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-            {lastSaveTime && !isSaving && (
+            {!isCompact && unit && <span className="text-sm text-muted-foreground">{unit}</span>}
+            {!isCompact && isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+            {!isCompact && lastSaveTime && !isSaving && (
               <Check className="h-3 w-3 text-green-500" />
             )}
           </div>
@@ -319,174 +385,293 @@ export default function PlanManagement() {
         </div>
       </div>
 
-      {/* Plan Selector Tabs */}
-      <Tabs value={selectedPlan} onValueChange={setSelectedPlan}>
+      {/* Enhanced Tabs for Different Views */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          {plans.map((plan) => (
-            <TabsTrigger key={plan.code} value={plan.code}>
-              <div className="flex items-center gap-2">
-                {plan.code === 'elite' && <Crown className="h-4 w-4" />}
-                {plan.code === 'growth' && <TrendingUp className="h-4 w-4" />}
-                {plan.code === 'core' && <Zap className="h-4 w-4" />}
-                <span>{plan.name}</span>
-                <Badge variant="secondary" className="ml-2">
-                  ${(plan.priceCents / 100).toFixed(0)}/mo
-                </Badge>
-              </div>
-            </TabsTrigger>
-          ))}
+          <TabsTrigger value="plan-features">Plan Features</TabsTrigger>
+          <TabsTrigger value="comparison-matrix">Comparison Matrix</TabsTrigger>
+          <TabsTrigger value="tenant-overrides">Tenant Overrides</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={selectedPlan} className="mt-6">
-          {/* Quick Actions */}
-          <Card className="mb-6">
+        {/* Plan Features Tab */}
+        <TabsContent value="plan-features" className="mt-6">
+          <Tabs value={selectedPlan} onValueChange={setSelectedPlan}>
+            <TabsList className="grid w-full grid-cols-3">
+              {plans.map((plan) => (
+                <TabsTrigger key={plan.code} value={plan.code}>
+                  <div className="flex items-center gap-2">
+                    {plan.code === 'elite' && <Crown className="h-4 w-4" />}
+                    {plan.code === 'growth' && <TrendingUp className="h-4 w-4" />}
+                    {plan.code === 'core' && <Zap className="h-4 w-4" />}
+                    <span>{plan.name}</span>
+                    <Badge variant="secondary" className="ml-2">
+                      ${(plan.priceCents / 100).toFixed(0)}/mo
+                    </Badge>
+                  </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <TabsContent value={selectedPlan} className="mt-6">
+              {/* Quick Actions */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>
+                    Copy features from another plan or reset to defaults
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    {plans
+                      .filter(p => p.code !== selectedPlan)
+                      .map(plan => (
+                        <Button
+                          key={plan.code}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyFeatures(plan.code)}
+                          disabled={bulkUpdateMutation.isPending}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy from {plan.name}
+                        </Button>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Features Grid */}
+              <div className="space-y-6">
+                {Object.entries(featuresByCategory).map(([category, features]) => {
+                  const Icon = categoryIcons[category] || Package;
+                  return (
+                    <Card key={category}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Icon className="h-5 w-5" />
+                          {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {(features as Feature[]).map((feature) => (
+                            <div
+                              key={feature.key}
+                              className="flex items-center justify-between py-2 border-b last:border-0"
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{feature.name}</span>
+                                        {feature.description && (
+                                          <Info className="h-4 w-4 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    {feature.description && (
+                                      <TooltipContent>
+                                        <p className="max-w-xs">{feature.description}</p>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <Badge variant="outline" className="text-xs">
+                                  {feature.key}
+                                </Badge>
+                              </div>
+                              <div className="ml-auto">
+                                {renderFeatureControl(feature)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        {/* Interactive Comparison Matrix Tab */}
+        <TabsContent value="comparison-matrix" className="mt-6">
+          <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>Interactive Feature Comparison</CardTitle>
               <CardDescription>
-                Copy features from another plan or reset to defaults
+                Click on any feature value to edit it directly. Changes are saved automatically.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                {plans
-                  .filter(p => p.code !== selectedPlan)
-                  .map(plan => (
-                    <Button
-                      key={plan.code}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopyFeatures(plan.code)}
-                      disabled={bulkUpdateMutation.isPending}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy from {plan.name}
-                    </Button>
-                  ))}
+              <ScrollArea className="h-[700px]">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-background border-b z-10">
+                    <tr>
+                      <th className="text-left p-3 min-w-[250px]">Feature</th>
+                      {plans.map(plan => (
+                        <th key={plan.code} className="text-center p-3 min-w-[150px]">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-2">
+                              {plan.code === 'elite' && <Crown className="h-4 w-4 text-yellow-500" />}
+                              {plan.code === 'growth' && <TrendingUp className="h-4 w-4 text-blue-500" />}
+                              {plan.code === 'core' && <Zap className="h-4 w-4 text-green-500" />}
+                              <span className="font-semibold">{plan.name}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              ${(plan.priceCents / 100).toFixed(0)}/mo
+                            </Badge>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonData?.comparison && Object.entries(comparisonData.comparison).map(([featureKey, feature]) => (
+                      <tr key={featureKey} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{feature.name}</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">Feature Key: {featureKey}</p>
+                                      <p>Category: {feature.category}</p>
+                                      <p>Type: {feature.type}</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {feature.type}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {feature.category.replace(/_/g, ' ')}
+                              </Badge>
+                            </div>
+                          </div>
+                        </td>
+                        {plans.map(plan => {
+                          const value = feature.plans[plan.code];
+                          const featureData: Feature = {
+                            key: featureKey,
+                            name: feature.name,
+                            category: feature.category,
+                            type: feature.type as 'boolean' | 'enum' | 'limit',
+                            value: value?.enabled ?? value?.variant ?? value?.limitValue ?? null,
+                            displayOrder: 0,
+                            optionsJson: feature.type === 'enum' ? { values: ['basic', 'advanced', 'premium'] } : 
+                                         feature.type === 'limit' ? { max: 999999, unit: '' } : null
+                          };
+                          
+                          return (
+                            <td key={plan.code} className="text-center p-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                              <div className="flex justify-center items-center">
+                                {renderFeatureControl(featureData, plan.code, true)}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tenant Overrides Tab */}
+        <TabsContent value="tenant-overrides" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tenant-Specific Feature Overrides</CardTitle>
+              <CardDescription>
+                Override features for specific tenants regardless of their plan
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Tenant Selector */}
+                <div className="flex items-center gap-4">
+                  <Select value={selectedTenant || ''} onValueChange={setSelectedTenant}>
+                    <SelectTrigger className="w-[300px]">
+                      <SelectValue placeholder="Select a tenant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tenants</SelectItem>
+                      {(tenants as any[])?.map(tenant => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          {tenant.name} ({tenant.planName})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" onClick={() => setShowOverrideDialog(true)}>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Add Override
+                  </Button>
+                </div>
+
+                {/* Overrides List */}
+                {tenantOverrides && (tenantOverrides as TenantOverride[]).length > 0 ? (
+                  <div className="space-y-2">
+                    {(tenantOverrides as TenantOverride[]).map((override: TenantOverride, idx: number) => (
+                      <Card key={idx} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{override.featureKey}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Tenant: {override.tenantName}
+                            </p>
+                            {override.reason && (
+                              <p className="text-sm text-muted-foreground">
+                                Reason: {override.reason}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {override.enabled !== undefined && (
+                              <Badge variant={override.enabled ? 'default' : 'secondary'}>
+                                {override.enabled ? 'Enabled' : 'Disabled'}
+                              </Badge>
+                            )}
+                            {override.variant && (
+                              <Badge variant="outline">{override.variant}</Badge>
+                            )}
+                            {override.limitValue !== undefined && (
+                              <Badge variant="outline">{override.limitValue}</Badge>
+                            )}
+                            {override.expiresAt && (
+                              <Badge variant="destructive">
+                                Expires: {new Date(override.expiresAt).toLocaleDateString()}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {selectedTenant ? 'No overrides for this tenant' : 'Select a tenant to view overrides'}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Features Grid */}
-          <div className="space-y-6">
-            {Object.entries(featuresByCategory).map(([category, features]) => {
-              const Icon = categoryIcons[category] || Package;
-              return (
-                <Card key={category}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Icon className="h-5 w-5" />
-                      {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {(features as Feature[]).map((feature) => (
-                        <div
-                          key={feature.key}
-                          className="flex items-center justify-between py-2 border-b last:border-0"
-                        >
-                          <div className="flex items-center gap-2 flex-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{feature.name}</span>
-                                    {feature.description && (
-                                      <Info className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                {feature.description && (
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{feature.description}</p>
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
-                            <Badge variant="outline" className="text-xs">
-                              {feature.key}
-                            </Badge>
-                          </div>
-                          <div className="ml-auto">
-                            {renderFeatureControl(feature)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
         </TabsContent>
       </Tabs>
-
-      {/* Feature Comparison Matrix */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Feature Comparison Matrix</CardTitle>
-          <CardDescription>
-            Compare features across all plans at a glance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[600px]">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-background border-b">
-                <tr>
-                  <th className="text-left p-2">Feature</th>
-                  {plans.map(plan => (
-                    <th key={plan.code} className="text-center p-2 min-w-[120px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-semibold">{plan.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          ${(plan.priceCents / 100).toFixed(0)}/mo
-                        </Badge>
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonData?.comparison && Object.entries(comparisonData.comparison).map(([featureKey, feature]) => (
-                  <tr key={featureKey} className="border-b hover:bg-muted/50">
-                    <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{feature.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {feature.type}
-                        </Badge>
-                      </div>
-                    </td>
-                    {plans.map(plan => {
-                      const value = feature.plans[plan.code];
-                      return (
-                        <td key={plan.code} className="text-center p-2">
-                          {feature.type === 'boolean' ? (
-                            value?.enabled ? (
-                              <Check className="h-5 w-5 text-green-500 mx-auto" />
-                            ) : (
-                              <X className="h-5 w-5 text-muted-foreground mx-auto" />
-                            )
-                          ) : feature.type === 'enum' ? (
-                            <Badge variant={value?.variant ? 'default' : 'secondary'}>
-                              {value?.variant || 'None'}
-                            </Badge>
-                          ) : feature.type === 'limit' ? (
-                            <span className="font-medium">
-                              {value?.limitValue === 999999 ? '∞' : value?.limitValue || 0}
-                            </span>
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
     </div>
   );
 }

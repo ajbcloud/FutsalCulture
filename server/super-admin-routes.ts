@@ -799,4 +799,54 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to resolve help request' });
     }
   });
+
+  // Get tenant-specific feature overrides
+  app.get('/api/super-admin/tenant-overrides', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.query;
+      const overrides = await storage.getTenantFeatureOverrides(tenantId as string);
+      res.json(overrides || []);
+    } catch (error) {
+      console.error('Fetch tenant overrides error:', error);
+      res.status(500).json({ error: 'Failed to fetch tenant overrides' });
+    }
+  });
+
+  // Create or update tenant feature override
+  app.post('/api/super-admin/tenant-overrides', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId, featureKey, enabled, variant, limitValue, reason, expiresAt } = req.body;
+      
+      if (!tenantId || !featureKey) {
+        return res.status(400).json({ error: 'Tenant ID and feature key are required' });
+      }
+
+      await storage.setTenantFeatureOverride(tenantId, featureKey, {
+        enabled,
+        variant,
+        limitValue,
+        reason,
+        expiresAt
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Create tenant override error:', error);
+      res.status(500).json({ error: 'Failed to create tenant override' });
+    }
+  });
+
+  // Delete tenant feature override
+  app.delete('/api/super-admin/tenant-overrides/:tenantId/:featureKey', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId, featureKey } = req.params;
+      
+      await storage.removeTenantFeatureOverride(tenantId, featureKey);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete tenant override error:', error);
+      res.status(500).json({ error: 'Failed to delete tenant override' });
+    }
+  });
 }
