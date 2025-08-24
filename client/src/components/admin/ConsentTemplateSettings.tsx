@@ -274,6 +274,47 @@ export default function ConsentTemplateSettings() {
     },
   });
 
+  // Preview PDF mutation
+  const previewMutation = useMutation({
+    mutationFn: async (templateType: string) => {
+      const response = await fetch(`/api/admin/consent-templates/${templateType}/preview`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate preview PDF');
+      }
+      
+      return response.blob();
+    },
+    onSuccess: (blob, templateType) => {
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${templateType}-consent-preview.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "PDF Generated",
+        description: "Preview PDF has been downloaded",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Preview failed",
+        description: error.message || "Failed to generate PDF preview",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileUpload = (templateType: string) => async () => {
     const response = await fetch("/api/admin/consent-templates/upload", {
       method: "POST",
@@ -306,6 +347,10 @@ export default function ConsentTemplateSettings() {
     if (!content) return;
     
     saveContentMutation.mutate({ templateType, content });
+  };
+
+  const handlePreviewPDF = (templateType: string) => {
+    previewMutation.mutate(templateType);
   };
 
   const copyMergeField = (field: string) => {
@@ -479,6 +524,16 @@ export default function ConsentTemplateSettings() {
                         >
                           <Eye className="h-4 w-4" />
                           Edit Content
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePreviewPDF(type.key)}
+                          className="flex items-center gap-2"
+                          data-testid={`button-preview-${type.key}`}
+                        >
+                          <Download className="h-4 w-4" />
+                          Preview PDF
                         </Button>
 
                         {activeTemplate?.filePath && (
