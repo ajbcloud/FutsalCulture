@@ -1,4 +1,5 @@
 import React from "react";
+// @ts-ignore - react-simple-maps types not available
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
 
@@ -54,8 +55,8 @@ export default function USMap({ data, title = "Tenant Distribution by State", cl
       >
         <ZoomableGroup>
           <Geographies geography={geoUrl}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
+            {({ geographies }: any) =>
+              geographies.map((geo: any) => {
                 const stateName = geo.properties.name;
                 const stateAbbr = stateNameToAbbr[stateName] || "";
                 const tenantCount = stateDataMap.get(stateAbbr) || 0;
