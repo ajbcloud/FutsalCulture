@@ -14,9 +14,10 @@ interface USMapProps {
   data: StateData[];
   title?: string;
   className?: string;
+  onStateClick?: (stateAbbr: string, stateName: string, tenantCount: number) => void;
 }
 
-export default function USMap({ data, title = "Tenant Distribution by State", className = "" }: USMapProps) {
+export default function USMap({ data, title = "Tenant Distribution by State", className = "", onStateClick }: USMapProps) {
   // Create a color scale based on tenant count
   const maxValue = Math.max(...data.map(d => d.count), 1);
   const colorScale = scaleLinear<string>()
@@ -75,13 +76,19 @@ export default function USMap({ data, title = "Tenant Distribution by State", cl
                       hover: {
                         fill: tenantCount > 0 ? "#1565c0" : "#e0e0e0",
                         outline: "none",
-                        cursor: "pointer",
+                        cursor: tenantCount > 0 ? "pointer" : "default",
                       },
                       pressed: {
                         outline: "none",
                       },
                     }}
                     title={`${stateName}: ${tenantCount} tenant${tenantCount !== 1 ? 's' : ''}`}
+                    onClick={() => {
+                      if (tenantCount > 0 && onStateClick) {
+                        onStateClick(stateAbbr, stateName, tenantCount);
+                      }
+                    }}
+                    data-testid={`state-${stateAbbr}`}
                   />
                 );
               })

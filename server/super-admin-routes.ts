@@ -250,6 +250,105 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Get tenants by state for geographic drill-down
+  app.get('/api/super-admin/tenants-by-state/:state', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { state } = req.params;
+      
+      // Return mock tenant data for the clicked state
+      const mockTenantsByState: Record<string, any[]> = {
+        'CA': [
+          {
+            tenantId: '1',
+            tenantName: 'Futsal Culture',
+            planLevel: 'elite',
+            state: 'CA',
+            createdAt: '2024-01-15T00:00:00Z',
+            userCount: 25,
+            lastActivity: '2025-08-20T00:00:00Z'
+          },
+          {
+            tenantId: '2',
+            tenantName: 'Premier Futsal Club',
+            planLevel: 'growth',
+            state: 'CA',
+            createdAt: '2024-03-10T00:00:00Z',
+            userCount: 18,
+            lastActivity: '2025-08-22T00:00:00Z'
+          },
+          {
+            tenantId: '3',
+            tenantName: 'Champions Training Center',
+            planLevel: 'core',
+            state: 'CA',
+            createdAt: '2024-05-22T00:00:00Z',
+            userCount: 12,
+            lastActivity: '2025-08-19T00:00:00Z'
+          }
+        ],
+        'TX': [
+          {
+            tenantId: '4',
+            tenantName: 'Texas Elite Futsal',
+            planLevel: 'growth',
+            state: 'TX',
+            createdAt: '2024-02-08T00:00:00Z',
+            userCount: 22,
+            lastActivity: '2025-08-21T00:00:00Z'
+          },
+          {
+            tenantId: '5',
+            tenantName: 'Dallas Futsal Academy',
+            planLevel: 'core',
+            state: 'TX',
+            createdAt: '2024-06-15T00:00:00Z',
+            userCount: 15,
+            lastActivity: '2025-08-18T00:00:00Z'
+          }
+        ],
+        'NY': [
+          {
+            tenantId: '6',
+            tenantName: 'NYC Futsal Pro',
+            planLevel: 'elite',
+            state: 'NY',
+            createdAt: '2024-04-12T00:00:00Z',
+            userCount: 30,
+            lastActivity: '2025-08-23T00:00:00Z'
+          }
+        ],
+        'FL': [
+          {
+            tenantId: '7',
+            tenantName: 'Miami Futsal Center',
+            planLevel: 'growth',
+            state: 'FL',
+            createdAt: '2024-07-01T00:00:00Z',
+            userCount: 20,
+            lastActivity: '2025-08-20T00:00:00Z'
+          }
+        ],
+        'WA': [
+          {
+            tenantId: '8',
+            tenantName: 'Seattle Futsal Hub',
+            planLevel: 'core',
+            state: 'WA',
+            createdAt: '2024-08-05T00:00:00Z',
+            userCount: 10,
+            lastActivity: '2025-08-17T00:00:00Z'
+          }
+        ]
+      };
+
+      const stateTenants = mockTenantsByState[state.toUpperCase()] || [];
+      res.json(stateTenants);
+    } catch (error) {
+      console.error("Error fetching tenants by state:", error);
+      res.status(500).json({ message: "Failed to fetch tenants by state" });
+    }
+  });
+
   // Tenant Details
   app.get('/api/super-admin/tenants/:id/details', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

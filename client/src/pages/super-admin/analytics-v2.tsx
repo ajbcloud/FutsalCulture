@@ -23,6 +23,7 @@ import { DollarSign, Users, TrendingUp, AlertTriangle, CreditCard, UserPlus, Act
 
 // Import US Map component and Card components
 import USMap from '@/components/super-admin/us-map';
+import StateTenantsModal from '@/components/super-admin/state-tenants-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -88,6 +89,14 @@ export default function AnalyticsV2() {
   
   // AI Analytics state
   const [isAskAnalyticsOpen, setIsAskAnalyticsOpen] = useState(false);
+  
+  // State for tenant modal
+  const [stateModalOpen, setStateModalOpen] = useState(false);
+  const [selectedState, setSelectedState] = useState<{
+    abbr: string;
+    name: string;
+    count: number;
+  } | null>(null);
 
   // URL sync
   useEffect(() => {
@@ -491,6 +500,10 @@ export default function AnalyticsV2() {
                           data={geographicData?.tenantsByState || []} 
                           title="Tenant Distribution by State"
                           className="mb-6"
+                          onStateClick={(stateAbbr, stateName, tenantCount) => {
+                            setSelectedState({ abbr: stateAbbr, name: stateName, count: tenantCount });
+                            setStateModalOpen(true);
+                          }}
                         />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -685,6 +698,20 @@ export default function AnalyticsV2() {
             status: lane === 'platform' ? 'platform' : 'commerce'
           }}
         />
+        
+        {/* State Tenants Modal */}
+        {selectedState && (
+          <StateTenantsModal
+            isOpen={stateModalOpen}
+            onClose={() => {
+              setStateModalOpen(false);
+              setSelectedState(null);
+            }}
+            stateAbbr={selectedState.abbr}
+            stateName={selectedState.name}
+            tenantCount={selectedState.count}
+          />
+        )}
       </div>
     </div>
   );
