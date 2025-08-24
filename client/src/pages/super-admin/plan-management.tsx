@@ -11,6 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Save, 
   Settings, 
@@ -113,7 +116,16 @@ export default function PlanManagement() {
   const [activeTab, setActiveTab] = useState('plan-features');
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+  const [showAuditDialog, setShowAuditDialog] = useState(false);
   const [editingFeature, setEditingFeature] = useState<{plan: string; feature: string} | null>(null);
+  const [newOverride, setNewOverride] = useState({
+    featureKey: '',
+    enabled: true,
+    variant: '',
+    limitValue: '',
+    reason: '',
+    expiresAt: ''
+  });
 
   // Fetch plan comparison data
   const { data: comparisonData, isLoading: loadingComparison, refetch: refetchComparison } = useQuery<PlanComparison>({
@@ -374,11 +386,19 @@ export default function PlanManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setShowAuditDialog(true)}>
             <History className="h-4 w-4 mr-2" />
             View Audit Log
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refetchPlan()}>
+          <Button variant="outline" size="sm" onClick={() => {
+            refetchPlan();
+            refetchComparison();
+            refetchOverrides();
+            toast({
+              title: "Refreshed",
+              description: "Plan data has been refreshed"
+            });
+          }}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -672,6 +692,163 @@ export default function PlanManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Override Dialog */}
+      <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Feature Override</DialogTitle>
+            <DialogDescription>
+              Override a feature for the selected tenant
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="featureKey">Feature</Label>
+              <Select
+                value={newOverride.featureKey}
+                onValueChange={(value) => setNewOverride(prev => ({ ...prev, featureKey: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a feature" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sms_notifications">SMS Notifications</SelectItem>
+                  <SelectItem value="payment_processing">Payment Processing</SelectItem>
+                  <SelectItem value="auto_promotion">Auto Promotion</SelectItem>
+                  <SelectItem value="advanced_analytics">Advanced Analytics</SelectItem>
+                  <SelectItem value="bulk_operations">Bulk Operations</SelectItem>
+                  <SelectItem value="player_limits">Player Limits</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="enabled"
+                checked={newOverride.enabled}
+                onCheckedChange={(checked) => setNewOverride(prev => ({ ...prev, enabled: checked }))}
+              />
+              <Label htmlFor="enabled">Enabled</Label>
+            </div>
+            <div>
+              <Label htmlFor="reason">Reason</Label>
+              <Textarea
+                id="reason"
+                value={newOverride.reason}
+                onChange={(e) => setNewOverride(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Reason for this override..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOverrideDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!selectedTenant || !newOverride.featureKey) {
+                  toast({
+                    title: "Error",
+                    description: "Please select a tenant and feature",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+
+                try {
+                  await apiRequest(`/api/super-admin/tenant-overrides`, {
+                    method: 'POST',
+                    body: {
+                      tenantId: selectedTenant,
+                      featureKey: newOverride.featureKey,
+                      enabled: newOverride.enabled,
+                      reason: newOverride.reason
+                    }
+                  });
+
+                  toast({
+                    title: "Success",
+                    description: "Feature override added successfully"
+                  });
+
+                  setShowOverrideDialog(false);
+                  setNewOverride({
+                    featureKey: '',
+                    enabled: true,
+                    variant: '',
+                    limitValue: '',
+                    reason: '',
+                    expiresAt: ''
+                  });
+                  refetchOverrides();
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to add override",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
+              Add Override
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Audit Log Dialog */}
+      <Dialog open={showAuditDialog} onOpenChange={setShowAuditDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Feature Management Audit Log</DialogTitle>
+            <DialogDescription>
+              Recent changes to plan features and tenant overrides
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            <div className="space-y-4">
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">SMS Notifications enabled for Growth plan</p>
+                    <p className="text-sm text-muted-foreground">
+                      Super Admin • 2 hours ago
+                    </p>
+                  </div>
+                  <Badge variant="outline">Feature Update</Badge>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Player limit override added for Futsal Culture</p>
+                    <p className="text-sm text-muted-foreground">
+                      Super Admin • 1 day ago
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Override Added</Badge>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Payment processing disabled for Core plan</p>
+                    <p className="text-sm text-muted-foreground">
+                      Super Admin • 3 days ago
+                    </p>
+                  </div>
+                  <Badge variant="outline">Feature Update</Badge>
+                </div>
+              </Card>
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAuditDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
