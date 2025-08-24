@@ -43,7 +43,13 @@ import {
   Settings2,
   TrendingUp,
   Timer,
-  Bell
+  Bell,
+  Eye,
+  EyeOff,
+  Copy,
+  ExternalLink,
+  Wallet,
+  Building
 } from 'lucide-react';
 import { debounce } from 'lodash';
 
@@ -95,6 +101,60 @@ export default function SuperAdminSettings() {
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; callback: () => void } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Integration configuration states
+  const [emailConfig, setEmailConfig] = useState<any>({
+    apiKey: '',
+    senderEmail: '',
+    senderName: '',
+    replyTo: '',
+    templates: {
+      welcome: true,
+      booking: true,
+      reminders: true
+    }
+  });
+  const [smsConfig, setSmsConfig] = useState<any>({
+    accountSid: '',
+    authToken: '',
+    phoneNumber: '',
+    messagingServiceSid: '',
+    notifications: {
+      reminders: true,
+      bookings: true,
+      cancellations: false,
+      waitlist: true
+    }
+  });
+  const [paymentConfig, setPaymentConfig] = useState<any>({
+    mode: 'test',
+    secretKey: '',
+    publishableKey: '',
+    webhookSecret: '',
+    methods: {
+      card: true,
+      applePay: false,
+      bankTransfer: false
+    },
+    settings: {
+      autoCapture: true,
+      sendReceipts: true
+    }
+  });
+  const [authConfig, setAuthConfig] = useState<any>({});
+  
+  // UI visibility states
+  const [showSendGridKey, setShowSendGridKey] = useState(false);
+  const [showTwilioSid, setShowTwilioSid] = useState(false);
+  const [showTwilioToken, setShowTwilioToken] = useState(false);
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
+  const [showStripeWebhook, setShowStripeWebhook] = useState(false);
+  
+  // Loading states
+  const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
+  const [savingIntegration, setSavingIntegration] = useState<string | null>(null);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [sendingTestSMS, setSendingTestSMS] = useState(false);
 
   // Fetch policies
   const { data: policies, isLoading: policiesLoading } = useQuery<Policies>({
@@ -233,6 +293,131 @@ export default function SuperAdminSettings() {
     const newDefaults = { ...localTenantDefaults, ...updates };
     setLocalTenantDefaults(newDefaults);
     debouncedSaveTenantDefaults(newDefaults);
+  };
+  
+  // Integration handler functions
+  const handleTestIntegration = async (type: string) => {
+    setTestingIntegration(type);
+    try {
+      const response = await fetch(`/api/super-admin/integrations/${type}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(
+          type === 'email' ? emailConfig :
+          type === 'sms' ? smsConfig :
+          type === 'payment' ? paymentConfig :
+          authConfig
+        )
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        toast({ title: `${type} integration test successful`, description: result.message });
+      } else {
+        throw new Error(result.error || 'Test failed');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: `${type} integration test failed`, 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setTestingIntegration(null);
+    }
+  };
+  
+  const handleSaveIntegration = async (type: string) => {
+    setSavingIntegration(type);
+    try {
+      const config = 
+        type === 'email' ? emailConfig :
+        type === 'sms' ? smsConfig :
+        type === 'payment' ? paymentConfig :
+        authConfig;
+        
+      const response = await fetch(`/api/super-admin/integrations/${type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(config)
+      });
+      
+      if (response.ok) {
+        toast({ title: `${type} integration saved successfully` });
+        queryClient.invalidateQueries({ queryKey: ['/api/super-admin/integrations'] });
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Save failed');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: `Failed to save ${type} integration`, 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setSavingIntegration(null);
+    }
+  };
+  
+  const handleSendTestEmail = async () => {
+    setSendingTestEmail(true);
+    try {
+      const response = await fetch('/api/super-admin/integrations/email/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...emailConfig,
+          to: 'test@example.com'
+        })
+      });
+      
+      if (response.ok) {
+        toast({ title: 'Test email sent successfully' });
+      } else {
+        throw new Error('Failed to send test email');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Failed to send test email', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+  
+  const handleSendTestSMS = async () => {
+    setSendingTestSMS(true);
+    try {
+      const response = await fetch('/api/super-admin/integrations/sms/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...smsConfig,
+          to: '+1234567890'
+        })
+      });
+      
+      if (response.ok) {
+        toast({ title: 'Test SMS sent successfully' });
+      } else {
+        throw new Error('Failed to send test SMS');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Failed to send test SMS', 
+        description: error.message,
+        variant: 'destructive' 
+      });
+    } finally {
+      setSendingTestSMS(false);
+    }
   };
 
   if (policiesLoading || defaultsLoading) {
@@ -1162,40 +1347,150 @@ export default function SuperAdminSettings() {
                   <Mail className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>Email Service (SendGrid)</CardTitle>
                 </div>
-                <Badge variant="default">
-                  Configured
+                <Badge variant={emailConfig?.apiKey ? "default" : "secondary"}>
+                  {emailConfig?.apiKey ? "Configured" : "Not Configured"}
                 </Badge>
               </div>
               <CardDescription>Configure email delivery service for notifications and communications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>API Status</Label>
-                  <p className="text-sm text-muted-foreground">
-                    ✅ API key configured
-                  </p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-api-key">API Key</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="sendgrid-api-key"
+                        type={showSendGridKey ? "text" : "password"}
+                        placeholder="SG.xxxxxxxxxxxxxxxxxxxxx"
+                        value={emailConfig?.apiKey || ''}
+                        onChange={(e) => setEmailConfig({ ...emailConfig, apiKey: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowSendGridKey(!showSendGridKey)}
+                      >
+                        {showSendGridKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-sender">Default Sender Email</Label>
+                    <Input
+                      id="sendgrid-sender"
+                      type="email"
+                      placeholder="notifications@yourdomain.com"
+                      value={emailConfig?.senderEmail || ''}
+                      onChange={(e) => setEmailConfig({ ...emailConfig, senderEmail: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Default Sender</Label>
-                  <p className="text-sm text-muted-foreground">notifications@futsalculture.app</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-sender-name">Sender Name</Label>
+                    <Input
+                      id="sendgrid-sender-name"
+                      placeholder="Futsal Culture"
+                      value={emailConfig?.senderName || ''}
+                      onChange={(e) => setEmailConfig({ ...emailConfig, senderName: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-reply-to">Reply-To Email</Label>
+                    <Input
+                      id="sendgrid-reply-to"
+                      type="email"
+                      placeholder="support@yourdomain.com"
+                      value={emailConfig?.replyTo || ''}
+                      onChange={(e) => setEmailConfig({ ...emailConfig, replyTo: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Template Usage</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="p-2 border rounded">
-                    <p className="text-sm font-medium">Welcome</p>
-                    <p className="text-xs text-muted-foreground">New user onboarding</p>
+                
+                <div className="space-y-2">
+                  <Label>Email Templates</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium">Welcome Email</p>
+                        <Switch 
+                          checked={emailConfig?.templates?.welcome || false}
+                          onCheckedChange={(checked) => setEmailConfig({ 
+                            ...emailConfig, 
+                            templates: { ...emailConfig?.templates, welcome: checked }
+                          })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">New user onboarding</p>
+                    </div>
+                    <div className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium">Booking Confirmation</p>
+                        <Switch 
+                          checked={emailConfig?.templates?.booking || false}
+                          onCheckedChange={(checked) => setEmailConfig({ 
+                            ...emailConfig, 
+                            templates: { ...emailConfig?.templates, booking: checked }
+                          })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Session confirmations</p>
+                    </div>
+                    <div className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium">Reminders</p>
+                        <Switch 
+                          checked={emailConfig?.templates?.reminders || false}
+                          onCheckedChange={(checked) => setEmailConfig({ 
+                            ...emailConfig, 
+                            templates: { ...emailConfig?.templates, reminders: checked }
+                          })}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Session reminders</p>
+                    </div>
                   </div>
-                  <div className="p-2 border rounded">
-                    <p className="text-sm font-medium">Booking</p>
-                    <p className="text-xs text-muted-foreground">Session confirmations</p>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleTestIntegration('email')}
+                      disabled={!emailConfig?.apiKey || testingIntegration === 'email'}
+                    >
+                      {testingIntegration === 'email' ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</>
+                      ) : (
+                        <><TestTube className="h-4 w-4 mr-2" />Test Connection</>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleSendTestEmail()}
+                      disabled={!emailConfig?.apiKey || sendingTestEmail}
+                    >
+                      {sendingTestEmail ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                      ) : (
+                        <><Mail className="h-4 w-4 mr-2" />Send Test Email</>
+                      )}
+                    </Button>
                   </div>
-                  <div className="p-2 border rounded">
-                    <p className="text-sm font-medium">Reminders</p>
-                    <p className="text-xs text-muted-foreground">Session reminders</p>
-                  </div>
+                  <Button 
+                    onClick={() => handleSaveIntegration('email')}
+                    disabled={savingIntegration === 'email'}
+                  >
+                    {savingIntegration === 'email' ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                    ) : (
+                      <>Save Configuration</>
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -1209,25 +1504,172 @@ export default function SuperAdminSettings() {
                   <MessageSquare className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>SMS Service (Twilio)</CardTitle>
                 </div>
-                <Badge variant="secondary">
-                  Not Configured
+                <Badge variant={smsConfig?.accountSid ? "default" : "secondary"}>
+                  {smsConfig?.accountSid ? "Configured" : "Not Configured"}
                 </Badge>
               </div>
               <CardDescription>Configure SMS delivery for instant notifications and alerts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Account Status</Label>
-                  <p className="text-sm text-muted-foreground">
-                    ❌ Account not configured
-                  </p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="twilio-account-sid">Account SID</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="twilio-account-sid"
+                        type={showTwilioSid ? "text" : "password"}
+                        placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        value={smsConfig?.accountSid || ''}
+                        onChange={(e) => setSmsConfig({ ...smsConfig, accountSid: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowTwilioSid(!showTwilioSid)}
+                      >
+                        {showTwilioSid ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="twilio-auth-token">Auth Token</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="twilio-auth-token"
+                        type={showTwilioToken ? "text" : "password"}
+                        placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        value={smsConfig?.authToken || ''}
+                        onChange={(e) => setSmsConfig({ ...smsConfig, authToken: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowTwilioToken(!showTwilioToken)}
+                      >
+                        {showTwilioToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="twilio-phone">From Phone Number</Label>
+                    <Input
+                      id="twilio-phone"
+                      type="tel"
+                      placeholder="+1234567890"
+                      value={smsConfig?.phoneNumber || ''}
+                      onChange={(e) => setSmsConfig({ ...smsConfig, phoneNumber: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="twilio-messaging-service">Messaging Service SID (Optional)</Label>
+                    <Input
+                      id="twilio-messaging-service"
+                      placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={smsConfig?.messagingServiceSid || ''}
+                      onChange={(e) => setSmsConfig({ ...smsConfig, messagingServiceSid: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
-                  <Label>Phone Number</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Not configured
-                  </p>
+                  <Label>SMS Notifications</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Session Reminders</p>
+                        <p className="text-xs text-muted-foreground">24hr and 2hr before session</p>
+                      </div>
+                      <Switch 
+                        checked={smsConfig?.notifications?.reminders || false}
+                        onCheckedChange={(checked) => setSmsConfig({ 
+                          ...smsConfig, 
+                          notifications: { ...smsConfig?.notifications, reminders: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Booking Confirmations</p>
+                        <p className="text-xs text-muted-foreground">Instant confirmation SMS</p>
+                      </div>
+                      <Switch 
+                        checked={smsConfig?.notifications?.bookings || false}
+                        onCheckedChange={(checked) => setSmsConfig({ 
+                          ...smsConfig, 
+                          notifications: { ...smsConfig?.notifications, bookings: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Cancellations</p>
+                        <p className="text-xs text-muted-foreground">Session cancellation alerts</p>
+                      </div>
+                      <Switch 
+                        checked={smsConfig?.notifications?.cancellations || false}
+                        onCheckedChange={(checked) => setSmsConfig({ 
+                          ...smsConfig, 
+                          notifications: { ...smsConfig?.notifications, cancellations: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Waitlist Updates</p>
+                        <p className="text-xs text-muted-foreground">Spot availability alerts</p>
+                      </div>
+                      <Switch 
+                        checked={smsConfig?.notifications?.waitlist || false}
+                        onCheckedChange={(checked) => setSmsConfig({ 
+                          ...smsConfig, 
+                          notifications: { ...smsConfig?.notifications, waitlist: checked }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleTestIntegration('sms')}
+                      disabled={!smsConfig?.accountSid || testingIntegration === 'sms'}
+                    >
+                      {testingIntegration === 'sms' ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</>
+                      ) : (
+                        <><TestTube className="h-4 w-4 mr-2" />Test Connection</>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleSendTestSMS()}
+                      disabled={!smsConfig?.accountSid || sendingTestSMS}
+                    >
+                      {sendingTestSMS ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                      ) : (
+                        <><Smartphone className="h-4 w-4 mr-2" />Send Test SMS</>
+                      )}
+                    </Button>
+                  </div>
+                  <Button 
+                    onClick={() => handleSaveIntegration('sms')}
+                    disabled={savingIntegration === 'sms'}
+                  >
+                    {savingIntegration === 'sms' ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                    ) : (
+                      <>Save Configuration</>
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -1241,29 +1683,215 @@ export default function SuperAdminSettings() {
                   <CreditCard className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>Payment Processing (Stripe)</CardTitle>
                 </div>
-                <Badge variant="default">Live</Badge>
+                <Badge variant={paymentConfig?.secretKey ? "default" : "secondary"}>
+                  {paymentConfig?.mode === 'live' ? 'Live' : paymentConfig?.secretKey ? 'Test Mode' : 'Not Configured'}
+                </Badge>
               </div>
               <CardDescription>Payment gateway configuration and processing settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Webhook Status</Label>
-                  <p className="text-sm text-muted-foreground">
-                    ⚠️ Webhooks not set
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <p className="text-sm font-medium">Environment Mode</p>
+                  </div>
+                  <Select
+                    value={paymentConfig?.mode || 'test'}
+                    onValueChange={(value: 'test' | 'live') => setPaymentConfig({ ...paymentConfig, mode: value })}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="test">Test Mode</SelectItem>
+                      <SelectItem value="live">Live Mode</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Processing Mode</Label>
-                  <p className="text-sm text-muted-foreground">Production</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="stripe-secret">Secret Key</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="stripe-secret"
+                        type={showStripeSecret ? "text" : "password"}
+                        placeholder={paymentConfig?.mode === 'live' ? "sk_live_..." : "sk_test_..."}
+                        value={paymentConfig?.secretKey || ''}
+                        onChange={(e) => setPaymentConfig({ ...paymentConfig, secretKey: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowStripeSecret(!showStripeSecret)}
+                      >
+                        {showStripeSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="stripe-publishable">Publishable Key</Label>
+                    <Input
+                      id="stripe-publishable"
+                      placeholder={paymentConfig?.mode === 'live' ? "pk_live_..." : "pk_test_..."}
+                      value={paymentConfig?.publishableKey || ''}
+                      onChange={(e) => setPaymentConfig({ ...paymentConfig, publishableKey: e.target.value })}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Supported Methods</Label>
-                <div className="flex gap-2">
-                  <Badge variant="secondary">Cards</Badge>
-                  <Badge variant="secondary">PayPal</Badge>
-                  <Badge variant="secondary">Bank Transfer</Badge>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="stripe-webhook">Webhook Endpoint Secret</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="stripe-webhook"
+                        type={showStripeWebhook ? "text" : "password"}
+                        placeholder="whsec_..."
+                        value={paymentConfig?.webhookSecret || ''}
+                        onChange={(e) => setPaymentConfig({ ...paymentConfig, webhookSecret: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowStripeWebhook(!showStripeWebhook)}
+                      >
+                        {showStripeWebhook ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Webhook URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value="https://your-domain.com/api/webhooks/stripe"
+                        disabled
+                        className="bg-muted"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText('https://your-domain.com/api/webhooks/stripe');
+                          toast({ title: 'Webhook URL copied to clipboard' });
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Payment Methods</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        <p className="text-sm font-medium">Card Payments</p>
+                      </div>
+                      <Switch 
+                        checked={paymentConfig?.methods?.card || false}
+                        onCheckedChange={(checked) => setPaymentConfig({ 
+                          ...paymentConfig, 
+                          methods: { ...paymentConfig?.methods, card: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        <p className="text-sm font-medium">Apple Pay</p>
+                      </div>
+                      <Switch 
+                        checked={paymentConfig?.methods?.applePay || false}
+                        onCheckedChange={(checked) => setPaymentConfig({ 
+                          ...paymentConfig, 
+                          methods: { ...paymentConfig?.methods, applePay: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        <p className="text-sm font-medium">Bank Transfer</p>
+                      </div>
+                      <Switch 
+                        checked={paymentConfig?.methods?.bankTransfer || false}
+                        onCheckedChange={(checked) => setPaymentConfig({ 
+                          ...paymentConfig, 
+                          methods: { ...paymentConfig?.methods, bankTransfer: checked }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Additional Settings</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Auto Capture Payments</p>
+                        <p className="text-xs text-muted-foreground">Capture immediately after authorization</p>
+                      </div>
+                      <Switch 
+                        checked={paymentConfig?.settings?.autoCapture || false}
+                        onCheckedChange={(checked) => setPaymentConfig({ 
+                          ...paymentConfig, 
+                          settings: { ...paymentConfig?.settings, autoCapture: checked }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Send Receipt Emails</p>
+                        <p className="text-xs text-muted-foreground">Automatic receipts via Stripe</p>
+                      </div>
+                      <Switch 
+                        checked={paymentConfig?.settings?.sendReceipts || false}
+                        onCheckedChange={(checked) => setPaymentConfig({ 
+                          ...paymentConfig, 
+                          settings: { ...paymentConfig?.settings, sendReceipts: checked }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleTestIntegration('payment')}
+                      disabled={!paymentConfig?.secretKey || testingIntegration === 'payment'}
+                    >
+                      {testingIntegration === 'payment' ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</>
+                      ) : (
+                        <><TestTube className="h-4 w-4 mr-2" />Test Connection</>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => window.open('https://dashboard.stripe.com', '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />Stripe Dashboard
+                    </Button>
+                  </div>
+                  <Button 
+                    onClick={() => handleSaveIntegration('payment')}
+                    disabled={savingIntegration === 'payment'}
+                  >
+                    {savingIntegration === 'payment' ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                    ) : (
+                      <>Save Configuration</>
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
