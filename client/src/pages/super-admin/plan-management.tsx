@@ -429,15 +429,16 @@ export default function PlanManagement() {
         <TabsContent value="plan-features" className="mt-8">
           <Tabs value={selectedPlan} onValueChange={setSelectedPlan}>
             <div className="flex justify-center mb-8">
-              <TabsList className="grid grid-cols-3 max-w-4xl h-16 bg-muted p-1">
+              <TabsList className="grid grid-cols-4 max-w-5xl h-auto bg-muted p-1">
                 {plans.map((plan) => (
-                  <TabsTrigger key={plan.code} value={plan.code} className="py-3">
+                  <TabsTrigger key={plan.code} value={plan.code} className="py-3 px-2">
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-2">
-                        {plan.code === 'elite' && <Crown className="h-5 w-5 text-yellow-500" />}
-                        {plan.code === 'growth' && <TrendingUp className="h-5 w-5 text-green-500" />}
-                        {plan.code === 'core' && <Zap className="h-5 w-5 text-blue-500" />}
-                        <span className="font-medium">{plan.name}</span>
+                        {plan.code === 'elite' && <Crown className="h-4 w-4 text-yellow-500" />}
+                        {plan.code === 'growth' && <TrendingUp className="h-4 w-4 text-green-500" />}
+                        {plan.code === 'core' && <Zap className="h-4 w-4 text-blue-500" />}
+                        {plan.code === 'free' && <Package className="h-4 w-4 text-gray-500" />}
+                        <span className="font-medium text-sm">{plan.name}</span>
                       </div>
                       <Badge variant="secondary" className="text-xs">
                         ${(plan.priceCents / 100).toFixed(0)}/mo
