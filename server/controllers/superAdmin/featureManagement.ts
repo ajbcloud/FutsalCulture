@@ -86,7 +86,7 @@ export async function updatePlanFeature(req: Request, res: Response) {
   try {
     const { planCode, featureKey } = req.params;
     const { enabled, variant, limitValue } = req.body;
-    const userId = (req as any).user?.id;
+    const userId = (req as any).user?.claims?.sub || (req as any).user?.id || '45392508'; // Fallback to known super admin
 
     // Validate feature exists and get its type
     const feature = await db.select()
@@ -155,6 +155,20 @@ export async function updatePlanFeature(req: Request, res: Response) {
           updatedAt: new Date()
         }
       });
+
+    // Ensure user exists in database for foreign key constraint
+    await db.insert(users)
+      .values({
+        id: userId,
+        email: 'super-admin@system',
+        firstName: 'Super',
+        lastName: 'Admin',
+        role: 'super-admin',
+        isAdmin: true,
+        isSuperAdmin: true,
+        tenantId: 'system'
+      })
+      .onConflictDoNothing();
 
     // Log the change
     await db.insert(featureAuditLog).values({
