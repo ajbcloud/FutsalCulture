@@ -597,18 +597,19 @@ export default function AdminHelpRequests() {
 
       {/* Desktop Table View */}
       <div className="hidden lg:block bg-card rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border">
-              <TableHead className="text-muted-foreground">User</TableHead>
-              <TableHead className="text-muted-foreground">Message Preview</TableHead>
-              <TableHead className="text-muted-foreground">Source</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
-              <TableHead className="text-muted-foreground">Submitted</TableHead>
-              <TableHead className="text-muted-foreground">Resolution</TableHead>
-              <TableHead className="text-muted-foreground">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+        <div className="overflow-x-auto max-w-full">
+          <Table className="min-w-full">
+            <TableHeader>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground w-48 min-w-48">User</TableHead>
+                <TableHead className="text-muted-foreground w-64 min-w-64">Message Preview</TableHead>
+                <TableHead className="text-muted-foreground w-32 min-w-32">Source</TableHead>
+                <TableHead className="text-muted-foreground w-24 min-w-24">Status</TableHead>
+                <TableHead className="text-muted-foreground w-36 min-w-36">Submitted</TableHead>
+                <TableHead className="text-muted-foreground w-48 min-w-48">Resolution</TableHead>
+                <TableHead className="text-muted-foreground w-32 min-w-32">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {paginatedRequests.map((request: any) => (
               <TableRow key={request.id} className="border-border">
@@ -741,6 +742,7 @@ export default function AdminHelpRequests() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Mobile Card View */}
