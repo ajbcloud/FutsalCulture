@@ -28,6 +28,8 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLocation } from 'wouter';
+import React from 'react';
 
 interface Parent {
   id: string;
@@ -65,33 +67,14 @@ export default function SuperAdminParents() {
   const [loadingPlayers, setLoadingPlayers] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
+  const [location] = useLocation();
 
-  // Fetch all parents across tenants
-  const { data: parents = [], isLoading, error } = useQuery<Parent[]>({
-    queryKey: ['/api/super-admin/parents', { search: searchTerm, status: statusFilter, tenant: tenantFilter }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (tenantFilter !== 'all') params.append('tenant', tenantFilter);
-      
-      const response = await fetch(`/api/super-admin/parents?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch parents');
-      return response.json();
-    }
-  });
+  // Parse URL parameters for direct parent filtering
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const urlParentId = urlParams.get('parentId');
+  const urlFilter = urlParams.get('filter');
 
-  // Fetch tenants for filter dropdown
-  const { data: tenants = [] } = useQuery({
-    queryKey: ['/api/super-admin/tenants-list'],
-    queryFn: async () => {
-      const response = await fetch('/api/super-admin/tenants');
-      if (!response.ok) throw new Error('Failed to fetch tenants');
-      return response.json();
-    }
-  });
-
-  // Load players for a specific parent (similar to admin panel)
+  // Load players for a specific parent (defined early for useEffect)
   const loadPlayersForParent = async (parentId: string) => {
     if (parentPlayers[parentId]) {
       return; // Already loaded
@@ -123,6 +106,45 @@ export default function SuperAdminParents() {
       });
     }
   };
+
+  // Initialize search term from URL if provided
+  React.useEffect(() => {
+    if (urlFilter && !searchTerm) {
+      setSearchTerm(urlFilter);
+    }
+    if (urlParentId) {
+      // Auto-expand the specific parent
+      setExpandedParentIds(prev => new Set(prev).add(urlParentId));
+      // Auto-load players for this parent
+      loadPlayersForParent(urlParentId);
+    }
+  }, [urlFilter, urlParentId]);
+
+  // Fetch all parents across tenants
+  const { data: parents = [], isLoading, error } = useQuery<Parent[]>({
+    queryKey: ['/api/super-admin/parents', { search: searchTerm, status: statusFilter, tenant: tenantFilter }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (tenantFilter !== 'all') params.append('tenant', tenantFilter);
+      
+      const response = await fetch(`/api/super-admin/parents?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch parents');
+      return response.json();
+    }
+  });
+
+  // Fetch tenants for filter dropdown
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['/api/super-admin/tenants-list'],
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/tenants');
+      if (!response.ok) throw new Error('Failed to fetch tenants');
+      return response.json();
+    }
+  });
+
 
   if (isLoading) {
     return (
