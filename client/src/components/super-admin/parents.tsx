@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export default function SuperAdminParents() {
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
   const [parentPlayers, setParentPlayers] = useState<Record<string, Player[]>>({});
   const [loadingPlayers, setLoadingPlayers] = useState<Set<string>>(new Set());
+  const [location] = useLocation();
 
   // Fetch tenants for filter
   const { data: tenants = [] } = useQuery({
@@ -108,6 +109,26 @@ export default function SuperAdminParents() {
       });
     }
   };
+
+  // Read URL parameters for filtering (after function definition)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const searchParam = urlParams.get('search');
+    const filterParam = urlParams.get('filter');
+    const parentIdParam = urlParams.get('parentId');
+    
+    if (searchParam && !searchQuery) {
+      setSearchQuery(searchParam);
+    }
+    if (filterParam && !searchQuery) {
+      setSearchQuery(filterParam);
+    }
+    if (parentIdParam) {
+      // Auto-expand the specific parent and load their players
+      setExpandedParentIds(prev => new Set(prev).add(parentIdParam));
+      loadPlayersForParent(parentIdParam);
+    }
+  }, [location, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -407,7 +428,7 @@ export default function SuperAdminParents() {
                                           <div className="flex-1">
                                             {/* Clickable player name linking to players page */}
                                             <Link 
-                                              href={`/super-admin/players?playerId=${player.id}`}
+                                              href={`/super-admin/players?search=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
                                               className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
                                             >
                                               {player.firstName} {player.lastName}

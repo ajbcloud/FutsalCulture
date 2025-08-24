@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,21 @@ export default function SuperAdminPlayers() {
   const [selectedGender, setSelectedGender] = useState("all");
   const [portalAccessFilter, setPortalAccessFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [location] = useLocation();
+  
+  // Read URL parameters for filtering
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const searchParam = urlParams.get('search');
+    const filterParam = urlParams.get('filter');
+    
+    if (searchParam && !searchQuery) {
+      setSearchQuery(searchParam);
+    }
+    if (filterParam && !searchQuery) {
+      setSearchQuery(filterParam);
+    }
+  }, [location]);
 
   // Fetch tenants for filter
   const { data: tenants = [] } = useQuery({
@@ -321,7 +336,7 @@ export default function SuperAdminPlayers() {
                     <div>
                       {/* Clickable parent name linking to parents page */}
                       <Link 
-                        href={`/super-admin/parents?parentName=${encodeURIComponent(player.parentName)}`}
+                        href={`/super-admin/parents?filter=${encodeURIComponent(player.parentName)}`}
                         className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
                       >
                         {player.parentName}
