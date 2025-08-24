@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useCookieConsent } from "@/hooks/useCookieConsent";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
 import Parent2InviteControls from "@/components/parent2-invite-controls";
@@ -11,12 +12,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Save, X, User, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3 } from "lucide-react";
 import { NotificationPreferences } from "@shared/schema";
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const { consent, updateConsent, resetConsent } = useCookieConsent();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -390,6 +393,107 @@ export default function Profile() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Cookie Preferences */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
+                <Cookie className="w-5 h-5 mr-2" />
+                Cookie Preferences
+              </h3>
+              
+              <div className="space-y-4">
+                {consent ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[
+                        {
+                          id: "necessary",
+                          name: "Necessary",
+                          description: "Essential cookies for core functionality",
+                          required: true,
+                          enabled: true,
+                          icon: <Shield className="w-4 h-4" />
+                        },
+                        {
+                          id: "functional", 
+                          name: "Functional",
+                          description: "Enhanced features and personalization",
+                          required: false,
+                          enabled: consent.categories?.functional || false,
+                          icon: <Settings className="w-4 h-4" />
+                        },
+                        {
+                          id: "analytics",
+                          name: "Analytics", 
+                          description: "Anonymous usage analytics",
+                          required: false,
+                          enabled: consent.categories?.analytics || false,
+                          icon: <BarChart3 className="w-4 h-4" />
+                        }
+                      ].map((category) => (
+                        <div key={category.id} className="p-4 border rounded-lg bg-muted/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              {category.icon}
+                              <span className="font-medium">{category.name}</span>
+                              {category.required && (
+                                <Badge variant="secondary" className="text-xs">Required</Badge>
+                              )}
+                            </div>
+                            <Switch
+                              checked={category.enabled}
+                              disabled={category.required}
+                              onCheckedChange={(enabled) => {
+                                if (!category.required) {
+                                  const newCategories = {
+                                    ...consent.categories,
+                                    [category.id]: enabled
+                                  };
+                                  updateConsent(newCategories);
+                                  toast({
+                                    title: "Cookie preferences updated",
+                                    description: `${category.name} cookies ${enabled ? 'enabled' : 'disabled'}`,
+                                  });
+                                }
+                              }}
+                              data-testid={`cookie-toggle-${category.id}`}
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          resetConsent();
+                          toast({
+                            title: "Cookie preferences reset",
+                            description: "The cookie consent banner will appear again on your next page load",
+                          });
+                        }}
+                        data-testid="cookie-reset"
+                      >
+                        Reset Preferences
+                      </Button>
+                      <div className="text-xs text-muted-foreground flex items-center">
+                        Last updated: {new Date(consent.timestamp).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-6 border rounded-lg text-center bg-muted/30">
+                    <Cookie className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      You haven't configured your cookie preferences yet. The cookie consent banner will appear to collect your preferences.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

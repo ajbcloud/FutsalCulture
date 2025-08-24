@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import ErrorBoundary from "@/components/error-boundary";
+import CookieConsentBanner from "@/components/ui/cookie-consent";
 import Landing from "@/pages/landing";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
@@ -119,6 +120,9 @@ function Router() {
         )}
         <Route component={NotFound} />
       </Switch>
+      
+      {/* Cookie Consent Banner - shows globally */}
+      <CookieConsentBanner />
     </div>
   );
 }
