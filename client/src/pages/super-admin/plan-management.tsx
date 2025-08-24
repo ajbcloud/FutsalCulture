@@ -739,12 +739,22 @@ export default function PlanManagement() {
                             }
                           };
 
+                          // Extract the correct value based on feature type
+                          let featureValue = null;
+                          if (feature.type === 'boolean') {
+                            featureValue = value?.enabled ?? false;
+                          } else if (feature.type === 'enum') {
+                            featureValue = value?.variant || value || 'basic'; // Default to 'basic' if no variant
+                          } else if (feature.type === 'limit') {
+                            featureValue = value?.limitValue ?? 0;
+                          }
+
                           const featureData: Feature = {
                             key: featureKey,
                             name: feature.name,
                             category: feature.category,
                             type: feature.type as 'boolean' | 'enum' | 'limit',
-                            value: value?.enabled ?? value?.variant ?? value?.limitValue ?? null,
+                            value: featureValue,
                             displayOrder: 0,
                             optionsJson: feature.type === 'enum' ? { values: getEnumOptionsForComparison(featureKey) } : 
                                          feature.type === 'limit' ? { max: 999999, unit: '' } : null
