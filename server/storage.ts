@@ -182,7 +182,7 @@ export interface IStorage {
   
   // Tenant feature override operations
   getTenantFeatureOverrides(tenantId?: string): Promise<any[]>;
-  setTenantFeatureOverride(tenantId: string, featureKey: string, override: any): Promise<void>;
+  setTenantFeatureOverride(tenantId: string, featureKey: string, override: any, userId?: string, ip?: string, userAgent?: string): Promise<void>;
   removeTenantFeatureOverride(tenantId: string, featureKey: string): Promise<void>;
   
   // Player Development operations
@@ -2661,7 +2661,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async setTenantFeatureOverride(tenantId: string, featureKey: string, override: any): Promise<void> {
+  async setTenantFeatureOverride(tenantId: string, featureKey: string, override: any, userId?: string, ip?: string, userAgent?: string): Promise<void> {
     try {
       // Check if override exists
       const [existing] = await db
@@ -2673,6 +2673,18 @@ export class DatabaseStorage implements IStorage {
             eq(tenantFeatureOverrides.featureKey, featureKey)
           )
         );
+
+      const oldValue = existing ? {
+        enabled: existing.enabled,
+        variant: existing.variant,
+        limitValue: existing.limitValue
+      } : null;
+
+      const newValue = {
+        enabled: override.enabled,
+        variant: override.variant,
+        limitValue: override.limitValue
+      };
 
       if (existing) {
         // Update existing override
@@ -2702,6 +2714,35 @@ export class DatabaseStorage implements IStorage {
           limitValue: override.limitValue,
           reason: override.reason,
           expiresAt: override.expiresAt ? new Date(override.expiresAt) : null
+        });
+      }
+
+      // Log the change for audit purposes
+      if (userId) {
+        // Ensure user exists in database for foreign key constraint
+        await db.insert(users)
+          .values({
+            id: userId,
+            email: 'super-admin@system',
+            firstName: 'Super',
+            lastName: 'Admin',
+            role: 'super-admin',
+            isAdmin: true,
+            isSuperAdmin: true,
+            tenantId: 'system'
+          })
+          .onConflictDoNothing();
+
+        await db.insert(featureAuditLog).values({
+          entityType: 'tenant',
+          entityId: tenantId,
+          featureKey,
+          oldValue,
+          newValue,
+          changedBy: userId,
+          changeReason: override.reason || 'Tenant feature override',
+          ip: ip || '',
+          userAgent: userAgent || ''
         });
       }
     } catch (error) {

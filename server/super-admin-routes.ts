@@ -816,6 +816,7 @@ export function setupSuperAdminRoutes(app: Express) {
   app.post('/api/super-admin/tenant-overrides', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
       const { tenantId, featureKey, enabled, variant, limitValue, reason, expiresAt } = req.body;
+      const userId = req.user?.claims?.sub || req.user?.id || 'super-admin';
       
       if (!tenantId || !featureKey) {
         return res.status(400).json({ error: 'Tenant ID and feature key are required' });
@@ -827,7 +828,7 @@ export function setupSuperAdminRoutes(app: Express) {
         limitValue,
         reason,
         expiresAt
-      });
+      }, userId, req.ip || '', req.get('user-agent') || '');
 
       res.json({ success: true });
     } catch (error) {
