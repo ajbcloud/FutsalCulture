@@ -26,6 +26,7 @@ import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
+import AgePolicySettings from '../../components/admin/AgePolicySettings';
 // Remove unused import
 
 interface LocationData {
@@ -902,12 +903,18 @@ export default function AdminSettings() {
             >
               Integrations
             </TabsTrigger>
+            <TabsTrigger 
+              value="age-policy" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Age Policy
+            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-6 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-7 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -925,6 +932,9 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Integrations
+            </TabsTrigger>
+            <TabsTrigger value="age-policy" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Age Policy
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2382,6 +2392,11 @@ export default function AdminSettings() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+        
+        {/* Age Policy Tab */}
+        <TabsContent value="age-policy" className="space-y-6">
+          <AgePolicySettings />
         </TabsContent>
         </Tabs>
       </AdminLayout>

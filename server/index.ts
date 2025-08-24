@@ -5,7 +5,12 @@ import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
 import './jobs/scheduler'; // Initialize usage rollup scheduler
+import { scheduleBirthdayUpshift } from './jobs/birthday-upshift';
 import { rateLimitMiddleware, ipRestrictionMiddleware, sessionMonitoringMiddleware } from './middleware/security';
+import policyRouter from './routes/policy';
+import signupRouter from './routes/signup';
+import consentRouter from './routes/consent';
+import guardianRouter from './routes/guardian';
 
 const app = express();
 
@@ -84,6 +89,12 @@ app.use((req, res, next) => {
   
   // Mount admin campaigns routes
   app.use('/api/admin', adminCampaignsRoutes);
+  
+  // Mount age policy routes
+  app.use('/api', policyRouter);
+  app.use('/api', signupRouter);
+  app.use('/api', consentRouter);
+  app.use('/api', guardianRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -115,6 +126,7 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Start background processors
     startWaitlistProcessor();
+    scheduleBirthdayUpshift();
   });
 
   // Background job to clean up expired reservations (pending payment > 1 hour)

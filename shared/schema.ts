@@ -128,6 +128,7 @@ export const users = pgTable("users", {
 
 // Gender enum for players and sessions
 export const genderEnum = pgEnum("gender", ["boys", "girls"]);
+export const ageBandEnum = pgEnum("age_band", ["child", "teen", "adult"]);
 
 // Players table  
 export const players = pgTable("players", {
@@ -138,6 +139,11 @@ export const players = pgTable("players", {
   avatarColor: varchar("avatar_color").default("#10b981"), // Custom avatar background color for players
   avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   birthYear: integer("birth_year").notNull(),
+  dateOfBirth: date("date_of_birth"),
+  computedAge: integer("computed_age"),
+  ageBand: ageBandEnum("age_band"),
+  isTeen: boolean("is_teen").notNull().default(false),
+  isAdult: boolean("is_adult").notNull().default(false),
   gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
   parent2Id: varchar("parent2_id"), // Second parent support

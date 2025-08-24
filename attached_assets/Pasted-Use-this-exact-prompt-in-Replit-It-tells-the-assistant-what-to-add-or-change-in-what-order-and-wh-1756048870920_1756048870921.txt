@@ -1,0 +1,678 @@
+Use this exact prompt in Replit. It tells the assistant what to add or change, in what order, and what success looks like.
+
+Title
+Futsal Culture age policy, youth mixed adult support, and parent visibility rules
+
+Stack assumptions
+
+* React app with React Router
+* Node Express API server in src server
+* Drizzle ORM with PostgreSQL
+* Replit Auth for auth and tenant scoping
+* Stripe already integrated for payments
+
+Goal
+Add tenant age and audience policy so the platform cleanly supports youth only, mixed, and adult only programs. The signup flow must branch by date of birth. Parent sections must auto hide when not relevant. Admins must control defaults. Player and parent pages must support cross page deep links that auto filter the list when arriving from a linked name.
+
+High level tasks
+
+1. Add Drizzle schema and migrations for tenant policy, guardian links, consent events, and player profile fields
+2. Add a pure function that evaluates the policy given tenant, region, and date of birth
+3. Expose REST endpoints for reading and updating policy, running evaluation at signup, logging consent, and managing guardian links
+4. Implement signup flow UI that asks for date of birth up front and branches accordingly
+5. Implement Admin policy settings UI with audience mode and thresholds
+6. Implement cross page deep link auto filter between players and parents lists
+7. Add a daily birthday upshift job that promotes teens to adults at the right time and updates permissions
+8. Add a feature flag and seed data, add basic tests, and ship
+
+File map to create or edit
+
+* src/db/schema/tenantPolicy.ts
+* src/db/schema/guardianLink.ts
+* src/db/schema/consentEvent.ts
+* src/db/schema/players.ts update
+* src/services/agePolicy.ts
+* src/server/routes/policy.ts
+* src/server/routes/signup.ts
+* src/server/routes/consent.ts
+* src/server/routes/guardian.ts
+* src/server/jobs/birthdayUpshift.ts
+* src/server/featureFlags.ts
+* src/client/pages/SignupStart.tsx
+* src/client/pages/SignupParentFlow\.tsx
+* src/client/pages/SignupPlayerFlow\.tsx
+* src/client/pages/admin/AdminPolicySettings.tsx
+* src/client/pages/players/PlayerList.tsx update
+* src/client/pages/parents/ParentList.tsx update
+* src/client/hooks/useSearchSync.ts
+
+Drizzle schema and migrations
+Create src/db/schema/tenantPolicy.ts
+
+```ts
+import { pgTable, serial, integer, text, boolean } from "drizzle-orm/pg-core";
+import { tenants } from "./tenants";
+
+export const tenantPolicies = pgTable("tenant_policies", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  region: text("region").notNull().default("US"),
+  audienceMode: text("audience_mode").notNull().default("mixed"), // values: adult_only, mixed, youth_only
+  parentRequiredBelow: integer("parent_required_below").notNull().default(13),
+  teenSelfAccessAt: integer("teen_self_access_at").notNull().default(13),
+  adultAge: integer("adult_age").notNull().default(18),
+  allowTeenPayments: boolean("allow_teen_payments").notNull().default(false),
+  allowSplitPayments: boolean("allow_split_payments").notNull().default(false),
+  requireSavedMethodForAdult: boolean("require_saved_method_for_adult").notNull().default(false),
+});
+```
+
+Create src/db/schema/guardianLink.ts
+
+```ts
+import { pgTable, serial, integer, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { parents } from "./parents";
+import { players } from "./players";
+
+export const guardianLinks = pgTable("guardian_links", {
+  id: serial("id").primaryKey(),
+  parentId: integer("parent_id").notNull().references(() => parents.id, { onDelete: "cascade" }),
+  playerId: integer("player_id").notNull().references(() => players.id, { onDelete: "cascade" }),
+  permissionBook: boolean("permission_book").notNull().default(false),
+  permissionPay: boolean("permission_pay").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+}, (t) => ({
+  uniq: uniqueIndex("guardian_links_parent_player_uniq").on(t.parentId, t.playerId),
+}));
+```
+
+Create src/db/schema/consentEvent.ts
+
+```ts
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+
+export const consentEvents = pgTable("consent_events", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull(),
+  subjectId: integer("subject_id").notNull(),
+  subjectRole: text("subject_role").notNull(), // parent or player
+  policyKey: text("policy_key").notNull(), // medical, liability, photo, privacy
+  policyVersion: text("policy_version").notNull(),
+  acceptedBy: text("accepted_by").notNull(), // user id or email
+  ip: text("ip").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+Update src/db/schema/players.ts
+Add fields if missing
+
+```ts
+import { pgEnum } from "drizzle-orm/pg-core";
+
+export const ageBandEnum = pgEnum("age_band", ["child", "teen", "adult"]);
+
+// inside players table definition add
+  dateOfBirth: date("date_of_birth"),
+  computedAge: integer("computed_age"),
+  ageBand: ageBandEnum("age_band"),
+  // optional flags for convenience
+  isTeen: boolean("is_teen").notNull().default(false),
+  isAdult: boolean("is_adult").notNull().default(false),
+```
+
+Migration notes
+
+* Create new tables and columns with allow null where needed, backfill, then set not null where safe
+* Backfill computedAge and ageBand with a script shown below
+
+Service function
+Create src/services/agePolicy.ts
+
+```ts
+import { differenceInYears } from "date-fns";
+import { tenantPolicies } from "../db/schema/tenantPolicy";
+
+export type AudienceMode = "adult_only" | "mixed" | "youth_only";
+
+export type PolicyOutcome = {
+  parentRequired: boolean;
+  showParentSections: boolean;
+  teenSelf: boolean;
+  whoCanPay: "parent" | "player" | "both";
+  guardianConsentNeeded: boolean;
+  allowed: {
+    book: boolean;
+    pay: boolean;
+    viewSchedules: boolean;
+    manageProfile: boolean;
+    inviteOthers: boolean;
+    manageDependents: boolean;
+  };
+};
+
+export function evaluatePolicy(params: {
+  dob: Date;
+  policy: {
+    audienceMode: AudienceMode;
+    parentRequiredBelow: number;
+    teenSelfAccessAt: number;
+    adultAge: number;
+    allowTeenPayments: boolean;
+  };
+}): PolicyOutcome {
+  const { dob, policy } = params;
+  const age = differenceInYears(new Date(), dob);
+
+  if (policy.audienceMode === "adult_only") {
+    return {
+      parentRequired: false,
+      showParentSections: false,
+      teenSelf: false,
+      whoCanPay: "player",
+      guardianConsentNeeded: false,
+      allowed: {
+        book: true,
+        pay: true,
+        viewSchedules: true,
+        manageProfile: true,
+        inviteOthers: true,
+        manageDependents: false,
+      },
+    };
+  }
+
+  const parentRequired = age < policy.parentRequiredBelow;
+  const teenSelf = age >= policy.teenSelfAccessAt && age < policy.adultAge;
+  const isAdult = age >= policy.adultAge;
+
+  const whoCanPay = parentRequired ? "parent" : isAdult ? "player" : policy.allowTeenPayments ? "player" : "parent";
+  const guardianConsentNeeded = parentRequired || teenSelf;
+
+  return {
+    parentRequired,
+    showParentSections: parentRequired,
+    teenSelf,
+    whoCanPay,
+    guardianConsentNeeded,
+    allowed: {
+      book: !parentRequired,
+      pay: isAdult ? true : policy.allowTeenPayments && teenSelf ? true : !parentRequired ? true : false,
+      viewSchedules: true,
+      manageProfile: !parentRequired,
+      inviteOthers: isAdult,
+      manageDependents: false,
+    },
+  };
+}
+```
+
+REST endpoints
+Create src/server/routes/policy.ts
+
+```ts
+import { Router } from "express";
+import { db } from "../../db";
+import { tenantPolicies } from "../../db/schema/tenantPolicy";
+import { eq } from "drizzle-orm";
+
+export const policyRouter = Router();
+
+// Auth middleware should set req.tenantId from session
+
+policyRouter.get("/policy", async (req: any, res) => {
+  const tenantId = req.tenantId;
+  const [row] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
+  res.json(row);
+});
+
+policyRouter.patch("/policy", async (req: any, res) => {
+  const tenantId = req.tenantId;
+  const body = req.body;
+  await db
+    .insert(tenantPolicies)
+    .values({ tenantId, ...body })
+    .onConflictDoUpdate({
+      target: tenantPolicies.tenantId,
+      set: body,
+    });
+  const [row] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
+  res.json(row);
+});
+```
+
+Create src/server/routes/signup.ts
+
+```ts
+import { Router } from "express";
+import { db } from "../../db";
+import { tenantPolicies } from "../../db/schema/tenantPolicy";
+import { eq } from "drizzle-orm";
+import { evaluatePolicy } from "../../services/agePolicy";
+
+export const signupRouter = Router();
+
+signupRouter.post("/signup/evaluate", async (req: any, res) => {
+  const tenantId = req.tenantId;
+  const { dob } = req.body; // ISO string
+  const [policy] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
+  if (!policy) return res.status(400).json({ error: "Policy not configured" });
+  const outcome = evaluatePolicy({ dob: new Date(dob), policy });
+  res.json({ outcome });
+});
+```
+
+Create src/server/routes/consent.ts
+
+```ts
+import { Router } from "express";
+import { db } from "../../db";
+import { consentEvents } from "../../db/schema/consentEvent";
+
+export const consentRouter = Router();
+
+consentRouter.post("/consent", async (req: any, res) => {
+  const tenantId = req.tenantId;
+  const { subjectId, subjectRole, policyKey, policyVersion, acceptedBy, ip } = req.body;
+  const [row] = await db.insert(consentEvents).values({ tenantId, subjectId, subjectRole, policyKey, policyVersion, acceptedBy, ip }).returning();
+  res.json(row);
+});
+```
+
+Create src/server/routes/guardian.ts
+
+```ts
+import { Router } from "express";
+import { db } from "../../db";
+import { guardianLinks } from "../../db/schema/guardianLink";
+
+export const guardianRouter = Router();
+
+guardianRouter.post("/guardians", async (req: any, res) => {
+  const { parentId, playerId, permissionBook, permissionPay } = req.body;
+  const [row] = await db
+    .insert(guardianLinks)
+    .values({ parentId, playerId, permissionBook, permissionPay })
+    .onConflictDoUpdate({ target: [guardianLinks.parentId, guardianLinks.playerId], set: { permissionBook, permissionPay, active: true } })
+    .returning();
+  res.json(row);
+});
+
+```
+
+Wire routes in server
+
+```ts
+// src/server/index.ts
+import express from "express";
+import { policyRouter } from "./routes/policy";
+import { signupRouter } from "./routes/signup";
+import { consentRouter } from "./routes/consent";
+import { guardianRouter } from "./routes/guardian";
+
+const app = express();
+app.use(express.json());
+
+// middleware that resolves tenantId from session
+app.use((req: any, _res, next) => {
+  // TODO read from Replit Auth session
+  req.tenantId = req.headers["x-tenant-id"]; // placeholder
+  next();
+});
+
+app.use("/api", policyRouter);
+app.use("/api", signupRouter);
+app.use("/api", consentRouter);
+app.use("/api", guardianRouter);
+
+export default app;
+```
+
+Signup UI
+Create src/client/pages/SignupStart.tsx
+
+```tsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function SignupStart() {
+  const [dob, setDob] = useState("");
+  const navigate = useNavigate();
+
+  async function handleNext() {
+    const res = await fetch("/api/signup/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dob }),
+    });
+    const { outcome } = await res.json();
+    if (outcome.parentRequired) {
+      navigate(`/signup/parent?dob=${encodeURIComponent(dob)}`);
+    } else {
+      navigate(`/signup/player?dob=${encodeURIComponent(dob)}&who=${outcome.whoCanPay}`);
+    }
+  }
+
+  return (
+    <div className="p-6 text-gray-100 bg-black min-h-screen">
+      <h1 className="text-2xl mb-4">Create your account</h1>
+      <label className="block mb-2">Date of birth</label>
+      <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="text-black px-3 py-2 rounded" />
+      <button onClick={handleNext} className="mt-4 px-4 py-2 rounded bg-white text-black">Continue</button>
+    </div>
+  );
+}
+```
+
+Create src/client/pages/SignupParentFlow\.tsx
+
+```tsx
+import React from "react";
+import { useSearchParams } from "react-router-dom";
+
+export default function SignupParentFlow() {
+  const [sp] = useSearchParams();
+  const dob = sp.get("dob");
+  return (
+    <div className="p-6 text-gray-100 bg-black min-h-screen">
+      <h1 className="text-xl mb-4">Parent signup</h1>
+      {/* Render parent fields only. Hide player only sections. */}
+      <p className="opacity-80">We detected that a parent account is required based on the date of birth you entered.</p>
+      {/* ...parent form fields, consent blocks, payment setup... */}
+    </div>
+  );
+}
+```
+
+Create src/client/pages/SignupPlayerFlow\.tsx
+
+```tsx
+import React from "react";
+import { useSearchParams } from "react-router-dom";
+
+export default function SignupPlayerFlow() {
+  const [sp] = useSearchParams();
+  const dob = sp.get("dob");
+  const who = sp.get("who");
+  return (
+    <div className="p-6 text-gray-100 bg-black min-h-screen">
+      <h1 className="text-xl mb-4">Player signup</h1>
+      {/* If who === parent, hide payment input and show message that parent pays. If who === player or both, show payment input. */}
+      {/* Hide parent sections entirely in this flow. */}
+      <p className="opacity-80">We tailored your signup based on your date of birth.</p>
+    </div>
+  );
+}
+```
+
+Admin policy settings UI
+Create src/client/pages/admin/AdminPolicySettings.tsx
+
+```tsx
+import React, { useEffect, useState } from "react";
+
+type Policy = {
+  region: string;
+  audienceMode: "adult_only" | "mixed" | "youth_only";
+  parentRequiredBelow: number;
+  teenSelfAccessAt: number;
+  adultAge: number;
+  allowTeenPayments: boolean;
+  allowSplitPayments: boolean;
+  requireSavedMethodForAdult: boolean;
+};
+
+export default function AdminPolicySettings() {
+  const [policy, setPolicy] = useState<Policy | null>(null);
+
+  useEffect(() => {
+    fetch("/api/policy").then(r => r.json()).then(setPolicy);
+  }, []);
+
+  if (!policy) return <div className="p-6">Loading</div>;
+
+  function update<K extends keyof Policy>(key: K, value: Policy[K]) {
+    setPolicy({ ...policy, [key]: value });
+  }
+
+  async function save() {
+    await fetch("/api/policy", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(policy) });
+    alert("Saved");
+  }
+
+  return (
+    <div className="p-6 text-gray-100 bg-black min-h-screen">
+      <h1 className="text-2xl mb-4">Audience and age policy</h1>
+      <div className="grid gap-4">
+        <label className="grid">
+          <span>Audience mode</span>
+          <select value={policy.audienceMode} onChange={(e) => update("audienceMode", e.target.value as any)} className="text-black px-2 py-1 rounded">
+            <option value="adult_only">Adult only</option>
+            <option value="mixed">Mixed</option>
+            <option value="youth_only">Youth only</option>
+          </select>
+        </label>
+        <label className="grid">
+          <span>Region</span>
+          <input value={policy.region} onChange={(e) => update("region", e.target.value)} className="text-black px-2 py-1 rounded" />
+        </label>
+        <label className="grid">
+          <span>Parent required below age</span>
+          <input type="number" value={policy.parentRequiredBelow} onChange={(e) => update("parentRequiredBelow", Number(e.target.value))} className="text-black px-2 py-1 rounded" />
+        </label>
+        <label className="grid">
+          <span>Teen self access at age</span>
+          <input type="number" value={policy.teenSelfAccessAt} onChange={(e) => update("teenSelfAccessAt", Number(e.target.value))} className="text-black px-2 py-1 rounded" />
+        </label>
+        <label className="grid">
+          <span>Adult at age</span>
+          <input type="number" value={policy.adultAge} onChange={(e) => update("adultAge", Number(e.target.value))} className="text-black px-2 py-1 rounded" />
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={policy.allowTeenPayments} onChange={(e) => update("allowTeenPayments", e.target.checked)} />
+          <span>Allow teen payments</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={policy.allowSplitPayments} onChange={(e) => update("allowSplitPayments", e.target.checked)} />
+          <span>Allow split payments</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={policy.requireSavedMethodForAdult} onChange={(e) => update("requireSavedMethodForAdult", e.target.checked)} />
+          <span>Require saved payment method for adult programs</span>
+        </label>
+        <button onClick={save} className="px-4 py-2 rounded bg-white text-black">Save changes</button>
+      </div>
+    </div>
+  );
+}
+```
+
+Cross page deep link auto filter
+Create src/client/hooks/useSearchSync.ts
+
+```ts
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+export function useSearchSync(setSearch: (q: string) => void, defaultKey = "q") {
+  const loc = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(loc.search);
+    const q = params.get(defaultKey) || "";
+    if (q) setSearch(q);
+  }, [loc.search, setSearch, defaultKey]);
+}
+```
+
+Update PlayerList.tsx
+
+```tsx
+import React, { useState } from "react";
+import { useSearchSync } from "../../hooks/useSearchSync";
+
+export default function PlayerList() {
+  const [search, setSearch] = useState("");
+  useSearchSync(setSearch, "q");
+  // apply search to filter the table
+  return (
+    <div className="p-6">
+      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search players" className="text-black px-3 py-2 rounded" />
+      {/* table renders based on search */}
+    </div>
+  );
+}
+```
+
+Update ParentList.tsx
+
+```tsx
+import React, { useState } from "react";
+import { useSearchSync } from "../../hooks/useSearchSync";
+
+export default function ParentList() {
+  const [search, setSearch] = useState("");
+  useSearchSync(setSearch, "q");
+  return (
+    <div className="p-6">
+      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search parents" className="text-black px-3 py-2 rounded" />
+      {/* table renders based on search */}
+    </div>
+  );
+}
+```
+
+When rendering cross links
+
+* From a parent detail, for a child named Maya Hart, link to `/players?q=Maya%20Hart`
+* From a player detail, for a parent named Lisa Brind, link to `/parents?q=Lisa%20Brind`
+* On mount, the list pages read the q param and set the search input, so the view is already filtered
+
+Birthday upshift job
+Create src/server/jobs/birthdayUpshift.ts
+
+```ts
+import { CronJob } from "cron";
+import { db } from "../../db";
+import { players } from "../../db/schema/players";
+import { tenantPolicies } from "../../db/schema/tenantPolicy";
+import { eq } from "drizzle-orm";
+import { differenceInYears } from "date-fns";
+
+// Run at 2:15 ET daily
+export const birthdayUpshiftJob = new CronJob("15 2 * * *", async () => {
+  const allPlayers = await db.select().from(players);
+  for (const p of allPlayers) {
+    if (!p.dateOfBirth) continue;
+    const age = differenceInYears(new Date(), p.dateOfBirth);
+    // fetch tenant policy for this player
+    const [policy] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, p.tenantId));
+    if (!policy) continue;
+    const becameAdult = p.isAdult === false && age >= policy.adultAge;
+    const becameTeen = p.isTeen === false && age >= policy.teenSelfAccessAt && age < policy.adultAge;
+    const band = age >= policy.adultAge ? "adult" : age >= policy.teenSelfAccessAt ? "teen" : "child";
+    await db.update(players).set({
+      computedAge: age,
+      ageBand: band as any,
+      isTeen: age >= policy.teenSelfAccessAt && age < policy.adultAge,
+      isAdult: age >= policy.adultAge,
+    }).where(eq(players.id, p.id));
+    if (becameAdult) {
+      // notify parent and player, and relax restrictions
+      // TODO enqueue notifications and adjust permissions if stored elsewhere
+    }
+    if (becameTeen) {
+      // notify household to set teen permissions
+    }
+  }
+});
+```
+
+Wire the job in server startup
+
+```ts
+// src/server/index.ts
+import { birthdayUpshiftJob } from "./jobs/birthdayUpshift";
+
+birthdayUpshiftJob.start();
+```
+
+Feature flag
+Create src/server/featureFlags.ts
+
+```ts
+export const flags = {
+  agePolicy: true,
+};
+```
+
+Use the flag to hide new UI in production tenants until ready.
+
+Backfill script
+Create scripts/backfillAges.ts
+
+```ts
+import { db } from "../src/db";
+import { players } from "../src/db/schema/players";
+import { tenantPolicies } from "../src/db/schema/tenantPolicy";
+import { differenceInYears } from "date-fns";
+import { eq } from "drizzle-orm";
+
+async function run() {
+  const all = await db.select().from(players);
+  for (const p of all) {
+    if (!p.dateOfBirth) continue;
+    const [policy] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, p.tenantId));
+    const adultAge = policy?.adultAge ?? 18;
+    const teenAt = policy?.teenSelfAccessAt ?? 13;
+    const age = differenceInYears(new Date(), p.dateOfBirth);
+    const band = age >= adultAge ? "adult" : age >= teenAt ? "teen" : "child";
+    await db.update(players).set({ computedAge: age, ageBand: band, isTeen: band === "teen", isAdult: band === "adult" }).where(eq(players.id, p.id));
+  }
+  process.exit(0);
+}
+run();
+```
+
+QA checklist
+
+1. Adult only tenant
+
+   * Signup goes straight to player flow with payment and waivers
+   * Parent sections never appear
+   * If a user enters a date of birth that would require a parent in a mixed tenant, show a clear message that this tenant accepts adults only
+2. Mixed tenant child twelve
+
+   * Parent flow appears
+   * Parent is the only payer by default
+3. Mixed tenant teen sixteen with teen payments off
+
+   * Player flow appears without payment fields
+   * Booking disabled until parent enables
+4. Mixed tenant teen sixteen with teen payments on
+
+   * Player flow appears with payment fields
+   * Booking enabled
+5. Birthday upshift
+
+   * Change a test player date of birth so that they cross to adult on the next run
+   * Job updates age band and toggles isAdult
+6. Cross page deep links
+
+   * From parent detail click a player name and land on players list with the search field prefilled and the table filtered
+   * From player detail click a parent name and land on parents list with the search field prefilled and the table filtered
+
+Notes for Stripe behavior
+
+* If whoCanPay is parent, hide payment input in player flow and instruct that the parent will add a method
+* If whoCanPay is player, collect payment method during player signup
+* If whoCanPay is both, collect from player and allow guardian to add another method later if split payments are enabled
+
+Deliverable definition of done
+
+* Schema in place with safe migration and backfill
+* Policy evaluate function returns the expected outcomes for the QA scenarios
+* REST endpoints working and covered by happy path tests
+* Signup flows branch by date of birth and show only relevant sections
+* Admin policy settings round trip edits
+* Deep link auto filter works for both directions
+* Birthday upshift job runs and updates age flags

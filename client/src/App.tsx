@@ -41,6 +41,9 @@ import SessionPayment from "@/pages/session-payment";
 import PlayerInvite from "@/pages/player-invite";
 import Parent2Invite from "@/pages/parent2-invite";
 import NotFound from "@/pages/not-found";
+import SignupStart from "@/pages/SignupStart";
+import SignupParentFlow from "@/pages/SignupParentFlow";
+import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -62,6 +65,9 @@ function Router() {
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/help" component={Help} />
+            <Route path="/signup" component={SignupStart} />
+            <Route path="/signup/parent" component={SignupParentFlow} />
+            <Route path="/signup/player" component={SignupPlayerFlow} />
           </>
         ) : (
           <>
