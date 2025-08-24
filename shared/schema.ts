@@ -12,6 +12,8 @@ import {
   pgEnum,
   check,
   numeric,
+  date,
+  real,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -1941,6 +1943,86 @@ export const featureAuditLog = pgTable('feature_audit_log', {
   index("feature_audit_feature_key_idx").on(table.featureKey),
   index("feature_audit_changed_by_idx").on(table.changedBy),
   index("feature_audit_created_at_idx").on(table.createdAt),
+]);
+
+// AI Analytics Tables
+export const aiForecastsDaily = pgTable("ai_forecasts_daily", {
+  id: varchar("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  date: date("date").notNull(),
+  scopeType: varchar("scope_type", { length: 50 }).notNull(),
+  scopeId: varchar("scope_id"),
+  metric: varchar("metric", { length: 50 }).notNull(),
+  mean: integer("mean").notNull(), // in cents
+  p10: integer("p10").notNull(), // 10th percentile
+  p90: integer("p90").notNull(), // 90th percentile
+  model: varchar("model").default("prophet"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_forecasts_scope_idx").on(table.scopeType, table.scopeId, table.date),
+  index("ai_forecasts_metric_idx").on(table.metric, table.date),
+]);
+
+export const aiAnomalies = pgTable("ai_anomalies", {
+  id: varchar("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  date: date("date").notNull(),
+  scopeType: varchar("scope_type", { length: 50 }).notNull(),
+  scopeId: varchar("scope_id"),
+  metric: varchar("metric", { length: 50 }).notNull(),
+  direction: varchar("direction", { length: 10 }).notNull(),
+  zscore: real("zscore").notNull(),
+  expected: integer("expected").notNull(), // in cents
+  actual: integer("actual").notNull(), // in cents
+  severity: varchar("severity", { length: 10 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_anomalies_scope_idx").on(table.scopeType, table.scopeId, table.date),
+  index("ai_anomalies_severity_idx").on(table.severity, table.date),
+]);
+
+export const aiContributions = pgTable("ai_contributions", {
+  id: varchar("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  metric: varchar("metric", { length: 50 }).notNull(),
+  driverType: varchar("driver_type", { length: 50 }).notNull(),
+  driverId: varchar("driver_id").notNull(),
+  driverLabel: varchar("driver_label").notNull(),
+  impactAbs: integer("impact_abs").notNull(), // absolute impact in cents
+  impactPct: real("impact_pct").notNull(), // percentage impact
+  rank: integer("rank").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_contributions_period_idx").on(table.periodStart, table.periodEnd),
+  index("ai_contributions_metric_idx").on(table.metric, table.rank),
+]);
+
+export const aiTenantScores = pgTable("ai_tenant_scores", {
+  id: varchar("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  date: date("date").notNull(),
+  churnRisk: real("churn_risk").notNull(), // 0-1 probability
+  healthScore: integer("health_score").notNull(), // 0-100
+  topSignals: jsonb("top_signals").notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ai_tenant_scores_unique").on(table.tenantId, table.date),
+  index("ai_tenant_scores_risk_idx").on(table.churnRisk),
+]);
+
+export const aiNarratives = pgTable("ai_narratives", {
+  id: varchar("id").primaryKey().notNull().default(sql`gen_random_uuid()`),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  scopeType: varchar("scope_type", { length: 50 }).notNull(),
+  scopeId: varchar("scope_id"),
+  summaryMd: text("summary_md").notNull(),
+  driversMd: text("drivers_md").notNull(),
+  risksMd: text("risks_md").notNull(),
+  forecastMd: text("forecast_md").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_narratives_scope_idx").on(table.scopeType, table.scopeId),
+  index("ai_narratives_period_idx").on(table.periodStart, table.periodEnd),
 ]);
 
 export const insertFeatureSchema = createInsertSchema(features).omit({

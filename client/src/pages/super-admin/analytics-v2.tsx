@@ -14,6 +14,10 @@ import HealthList from '@/components/analytics/HealthList';
 import { NoDataState, ErrorState } from '@/components/analytics/EmptyState';
 import { StatCardSkeleton, TimeSeriesCardSkeleton, RankingTableSkeleton, HealthListSkeleton } from '@/components/analytics/Skeletons';
 
+// AI Analytics components
+import { AIInsightsBar } from '@/components/analytics/AIInsightsBar';
+import { AskAnalyticsDrawer } from '@/components/analytics/AskAnalyticsDrawer';
+
 // Icons
 import { DollarSign, Users, TrendingUp, AlertTriangle, CreditCard, UserPlus, Activity, Target } from 'lucide-react';
 
@@ -68,6 +72,9 @@ export default function AnalyticsV2() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  
+  // AI Analytics state
+  const [isAskAnalyticsOpen, setIsAskAnalyticsOpen] = useState(false);
 
   // URL sync
   useEffect(() => {
@@ -138,6 +145,20 @@ export default function AnalyticsV2() {
     }
   };
 
+  // AI navigation handler
+  const handleAINavigate = (tab: string, filters?: any) => {
+    if (tab === 'overview' || tab === 'revenue-trends' || tab === 'by-tenant') {
+      setSubTab(tab);
+    } else if (tab === 'platform-health') {
+      setLane('platform');
+      setSubTab('platform-health');
+    }
+    if (filters) {
+      if (filters.tenantId) setTenantId(filters.tenantId);
+      if (filters.status) setStatus(filters.status);
+    }
+  };
+
   // Tab configurations
   const platformSubTabs = [
     { value: 'overview', label: 'Overview' },
@@ -196,6 +217,18 @@ export default function AnalyticsV2() {
           onDateRangeChange={handleFilterChange.dateRange}
           onClearFilters={handleFilterChange.clear}
           data-testid="analytics-filter-bar"
+        />
+
+        {/* AI Insights Bar - Replaces KPI Row */}
+        <AIInsightsBar
+          filters={{
+            from: dateFrom,
+            to: dateTo,
+            tenantId,
+            status: lane === 'platform' ? 'platform' : 'commerce'
+          }}
+          onOpenAskAnalytics={() => setIsAskAnalyticsOpen(true)}
+          onNavigate={handleAINavigate}
         />
 
         {/* Main Tabs */}
@@ -539,6 +572,18 @@ export default function AnalyticsV2() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Ask Analytics Drawer */}
+        <AskAnalyticsDrawer
+          isOpen={isAskAnalyticsOpen}
+          onClose={() => setIsAskAnalyticsOpen(false)}
+          filters={{
+            from: dateFrom,
+            to: dateTo,
+            tenantId,
+            status: lane === 'platform' ? 'platform' : 'commerce'
+          }}
+        />
       </div>
     </div>
   );

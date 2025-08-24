@@ -698,12 +698,12 @@ export function setupSuperAdminRoutes(app: Express) {
   });
 
   app.get('/api/super-admin/analytics/series', isAuthenticated, isSuperAdmin, async (req: any, res) => {
-    const { series } = await import('./controllers/superAdmin/detailedAnalytics');
+    const { series } = await import('./controllers/superAdmin/analytics');
     return series(req, res);
   });
 
   app.get('/api/super-admin/analytics/by-tenant', isAuthenticated, isSuperAdmin, async (req: any, res) => {
-    const { byTenant } = await import('./controllers/superAdmin/detailedAnalytics');
+    const { byTenant } = await import('./controllers/superAdmin/analytics');
     return byTenant(req, res);
   });
 
@@ -744,6 +744,37 @@ export function setupSuperAdminRoutes(app: Express) {
     req.db = req.app.db;
     const { dashboard } = await import('./controllers/superAdmin/dunning');
     return dashboard(req, res);
+  });
+
+  // AI Analytics endpoints
+  app.get('/api/super-admin/ai/insights', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getInsights } = await import('./controllers/superAdmin/aiAnalytics');
+    return getInsights(req, res);
+  });
+
+  app.get('/api/super-admin/ai/anomalies', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getAnomalies } = await import('./controllers/superAdmin/aiAnalytics');
+    return getAnomalies(req, res);
+  });
+
+  app.get('/api/super-admin/ai/contributions', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getContributions } = await import('./controllers/superAdmin/aiAnalytics');
+    return getContributions(req, res);
+  });
+
+  app.get('/api/super-admin/ai/tenant-scores', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getTenantScores } = await import('./controllers/superAdmin/aiAnalytics');
+    return getTenantScores(req, res);
+  });
+
+  app.post('/api/super-admin/ai/ask', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { askAnalytics } = await import('./controllers/superAdmin/aiAnalytics');
+    return askAnalytics(req, res);
+  });
+
+  app.post('/api/super-admin/ai/seed', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { seedAIData } = await import('./controllers/superAdmin/aiAnalytics');
+    return seedAIData(req, res);
   });
 
   // Impersonation routes
