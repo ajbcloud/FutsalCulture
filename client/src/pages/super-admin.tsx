@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import SuperAdminOverview from "@/components/super-admin/overview";
 import SuperAdminTenants from "@/components/super-admin/tenants";
 import SuperAdminAnalytics from "@/components/super-admin/analytics";
-import SuperAdminSettings from "@/components/super-admin/settings";
+import SuperAdminSettings from "@/pages/super-admin/settings";
 import SuperAdminSessions from "@/components/super-admin/sessions";
 import SuperAdminPayments from "@/components/super-admin/payments";
 import SuperAdminRegistrations from "@/components/super-admin/registrations";
