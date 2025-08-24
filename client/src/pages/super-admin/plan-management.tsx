@@ -295,9 +295,39 @@ export default function PlanManagement() {
   const renderFeatureControl = (feature: Feature, planCode?: string, isCompact?: boolean) => {
     const targetPlan = planCode || selectedPlan;
     const pendingKey = `${targetPlan}-${feature.key}`;
-    const currentValue = pendingChanges[pendingKey] !== undefined 
-      ? pendingChanges[pendingKey] 
-      : feature.value;
+    
+    // Handle current value properly for different data structures
+    let currentValue = feature.value;
+    if (pendingChanges[pendingKey] !== undefined) {
+      currentValue = pendingChanges[pendingKey];
+    }
+    
+    // Extract boolean value correctly
+    const getBooleanValue = (value: any) => {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'object' && value !== null) {
+        return value.enabled === true;
+      }
+      return false;
+    };
+    
+    // Extract variant value correctly
+    const getVariantValue = (value: any) => {
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object' && value !== null) {
+        return value.variant || '';
+      }
+      return '';
+    };
+    
+    // Extract limit value correctly
+    const getLimitValue = (value: any) => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'object' && value !== null) {
+        return value.limitValue || 0;
+      }
+      return 0;
+    };
     
     const isSaving = updateFeatureMutation.isPending && 
       updateFeatureMutation.variables?.featureKey === feature.key &&
@@ -310,7 +340,7 @@ export default function PlanManagement() {
         return (
           <div className="flex items-center gap-2 justify-center">
             <Switch
-              checked={currentValue === true}
+              checked={getBooleanValue(currentValue)}
               onCheckedChange={(checked) => handleFeatureChange(feature.key, { enabled: checked }, planCode)}
               disabled={isSaving}
               className={isCompact ? "scale-90" : ""}
@@ -331,7 +361,7 @@ export default function PlanManagement() {
         return (
           <div className="flex items-center gap-2">
             <Select
-              value={currentValue || ''}
+              value={getVariantValue(currentValue)}
               onValueChange={(value) => handleFeatureChange(feature.key, { variant: value }, planCode)}
               disabled={isSaving}
             >
@@ -360,8 +390,8 @@ export default function PlanManagement() {
           <div className="flex items-center gap-2">
             <Input
               type="number"
-              value={currentValue || 0}
-              onChange={(e) => handleFeatureChange(feature.key, { limitValue: parseInt(e.target.value) }, planCode)}
+              value={getLimitValue(currentValue)}
+              onChange={(e) => handleFeatureChange(feature.key, { limitValue: parseInt(e.target.value) || 0 }, planCode)}
               min={0}
               max={maxValue}
               className={isCompact ? "w-[80px]" : "w-[120px]"}
