@@ -150,9 +150,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                             <td key={plan.id} className="p-3 text-center">
                               {isIncluded ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <svg className="h-4 w-4 feature-grid-check" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="20,6 9,17 4,12"></polyline>
-                                  </svg>
+                                  <Check className="h-4 w-4 text-green-600" />
                                   {featureValue !== 'Yes' && (
                                     <div className="text-xs text-muted-foreground max-w-20 text-center">
                                       {featureValue}
