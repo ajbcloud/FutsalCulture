@@ -81,22 +81,38 @@ export default function SignupPlayerFlow() {
   };
 
   const handleConsentComplete = async (signedDocuments: any[]) => {
+    // Mandatory validation: prevent proceeding without signed documents
+    if (!signedDocuments || signedDocuments.length === 0) {
+      toast({
+        title: "Consent Required",
+        description: "You must sign all required consent documents to complete registration. Registration cannot proceed without valid consent.",
+        variant: "destructive",
+      });
+      return; // Block further execution
+    }
+    
     setSignedConsents(signedDocuments);
     setShowConsentModal(false);
     
-    // Complete the signup process
+    // Complete the signup process only with validated documents
     await completeSignup(signedDocuments);
   };
 
   const completeSignup = async (consentDocuments: any[]) => {
     setLoading(true);
     try {
+      // Validate consent documents exist
+      if (!consentDocuments || consentDocuments.length === 0) {
+        throw new Error("Consent documents are required to complete registration");
+      }
+
       // Create player account
-      const response = await apiRequest("/api/auth/register", "POST", {
+      const response = await apiRequest("POST", "/api/auth/register", {
         ...playerData,
         dateOfBirth: dob,
         role: "player",
         parentContact: isTeen ? parentContact : undefined,
+        consentDocuments: consentDocuments.map(doc => doc.id), // Include consent document IDs
       });
       
       // Note: Consent documents are already signed and stored via the ConsentDocumentModal
@@ -104,7 +120,7 @@ export default function SignupPlayerFlow() {
       
       // If teen, send notification to parent
       if (isTeen && parentContact.parentEmail) {
-        await apiRequest("/api/notifications/parent-consent", "POST", {
+        await apiRequest("POST", "/api/notifications/parent-consent", {
           playerId: response.id,
           parentEmail: parentContact.parentEmail,
           parentName: parentContact.parentName,
@@ -402,7 +418,14 @@ export default function SignupPlayerFlow() {
         {/* Consent Document Modal */}
         <ConsentDocumentModal
           isOpen={showConsentModal}
-          onClose={() => setShowConsentModal(false)}
+          onClose={() => {
+            // Prevent closing without completion - show warning
+            toast({
+              title: "Consent Required",
+              description: "You must complete all consent documents to proceed with registration.",
+              variant: "destructive",
+            });
+          }}
           onComplete={handleConsentComplete}
           playerData={{
             firstName: playerData.firstName,

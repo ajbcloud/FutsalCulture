@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useSearch } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,44 +58,52 @@ export default function SignupParentFlow() {
   };
 
   const handleConsentComplete = async (signedDocuments: any[]) => {
+    // Mandatory validation: prevent proceeding without signed documents
+    if (!signedDocuments || signedDocuments.length === 0) {
+      toast({
+        title: "Consent Required",
+        description: "You must sign all required consent documents to complete registration. Registration cannot proceed without valid consent.",
+        variant: "destructive",
+      });
+      return; // Block further execution
+    }
+    
     setSignedConsents(signedDocuments);
     setShowConsentModal(false);
     
-    // Complete the signup process
+    // Complete the signup process only with validated documents
     await completeSignup(signedDocuments);
   };
 
   const completeSignup = async (consentDocuments: any[]) => {
     setLoading(true);
     try {
+      // Validate consent documents exist
+      if (!consentDocuments || consentDocuments.length === 0) {
+        throw new Error("Consent documents are required to complete registration");
+      }
+
       // Create parent account
-      const parentResponse = await apiRequest("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          ...parentData,
-          role: "parent",
-        }),
+      const parentResult = await apiRequest("POST", "/api/auth/register", {
+        ...parentData,
+        role: "parent",
+        consentDocuments: consentDocuments.map(doc => doc.id), // Include consent document IDs
       });
       
       // Create child player
-      const playerResponse = await apiRequest("/api/players", {
-        method: "POST",
-        body: JSON.stringify({
-          ...childData,
-          dateOfBirth: dob,
-          parentId: parentResponse.id,
-        }),
+      const playerResult = await apiRequest("POST", "/api/players", {
+        ...childData,
+        dateOfBirth: dob,
+        parentId: parentResult.id,
+        consentDocuments: consentDocuments.map(doc => doc.id), // Include consent document IDs
       });
       
       // Create guardian link
-      await apiRequest("/api/guardians", {
-        method: "POST",
-        body: JSON.stringify({
-          parentId: parentResponse.id,
-          playerId: playerResponse.id,
-          permissionBook: true,
-          permissionPay: true,
-        }),
+      await apiRequest("POST", "/api/guardians", {
+        parentId: parentResult.id,
+        playerId: playerResult.id,
+        permissionBook: true,
+        permissionPay: true,
       });
       
       // Note: Consent documents are already signed and stored via the ConsentDocumentModal
@@ -313,7 +320,7 @@ export default function SignupParentFlow() {
                 <div className="border rounded-lg p-4">
                   <h3 className="font-medium mb-2">Child Information</h3>
                   <p className="text-sm text-muted-foreground">
-                    {childData.firstName} {childData.lastName} • Born: {new Date(dob).toLocaleDateString()} • {childData.gender}
+                    {childData.firstName} {childData.lastName} • Born: {dob ? new Date(dob).toLocaleDateString() : 'Not provided'} • {childData.gender}
                   </p>
                 </div>
               </div>
@@ -354,12 +361,19 @@ export default function SignupParentFlow() {
         {/* Consent Document Modal */}
         <ConsentDocumentModal
           isOpen={showConsentModal}
-          onClose={() => setShowConsentModal(false)}
+          onClose={() => {
+            // Prevent closing without completion - show warning
+            toast({
+              title: "Consent Required",
+              description: "You must complete all consent documents to proceed with registration.",
+              variant: "destructive",
+            });
+          }}
           onComplete={handleConsentComplete}
           playerData={{
             firstName: childData.firstName,
             lastName: childData.lastName,
-            birthDate: dob
+            birthDate: dob || ''
           }}
           parentData={{
             firstName: parentData.firstName,

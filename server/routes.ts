@@ -135,6 +135,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User registration endpoint with mandatory consent validation
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { 
+        firstName, 
+        lastName, 
+        email, 
+        username, 
+        dateOfBirth, 
+        role, 
+        parentContact, 
+        consentDocuments,
+        tenantId
+      } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName || !email || !role) {
+        return res.status(400).json({ 
+          error: "Missing required fields: firstName, lastName, email, role" 
+        });
+      }
+
+      // MANDATORY: Validate consent documents are provided
+      if (!consentDocuments || !Array.isArray(consentDocuments) || consentDocuments.length === 0) {
+        return res.status(400).json({ 
+          error: "Consent documents are required to complete registration. You must sign all required consent forms before proceeding.",
+          consentRequired: true
+        });
+      }
+
+      // Validate that consent documents exist and are signed
+      for (const docId of consentDocuments) {
+        try {
+          const signatures = await storage.getConsentSignaturesByDocument(docId);
+          if (signatures.length === 0) {
+            return res.status(400).json({ 
+              error: "All consent documents must be signed before registration can be completed.",
+              consentRequired: true
+            });
+          }
+        } catch (error) {
+          console.error("Error validating consent document:", docId, error);
+          return res.status(400).json({ 
+            error: "Invalid consent document provided. Please ensure all consent forms are properly signed.",
+            consentRequired: true
+          });
+        }
+      }
+
+      // Get tenant ID from various sources
+      const targetTenantId = tenantId || req.user?.claims?.tenantId || req.session?.user?.tenantId;
+      if (!targetTenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      // Check auto-approve setting
+      const autoApproveSetting = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+        .limit(1);
+      
+      const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0;
+
+      // Create user with validated consent
+      const userData = {
+        id: req.user?.claims?.sub || email.split('@')[0] + '-' + Date.now(),
+        firstName,
+        lastName,
+        email,
+        tenantId: targetTenantId,
+        isApproved: autoApprove,
+        registrationStatus: autoApprove ? 'approved' as const : 'pending' as const,
+      };
+
+      const user = await storage.upsertUser(userData);
+
+      // If this is a player registration, create the player record
+      if (role === 'player' && dateOfBirth) {
+        const playerData = {
+          id: user.id,
+          firstName,
+          lastName,
+          birthYear: new Date(dateOfBirth).getFullYear(),
+          gender: (req.body.gender || 'boys') as 'boys' | 'girls',
+          tenantId: targetTenantId,
+          parentId: req.body.parentId || '',
+          isApproved: autoApprove,
+          registrationStatus: autoApprove ? 'approved' as const : 'pending' as const,
+        };
+
+        await storage.createPlayer(playerData);
+      }
+
+      // Log successful registration with consent validation
+      console.log(`✅ User registered with consent validation:`, { 
+        id: user.id, 
+        role, 
+        consentDocuments: consentDocuments.length,
+        autoApprove 
+      });
+
+      res.status(201).json({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isApproved: user.isApproved,
+        registrationStatus: user.registrationStatus,
+        consentValidated: true
+      });
+    } catch (error) {
+      console.error("Error during registration:", error);
+      res.status(500).json({ 
+        error: "Registration failed. Please ensure all consent documents are properly signed and try again." 
+      });
+    }
+  });
+
   // Impersonation routes
   app.get('/impersonate', impersonationController.consume);
   app.get('/api/impersonation/status', isAuthenticated, impersonationController.status);
