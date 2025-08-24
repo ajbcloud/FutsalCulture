@@ -1,0 +1,222 @@
+**Paste this to Replit (verbal-only task).**
+
+Title: Add **AI Analytics** to Super Admin Analytics v2 and replace the KPI row with an AI Insights bar
+
+## Goal
+
+Augment Analytics v2 with server-side AI that (a) forecasts revenue & activity, (b) detects anomalies, (c) scores tenant churn/health, and (d) generates short, actionable narratives. Replace the current KPI cards with an **AI Insights** section that answers: *What changed? Why? What’s next?* Keep existing non-AI tabs and data APIs.
+
+---
+
+## UX / IA (what the user sees)
+
+Replace the top KPI row with an **AI Insights Bar** (always visible under the FilterBar). Below it, keep the existing tabs (Overview, Revenue Trends, By Tenant, Platform Health).
+
+**AI Insights Bar (4 tiles + a “Ask Analytics” button):**
+
+1. **Now** – “This week at a glance”
+
+   * One-sentence summary + badges (↑/↓ % vs prior period).
+   * Example: *“Platform revenue is up **12.4% WoW**, driven by **Elite** plan renewals (+\$3.7K). Failed payments decreased 18%.”*
+
+2. **Drivers** – root-cause/contribution analysis
+
+   * Top 3 contributors with % impact chips: tenants, plans, payment methods, or regions.
+   * Example: *“Top impact: **Futsal Culture** (+\$2.1K), **Stripe** (+\$1.4K), **Growth plan** (+\$800).”*
+   * Click opens drill-down filtered to those drivers.
+
+3. **Risks** – anomaly & churn risk
+
+   * Show 1–2 red/yellow alerts (e.g., sudden drop in registrations for a tenant, rising refund ratio, high dunning count).
+   * Each alert links to a tenant or to Platform Health.
+
+4. **Next 30 days** – forecast & confidence
+
+   * Sparkline + range chip: *“Forecast MRR **\$41.5K ±1.8K (80% CI)**; expected commerce revenue **\$68–72K**.”*
+   * Tiny footnote icon opens “How we estimate” modal.
+
+Rightmost aligned: **Ask Analytics** (button) → opens a right-side panel chat:
+
+* Supports natural language queries over pre-aggregated metrics (no ad-hoc SQL).
+* “Explain change” shortcut (if a major WoW change occurred) pre-fills a prompt.
+* Returns a concise answer + the metric breakdown table it used.
+
+**Interaction details**
+
+* The Insights Bar updates with current filters (tenant scope, date range, status).
+* Tiles have skeletons, robust empty states, and a “Last updated <time>” caption.
+* Tooltips show the exact formula/time window; clicking a tile navigates to the relevant tab with preserved filters.
+
+Feature flag: `ai_analytics_v1`
+
+---
+
+## Data & Models (how we compute)
+
+We’ll implement **lightweight, CPU-friendly** server jobs and store results so the UI is fast and deterministic.
+
+### Tables (new)
+
+* `ai_forecasts_daily`
+
+  * `date, scope_type ('platform'|'tenant'), scope_id, metric ('platform_mrr'|'commerce_net'|...), mean, p10, p90, model, created_at`
+* `ai_anomalies`
+
+  * `date, scope_type, scope_id, metric, direction ('high'|'low'), zscore, expected, actual, severity ('warn'|'crit'), created_at`
+* `ai_contributions`
+
+  * `period_start, period_end, metric, driver_type ('tenant'|'plan'|'method'), driver_id, impact_abs, impact_pct, rank`
+* `ai_tenant_scores`
+
+  * `tenant_id, date, churn_risk (0–1), health_score (0–100), top_signals jsonb, created_at`
+* `ai_narratives`
+
+  * `period_start, period_end, scope_type, scope_id, summary_md, drivers_md, risks_md, forecast_md, created_at`
+
+> All metrics are in **cents**; store dates in UTC. Add composite indexes for (scope\_type, scope\_id, date).
+
+### Jobs (cron / queue)
+
+* **Daily at 02:00 UTC** (backfills when needed):
+
+  1. **Aggregation**: roll up daily platform & tenant metrics from existing billing/commerce/registrations tables.
+  2. **Forecasts**: per metric (platform MRR, commerce net, registrations) using one of:
+
+     * **Prophet** (or **statsmodels SARIMA** as fallback) on the last 180–365 days.
+     * Fall back to 28-day seasonal naive if data is sparse (< 60 pts).
+     * Store mean, p10, p90 for the next 30 days in `ai_forecasts_daily`.
+  3. **Anomaly detection**:
+
+     * Rolling seasonal baseline (7/28-day) with robust z-score (MAD).
+     * Flag `severity='crit'` for |z| ≥ 3, `warn` for 2–3.
+     * Write to `ai_anomalies`.
+  4. **Contribution analysis** (driver breakdown):
+
+     * Attribution of WoW change = Δ(metric) by tenant/plan/payment\_method.
+     * Compute `impact_abs`, `impact_pct`; store top N to `ai_contributions`.
+  5. **Churn/health scoring** (tenant-level):
+
+     * Simple gradient-boosted or logistic model (scikit-learn) trained on labels (churned vs active) if historical exists; else heuristic: low usage, rising dunning, support tickets, low new registrations.
+     * Write `ai_tenant_scores` with `top_signals`.
+  6. **Narratives**:
+
+     * Compose short markdown snippets from the aggregates (pure template logic initially).
+     * (Optional) If available, pass the structured payload to an LLM for polishing *without* adding new facts.
+
+* **Hourly (lightweight)**:
+
+  * Re-run anomaly check for yesterday/today to catch spikes sooner.
+
+> All jobs are idempotent (upserts by `(date, scope, metric)`).
+
+---
+
+## APIs
+
+All endpoints accept the existing filter params: `from`, `to`, `tenantId?`, `status ('platform'|'commerce'|'all')`.
+
+* `GET /api/super-admin/ai/insights`
+  Returns the 4-tile payload for the current filter window:
+
+  ```ts
+  {
+    now: { summary: string, deltas: Array<{label:string, value:number, pct:number, dir:'up'|'down'}> },
+    drivers: Array<{type:'tenant'|'plan'|'method', id:string, label:string, impactPct:number, impactAbs:number}>,
+    risks: Array<{metric:string, label:string, severity:'warn'|'crit', context?:{tenantId?:string}}> ,
+    forecast: { metric:'platform_mrr'|'commerce_net', mean:number, p10:number, p90:number, horizonDays:number }
+  }
+  ```
+
+* `GET /api/super-admin/ai/anomalies` → table of anomalies within range.
+
+* `GET /api/super-admin/ai/contributions` → drivers for Δ metric.
+
+* `GET /api/super-admin/ai/tenant-scores` → list of tenants with churn/health scores.
+
+* `POST /api/super-admin/ai/ask` → NL Q\&A over **pre-aggregated** metrics only:
+
+  ```ts
+  { question:string, filters:{from:string,to:string,tenantId?:string,status?:string} }
+  → { answer_md:string, sources:Array<{type:'series'|'table', ref:string}>, table?:{columns:any[], rows:any[]} }
+  ```
+
+  * Implementation: parse a small set of supported intents (`trend`, `compare tenants`, `why change`, `forecast`) and compile to safe queries; **no ad-hoc SQL**.
+
+Validation: zod schemas; rate-limit `/ai/ask`.
+
+---
+
+## Frontend wiring
+
+* Add **AI Insights Bar** component: `client/src/components/analytics/AIInsightsBar.tsx`
+
+  * Props: current filters; uses React Query to call `/ai/insights`.
+  * Renders the 4 tiles with consistent cards, deltas, and sparklines.
+  * Tile clicks route to existing tabs with anchors & filters.
+* Add **AskAnalyticsDrawer.tsx** (right drawer)
+
+  * Textarea + “Ask” → calls `/ai/ask`.
+  * Shows markdown answer and optional result table.
+  * Add quick chips: “Why did revenue change?”, “Which tenants drive growth?”, “Forecast next 30 days?”
+* Keep the rest of Analytics v2 intact; just remove the old KPI row and mount AI bar at the top.
+
+Design details:
+
+* Same premium style as Analytics v2 (rounded-2xl, soft shadows).
+* Each tile shows “Updated 2h ago” or “Just now” depending on latest job time.
+* Tooltips with formulas; footnote icon links to “How we estimate” modal.
+
+---
+
+## Seed & Testing
+
+Extend the existing seed script to ensure the AI layer has meaningful data:
+
+* Backfill 180–365 days of synthetic platform/tenant revenue & commerce with weekly seasonality.
+* Insert realistic failed-payment patterns and 2–3 anomaly spikes.
+* Include at least one churned tenant and one recovering tenant.
+* Seed `ai_*` tables by running the daily job once after seeding raw data.
+
+Add `npm run seed:ai` and `npm run ai:jobs:once` scripts.
+
+---
+
+## Privacy/Safety & Ops
+
+* No PII exposed in narratives.
+* Store only necessary aggregates in `ai_*` tables; delete raw model artifacts.
+* Provide a **kill switch** in Policies: `enableAIInsights` toggle (default ON).
+* Add logging: job duration, model version, MAPE for forecasts.
+* Guardrails for `/ai/ask`: strict intent parser; return “I can’t answer that yet” for unsupported requests.
+
+---
+
+## Acceptance Criteria
+
+* AI Insights Bar renders 4 tiles with **non-empty** content on seed data for 7/30/90-day windows.
+* Clicking a tile deep-links to the correct drill-down with filters preserved.
+* `/ai/anomalies`, `/ai/contributions`, and `/ai/tenant-scores` power the Risks & Drivers tiles.
+* Forecast tile shows mean + p10/p90 and matches the stored series.
+* Ask Analytics returns concise answers for supported intents with a small table/series preview.
+* Jobs are idempotent; re-running produces stable results; tiles show fresh timestamps.
+* Feature flag `ai_analytics_v1` can disable the bar and fall back to classic KPIs.
+* No KPI NaNs; currency/percent formatting matches the platform.
+
+---
+
+## Tech notes
+
+* Libraries: `scikit-learn`, `prophet` (or `statsmodels` SARIMA fallback), `pandas` for jobs; keep models simple & cached.
+* All heavy compute runs in background jobs; the UI only reads precomputed tables.
+* Typed contracts; zod validation at endpoints; React Query caching (`staleTime`: 60s).
+* Keep performance: initial page load unaffected (AI endpoints are light).
+
+---
+
+**Deliverables**
+
+1. AI jobs + migrations (`ai_*` tables) + scripts to seed & run once.
+2. New AI endpoints with validation and rate-limiting.
+3. Frontend AI Insights Bar + Ask Analytics drawer; removal of old KPI row.
+4. Docs: “How AI insights are computed,” kill-switch flag, troubleshooting.
+5. Screenshots of the new Analytics v2 top section with 30-day filter showing tiles and the drawer.

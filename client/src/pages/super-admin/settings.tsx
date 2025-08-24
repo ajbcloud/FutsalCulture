@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,700 +8,805 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Save, 
-  TestTube,
+  Shield,
+  UserCheck,
+  Key,
+  Globe,
+  UserX,
+  Clock,
+  Database,
+  AlertTriangle,
+  Package,
+  Calendar,
+  Users as UsersIcon,
+  Sparkles,
+  HelpCircle,
+  Check,
+  Loader2,
+  CreditCard,
   Mail,
   MessageSquare,
   Smartphone,
-  CreditCard,
-  Shield,
-  Database,
+  TestTube,
   Server,
-  Globe,
-  Key,
   Users,
-  Settings as SettingsIcon,
-  Clock,
-  AlertTriangle
+  Settings as SettingsIcon
 } from 'lucide-react';
+import { debounce } from 'lodash';
 
-interface PlatformSettings {
-  general: {
-    platformName: string;
-    supportEmail: string;
-    termsOfService: string;
-    privacyPolicy: string;
-    maintenanceMode: boolean;
-    allowNewTenants: boolean;
-    maxTenantsPerPlan: {
-      starter: number;
-      pro: number;
-      enterprise: number;
-    };
+// Type definitions
+interface Policies {
+  autoApproveTenants: boolean;
+  requireTenantApproval: boolean;
+  mfa: {
+    requireSuperAdmins: boolean;
+    requireTenantAdmins: boolean;
   };
-  plans: Array<{
-    id: string;
-    name: string;
-    price: number;
-    features: string[];
-    maxUsers: number;
-    maxPlayers: number;
-    maxSessions: number;
-  }>;
-  integrations: {
-    email: {
-      provider: 'sendgrid' | 'mailgun' | 'ses';
-      apiKey: string;
-      verified: boolean;
-    };
-    sms: {
-      provider: 'twilio' | 'vonage';
-      accountSid: string;
-      authToken: string;
-      verified: boolean;
-    };
-    payment: {
-      stripePublicKey: string;
-      stripeSecretKey: string;
-      stripeWebhookSecret: string;
-      verified: boolean;
-    };
-    oauth: {
-      googleClientId: string;
-      googleClientSecret: string;
-      microsoftClientId: string;
-      microsoftClientSecret: string;
-    };
+  subdomains: {
+    enabled: boolean;
+    baseDomain: string;
+    dnsOk?: boolean;
+    sslOk?: boolean;
   };
-  features: {
-    tournaments: boolean;
-    analytics: boolean;
-    customBranding: boolean;
-    apiAccess: boolean;
-    whiteLabel: boolean;
-    multiLocation: boolean;
+  impersonation: {
+    allow: boolean;
+    maxMinutes: number;
+    requireReason: boolean;
+  };
+  session: {
+    idleTimeoutMinutes: number;
+  };
+  retentionDays: {
+    logs: number;
+    analytics: number;
+    pii: number;
+  };
+  maintenance: {
+    enabled: boolean;
+    message: string;
   };
 }
 
+interface TenantDefaults {
+  defaultPlanCode: 'free' | 'core' | 'growth' | 'elite';
+  bookingWindowHours: number;
+  sessionCapacity: number;
+  seedSampleContent: boolean;
+}
+
 export default function SuperAdminSettings() {
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('policies');
+  const [localPolicies, setLocalPolicies] = useState<Policies | null>(null);
+  const [localTenantDefaults, setLocalTenantDefaults] = useState<TenantDefaults | null>(null);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'idle' | 'saving' | 'saved' | 'error'; message?: string }>({ type: 'idle' });
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; callback: () => void } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch platform settings
-  const { data: settings, isLoading } = useQuery<PlatformSettings>({
-    queryKey: ['/api/super-admin/settings'],
+  // Fetch policies
+  const { data: policies, isLoading: policiesLoading } = useQuery<Policies>({
+    queryKey: ['/api/super-admin/settings/policies'],
     queryFn: async () => {
-      const response = await fetch('/api/super-admin/settings');
-      if (!response.ok) throw new Error('Failed to fetch settings');
+      const response = await fetch('/api/super-admin/settings/policies');
+      if (!response.ok) throw new Error('Failed to fetch policies');
       return response.json();
     }
   });
 
-  // Update settings mutation
-  const updateSettingsMutation = useMutation({
-    mutationFn: async ({ section, data }: { section: string; data: any }) => {
-      const response = await fetch(`/api/super-admin/settings/${section}`, {
+  // Fetch tenant defaults
+  const { data: tenantDefaults, isLoading: defaultsLoading } = useQuery<TenantDefaults>({
+    queryKey: ['/api/super-admin/settings/tenant-defaults'],
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/settings/tenant-defaults');
+      if (!response.ok) throw new Error('Failed to fetch tenant defaults');
+      return response.json();
+    }
+  });
+
+  // Update policies mutation
+  const updatePoliciesMutation = useMutation({
+    mutationFn: async (data: Policies) => {
+      const response = await fetch('/api/super-admin/settings/policies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Failed to update settings');
+      if (!response.ok) throw new Error('Failed to update policies');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
-      toast({ title: 'Settings updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings/policies'] });
+      setSaveStatus({ type: 'saved', message: 'Policies saved' });
+      setTimeout(() => setSaveStatus({ type: 'idle' }), 3000);
     },
     onError: (error: any) => {
-      toast({ title: 'Failed to update settings', description: error.message, variant: 'destructive' });
+      setSaveStatus({ type: 'error', message: error.message });
+      toast({ title: 'Failed to save policies', description: error.message, variant: 'destructive' });
     }
   });
 
-  // Test integration mutation
-  const testIntegrationMutation = useMutation({
-    mutationFn: async ({ type, config }: { type: string; config: any }) => {
-      const response = await fetch(`/api/super-admin/integrations/test`, {
-        method: 'POST',
+  // Update tenant defaults mutation
+  const updateTenantDefaultsMutation = useMutation({
+    mutationFn: async (data: TenantDefaults) => {
+      const response = await fetch('/api/super-admin/settings/tenant-defaults', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, config })
+        body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Test failed');
+      if (!response.ok) throw new Error('Failed to update tenant defaults');
       return response.json();
     },
-    onSuccess: (data) => {
-      toast({ title: 'Integration test successful', description: data.message });
-      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/settings/tenant-defaults'] });
+      setSaveStatus({ type: 'saved', message: 'Defaults saved' });
+      setTimeout(() => setSaveStatus({ type: 'idle' }), 3000);
     },
     onError: (error: any) => {
-      toast({ title: 'Integration test failed', description: error.message, variant: 'destructive' });
+      setSaveStatus({ type: 'error', message: error.message });
+      toast({ title: 'Failed to save defaults', description: error.message, variant: 'destructive' });
     }
   });
 
-  const handleSaveSettings = (section: string, data: any) => {
-    updateSettingsMutation.mutate({ section, data });
+  // Initialize local state
+  useEffect(() => {
+    if (policies) setLocalPolicies(policies);
+  }, [policies]);
+
+  useEffect(() => {
+    if (tenantDefaults) setLocalTenantDefaults(tenantDefaults);
+  }, [tenantDefaults]);
+
+  // Debounced autosave for policies
+  const debouncedSavePolicies = useCallback(
+    debounce((data: Policies) => {
+      setSaveStatus({ type: 'saving' });
+      updatePoliciesMutation.mutate(data);
+    }, 1000),
+    []
+  );
+
+  // Debounced autosave for tenant defaults
+  const debouncedSaveTenantDefaults = useCallback(
+    debounce((data: TenantDefaults) => {
+      setSaveStatus({ type: 'saving' });
+      updateTenantDefaultsMutation.mutate(data);
+    }, 1000),
+    []
+  );
+
+  // Handle policy changes
+  const handlePolicyChange = (updates: Partial<Policies>) => {
+    if (!localPolicies) return;
+    
+    const newPolicies = { ...localPolicies, ...updates };
+    
+    // Check for risky changes
+    const riskyChanges = [];
+    if (updates.maintenance?.enabled && !localPolicies.maintenance.enabled) {
+      riskyChanges.push('Enable maintenance mode');
+    }
+    if (updates.mfa?.requireSuperAdmins && !localPolicies.mfa.requireSuperAdmins) {
+      riskyChanges.push('Require MFA for Super Admins');
+    }
+    if (updates.impersonation && !updates.impersonation.allow && localPolicies.impersonation.allow) {
+      riskyChanges.push('Disable impersonation');
+    }
+
+    if (riskyChanges.length > 0) {
+      setConfirmDialog({
+        open: true,
+        action: riskyChanges.join(', '),
+        callback: () => {
+          setLocalPolicies(newPolicies);
+          debouncedSavePolicies(newPolicies);
+        }
+      });
+    } else {
+      setLocalPolicies(newPolicies);
+      debouncedSavePolicies(newPolicies);
+    }
   };
 
-  const handleTestIntegration = (type: string, config: any) => {
-    testIntegrationMutation.mutate({ type, config });
+  // Handle tenant defaults changes
+  const handleTenantDefaultsChange = (updates: Partial<TenantDefaults>) => {
+    if (!localTenantDefaults) return;
+    
+    const newDefaults = { ...localTenantDefaults, ...updates };
+    setLocalTenantDefaults(newDefaults);
+    debouncedSaveTenantDefaults(newDefaults);
   };
 
-  if (isLoading || !settings) {
+  if (policiesLoading || defaultsLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Platform Settings</h1>
-        </div>
-        <div className="space-y-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-64 bg-muted rounded animate-pulse" />
-          ))}
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-none">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Platform Settings</h1>
-          <p className="text-lg text-muted-foreground">Configure global platform settings and integrations</p>
+          <h2 className="text-3xl font-bold tracking-tight">Platform Settings</h2>
+          <p className="text-muted-foreground">Configure platform-wide policies and tenant defaults</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm">
-            <TestTube className="w-4 h-4 mr-2" />
-            Test All
-          </Button>
-          <Button>
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+        
+        <div className="flex items-center gap-2">
+          {saveStatus.type === 'saving' && (
+            <Badge variant="secondary">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              Saving...
+            </Badge>
+          )}
+          {saveStatus.type === 'saved' && (
+            <Badge variant="default" className="bg-green-500">
+              <Check className="h-3 w-3 mr-1" />
+              {saveStatus.message}
+            </Badge>
+          )}
+          {saveStatus.type === 'error' && (
+            <Badge variant="destructive">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {saveStatus.message}
+            </Badge>
+          )}
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <TabsList className="grid w-full max-w-4xl grid-cols-5 h-12">
-          <TabsTrigger value="general" className="text-sm font-medium flex items-center gap-1">
-            <Globe className="w-4 h-4" />
-            <span className="hidden sm:inline">General</span>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="policies">
+            <Shield className="h-4 w-4 mr-2" />
+            Policies
           </TabsTrigger>
-          <TabsTrigger value="plans" className="text-sm font-medium flex items-center gap-1">
-            <CreditCard className="w-4 h-4" />
-            <span className="hidden sm:inline">Plans</span>
+          <TabsTrigger value="tenant-defaults">
+            <Package className="h-4 w-4 mr-2" />
+            Tenant Defaults
           </TabsTrigger>
-          <TabsTrigger value="features" className="text-sm font-medium flex items-center gap-1">
-            <SettingsIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Features</span>
+          <TabsTrigger value="integrations">
+            <Server className="h-4 w-4 mr-2" />
+            Integrations
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="text-sm font-medium flex items-center gap-1">
-            <Key className="w-4 h-4" />
-            <span className="hidden sm:inline">Integrations</span>
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="text-sm font-medium flex items-center gap-1">
-            <Server className="w-4 h-4" />
-            <span className="hidden sm:inline">System</span>
+          <TabsTrigger value="user-management">
+            <Users className="h-4 w-4 mr-2" />
+            User Management
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-8">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="w-5 h-5" />
-                  Platform Configuration
-                </CardTitle>
-                <CardDescription>
-                  Basic platform settings and policies
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="platformName">Platform Name</Label>
-                    <Input
-                      id="platformName"
-                      value={settings.general.platformName}
-                      onChange={(e) => {
-                        const newSettings = {
-                          ...settings,
-                          general: { ...settings.general, platformName: e.target.value }
-                        };
-                        // Update local state would go here if we had it
-                      }}
-                      placeholder="PlayHQ"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="supportEmail">Support Email</Label>
-                    <Input
-                      id="supportEmail"
-                      type="email"
-                      value={settings.general.supportEmail}
-                      placeholder="support@playhq.app"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="termsOfService">Terms of Service</Label>
-                  <Textarea
-                    id="termsOfService"
-                    value={settings.general.termsOfService}
-                    placeholder="Enter terms of service content..."
-                    rows={5}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="privacyPolicy">Privacy Policy</Label>
-                  <Textarea
-                    id="privacyPolicy"
-                    value={settings.general.privacyPolicy}
-                    placeholder="Enter privacy policy content..."
-                    rows={5}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  System Controls
-                </CardTitle>
-                <CardDescription>
-                  Platform-wide operational settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <Label className="text-base font-medium">Maintenance Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Temporarily disable access to all tenant portals
-                      </p>
+        <TabsContent value="policies" className="space-y-4 mt-6">
+          {localPolicies && (
+            <>
+              {/* Tenant Approval */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Tenant Approval</CardTitle>
                     </div>
-                    <Switch checked={settings.general.maintenanceMode} />
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Control how new tenants are onboarded to the platform</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Auto-approve new tenants</Label>
+                      <p className="text-sm text-muted-foreground">Automatically approve new tenant registrations</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.autoApproveTenants}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          autoApproveTenants: checked,
+                          requireTenantApproval: checked ? false : localPolicies.requireTenantApproval
+                        });
+                      }}
+                      disabled={localPolicies.requireTenantApproval}
+                    />
                   </div>
                   
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <Label className="text-base font-medium">Allow New Tenants</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Enable new organization registrations
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require tenant approval</Label>
+                      <p className="text-sm text-muted-foreground">Manually review and approve each tenant</p>
                     </div>
-                    <Switch checked={settings.general.allowNewTenants} />
+                    <Switch
+                      checked={localPolicies.requireTenantApproval}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          requireTenantApproval: checked,
+                          autoApproveTenants: checked ? false : localPolicies.autoApproveTenants
+                        });
+                      }}
+                      disabled={localPolicies.autoApproveTenants}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* MFA Policy */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Key className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Multi-Factor Authentication</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Enforce MFA requirements for different user roles</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require MFA for Super Admins</Label>
+                      <p className="text-sm text-muted-foreground">Enforce MFA for all Super Admin accounts</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.mfa.requireSuperAdmins}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          mfa: { ...localPolicies.mfa, requireSuperAdmins: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require MFA for Tenant Admins</Label>
+                      <p className="text-sm text-muted-foreground">Enforce MFA for all Tenant Admin accounts</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.mfa.requireTenantAdmins}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          mfa: { ...localPolicies.mfa, requireTenantAdmins: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Subdomains */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Tenant Subdomains</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Configure custom subdomains for tenants</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable subdomains</Label>
+                      <p className="text-sm text-muted-foreground">Allow tenants to use custom subdomains</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.subdomains.enabled}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          subdomains: { ...localPolicies.subdomains, enabled: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Base domain</Label>
+                    <Input
+                      value={localPolicies.subdomains.baseDomain}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          subdomains: { ...localPolicies.subdomains, baseDomain: e.target.value }
+                        });
+                      }}
+                      placeholder="tenants.playhq.app"
+                      disabled={!localPolicies.subdomains.enabled}
+                    />
+                    <div className="flex gap-2">
+                      {localPolicies.subdomains.dnsOk && (
+                        <Badge variant="secondary" className="text-green-600">
+                          <Check className="h-3 w-3 mr-1" />
+                          DNS Verified
+                        </Badge>
+                      )}
+                      {localPolicies.subdomains.sslOk && (
+                        <Badge variant="secondary" className="text-green-600">
+                          <Check className="h-3 w-3 mr-1" />
+                          SSL Verified
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Impersonation */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserX className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Impersonation Policy</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Control admin impersonation capabilities</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Allow impersonation</Label>
+                      <p className="text-sm text-muted-foreground">Enable Super Admins to impersonate users</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.impersonation.allow}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          impersonation: { ...localPolicies.impersonation, allow: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Max duration (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={localPolicies.impersonation.maxMinutes}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          impersonation: { ...localPolicies.impersonation, maxMinutes: parseInt(e.target.value) || 30 }
+                        });
+                      }}
+                      min={1}
+                      max={480}
+                      disabled={!localPolicies.impersonation.allow}
+                    />
                   </div>
 
-                  <div className="pt-4">
-                    <Button onClick={() => handleSaveSettings('general', settings.general)} className="w-full">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save General Settings
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require reason</Label>
+                      <p className="text-sm text-muted-foreground">Require a reason for impersonation</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.impersonation.requireReason}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          impersonation: { ...localPolicies.impersonation, requireReason: checked }
+                        });
+                      }}
+                      disabled={!localPolicies.impersonation.allow}
+                    />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="plans" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Subscription Plans
-              </CardTitle>
-              <CardDescription>
-                Manage pricing plans and limits
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {settings.plans.map((plan) => (
-                  <div key={plan.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="font-medium capitalize">{plan.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          ${plan.price}/month per organization
-                        </p>
-                      </div>
-                      <Badge variant="outline">{plan.name}</Badge>
+              {/* Session Security */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Session Security</CardTitle>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <Label>Max Users</Label>
-                        <Input
-                          type="number"
-                          value={plan.maxUsers}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Max Players</Label>
-                        <Input
-                          type="number"
-                          value={plan.maxPlayers}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Max Sessions/Month</Label>
-                        <Input
-                          type="number"
-                          value={plan.maxSessions}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label>Features</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {plan.features.map((feature, index) => (
-                          <Badge key={index} variant="secondary">
-                            {feature}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
                   </div>
-                ))}
-                
-                <Button onClick={() => handleSaveSettings('plans', settings.plans)}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Plan Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="features" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SettingsIcon className="w-5 h-5" />
-                Feature Toggles
-              </CardTitle>
-              <CardDescription>
-                Enable or disable features globally
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(settings.features).map(([feature, enabled]) => (
-                <div key={feature} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label className="capitalize">
-                      {feature.replace(/([A-Z])/g, ' $1').trim()}
-                    </Label>
+                  <CardDescription>Configure session timeout settings</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Idle timeout (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={localPolicies.session.idleTimeoutMinutes}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          session: { idleTimeoutMinutes: parseInt(e.target.value) || 60 }
+                        });
+                      }}
+                      min={5}
+                      max={1440}
+                    />
                     <p className="text-sm text-muted-foreground">
-                      {getFeatureDescription(feature)}
+                      Sessions will expire after {localPolicies.session.idleTimeoutMinutes} minutes of inactivity
                     </p>
                   </div>
-                  <Switch checked={enabled} />
-                </div>
-              ))}
-              
-              <Button onClick={() => handleSaveSettings('features', settings.features)}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Feature Settings
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="integrations" className="space-y-6">
-          {/* Email Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5" />
-                Email Service
-                {settings.integrations.email.verified && (
-                  <Badge className="bg-green-500">Verified</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Configure email delivery service
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Provider</Label>
-                  <Input value={settings.integrations.email.provider} disabled />
-                </div>
-                <div>
-                  <Label>API Key</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.email.apiKey}
-                    placeholder="SG.****"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleTestIntegration('email', settings.integrations.email)}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  Test Connection
-                </Button>
-                <Button onClick={() => handleSaveSettings('integrations', settings.integrations)}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* SMS Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5" />
-                SMS Service
-                {settings.integrations.sms.verified && (
-                  <Badge className="bg-green-500">Verified</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Configure SMS notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Provider</Label>
-                  <Input value={settings.integrations.sms.provider} disabled />
-                </div>
-                <div>
-                  <Label>Account SID</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.sms.accountSid}
-                    placeholder="AC****"
-                  />
-                </div>
-                <div>
-                  <Label>Auth Token</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.sms.authToken}
-                    placeholder="****"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleTestIntegration('sms', settings.integrations.sms)}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  Test Connection
-                </Button>
-                <Button onClick={() => handleSaveSettings('integrations', settings.integrations)}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Payment Processing
-                {settings.integrations.payment.verified && (
-                  <Badge className="bg-green-500">Verified</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Configure Stripe payment processing
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label>Stripe Public Key</Label>
-                  <Input
-                    value={settings.integrations.payment.stripePublicKey}
-                    placeholder="pk_****"
-                  />
-                </div>
-                <div>
-                  <Label>Stripe Secret Key</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.payment.stripeSecretKey}
-                    placeholder="sk_****"
-                  />
-                </div>
-                <div>
-                  <Label>Webhook Secret</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.payment.stripeWebhookSecret}
-                    placeholder="whsec_****"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleTestIntegration('stripe', settings.integrations.payment)}
-                >
-                  <TestTube className="w-4 h-4 mr-2" />
-                  Test Connection
-                </Button>
-                <Button onClick={() => handleSaveSettings('integrations', settings.integrations)}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="maintenance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Server className="w-5 h-5" />
-                System Maintenance
-              </CardTitle>
-              <CardDescription>
-                System health and maintenance tools
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Database</div>
-                        <div className="text-sm text-muted-foreground">PostgreSQL</div>
-                      </div>
-                      <Badge className="bg-green-500">Online</Badge>
+              {/* Data Retention */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Data Retention</CardTitle>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Redis Cache</div>
-                        <div className="text-sm text-muted-foreground">In-memory cache</div>
-                      </div>
-                      <Badge className="bg-green-500">Online</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full">
-                  <Database className="w-4 h-4 mr-2" />
-                  Run Database Backup
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <Server className="w-4 h-4 mr-2" />
-                  Clear Application Cache
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <Users className="w-4 h-4 mr-2" />
-                  Generate System Report
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Data Retention & Cleanup
-              </CardTitle>
-              <CardDescription>
-                Configure automatic data cleanup policies across all tenants
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="waitlistExpirationHours" className="text-foreground">
-                    Waitlist Data Cleanup (hours)
-                  </Label>
-                  <Input
-                    id="waitlistExpirationHours"
-                    type="number"
-                    min="1"
-                    max="168"
-                    defaultValue="24"
-                    className="max-w-xs"
-                    placeholder="24"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Automatically clean up expired waitlist data after sessions end. This affects all tenants globally.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                        Global Setting
-                      </h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                        This setting applies to all tenants platform-wide. Changes will affect data retention policies across all organizations.
-                      </p>
-                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
                   </div>
-                </div>
+                  <CardDescription>Set data retention periods for different data types</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Logs (days)</Label>
+                    <Input
+                      type="number"
+                      value={localPolicies.retentionDays.logs}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          retentionDays: { ...localPolicies.retentionDays, logs: parseInt(e.target.value) || 90 }
+                        });
+                      }}
+                      min={1}
+                      max={3650}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Analytics (days)</Label>
+                    <Input
+                      type="number"
+                      value={localPolicies.retentionDays.analytics}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          retentionDays: { ...localPolicies.retentionDays, analytics: parseInt(e.target.value) || 365 }
+                        });
+                      }}
+                      min={1}
+                      max={3650}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>PII (days)</Label>
+                    <Input
+                      type="number"
+                      value={localPolicies.retentionDays.pii}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          retentionDays: { ...localPolicies.retentionDays, pii: parseInt(e.target.value) || 730 }
+                        });
+                      }}
+                      min={1}
+                      max={3650}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="flex justify-start">
-                  <Button onClick={() => {/* TODO: Implement save handler */}}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Cleanup Settings
-                  </Button>
-                </div>
-              </div>
+              {/* Maintenance Mode */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Maintenance Mode</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Temporarily disable platform access for maintenance</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable maintenance mode</Label>
+                      <p className="text-sm text-muted-foreground">Block non-admin access to the platform</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.maintenance.enabled}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          maintenance: { ...localPolicies.maintenance, enabled: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Maintenance message</Label>
+                    <Textarea
+                      value={localPolicies.maintenance.message}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          maintenance: { ...localPolicies.maintenance, message: e.target.value }
+                        });
+                      }}
+                      placeholder="The platform is undergoing scheduled maintenance. We'll be back shortly."
+                      disabled={!localPolicies.maintenance.enabled}
+                      rows={3}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="tenant-defaults" className="space-y-4 mt-6">
+          {localTenantDefaults && (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Default Plan</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Plan assigned to new tenants by default</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select
+                    value={localTenantDefaults.defaultPlanCode}
+                    onValueChange={(value: 'free' | 'core' | 'growth' | 'elite') => {
+                      handleTenantDefaultsChange({ defaultPlanCode: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="core">Core</SelectItem>
+                      <SelectItem value="growth">Growth</SelectItem>
+                      <SelectItem value="elite">Elite</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Booking Window</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Default booking window for new tenants (hours before session)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      value={localTenantDefaults.bookingWindowHours}
+                      onChange={(e) => {
+                        handleTenantDefaultsChange({ bookingWindowHours: parseInt(e.target.value) || 8 });
+                      }}
+                      min={0}
+                      max={168}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Sessions open for booking {localTenantDefaults.bookingWindowHours} hours before start time
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Session Capacity</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Default maximum capacity for new sessions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      value={localTenantDefaults.sessionCapacity}
+                      onChange={(e) => {
+                        handleTenantDefaultsChange({ sessionCapacity: parseInt(e.target.value) || 20 });
+                      }}
+                      min={1}
+                      max={1000}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Maximum {localTenantDefaults.sessionCapacity} players per session by default
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Sample Content</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Help new tenants get started with sample data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Seed sample content on trial</Label>
+                      <p className="text-sm text-muted-foreground">Create sample sessions, players, and data for new trial tenants</p>
+                    </div>
+                    <Switch
+                      checked={localTenantDefaults.seedSampleContent}
+                      onCheckedChange={(checked) => {
+                        handleTenantDefaultsChange({ seedSampleContent: checked });
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Integrations</CardTitle>
+              <CardDescription>Configure third-party service integrations</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">Integrations configuration is maintained in the existing interface.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="user-management" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Manage platform users and permissions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">User management is maintained in the existing interface.</p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Policy Change</AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to: <strong>{confirmDialog.action}</strong>
+                <br /><br />
+                This action will have immediate effect on the platform. Are you sure you want to continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmDialog(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                confirmDialog.callback();
+                setConfirmDialog(null);
+              }}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
-}
-
-function getFeatureDescription(feature: string): string {
-  const descriptions: Record<string, string> = {
-    tournaments: 'Enable tournament management capabilities',
-    analytics: 'Advanced analytics and reporting features',
-    customBranding: 'Allow tenants to customize their branding',
-    apiAccess: 'Enable API access for third-party integrations',
-    whiteLabel: 'Remove platform branding for enterprise clients',
-    multiLocation: 'Support for multiple training locations'
-  };
-  
-  return descriptions[feature] || 'Feature configuration';
 }

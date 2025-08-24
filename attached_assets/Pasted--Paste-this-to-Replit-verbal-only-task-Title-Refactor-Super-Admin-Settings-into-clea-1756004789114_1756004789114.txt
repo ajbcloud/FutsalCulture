@@ -1,0 +1,185 @@
+**Paste this to Replit (verbal-only task).**
+
+Title: Refactor **Super Admin → Settings** into clear, useful controls (Policies + Tenant Defaults), with autosave, audit, and proper enforcement
+
+## Goal
+
+Replace the current mixed Settings page with a coherent hub that only contains **true platform-wide policies** and **tenant creation defaults**. Move product limits to the plan engine, keep Integrations/User Management in their own tabs, add guardrails, autosave, audit, and typed APIs.
+
+---
+
+## Information Architecture (routes + tabs)
+
+Keep the existing route `/super-admin/settings`, but replace the content with 3 tabs:
+
+1. **Policies** *(platform-wide, enforced everywhere)*
+
+   * Auto-approve new tenants (toggle) — mutually exclusive with “Require tenant approval”
+   * Require tenant approval (toggle + moderation note)
+   * MFA policy:
+
+     * Require MFA for **Super Admins** (toggle) — default ON
+     * Require MFA for **Tenant Admins** (toggle)
+   * Tenant subdomains:
+
+     * Enabled (toggle)
+     * Base domain (input, e.g., `tenants.playhq.app`)
+     * Status pills (DNS/SSL verified)
+   * Impersonation policy:
+
+     * Allow impersonation (toggle)
+     * Max duration minutes (int, default 30)
+     * Require reason (toggle)
+   * Session security:
+
+     * Idle timeout minutes (int, default 60)
+   * Data retention:
+
+     * Logs (days), Analytics (days), PII (days) — ints
+   * Maintenance mode:
+
+     * Enabled (toggle)
+     * Message (text)
+
+2. **Tenant Defaults & Templates** *(applied when creating a tenant; can be overridden later)*
+
+   * Default Plan code (select: free/core/growth/elite)
+   * Booking window default (hours) **(Note: this is a default, not a policy)**
+   * Session capacity default
+   * Seed sample content on trial (toggle)
+
+3. **Integrations** *(keep your existing tab)*
+
+   * Leave as-is for now; ensure “Test” buttons work and show connection status.
+   * (No functional change in this task unless something breaks when refactoring shell.)
+
+**User Management** remains as a separate tab (already present).
+
+---
+
+## Move / remove items
+
+* **Move** “Default booking window (hours)” and “Default session capacity” out of Policies; place under **Tenant Defaults**.
+* **Convert** those two values into **plan/tenant defaults** (not global enforcement).
+* **Remove** “Max tenants per admin” (unless you can truly enforce via RBAC; otherwise drop).
+* Keep “Maintenance mode” and “Tenant subdomains” under **Policies**.
+
+---
+
+## UX details
+
+* Card-based forms; each card has a title, icon, helper text, and a small “Learn more” link.
+* **Autosave** after change with optimistic UI: “Saved · 3s ago by {email}”.
+* Risky toggles (Maintenance ON, Require MFA, Disable impersonation) prompt **confirm modals** describing impact.
+* “Last updated by” and timestamp at the top-right of each card.
+* Disabled inputs and status indicators when Maintenance mode is ON (non-destructive).
+* All inputs keyboard accessible; tooltips explain calculations/impact.
+* Empty/loading states consistent with the rest of the app.
+
+---
+
+## Backend: schema + endpoints
+
+Create a `platform_settings` table (if not present) with a single row:
+
+```sql
+id bigserial pk,
+policies jsonb not null default '{}',
+tenant_defaults jsonb not null default '{}',
+updated_by uuid not null,
+updated_at timestamptz not null default now()
+```
+
+Typed shape (zod/TS):
+
+```ts
+type Policies = {
+  autoApproveTenants: boolean;
+  requireTenantApproval: boolean;
+  mfa: { requireSuperAdmins: boolean; requireTenantAdmins: boolean };
+  subdomains: { enabled: boolean; baseDomain: string; dnsOk?: boolean; sslOk?: boolean };
+  impersonation: { allow: boolean; maxMinutes: number; requireReason: boolean };
+  session: { idleTimeoutMinutes: number };
+  retentionDays: { logs: number; analytics: number; pii: number };
+  maintenance: { enabled: boolean; message: string };
+};
+
+type TenantDefaults = {
+  defaultPlanCode: 'free' | 'core' | 'growth' | 'elite';
+  bookingWindowHours: number;
+  sessionCapacity: number;
+  seedSampleContent: boolean;
+};
+```
+
+APIs (Super Admin only, zod-validated):
+
+* `GET /api/super-admin/settings/policies` → `Policies`
+* `PUT /api/super-admin/settings/policies` → upsert row, write `audit_logs`, emit `settings:changed` event
+* `GET /api/super-admin/settings/tenant-defaults` → `TenantDefaults`
+* `PUT /api/super-admin/settings/tenant-defaults` → upsert row, audit, emit event
+
+**Events & enforcement**
+
+* Emit `settings:changed` with `{ scope: 'policies' | 'tenant-defaults', changedKeys: [...] }`.
+* Maintenance mode: middleware blocks non-admins and shows banner; respects message.
+* Impersonation: reuse existing impersonation middleware; read `allow`, `maxMinutes`, `requireReason`.
+* Subdomains: base domain consumed by provisioning job; show DNS/SSL status (read-only booleans).
+* Session idle timeout: auth/session service reads policy when issuing tokens.
+* Retention days: expose to jobs (cleanup tasks) — stub schedules if not present.
+
+**Audit logging**
+
+* On each PUT, append to `audit_logs` with:
+
+  * actor (SA id/email), route, previous vs new JSON diff, timestamp, IP/UA.
+
+---
+
+## Plan/feature mapping (important)
+
+* Ensure enforcement for **booking window** and **session capacity** comes from **plan features/limits** or the **tenant defaults** set at creation (not Policies).
+* If a tenant lacks an explicit value, resolve order: `tenant.value ?? plan.default ?? platform.tenant_defaults`.
+
+---
+
+## Frontend implementation
+
+* Replace current page with the new tabbed UI.
+* Use shadcn/ui Cards, Inputs, Switches; lucide icons.
+* Autosave via debounced PATCH/PUT; show inline toasts on error; revert optimistic state if server rejects.
+* Display “Last updated by” (from `updated_by`) and `updated_at`.
+
+---
+
+## QA / Acceptance Criteria
+
+* Policies: toggles/inputs autosave and reflect across the app (e.g., Maintenance mode gates non-admins; Impersonation requires reason; SA MFA required).
+* Tenant Defaults: creating a new tenant uses these defaults; existing tenants **unchanged**.
+* Booking window & session capacity no longer shown under Policies; they appear only in Tenant Defaults and are enforced via plan/tenant config.
+* All writes generate audit entries visible in **Security & Audit** (include JSON diff).
+* Access control: only Super Admins can read/write these endpoints.
+* Page has helpful helper text, confirm modals for risky actions, and clear success state.
+* No dead/unreferenced settings remain in code.
+
+---
+
+## Stretch (only if time permits)
+
+* Add a small “Feature Flags” card (SAs only): `analytics_v2`, `new_billing_flow`.
+* On Policies load, show subdomain DNS/SSL checks (read-only badges).
+
+---
+
+## Deliverables
+
+1. New **Settings** UI (Policies + Tenant Defaults) with autosave & guardrails.
+2. New endpoints + migrations + zod validation + audit log integration.
+3. Wiring for enforcement (maintenance, mfa, impersonation, session timeout).
+4. Updated docs in README: what’s a Policy vs Tenant Default; how to roll back.
+5. Screenshots of each tab with sample values; link to an audit entry created by a change.
+
+> Notes:
+>
+> * Do **not** reintroduce “Max tenants per admin” unless enforced by RBAC.
+> * Keep Integrations/User Management routes intact; only update their tab layout if needed for visual consistency.

@@ -936,7 +936,44 @@ export const auditLogs = pgTable("audit_logs", {
 // Platform settings table for impersonation policy
 export const platformSettings = pgTable("platform_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  allowImpersonation: boolean("allow_impersonation").default(true),
+  policies: jsonb("policies").notNull().default(sql`'{
+    "autoApproveTenants": false,
+    "requireTenantApproval": true,
+    "mfa": {
+      "requireSuperAdmins": true,
+      "requireTenantAdmins": false
+    },
+    "subdomains": {
+      "enabled": false,
+      "baseDomain": "tenants.playhq.app",
+      "dnsOk": false,
+      "sslOk": false
+    },
+    "impersonation": {
+      "allow": true,
+      "maxMinutes": 30,
+      "requireReason": true
+    },
+    "session": {
+      "idleTimeoutMinutes": 60
+    },
+    "retentionDays": {
+      "logs": 90,
+      "analytics": 365,
+      "pii": 730
+    },
+    "maintenance": {
+      "enabled": false,
+      "message": ""
+    }
+  }'::jsonb`),
+  tenantDefaults: jsonb("tenant_defaults").notNull().default(sql`'{
+    "defaultPlanCode": "core",
+    "bookingWindowHours": 8,
+    "sessionCapacity": 20,
+    "seedSampleContent": false
+  }'::jsonb`),
+  updatedBy: varchar("updated_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

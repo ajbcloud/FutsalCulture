@@ -25,6 +25,7 @@ import { stripeWebhookRouter } from './stripe-webhooks';
 import publicIngestionRoutes from './routes/publicIngestion';
 import { impersonationContext } from './middleware/impersonation';
 import * as impersonationController from './controllers/impersonation';
+import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -37,7 +38,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
   
-  // Impersonation context middleware (must be after auth)
+  // Platform policy middleware (must be after auth)
+  app.use(maintenanceMode); // Check maintenance mode for all routes
+  app.use(enforceSessionTimeout); // Check session timeout for all authenticated routes
+  app.use(enforceMFA); // Enforce MFA requirements
+  
+  // Impersonation context middleware (must be after auth and policies)
   app.use(impersonationContext);
 
   // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
