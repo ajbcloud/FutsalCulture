@@ -428,7 +428,7 @@ export default function SuperAdminParents() {
                                           <div className="flex-1">
                                             {/* Clickable player name linking to players page */}
                                             <Link 
-                                              href={`/super-admin/players?filter=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
+                                              to={`/super-admin/players?filter=${encodeURIComponent(`${player.firstName} ${player.lastName}`)}`}
                                               className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
                                             >
                                               {player.firstName} {player.lastName}

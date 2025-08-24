@@ -336,7 +336,7 @@ export default function SuperAdminPlayers() {
                     <div>
                       {/* Clickable parent name linking to parents page */}
                       <Link 
-                        href={`/super-admin/parents?filter=${encodeURIComponent(player.parentName)}`}
+                        to={`/super-admin/parents?filter=${encodeURIComponent(player.parentName)}`}
                         className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
                       >
                         {player.parentName}
