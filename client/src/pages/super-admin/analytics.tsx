@@ -8,8 +8,10 @@ import FilterBar from '@/components/shared/FilterBar';
 import StatCard from '@/components/super-admin/ui/StatCard';
 import Section from '@/components/super-admin/ui/Section';
 import CompanyKPIs from '@/components/super-admin/CompanyKPIs';
+import USMap from '@/components/super-admin/us-map';
+import { Badge } from '@/components/ui/badge';
 import { get } from '@/lib/api';
-import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, UserCheck, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, UserCheck, AlertTriangle, MapPin } from 'lucide-react';
 
 // Type definitions
 interface PlatformOverviewData {
@@ -45,6 +47,14 @@ interface TenantData {
   page: number;
   pageSize: number;
   totalRows: number;
+}
+
+interface GeographicData {
+  tenantsByState: Array<{ state: string; count: number }>;
+  uniqueStatesCount: number;
+  totalUSTenants: number;
+  sessionsByState: Array<{ state: string; count: number }>;
+  topStates: Array<{ state: string; count: number }>;
 }
 
 export default function Analytics() {
@@ -90,6 +100,12 @@ export default function Analytics() {
     queryKey: ['/api/super-admin/analytics/by-tenant', lane, status, tenantId, dateFrom, dateTo],
     queryFn: () => get<TenantData>(`/api/super-admin/analytics/by-tenant?${buildParams()}`),
     enabled: subTab === 'by-tenant'
+  });
+
+  const { data: geographicData } = useQuery<GeographicData>({
+    queryKey: ['/api/super-admin/geographic-analytics'],
+    queryFn: () => get('/api/super-admin/geographic-analytics'),
+    enabled: lane === 'platform'
   });
 
   const handleFilterApply = () => {
@@ -222,6 +238,87 @@ export default function Analytics() {
                       subtext="Paying customers"
                     />
                   </div>
+
+                  {/* US Geographic Distribution */}
+                  {geographicData && (
+                    <Card className="w-full">
+                      <CardHeader>
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="w-5 h-5" />
+                          <div>
+                            <CardTitle>Geographic Distribution</CardTitle>
+                            <p className="text-sm text-muted-foreground">Tenant distribution across US states (US-only for compliance)</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          <USMap 
+                            data={geographicData?.tenantsByState || []} 
+                            title="Tenant Distribution by State"
+                            className="mb-6"
+                          />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* US States Metric */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                                <div>
+                                  <h4 className="text-lg font-semibold">US States</h4>
+                                  <p className="text-sm text-muted-foreground">Active coverage</p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold">{geographicData?.uniqueStatesCount || 0}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {Math.round(((geographicData?.uniqueStatesCount || 0) / 50) * 100)}% coverage
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Top States */}
+                              <div>
+                                <h4 className="text-sm font-medium mb-3">Top 5 States by Tenant Count</h4>
+                                <div className="space-y-2">
+                                  {geographicData?.topStates?.map((state, index: number) => (
+                                    <div key={state.state} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                      <div className="flex items-center space-x-2">
+                                        <Badge variant="outline">#{index + 1}</Badge>
+                                        <span className="font-medium">{state.state}</span>
+                                      </div>
+                                      <span className="text-sm text-muted-foreground">
+                                        {state.count} tenant{state.count !== 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Quick Stats */}
+                            <div>
+                              <h4 className="text-sm font-medium mb-3">Geographic Summary</h4>
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                                  <span className="text-sm">Total US Tenants</span>
+                                  <span className="font-medium">{geographicData?.totalUSTenants || 0}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                                  <span className="text-sm">States Covered</span>
+                                  <span className="font-medium">{geographicData?.uniqueStatesCount || 0}/50</span>
+                                </div>
+                                <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                                  <span className="text-sm">Coverage</span>
+                                  <span className="font-medium">
+                                    {Math.round(((geographicData?.uniqueStatesCount || 0) / 50) * 100)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Platform panels */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

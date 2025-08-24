@@ -32,7 +32,7 @@ export default function Landing() {
       <section className="py-16 bg-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">Why Choose <BusinessBranding variant="default" textClassName="inline" inline={true} />?</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Why Choose <BusinessBranding variant="default" textClassName="inline text-white" inline={true} />?</h2>
             <p className="text-xl text-zinc-400">Professional training with flexible booking</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -65,7 +65,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold mb-4 text-[#ffffff]">Ready to Get Started?</h2>
           <p className="text-xl text-gray-600 mb-8">
-            Join hundreds of families who trust <BusinessBranding variant="default" textClassName="inline" inline={true} /> for their children's development.
+            Join hundreds of families who trust <BusinessBranding variant="default" textClassName="inline text-gray-600" inline={true} /> for their children's development.
           </p>
           <Button asChild size="lg" className="bg-futsal-600 hover:bg-futsal-700">
             <a href="/api/login">Create Parent Account</a>
@@ -77,9 +77,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="col-span-2">
-              <h3 className="text-2xl font-bold text-futsal-400 mb-4">
+              <div className="text-2xl font-bold text-futsal-400 mb-4">
                 <BusinessBranding variant="default" textClassName="text-futsal-400" />
-              </h3>
+              </div>
               <p className="text-gray-300 mb-4">
                 Elite futsal training for young athletes. Professional coaching with flexible scheduling.
               </p>
@@ -102,7 +102,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 <BusinessBranding variant="small" textClassName="inline text-gray-400" />. All rights reserved.</p>
+            <p>&copy; 2024 <BusinessBranding variant="small" textClassName="inline text-gray-400" inline={true} />. All rights reserved.</p>
           </div>
         </div>
       </footer>
