@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { Users, Search, Filter, Building2, Calendar, UserCheck, Shield, Mail } from "lucide-react";
+import { Users, Search, Filter, Building2, Calendar, UserCheck, Shield, Mail, X, User } from "lucide-react";
 
 interface Player {
   id: string;
@@ -26,6 +26,15 @@ interface Player {
   lastActivity: string;
   tenantName: string;
   tenantId: string;
+  parents?: Parent[];
+}
+
+interface Parent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
 }
 
 export default function SuperAdminPlayers() {
@@ -35,20 +44,37 @@ export default function SuperAdminPlayers() {
   const [selectedGender, setSelectedGender] = useState("all");
   const [portalAccessFilter, setPortalAccessFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
-  const [location] = useLocation();
+  const [highlightedPlayerId, setHighlightedPlayerId] = useState<string | null>(null);
+  const [showSearchBanner, setShowSearchBanner] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [location, navigate] = useLocation();
   
-  // Read URL parameters for filtering
+  // Handle URL parameters for deep-linking
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
-    const searchParam = urlParams.get('search');
-    const filterParam = urlParams.get('filter');
+    const q = urlParams.get('q')?.trim() ?? '';
+    const tenantId = urlParams.get('tenantId');
+    const focus = urlParams.get('focus');
+    const searchParam = urlParams.get('search'); // Legacy support
+    const filterParam = urlParams.get('filter'); // Legacy support
     
-    if (searchParam) {
-      setSearchQuery(searchParam);
+    // Set tenant filter first if provided
+    if (tenantId && tenantId !== 'all') {
+      setSelectedTenant(tenantId);
     }
-    if (filterParam) {
-      // When filter is passed, set it as search query to find the specific player
-      setSearchQuery(filterParam);
+    
+    // Handle search query (prioritize 'q' parameter)
+    const finalQuery = q || searchParam || filterParam || '';
+    if (finalQuery) {
+      setSearchQuery(finalQuery);
+      setShowSearchBanner(true);
+      
+      // Auto-focus search input if requested
+      if (focus === 'search') {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 100);
+      }
     }
   }, [location]);
 
@@ -74,7 +100,11 @@ export default function SuperAdminPlayers() {
       if (portalAccessFilter !== "all") params.set("portalAccess", portalAccessFilter);
       if (dateRange?.from) params.set("dateFrom", dateRange.from.toISOString());
       if (dateRange?.to) params.set("dateTo", dateRange.to.toISOString());
-      if (searchQuery) params.set("search", searchQuery);
+      if (searchQuery) {
+        params.set("q", searchQuery); // Use 'q' parameter for search
+        params.set("search", searchQuery); // Keep legacy support
+      }
+      params.set("include", "parents"); // Include parents data
 
       const response = await fetch(`/api/super-admin/players?${params}`, {
         credentials: 'include'
@@ -83,6 +113,81 @@ export default function SuperAdminPlayers() {
       return response.json();
     },
   });
+
+  // Clear search and reset filters
+  const clearSearch = () => {
+    setSearchQuery('');
+    setShowSearchBanner(false);
+    setHighlightedPlayerId(null);
+    
+    // Update URL to remove search parameters
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    urlParams.delete('q');
+    urlParams.delete('focus');
+    urlParams.delete('search');
+    urlParams.delete('filter');
+    
+    const newUrl = urlParams.toString() ? 
+      `/super-admin/players?${urlParams.toString()}` : 
+      '/super-admin/players';
+    navigate(newUrl);
+  };
+
+  // Build parent link for navigation to parents page
+  const buildParentLink = (parentName: string) => {
+    const params = new URLSearchParams();
+    params.set('q', parentName);
+    if (selectedTenant !== 'all') {
+      params.set('tenantId', selectedTenant);
+    }
+    params.set('focus', 'search');
+    return `/super-admin/parents?${params.toString()}`;
+  };
+
+  // Highlight matching players and scroll to view
+  useEffect(() => {
+    if (searchQuery && players.length > 0) {
+      const normalizedQuery = searchQuery.toLowerCase();
+      const matchingPlayers = players.filter(player => 
+        `${player.firstName} ${player.lastName}`.toLowerCase().includes(normalizedQuery) ||
+        player.parentEmail.toLowerCase().includes(normalizedQuery)
+      );
+      
+      if (matchingPlayers.length === 1) {
+        setHighlightedPlayerId(matchingPlayers[0].id);
+        
+        // Scroll to the highlighted player
+        setTimeout(() => {
+          const element = document.getElementById(`player-row-${matchingPlayers[0].id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      } else {
+        setHighlightedPlayerId(null);
+      }
+    }
+  }, [searchQuery, players]);
+
+  // Update URL when search query changes (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        const urlParams = new URLSearchParams(location.split('?')[1] || '');
+        urlParams.set('q', searchQuery);
+        if (selectedTenant !== 'all') {
+          urlParams.set('tenantId', selectedTenant);
+        }
+        
+        const newUrl = `/super-admin/players?${urlParams.toString()}`;
+        if (location !== newUrl) {
+          navigate(newUrl, { replace: true });
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedTenant, location, navigate]);
 
   const getAgeGroupBadge = (age: number) => {
     if (age <= 8) return <Badge variant="outline">U8</Badge>;
@@ -190,13 +295,26 @@ export default function SuperAdminPlayers() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div>
+            <div className="relative">
               <Input
+                ref={searchInputRef}
                 placeholder="Search players..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
+                className="w-full pr-8"
+                data-testid="input-search-players"
               />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
             </div>
             
             <Select value={selectedTenant} onValueChange={setSelectedTenant}>
@@ -267,6 +385,33 @@ export default function SuperAdminPlayers() {
         </CardContent>
       </Card>
 
+      {/* Search Banner */}
+      {showSearchBanner && searchQuery && (
+        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">
+                  Showing results for <strong>"{searchQuery}"</strong>
+                  {players.length > 1 && ` — ${players.length} matches found`}
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearSearch}
+                className="text-blue-600 hover:text-blue-700"
+                data-testid="button-clear-search-banner"
+              >
+                Clear
+                <X className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Players Table */}
       <Card>
         <CardHeader>
@@ -315,7 +460,11 @@ export default function SuperAdminPlayers() {
                   </TableRow>
                 ) : (
                   players.map((player) => (
-                <TableRow key={player.id}>
+                <TableRow 
+                  key={player.id}
+                  id={`player-row-${player.id}`}
+                  className={highlightedPlayerId === player.id ? "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800" : ""}
+                >
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Building2 className="w-4 h-4 text-muted-foreground" />
@@ -338,8 +487,9 @@ export default function SuperAdminPlayers() {
                     <div>
                       {/* Clickable parent name linking to parents page */}
                       <Link 
-                        to={`/super-admin/parents?filter=${encodeURIComponent(player.parentName)}`}
+                        to={buildParentLink(player.parentName)}
                         className="text-blue-600 hover:text-blue-800 cursor-pointer underline font-medium"
+                        data-testid={`link-parent-${player.id}`}
                       >
                         {player.parentName}
                       </Link>

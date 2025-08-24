@@ -1249,7 +1249,7 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; dateFrom?: string; dateTo?: string; parentId?: string }): Promise<any[]> {
+  async getSuperAdminPlayers(filters?: { tenantId?: string; search?: string; ageGroup?: string; gender?: string; portalAccess?: string; dateFrom?: string; dateTo?: string; parentId?: string; include?: string }): Promise<any[]> {
     let query = db.select({
       id: players.id,
       tenantId: players.tenantId,

@@ -3,17 +3,21 @@ import { storage } from '../../storage';
 
 export async function list(req: Request, res: Response) {
   try {
-    const { tenantId, search, ageGroup, gender, portalAccess, dateFrom, dateTo, parentId } = req.query;
+    const { tenantId, search, q, ageGroup, gender, portalAccess, dateFrom, dateTo, parentId, include } = req.query;
+    
+    // Use 'q' parameter if provided, otherwise fall back to 'search' for legacy support
+    const searchQuery = (q as string) || (search as string);
     
     const filters = {
       tenantId: tenantId as string,
-      search: search as string,
+      search: searchQuery,
       ageGroup: ageGroup as string,
       gender: gender as string,
       portalAccess: portalAccess as string,
       dateFrom: dateFrom as string,
       dateTo: dateTo as string,
       parentId: parentId as string,
+      include: include as string,
     };
     
     const players = await storage.getSuperAdminPlayers(filters);
