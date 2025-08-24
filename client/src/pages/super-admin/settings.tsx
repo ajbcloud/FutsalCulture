@@ -2091,14 +2091,38 @@ export default function SuperAdminSettings() {
                   <Label>IP Restrictions</Label>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">Limit admin access by IP</p>
-                    <Switch disabled />
+                    <Switch 
+                      checked={localPolicies?.security?.ipRestrictions?.enabled || false}
+                      onCheckedChange={(checked) => handlePolicyChange({
+                        security: {
+                          ...localPolicies?.security,
+                          ipRestrictions: {
+                            ...localPolicies?.security?.ipRestrictions,
+                            enabled: checked
+                          }
+                        }
+                      })}
+                      data-testid="switch-ip-restrictions"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>API Rate Limiting</Label>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">Enforce API request limits</p>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={localPolicies?.security?.apiRateLimit?.enabled || false}
+                      onCheckedChange={(checked) => handlePolicyChange({
+                        security: {
+                          ...localPolicies?.security,
+                          apiRateLimit: {
+                            ...localPolicies?.security?.apiRateLimit,
+                            enabled: checked
+                          }
+                        }
+                      })}
+                      data-testid="switch-api-rate-limiting"
+                    />
                   </div>
                 </div>
               </div>
@@ -2106,7 +2130,19 @@ export default function SuperAdminSettings() {
                 <Label>Session Monitoring</Label>
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">Monitor concurrent sessions</p>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={localPolicies?.security?.sessionMonitoring?.enabled || false}
+                    onCheckedChange={(checked) => handlePolicyChange({
+                      security: {
+                        ...localPolicies?.security,
+                        sessionMonitoring: {
+                          ...localPolicies?.security?.sessionMonitoring,
+                          enabled: checked
+                        }
+                      }
+                    })}
+                    data-testid="switch-session-monitoring"
+                  />
                 </div>
               </div>
             </CardContent>

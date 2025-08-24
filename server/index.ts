@@ -5,6 +5,7 @@ import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
 import './jobs/scheduler'; // Initialize usage rollup scheduler
+import { rateLimitMiddleware, ipRestrictionMiddleware, sessionMonitoringMiddleware } from './middleware/security';
 
 const app = express();
 
@@ -39,6 +40,11 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Apply security middleware
+app.use(rateLimitMiddleware);
+app.use(ipRestrictionMiddleware);
+app.use(sessionMonitoringMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();

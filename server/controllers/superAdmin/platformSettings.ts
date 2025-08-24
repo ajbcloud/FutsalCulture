@@ -35,6 +35,20 @@ const PoliciesSchema = z.object({
     enabled: z.boolean(),
     message: z.string(),
   }),
+  security: z.object({
+    ipRestrictions: z.object({
+      enabled: z.boolean(),
+      allowedIPs: z.array(z.string()),
+    }),
+    apiRateLimit: z.object({
+      enabled: z.boolean(),
+      requestsPerMinute: z.number().min(1).max(10000),
+    }),
+    sessionMonitoring: z.object({
+      enabled: z.boolean(),
+      maxConcurrentSessions: z.number().min(1).max(100),
+    }),
+  }),
 });
 
 const TenantDefaultsSchema = z.object({
@@ -79,6 +93,11 @@ const defaultPolicies: Policies = {
     enabled: false,
     message: 'The platform is undergoing scheduled maintenance. We\'ll be back shortly.',
   },
+  security: {
+    ipRestrictions: { enabled: false, allowedIPs: [] },
+    apiRateLimit: { enabled: true, requestsPerMinute: 60 },
+    sessionMonitoring: { enabled: true, maxConcurrentSessions: 3 }
+  }
 };
 
 const defaultTenantDefaults: TenantDefaults = {
