@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UserCheck, Users, Shield, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
 
 export default function SignupParentFlow() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -36,13 +37,9 @@ export default function SignupParentFlow() {
     gender: "boys" as "boys" | "girls",
   });
   
-  // Consents
-  const [consents, setConsents] = useState({
-    medical: false,
-    liability: false,
-    photo: false,
-    privacy: false,
-  });
+  // Consent document modal
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [signedConsents, setSignedConsents] = useState<any[]>([]);
 
   const handleParentSubmit = () => {
     if (parentData.password !== parentData.confirmPassword) {
@@ -57,19 +54,19 @@ export default function SignupParentFlow() {
   };
 
   const handleChildSubmit = () => {
-    setStep(3);
+    // Move to consent step - show consent modal
+    setShowConsentModal(true);
   };
 
-  const handleConsentSubmit = async () => {
-    if (!Object.values(consents).every(v => v)) {
-      toast({
-        title: "Consent required",
-        description: "Please accept all terms to continue",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleConsentComplete = async (signedDocuments: any[]) => {
+    setSignedConsents(signedDocuments);
+    setShowConsentModal(false);
     
+    // Complete the signup process
+    await completeSignup(signedDocuments);
+  };
+
+  const completeSignup = async (consentDocuments: any[]) => {
     setLoading(true);
     try {
       // Create parent account
@@ -102,21 +99,8 @@ export default function SignupParentFlow() {
         }),
       });
       
-      // Record consents
-      for (const [key, value] of Object.entries(consents)) {
-        if (value) {
-          await apiRequest("/api/consent", {
-            method: "POST",
-            body: JSON.stringify({
-              subjectId: playerResponse.id,
-              subjectRole: "player",
-              policyKey: key,
-              policyVersion: "1.0",
-              acceptedBy: parentResponse.id,
-            }),
-          });
-        }
-      }
+      // Note: Consent documents are already signed and stored via the ConsentDocumentModal
+      // The signed documents are linked to the player via the consent API
       
       toast({
         title: "Account created!",
@@ -312,52 +296,37 @@ export default function SignupParentFlow() {
               <div className="flex justify-center mb-4">
                 <Shield className="h-12 w-12 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Terms & Consent</CardTitle>
+              <CardTitle className="text-2xl">Review Information</CardTitle>
               <CardDescription>
-                Please review and accept our terms
+                Please review your information before proceeding to consent documents
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={consents.medical}
-                    onCheckedChange={(checked) => setConsents({...consents, medical: checked as boolean})}
-                  />
-                  <span className="text-sm">
-                    I consent to emergency medical treatment for my child if needed
-                  </span>
-                </label>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4">
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Parent Information</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {parentData.firstName} {parentData.lastName} • {parentData.email}
+                  </p>
+                </div>
                 
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={consents.liability}
-                    onCheckedChange={(checked) => setConsents({...consents, liability: checked as boolean})}
-                  />
-                  <span className="text-sm">
-                    I understand and accept the liability waiver
-                  </span>
-                </label>
-                
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={consents.photo}
-                    onCheckedChange={(checked) => setConsents({...consents, photo: checked as boolean})}
-                  />
-                  <span className="text-sm">
-                    I consent to photos/videos being taken for promotional purposes
-                  </span>
-                </label>
-                
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={consents.privacy}
-                    onCheckedChange={(checked) => setConsents({...consents, privacy: checked as boolean})}
-                  />
-                  <span className="text-sm">
-                    I have read and accept the privacy policy
-                  </span>
-                </label>
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Child Information</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {childData.firstName} {childData.lastName} • Born: {new Date(dob).toLocaleDateString()} • {childData.gender}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
+                  <Shield className="h-4 w-4" />
+                  <span className="font-medium">Next: Consent Documents</span>
+                </div>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  You'll be asked to review and digitally sign consent documents including medical authorization, 
+                  liability waivers, and photo releases for your child.
+                </p>
               </div>
               
               <div className="flex gap-2">
@@ -370,17 +339,34 @@ export default function SignupParentFlow() {
                   Back
                 </Button>
                 <Button 
-                  onClick={handleConsentSubmit} 
+                  onClick={handleChildSubmit} 
                   className="flex-1"
-                  disabled={loading || !Object.values(consents).every(v => v)}
-                  data-testid="button-create-account"
+                  disabled={loading}
+                  data-testid="button-review-consent"
                 >
-                  {loading ? "Creating Account..." : "Create Account"}
+                  {loading ? "Processing..." : "Review & Sign Consent Documents"}
                 </Button>
               </div>
             </CardContent>
           </>
         )}
+
+        {/* Consent Document Modal */}
+        <ConsentDocumentModal
+          isOpen={showConsentModal}
+          onClose={() => setShowConsentModal(false)}
+          onComplete={handleConsentComplete}
+          playerData={{
+            firstName: childData.firstName,
+            lastName: childData.lastName,
+            birthDate: dob
+          }}
+          parentData={{
+            firstName: parentData.firstName,
+            lastName: parentData.lastName
+          }}
+          isParentSigning={true}
+        />
       </Card>
     </div>
   );
