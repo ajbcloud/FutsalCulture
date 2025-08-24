@@ -756,15 +756,23 @@ export default function PlanManagement() {
                 }
 
                 try {
-                  await apiRequest(`/api/super-admin/tenant-overrides`, {
+                  const response = await fetch('/api/super-admin/tenant-overrides', {
                     method: 'POST',
-                    body: {
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
                       tenantId: selectedTenant,
                       featureKey: newOverride.featureKey,
                       enabled: newOverride.enabled,
                       reason: newOverride.reason
-                    }
+                    })
                   });
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
 
                   toast({
                     title: "Success",
