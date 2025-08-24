@@ -19,6 +19,7 @@ interface AIInsightsBarProps {
     to?: string;
     tenantId?: string;
     status?: string;
+    lane?: 'platform' | 'commerce' | 'kpis';
   };
   onOpenAskAnalytics: () => void;
   onNavigate: (tab: string, filters?: any) => void;
@@ -65,6 +66,7 @@ export function AIInsightsBar({ filters, onOpenAskAnalytics, onNavigate }: AIIns
       if (filters.to) params.append('to', filters.to);
       if (filters.tenantId) params.append('tenantId', filters.tenantId);
       if (filters.status) params.append('status', filters.status);
+      if (filters.lane) params.append('lane', filters.lane);
       
       const response = await fetch(`/api/super-admin/ai/insights?${params}`);
       if (!response.ok) throw new Error('Failed to fetch AI insights');

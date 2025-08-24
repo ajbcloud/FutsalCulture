@@ -225,7 +225,8 @@ export default function AnalyticsV2() {
             from: dateFrom,
             to: dateTo,
             tenantId,
-            status: lane === 'platform' ? 'platform' : 'commerce'
+            status,
+            lane
           }}
           onOpenAskAnalytics={() => setIsAskAnalyticsOpen(true)}
           onNavigate={handleAINavigate}
