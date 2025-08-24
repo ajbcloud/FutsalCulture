@@ -153,6 +153,7 @@ export const players = pgTable("players", {
   ageBand: ageBandEnum("age_band"),
   isTeen: boolean("is_teen").notNull().default(false),
   isAdult: boolean("is_adult").notNull().default(false),
+  becameAdultAt: timestamp("became_adult_at"), // Track when player turned 18
   gender: genderEnum("gender").notNull(),
   parentId: varchar("parent_id").notNull(),
   parent2Id: varchar("parent2_id"), // Second parent support

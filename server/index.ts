@@ -6,6 +6,7 @@ import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
 import './jobs/scheduler'; // Initialize usage rollup scheduler
 import { scheduleBirthdayUpshift } from './jobs/birthday-upshift';
+import { scheduleAgeTransitionProcessor } from './jobs/age-transition';
 import { rateLimitMiddleware, ipRestrictionMiddleware, sessionMonitoringMiddleware } from './middleware/security';
 import policyRouter from './routes/policy';
 import signupRouter from './routes/signup';
@@ -127,6 +128,7 @@ app.use((req, res, next) => {
     // Start background processors
     startWaitlistProcessor();
     scheduleBirthdayUpshift();
+    scheduleAgeTransitionProcessor();
   });
 
   // Background job to clean up expired reservations (pending payment > 1 hour)

@@ -1241,7 +1241,14 @@ export function setupSuperAdminRoutes(app: Express) {
         return res.status(400).json({ error: 'Tenant ID required' });
       }
 
-      const consentStatus = await storage.getPlayerConsentStatus(tenantId as string, playerId);
+      // Import age transition functions
+      const { getConsentStatusWithAgeTransition, processAgeTransitions } = await import('../services/ageTransition');
+      
+      // Process any age transitions for this player first
+      await processAgeTransitions(tenantId as string);
+      
+      // Get consent status with age transition awareness
+      const consentStatus = await getConsentStatusWithAgeTransition(playerId, tenantId as string);
       res.json(consentStatus);
     } catch (error) {
       console.error('Error fetching player consent status:', error);

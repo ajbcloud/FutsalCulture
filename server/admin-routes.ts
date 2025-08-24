@@ -4273,7 +4273,14 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         return res.status(400).json({ error: 'Tenant ID required' });
       }
 
-      const consentStatus = await storage.getPlayerConsentStatus(tenantId, playerId);
+      // Import age transition functions
+      const { getConsentStatusWithAgeTransition, processAgeTransitions } = await import('../services/ageTransition');
+      
+      // Process any age transitions for this player first
+      await processAgeTransitions(tenantId);
+      
+      // Get consent status with age transition awareness
+      const consentStatus = await getConsentStatusWithAgeTransition(playerId, tenantId);
       res.json(consentStatus);
     } catch (error) {
       console.error('Error fetching player consent status:', error);

@@ -57,18 +57,24 @@ function SuperAdminParentConsentStatusCell({ parentId, parentName, tenantId }: {
     return <span className="text-muted-foreground">—</span>;
   }
 
-  const { completedCount, missingCount, totalTemplates } = consentStatus;
-  const isComplete = missingCount === 0 && totalTemplates > 0;
+  const { completedCount, missingCount, totalTemplates, needsAdultResign, invalidatedTypes } = consentStatus;
+  const isComplete = missingCount === 0 && totalTemplates > 0 && !needsAdultResign;
+  const hasAgeTransition = needsAdultResign;
 
   return (
     <div className="flex items-center gap-1">
       {isComplete ? (
         <FileCheck className="w-4 h-4 text-green-500" />
       ) : (
-        <FileX className="w-4 h-4 text-red-500" />
+        <FileX className={`w-4 h-4 ${hasAgeTransition ? 'text-orange-500' : 'text-red-500'}`} />
       )}
-      <span className={`text-sm ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+      <span className={`text-sm ${isComplete ? 'text-green-600' : hasAgeTransition ? 'text-orange-600' : 'text-red-600'}`}>
         {completedCount}/{totalTemplates}
+        {hasAgeTransition && (
+          <span className="ml-1 text-xs" title={`Player turned 18 - needs to re-sign: ${invalidatedTypes?.join(', ') || 'all forms'}`}>
+            🎂
+          </span>
+        )}
       </span>
     </div>
   );
