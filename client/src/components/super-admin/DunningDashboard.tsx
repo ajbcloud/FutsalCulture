@@ -290,8 +290,10 @@ export default function DunningDashboard() {
               )}
             </>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No dunning events found</p>
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg">No dunning events found</p>
+              <p className="text-sm text-muted-foreground mt-2">All payments are processing successfully</p>
             </div>
           )}
         </CardContent>

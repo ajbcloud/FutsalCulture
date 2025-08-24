@@ -164,108 +164,152 @@ export default function SuperAdminSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-none">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Platform Settings</h1>
-          <p className="text-muted-foreground">Configure global platform settings and integrations</p>
+          <p className="text-lg text-muted-foreground">Configure global platform settings and integrations</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm">
+            <TestTube className="w-4 h-4 mr-2" />
+            Test All
+          </Button>
+          <Button>
+            <Save className="w-4 h-4 mr-2" />
+            Save Changes
+          </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="plans">Plans & Billing</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="maintenance">System</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <TabsList className="grid w-full max-w-4xl grid-cols-5 h-12">
+          <TabsTrigger value="general" className="text-sm font-medium flex items-center gap-1">
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">General</span>
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="text-sm font-medium flex items-center gap-1">
+            <CreditCard className="w-4 h-4" />
+            <span className="hidden sm:inline">Plans</span>
+          </TabsTrigger>
+          <TabsTrigger value="features" className="text-sm font-medium flex items-center gap-1">
+            <SettingsIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Features</span>
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="text-sm font-medium flex items-center gap-1">
+            <Key className="w-4 h-4" />
+            <span className="hidden sm:inline">Integrations</span>
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="text-sm font-medium flex items-center gap-1">
+            <Server className="w-4 h-4" />
+            <span className="hidden sm:inline">System</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                Platform Configuration
-              </CardTitle>
-              <CardDescription>
-                Basic platform settings and policies
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        <TabsContent value="general" className="space-y-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Platform Configuration
+                </CardTitle>
+                <CardDescription>
+                  Basic platform settings and policies
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="platformName">Platform Name</Label>
+                    <Input
+                      id="platformName"
+                      value={settings.general.platformName}
+                      onChange={(e) => {
+                        const newSettings = {
+                          ...settings,
+                          general: { ...settings.general, platformName: e.target.value }
+                        };
+                        // Update local state would go here if we had it
+                      }}
+                      placeholder="PlayHQ"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="supportEmail">Support Email</Label>
+                    <Input
+                      id="supportEmail"
+                      type="email"
+                      value={settings.general.supportEmail}
+                      placeholder="support@playhq.app"
+                    />
+                  </div>
+                </div>
+                
                 <div>
-                  <Label htmlFor="platformName">Platform Name</Label>
-                  <Input
-                    id="platformName"
-                    value={settings.general.platformName}
-                    onChange={(e) => {
-                      const newSettings = {
-                        ...settings,
-                        general: { ...settings.general, platformName: e.target.value }
-                      };
-                      // Update local state would go here if we had it
-                    }}
-                    placeholder="PlayHQ"
+                  <Label htmlFor="termsOfService">Terms of Service</Label>
+                  <Textarea
+                    id="termsOfService"
+                    value={settings.general.termsOfService}
+                    placeholder="Enter terms of service content..."
+                    rows={5}
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor="supportEmail">Support Email</Label>
-                  <Input
-                    id="supportEmail"
-                    type="email"
-                    value={settings.general.supportEmail}
-                    placeholder="support@playhq.app"
+                  <Label htmlFor="privacyPolicy">Privacy Policy</Label>
+                  <Textarea
+                    id="privacyPolicy"
+                    value={settings.general.privacyPolicy}
+                    placeholder="Enter privacy policy content..."
+                    rows={5}
                   />
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="termsOfService">Terms of Service</Label>
-                <Textarea
-                  id="termsOfService"
-                  value={settings.general.termsOfService}
-                  placeholder="Enter terms of service content..."
-                  rows={4}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="privacyPolicy">Privacy Policy</Label>
-                <Textarea
-                  id="privacyPolicy"
-                  value={settings.general.privacyPolicy}
-                  placeholder="Enter privacy policy content..."
-                  rows={4}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <Label>Maintenance Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Temporarily disable access to all tenant portals
-                  </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  System Controls
+                </CardTitle>
+                <CardDescription>
+                  Platform-wide operational settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label className="text-base font-medium">Maintenance Mode</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Temporarily disable access to all tenant portals
+                      </p>
+                    </div>
+                    <Switch checked={settings.general.maintenanceMode} />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label className="text-base font-medium">Allow New Tenants</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Enable new organization registrations
+                      </p>
+                    </div>
+                    <Switch checked={settings.general.allowNewTenants} />
+                  </div>
+
+                  <div className="pt-4">
+                    <Button onClick={() => handleSaveSettings('general', settings.general)} className="w-full">
+                      <Save className="w-4 h-4 mr-2" />
+                      Save General Settings
+                    </Button>
+                  </div>
                 </div>
-                <Switch checked={settings.general.maintenanceMode} />
-              </div>
-              
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <Label>Allow New Tenants</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable new organization registrations
-                  </p>
-                </div>
-                <Switch checked={settings.general.allowNewTenants} />
-              </div>
-              
-              <Button onClick={() => handleSaveSettings('general', settings.general)}>
-                <Save className="w-4 h-4 mr-2" />
-                Save General Settings
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="plans" className="space-y-6">

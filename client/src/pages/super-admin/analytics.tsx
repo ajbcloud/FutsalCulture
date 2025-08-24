@@ -486,36 +486,36 @@ export default function Analytics() {
             <TabsContent value="by-tenant" className="space-y-8">
               <Section title={`${lane === 'platform' ? 'Platform' : 'Commerce'} Revenue by Tenant`} subtitle="Detailed breakdown per organization">
                 {tenantLoading ? (
-                  <div className="h-64 bg-muted/50 rounded-lg animate-pulse" />
+                  <div className="h-80 bg-muted/50 rounded-lg animate-pulse" />
                 ) : tenantData?.rows?.length ? (
-                  <Card>
+                  <Card className="w-full">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
-                          <thead className="border-b">
+                          <thead className="bg-muted/50">
                             <tr>
-                              <th className="text-left p-4 font-medium">Tenant</th>
-                              <th className="text-right p-4 font-medium">Revenue</th>
-                              <th className="text-right p-4 font-medium">Transactions</th>
-                              <th className="text-right p-4 font-medium">Failed</th>
-                              <th className="text-right p-4 font-medium">Refunds</th>
+                              <th className="text-left p-4 font-semibold">Tenant</th>
+                              <th className="text-right p-4 font-semibold">Revenue</th>
+                              <th className="text-right p-4 font-semibold">Transactions</th>
+                              <th className="text-right p-4 font-semibold">Failed</th>
+                              <th className="text-right p-4 font-semibold">Refunds</th>
                             </tr>
                           </thead>
                           <tbody>
                             {tenantData.rows.map((row) => (
-                              <tr key={row.tenantId} className="border-b last:border-b-0">
-                                <td className="p-4 font-medium">{row.tenantName}</td>
-                                <td className="p-4 text-right text-green-600 dark:text-green-400">
+                              <tr key={row.tenantId} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+                                <td className="p-4 font-semibold">{row.tenantName}</td>
+                                <td className="p-4 text-right text-green-600 dark:text-green-400 font-medium">
                                   ${Math.round(row.revenue / 100).toLocaleString()}
                                 </td>
-                                <td className="p-4 text-right">{row.transactions}</td>
+                                <td className="p-4 text-right font-medium">{row.transactions}</td>
                                 <td className="p-4 text-right">
-                                  <span className={row.failed > 0 ? 'text-red-600 dark:text-red-400' : ''}>
+                                  <span className={`font-medium ${row.failed > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
                                     {row.failed}
                                   </span>
                                 </td>
                                 <td className="p-4 text-right">
-                                  <span className={row.refunds > 0 ? 'text-yellow-600 dark:text-yellow-400' : ''}>
+                                  <span className={`font-medium ${row.refunds > 0 ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
                                     {row.refunds}
                                   </span>
                                 </td>

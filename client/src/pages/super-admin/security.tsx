@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, ShieldCheck, Users, UserCheck, Search, Ban, AlertTriangle, CheckCircle, Clock, Code } from 'lucide-react';
+import { Shield, ShieldCheck, Users, UserCheck, Search, Ban, AlertTriangle, CheckCircle, Clock, Code, Download, RefreshCw, TestTube, BarChart3, FileText } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import FilterBar from '@/components/shared/FilterBar';
 
@@ -123,53 +123,65 @@ export default function SecurityAudit() {
   }) || [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-none">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-foreground">
             Security & Audit
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-lg text-muted-foreground mt-1">
             Monitor authentication security and track administrative activities
           </p>
         </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Export Logs
+          </Button>
+          <Button size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <FilterBar
-        dateFrom={dateRange.from}
-        dateTo={dateRange.to}
-        onDateRangeChange={(from, to) => setDateRange({ from, to })}
-      />
+      <div className="bg-muted/50 p-4 rounded-lg">
+        <FilterBar
+          dateFrom={dateRange.from}
+          dateTo={dateRange.to}
+          onDateRangeChange={(from, to) => setDateRange({ from, to })}
+        />
+      </div>
 
       {/* MFA Adoption Section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-          <Shield className="h-5 w-5 mr-2" />
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold text-foreground flex items-center">
+          <Shield className="h-6 w-6 mr-3" />
           MFA Adoption
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card data-testid="super-admin-mfa">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card data-testid="super-admin-mfa" className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-base font-semibold">Super Admins</CardTitle>
+              <ShieldCheck className="h-5 w-5 text-green-600" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {overviewLoading ? (
                 <div className="animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-10 bg-muted rounded mb-3"></div>
+                  <div className="h-4 bg-muted rounded"></div>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-baseline space-x-2 mb-2">
-                    <span className="text-2xl font-bold">
+                  <div className="flex items-baseline space-x-2 mb-3">
+                    <span className="text-3xl font-bold text-green-600">
                       {overview?.superAdmins.withMfa || 0}
                     </span>
-                    <span className="text-lg text-gray-500">/ {overview?.superAdmins.total || 0}</span>
+                    <span className="text-xl text-muted-foreground">/ {overview?.superAdmins.total || 0}</span>
                   </div>
-                  <Progress value={superAdminMfaPercentage} className="mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                  <Progress value={superAdminMfaPercentage} className="mb-3 h-3" />
+                  <p className="text-sm text-green-600 font-medium">
                     {superAdminMfaPercentage.toFixed(1)}% have MFA enabled
                   </p>
                   {superAdminMfaPercentage < 100 && (

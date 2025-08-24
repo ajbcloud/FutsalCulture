@@ -121,79 +121,93 @@ export default function CommsDeliverability() {
       }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-none">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-foreground">
             Communications Deliverability
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-lg text-muted-foreground mt-1">
             Monitor email and SMS delivery performance across all tenants
           </p>
         </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm">
+            <FileDown className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
+          <Button size="sm">
+            <TestTube className="w-4 h-4 mr-2" />
+            Test Delivery
+          </Button>
+        </div>
       </div>
 
-      <FilterBar
-        dateFrom={dateRange.from}
-        dateTo={dateRange.to}
-        onDateRangeChange={(from, to) => setDateRange({ from, to })}
-      />
+      <div className="bg-muted/50 p-4 rounded-lg">
+        <FilterBar
+          dateFrom={dateRange.from}
+          dateTo={dateRange.to}
+          onDateRangeChange={(from, to) => setDateRange({ from, to })}
+        />
+      </div>
 
       <Tabs value={selectedChannel} onValueChange={(value) => setSelectedChannel(value as 'email' | 'sms')}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="email" data-testid="tab-email">
-            <Mail className="h-4 w-4 mr-2" />
-            Email
-          </TabsTrigger>
-          <TabsTrigger value="sms" data-testid="tab-sms">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            SMS
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          <TabsList className="grid grid-cols-2 max-w-lg h-12 bg-muted">
+            <TabsTrigger value="email" data-testid="tab-email" className="text-base font-medium">
+              <Mail className="h-5 w-5 mr-2" />
+              Email
+            </TabsTrigger>
+            <TabsTrigger value="sms" data-testid="tab-sms" className="text-base font-medium">
+              <MessageSquare className="h-5 w-5 mr-2" />
+              SMS
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="email" className="space-y-6">
+        <TabsContent value="email" className="space-y-8">
           {/* Email KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card data-testid="email-delivered">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-                <Mail className="h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+            <Card data-testid="email-delivered" className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold">Delivered</CardTitle>
+                <Mail className="h-5 w-5 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-green-600">
                   {emailStats.delivered.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-green-600 font-medium">
                   {emailDeliveryRate.toFixed(1)}% delivery rate
                 </p>
               </CardContent>
             </Card>
 
-            <Card data-testid="email-failed">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Failed</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <Card data-testid="email-failed" className="border-l-4 border-l-red-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold">Failed</CardTitle>
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-3xl font-bold text-red-600">
                   {emailStats.failed.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Bounces, drops, spam reports
                 </p>
               </CardContent>
             </Card>
 
-            <Card data-testid="email-opens">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Opens</CardTitle>
-                <Eye className="h-4 w-4 text-muted-foreground" />
+            <Card data-testid="email-opens" className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold">Opens</CardTitle>
+                <Eye className="h-5 w-5 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-3xl font-bold text-blue-600">
                   {emailStats.opens.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-blue-600 font-medium">
                   {emailOpenRate.toFixed(1)}% open rate
                 </p>
               </CardContent>

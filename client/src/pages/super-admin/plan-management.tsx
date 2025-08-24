@@ -45,7 +45,8 @@ import {
   Copy,
   RefreshCw,
   History,
-  Loader2
+  Loader2,
+  Grid
 } from 'lucide-react';
 
 // Category icons
@@ -376,16 +377,16 @@ export default function PlanManagement() {
   const plans = comparisonData?.plans || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-none">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Plan & Feature Management</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Plan & Feature Management</h1>
+          <p className="text-lg text-muted-foreground mt-1">
             Configure features and limits for each subscription plan
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowAuditDialog(true)}>
             <History className="h-4 w-4 mr-2" />
             View Audit Log
@@ -407,53 +408,68 @@ export default function PlanManagement() {
 
       {/* Enhanced Tabs for Different Views */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="plan-features">Plan Features</TabsTrigger>
-          <TabsTrigger value="comparison-matrix">Comparison Matrix</TabsTrigger>
-          <TabsTrigger value="tenant-overrides">Tenant Overrides</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          <TabsList className="grid grid-cols-3 max-w-4xl h-12 bg-muted">
+            <TabsTrigger value="plan-features" className="text-base font-medium flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Plan Features
+            </TabsTrigger>
+            <TabsTrigger value="comparison-matrix" className="text-base font-medium flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Comparison Matrix
+            </TabsTrigger>
+            <TabsTrigger value="tenant-overrides" className="text-base font-medium flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Tenant Overrides
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Plan Features Tab */}
-        <TabsContent value="plan-features" className="mt-6">
+        <TabsContent value="plan-features" className="mt-8">
           <Tabs value={selectedPlan} onValueChange={setSelectedPlan}>
-            <TabsList className="grid w-full grid-cols-3">
-              {plans.map((plan) => (
-                <TabsTrigger key={plan.code} value={plan.code}>
-                  <div className="flex items-center gap-2">
-                    {plan.code === 'elite' && <Crown className="h-4 w-4" />}
-                    {plan.code === 'growth' && <TrendingUp className="h-4 w-4" />}
-                    {plan.code === 'core' && <Zap className="h-4 w-4" />}
-                    <span>{plan.name}</span>
-                    <Badge variant="secondary" className="ml-2">
-                      ${(plan.priceCents / 100).toFixed(0)}/mo
-                    </Badge>
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="flex justify-center mb-8">
+              <TabsList className="grid grid-cols-3 max-w-4xl h-16 bg-muted p-1">
+                {plans.map((plan) => (
+                  <TabsTrigger key={plan.code} value={plan.code} className="py-3">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        {plan.code === 'elite' && <Crown className="h-5 w-5 text-yellow-500" />}
+                        {plan.code === 'growth' && <TrendingUp className="h-5 w-5 text-green-500" />}
+                        {plan.code === 'core' && <Zap className="h-5 w-5 text-blue-500" />}
+                        <span className="font-medium">{plan.name}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        ${(plan.priceCents / 100).toFixed(0)}/mo
+                      </Badge>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-            <TabsContent value={selectedPlan} className="mt-6">
+            <TabsContent value={selectedPlan} className="mt-8">
               {/* Quick Actions */}
-              <Card className="mb-6">
+              <Card className="mb-8">
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-xl">Quick Actions</CardTitle>
+                  <CardDescription className="text-base">
                     Copy features from another plan or reset to defaults
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2">
+                <CardContent className="p-6">
+                  <div className="flex flex-wrap gap-3">
                     {plans
                       .filter(p => p.code !== selectedPlan)
                       .map(plan => (
                         <Button
                           key={plan.code}
                           variant="outline"
-                          size="sm"
                           onClick={() => handleCopyFeatures(plan.code)}
                           disabled={bulkUpdateMutation.isPending}
+                          className="flex items-center gap-2"
                         >
-                          <Copy className="h-4 w-4 mr-2" />
+                          <Copy className="h-4 w-4" />
                           Copy from {plan.name}
                         </Button>
                       ))}
@@ -462,14 +478,14 @@ export default function PlanManagement() {
               </Card>
 
               {/* Features Grid */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {Object.entries(featuresByCategory).map(([category, features]) => {
                   const Icon = categoryIcons[category] || Package;
                   return (
-                    <Card key={category}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Icon className="h-5 w-5" />
+                    <Card key={category} className="w-full">
+                      <CardHeader className="pb-6">
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                          <Icon className="h-6 w-6" />
                           {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </CardTitle>
                       </CardHeader>
