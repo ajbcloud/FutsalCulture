@@ -816,7 +816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hour12: true 
         })}`,
         sessionDate: new Date(session.startTime).toISOString().split('T')[0], // YYYY-MM-DD format
-        sessionStartTime: new Date(session.startTime).toTimeString().split(' ')[0], // HH:MM:SS format
+        sessionStartTime: new Date(session.startTime).toISOString().split('T')[1].split('.')[0], // HH:MM:SS format in UTC
         location: session.location,
         paid: session.paid,
         paymentId: session.paymentId,

@@ -90,8 +90,8 @@ export function PlayerSessionHistoryDropdown({
     // If session doesn't have proper date/time info, deny refund (be conservative)
     if (!session.sessionDate || !session.sessionStartTime) return false;
     
-    // Parse session date and time
-    const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionStartTime}`);
+    // Parse session date and time as UTC
+    const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionStartTime}Z`);
     if (isNaN(sessionDateTime.getTime())) return false; // Invalid date, deny refund
     
     const now = new Date();
