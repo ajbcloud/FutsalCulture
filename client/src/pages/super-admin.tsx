@@ -15,7 +15,6 @@ import SuperAdminPayments from "@/components/super-admin/payments";
 import SuperAdminRegistrations from "@/components/super-admin/registrations";
 import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
-import SuperAdminHelpRequests from "@/components/super-admin/help-requests";
 import Analytics from "@/pages/super-admin/analytics";
 import AnalyticsV2 from "@/pages/super-admin/analytics-v2";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
@@ -38,7 +37,6 @@ import {
   Calendar,
   CreditCard,
   ClipboardList,
-  HelpCircle,
   Home,
   Menu,
   X,
@@ -97,7 +95,6 @@ export default function SuperAdminPage() {
     { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: basePath === "/super-admin/registrations" },
     { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: basePath === "/super-admin/parents" },
     { name: "Players", href: "/super-admin/players", icon: Shirt, current: basePath === "/super-admin/players" },
-    { name: "Help Requests", href: "/super-admin/help", icon: HelpCircle, current: basePath === "/super-admin/help" },
   ];
 
   // Render current page content
@@ -136,8 +133,6 @@ export default function SuperAdminPage() {
         return <SuperAdminParents />;
       case basePath === "/super-admin/players":
         return <SuperAdminPlayers />;
-      case basePath === "/super-admin/help":
-        return <SuperAdminHelpRequests />;
       default:
         return <SuperAdminOverview />;
     }
@@ -280,13 +275,6 @@ export default function SuperAdminPage() {
                     <Link href="/admin" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       Admin Portal
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem asChild>
-                    <Link href="/help" className="cursor-pointer">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Help
                     </Link>
                   </DropdownMenuItem>
                   
