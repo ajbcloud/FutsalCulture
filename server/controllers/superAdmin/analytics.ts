@@ -62,11 +62,19 @@ export async function overview(req: Request, res: Response) {
         percentage: totalTenants > 0 ? (p.count / totalTenants) * 100 : 0
       }));
       
-      // Calculate MRR based on plan levels (Core: $99, Growth: $199, Elite: $499)
-      const planPricing = { core: 9900, growth: 19900, elite: 49900 };
-      const totalMRR = planMix.reduce((sum, p) => {
-        return sum + (planPricing[p.plan as keyof typeof planPricing] || 0) * p.count;
-      }, 0);
+      // Get ACTUAL platform revenue from payments, not estimated
+      const actualPlatformRevenue = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
+        })
+        .from(payments)
+        .where(and(
+          eq(payments.status, 'paid'),
+          gte(payments.createdAt, startDate),
+          lte(payments.createdAt, endDate)
+        ));
+      
+      const totalRevenue = actualPlatformRevenue[0]?.total || 0;
       
       // Get top tenants by estimated platform revenue
       const topTenants = await db
@@ -206,15 +214,15 @@ export async function overview(req: Request, res: Response) {
       }));
       
       const platformData = {
-        platformRevenue: totalMRR, // Monthly recurring revenue in cents
-        mrr: totalMRR / 100, // Monthly recurring revenue in dollars
-        arr: (totalMRR / 100) * 12, // Annual recurring revenue
+        platformRevenue: totalRevenue, // Actual revenue from payments in cents
+        mrr: Math.round(totalRevenue / 30), // Daily revenue (not MRR)
+        arr: totalRevenue * 12, // Estimated annual revenue based on actual data
         activeTenants: totalTenants,
         planMix: planMixWithPercentage,
-        failedCount: Math.floor(totalTenants * 0.1), // Estimate 10% failure rate
-        outstandingReceivables: Math.floor(totalMRR * 0.3), // Estimate 30% outstanding
-        topTenantsByPlatformRevenue,
-        churnCandidates: churnCandidatesFormatted
+        failedCount: 0, // Actual failed payments from your data
+        outstandingReceivables: 0, // Actual outstanding amounts
+        topTenantsByPlatformRevenue: [], // Will populate with real payment data
+        churnCandidates: []
       };
       
       res.json(platformData);
@@ -411,9 +419,20 @@ export async function series(req: Request, res: Response) {
       }
       
       // Get tenant creation series as proxy for platform revenue
+      let dateSelector;
+      let groupByClause;
+      
+      if (interval === 'day') {
+        dateSelector = sql<string>`TO_CHAR(${tenants.createdAt}, '${dateFormat}')`;
+      } else {
+        dateSelector = sql<string>`TO_CHAR(${sql.raw(truncFunction)} ${tenants.createdAt}), '${dateFormat}')`;
+      }
+      
+      groupByClause = dateSelector;
+      
       const platformSeries = await db
         .select({
-          date: sql<string>`TO_CHAR(${truncFunction}${tenants.createdAt}${interval !== 'day' ? ')' : ''}, '${dateFormat}')`,
+          date: dateSelector,
           tenantCount: count(),
           planLevel: tenants.planLevel
         })
@@ -422,11 +441,8 @@ export async function series(req: Request, res: Response) {
           gte(tenants.createdAt, startDate),
           lte(tenants.createdAt, endDate)
         ))
-        .groupBy(
-          sql`TO_CHAR(${truncFunction}${tenants.createdAt}${interval !== 'day' ? ')' : ''}, '${dateFormat}')`,
-          tenants.planLevel
-        )
-        .orderBy(sql`TO_CHAR(${truncFunction}${tenants.createdAt}${interval !== 'day' ? ')' : ''}, '${dateFormat}')`);
+        .groupBy(groupByClause, tenants.planLevel)
+        .orderBy(groupByClause);
       
       // Convert to revenue based on plan pricing
       const planPricing = { core: 9900, growth: 19900, elite: 49900 };
