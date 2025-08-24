@@ -562,12 +562,20 @@ export default function SuperAdminSettings() {
                     <Switch
                       checked={localPolicies.autoApproveTenants}
                       onCheckedChange={(checked) => {
-                        handlePolicyChange({ 
-                          autoApproveTenants: checked,
-                          requireTenantApproval: checked ? false : localPolicies.requireTenantApproval
-                        });
+                        if (checked) {
+                          // If enabling auto-approve, disable manual approval
+                          handlePolicyChange({ 
+                            autoApproveTenants: true,
+                            requireTenantApproval: false
+                          });
+                        } else {
+                          // If disabling auto-approve, enable manual approval by default
+                          handlePolicyChange({ 
+                            autoApproveTenants: false,
+                            requireTenantApproval: true
+                          });
+                        }
                       }}
-                      disabled={localPolicies.requireTenantApproval}
                     />
                   </div>
                   
@@ -579,12 +587,20 @@ export default function SuperAdminSettings() {
                     <Switch
                       checked={localPolicies.requireTenantApproval}
                       onCheckedChange={(checked) => {
-                        handlePolicyChange({ 
-                          requireTenantApproval: checked,
-                          autoApproveTenants: checked ? false : localPolicies.autoApproveTenants
-                        });
+                        if (checked) {
+                          // If enabling manual approval, disable auto-approve
+                          handlePolicyChange({ 
+                            requireTenantApproval: true,
+                            autoApproveTenants: false
+                          });
+                        } else {
+                          // If disabling manual approval, enable auto-approve by default
+                          handlePolicyChange({ 
+                            requireTenantApproval: false,
+                            autoApproveTenants: true
+                          });
+                        }
                       }}
-                      disabled={localPolicies.autoApproveTenants}
                     />
                   </div>
                 </CardContent>
