@@ -154,6 +154,19 @@ export default function PlanManagement() {
     enabled: activeTab === 'tenant-overrides'
   });
 
+  // Fetch all available features from database
+  const { data: allFeatures = [] } = useQuery<Feature[]>({
+    queryKey: ['/api/super-admin/features'],
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/features', {
+        credentials: 'include'
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: activeTab === 'tenant-overrides'
+  });
+
   // Fetch features for selected plan
   const { data: planData, isLoading: loadingPlan, refetch: refetchPlan } = useQuery({
     queryKey: ['/api/super-admin/plans', selectedPlan, 'features'],
@@ -731,12 +744,11 @@ export default function PlanManagement() {
                   <SelectValue placeholder="Select a feature" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(FEATURE_KEYS).map((key: string) => {
-                    const displayName = key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-                    return (
-                      <SelectItem key={key} value={key}>{displayName}</SelectItem>
-                    );
-                  })}
+                  {allFeatures.map((feature: Feature) => (
+                    <SelectItem key={feature.key} value={feature.key}>
+                      {feature.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
