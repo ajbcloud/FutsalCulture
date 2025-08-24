@@ -7,7 +7,8 @@ import {
   planCatalog,
   featureAuditLog,
   tenants,
-  tenantPlanAssignments
+  tenantPlanAssignments,
+  users
 } from '../../../shared/schema';
 
 // Get all features for a plan, organized by category
