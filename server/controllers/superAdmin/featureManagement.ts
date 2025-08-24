@@ -156,32 +156,39 @@ export async function updatePlanFeature(req: Request, res: Response) {
         }
       });
 
-    // Ensure user exists in database for foreign key constraint
-    await db.insert(users)
-      .values({
-        id: userId,
-        email: 'super-admin@system',
-        firstName: 'Super',
-        lastName: 'Admin',
-        role: 'super-admin',
-        isAdmin: true,
-        isSuperAdmin: true,
-        tenantId: 'system'
-      })
-      .onConflictDoNothing();
+    // Log the change - only if we have a valid user ID
+    if (userId && userId !== 'undefined' && userId !== 'null') {
+      try {
+        // Ensure user exists in database for foreign key constraint
+        await db.insert(users)
+          .values({
+            id: userId,
+            email: 'super-admin@system',
+            firstName: 'Super',
+            lastName: 'Admin',
+            role: 'super-admin',
+            isAdmin: true,
+            isSuperAdmin: true,
+            tenantId: 'system'
+          })
+          .onConflictDoNothing();
 
-    // Log the change
-    await db.insert(featureAuditLog).values({
-      entityType: 'plan',
-      entityId: planCode,
-      featureKey,
-      oldValue,
-      newValue: value,
-      changedBy: userId,
-      changeReason: req.body.reason,
-      ip: req.ip || '',
-      userAgent: req.get('user-agent') || ''
-    });
+        await db.insert(featureAuditLog).values({
+          entityType: 'plan',
+          entityId: planCode,
+          featureKey,
+          oldValue,
+          newValue: value,
+          changedBy: userId,
+          changeReason: req.body.reason || 'Plan feature update',
+          ip: req.ip || '',
+          userAgent: req.get('user-agent') || ''
+        });
+      } catch (auditError) {
+        // Don't fail the main operation if audit logging fails
+        console.warn('Audit logging failed, but feature update succeeded:', auditError);
+      }
+    }
 
     // Get affected tenants count for cache invalidation
     const affectedTenants = await db

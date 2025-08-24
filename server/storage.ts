@@ -2717,33 +2717,38 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
-      // Log the change for audit purposes
-      if (userId) {
-        // Ensure user exists in database for foreign key constraint
-        await db.insert(users)
-          .values({
-            id: userId,
-            email: 'super-admin@system',
-            firstName: 'Super',
-            lastName: 'Admin',
-            role: 'super-admin',
-            isAdmin: true,
-            isSuperAdmin: true,
-            tenantId: 'system'
-          })
-          .onConflictDoNothing();
+      // Log the change for audit purposes - only if we have a valid user ID
+      if (userId && userId !== 'undefined' && userId !== 'null') {
+        try {
+          // Ensure user exists in database for foreign key constraint
+          await db.insert(users)
+            .values({
+              id: userId,
+              email: 'super-admin@system',
+              firstName: 'Super',
+              lastName: 'Admin',
+              role: 'super-admin',
+              isAdmin: true,
+              isSuperAdmin: true,
+              tenantId: 'system'
+            })
+            .onConflictDoNothing();
 
-        await db.insert(featureAuditLog).values({
-          entityType: 'tenant',
-          entityId: tenantId,
-          featureKey,
-          oldValue,
-          newValue,
-          changedBy: userId,
-          changeReason: override.reason || 'Tenant feature override',
-          ip: ip || '',
-          userAgent: userAgent || ''
-        });
+          await db.insert(featureAuditLog).values({
+            entityType: 'tenant',
+            entityId: tenantId,
+            featureKey,
+            oldValue,
+            newValue,
+            changedBy: userId,
+            changeReason: override.reason || 'Tenant feature override',
+            ip: ip || '',
+            userAgent: userAgent || ''
+          });
+        } catch (auditError) {
+          // Don't fail the main operation if audit logging fails
+          console.warn('Audit logging failed, but tenant override succeeded:', auditError);
+        }
       }
     } catch (error) {
       console.error('Error setting tenant feature override:', error);
