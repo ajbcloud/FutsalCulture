@@ -403,27 +403,6 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
-  // New Platform Settings Endpoints
-  app.get('/api/super-admin/settings/policies', isAuthenticated, isSuperAdmin, async (req, res) => {
-    const { getPolicies } = await import('./controllers/superAdmin/platformSettings');
-    return getPolicies(req, res);
-  });
-
-  app.put('/api/super-admin/settings/policies', isAuthenticated, isSuperAdmin, async (req, res) => {
-    const { updatePolicies } = await import('./controllers/superAdmin/platformSettings');
-    return updatePolicies(req, res);
-  });
-
-  app.get('/api/super-admin/settings/tenant-defaults', isAuthenticated, isSuperAdmin, async (req, res) => {
-    const { getTenantDefaults } = await import('./controllers/superAdmin/platformSettings');
-    return getTenantDefaults(req, res);
-  });
-
-  app.put('/api/super-admin/settings/tenant-defaults', isAuthenticated, isSuperAdmin, async (req, res) => {
-    const { updateTenantDefaults } = await import('./controllers/superAdmin/platformSettings');
-    return updateTenantDefaults(req, res);
-  });
-
   // Test Integration
   app.post('/api/super-admin/integrations/test', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

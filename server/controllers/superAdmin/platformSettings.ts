@@ -102,21 +102,23 @@ export async function updatePolicies(req: Request & { user?: any }, res: Respons
 
     // Create audit log entry
     await db.insert(auditLogs).values({
+      userId: req.user.id,
       actorId: req.user.id,
       actorRole: 'super_admin',
       section: 'platform_settings',
       action: 'platform_settings.policies.update',
-      description: 'Updated platform policies',
-      oldValue: previousPolicies,
-      newValue: validatedPolicies,
-      ip: req.ip || '',
-      userAgent: req.get('user-agent') || '',
-      metadata: {
-        resourceId: currentSettings.id,
+      targetId: currentSettings.id,
+      meta: {
+        description: 'Updated platform policies',
         changedKeys: Object.keys(validatedPolicies).filter(
           key => JSON.stringify((previousPolicies as any)[key]) !== JSON.stringify((validatedPolicies as any)[key])
         ),
       },
+      diff: {
+        before: previousPolicies,
+        after: validatedPolicies,
+      },
+      ip: req.ip || '',
     });
 
     // Emit event for real-time updates
@@ -182,21 +184,23 @@ export async function updateTenantDefaults(req: Request & { user?: any }, res: R
 
     // Create audit log entry
     await db.insert(auditLogs).values({
+      userId: req.user.id,
       actorId: req.user.id,
       actorRole: 'super_admin',
       section: 'platform_settings',
       action: 'platform_settings.tenant_defaults.update',
-      description: 'Updated tenant defaults',
-      oldValue: previousDefaults,
-      newValue: validatedDefaults,
-      ip: req.ip || '',
-      userAgent: req.get('user-agent') || '',
-      metadata: {
-        resourceId: currentSettings.id,
+      targetId: currentSettings.id,
+      meta: {
+        description: 'Updated tenant defaults',
         changedKeys: Object.keys(validatedDefaults).filter(
           key => JSON.stringify((previousDefaults as any)[key]) !== JSON.stringify((validatedDefaults as any)[key])
         ),
       },
+      diff: {
+        before: previousDefaults,
+        after: validatedDefaults,
+      },
+      ip: req.ip || '',
     });
 
     // Emit event for real-time updates

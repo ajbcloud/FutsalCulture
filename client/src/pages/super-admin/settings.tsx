@@ -36,7 +36,14 @@ import {
   Server,
   Users,
   Settings as SettingsIcon,
-  User
+  User,
+  Gauge,
+  Lock,
+  MailCheck,
+  Settings2,
+  TrendingUp,
+  Timer,
+  Bell
 } from 'lucide-react';
 import { debounce } from 'lodash';
 
@@ -634,6 +641,143 @@ export default function SuperAdminSettings() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* API Rate Limiting */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gauge className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>API Rate Limiting</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Configure API request limits to prevent abuse</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Requests per minute</Label>
+                    <Input
+                      type="number"
+                      defaultValue="60"
+                      min={10}
+                      max={1000}
+                    />
+                    <p className="text-xs text-muted-foreground">Per user/tenant</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Burst limit</Label>
+                    <Input
+                      type="number"
+                      defaultValue="100"
+                      min={20}
+                      max={2000}
+                    />
+                    <p className="text-xs text-muted-foreground">Max concurrent requests</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Password Policy */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Password Policy</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Set password requirements for all platform users</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Minimum length</Label>
+                      <Input
+                        type="number"
+                        defaultValue="8"
+                        min={6}
+                        max={32}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Expiry (days)</Label>
+                      <Input
+                        type="number"
+                        defaultValue="90"
+                        min={0}
+                        max={365}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Requirements</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal">Uppercase letters</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal">Lowercase letters</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal">Numbers</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch />
+                        <Label className="font-normal">Special characters</Label>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Email Verification */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MailCheck className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Email Verification</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Control email verification requirements</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require email verification</Label>
+                      <p className="text-sm text-muted-foreground">Users must verify email before access</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Block disposable emails</Label>
+                      <p className="text-sm text-muted-foreground">Prevent temporary email addresses</p>
+                    </div>
+                    <Switch />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Verification link expiry (hours)</Label>
+                    <Input
+                      type="number"
+                      defaultValue="24"
+                      min={1}
+                      max={168}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </>
           )}
         </TabsContent>
@@ -753,6 +897,249 @@ export default function SuperAdminSettings() {
                         handleTenantDefaultsChange({ seedSampleContent: checked });
                       }}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Default Features */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Default Features</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Enable features for new tenants by default</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Communication</Label>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Switch defaultChecked />
+                          <Label className="font-normal text-sm">Email notifications</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch />
+                          <Label className="font-normal text-sm">SMS notifications</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch defaultChecked />
+                          <Label className="font-normal text-sm">In-app messaging</Label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Payments</Label>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Switch defaultChecked />
+                          <Label className="font-normal text-sm">Stripe integration</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch />
+                          <Label className="font-normal text-sm">PayPal integration</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch defaultChecked />
+                          <Label className="font-normal text-sm">Discount codes</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Default Limits */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Default Limits</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Set default limits for new tenants</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Max players</Label>
+                    <Input
+                      type="number"
+                      defaultValue="150"
+                      min={10}
+                      max={10000}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Max admins</Label>
+                    <Input
+                      type="number"
+                      defaultValue="5"
+                      min={1}
+                      max={50}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Max locations</Label>
+                    <Input
+                      type="number"
+                      defaultValue="3"
+                      min={1}
+                      max={100}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Storage (GB)</Label>
+                    <Input
+                      type="number"
+                      defaultValue="10"
+                      min={1}
+                      max={1000}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>API calls/month</Label>
+                    <Input
+                      type="number"
+                      defaultValue="10000"
+                      min={1000}
+                      max={1000000}
+                      step={1000}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Emails/month</Label>
+                    <Input
+                      type="number"
+                      defaultValue="5000"
+                      min={100}
+                      max={100000}
+                      step={100}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trial Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Trial Settings</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Configure trial period for new tenants</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Trial duration (days)</Label>
+                      <Input
+                        type="number"
+                        defaultValue="14"
+                        min={0}
+                        max={90}
+                      />
+                      <p className="text-xs text-muted-foreground">0 = No trial period</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Trial plan</Label>
+                      <Select defaultValue="growth">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="core">Core</SelectItem>
+                          <SelectItem value="growth">Growth</SelectItem>
+                          <SelectItem value="elite">Elite</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Auto-convert to free</Label>
+                      <p className="text-sm text-muted-foreground">Automatically downgrade after trial ends</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require payment method</Label>
+                      <p className="text-sm text-muted-foreground">Credit card required for trial</p>
+                    </div>
+                    <Switch />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Defaults */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Notification Defaults</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Default notification preferences for new tenants</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Session reminders</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal text-sm">24 hours before</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal text-sm">2 hours before</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch />
+                        <Label className="font-normal text-sm">30 min before</Label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Admin notifications</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal text-sm">New registrations</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal text-sm">Payment received</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch defaultChecked />
+                        <Label className="font-normal text-sm">Session full</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch />
+                        <Label className="font-normal text-sm">Daily summary</Label>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
