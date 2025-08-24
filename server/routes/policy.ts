@@ -52,6 +52,35 @@ policyRouter.patch("/policy", async (req: any, res) => {
     }
 
     const body = req.body;
+
+    // Enhanced validation for age policy conflicts
+    if (body.requireParent && body.minAge && body.requireParent < body.minAge) {
+      return res.status(400).json({ 
+        error: "Invalid parent requirement",
+        message: "Parent requirement age must be greater than or equal to minimum age"
+      });
+    }
+
+    if (body.requireParent && body.teenSelfMin && body.requireParent > body.teenSelfMin) {
+      return res.status(400).json({ 
+        error: "Invalid configuration",
+        message: "Parent requirement age cannot be greater than teen self-signup age"
+      });
+    }
+
+    if (body.teenSelfMin && body.teenPayMin && body.teenPayMin < body.teenSelfMin) {
+      return res.status(400).json({ 
+        error: "Invalid payment age",
+        message: "Teen payment age must be greater than or equal to teen self-signup age"
+      });
+    }
+
+    if (body.audience !== "adult" && body.maxAge && body.teenPayMin && body.teenPayMin > body.maxAge) {
+      return res.status(400).json({ 
+        error: "Invalid configuration",
+        message: "Teen payment age cannot exceed maximum program age"
+      });
+    }
     
     // Insert or update policy
     const [existing] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
@@ -75,6 +104,13 @@ policyRouter.patch("/policy", async (req: any, res) => {
     console.error("Error updating policy:", error);
     res.status(500).json({ error: "Failed to update policy" });
   }
+});
+
+// Add POST route that delegates to PATCH for compatibility
+policyRouter.post("/policy", async (req: any, res) => {
+  // Forward the request to the PATCH handler
+  req.method = 'PATCH';
+  return policyRouter.handle(req, res);
 });
 
 export default policyRouter;

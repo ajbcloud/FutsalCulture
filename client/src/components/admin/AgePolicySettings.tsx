@@ -34,6 +34,7 @@ export default function AgePolicySettings() {
   // Fetch current policy
   const { data: currentPolicy, isLoading: loadingPolicy } = useQuery<TenantPolicy>({
     queryKey: ["/api/policy/tenant"],
+    queryFn: () => fetch("/api/policy/tenant").then(res => res.json()),
   });
 
   // Local state for form
@@ -59,7 +60,7 @@ export default function AgePolicySettings() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<TenantPolicy>) => {
-      return apiRequest("/api/policy/tenant", "POST", data);
+      return apiRequest("/api/policy/tenant", "PATCH", data);
     },
     onSuccess: () => {
       toast({
@@ -88,10 +89,41 @@ export default function AgePolicySettings() {
       return;
     }
 
+    // Validate parent requirement age
     if (policy.requireParent && policy.requireParent < policy.minAge!) {
       toast({
         title: "Invalid parent requirement",
         description: "Parent requirement age must be greater than or equal to minimum age",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate teen self-access relationship with parent requirement
+    if (policy.requireParent && policy.teenSelfMin && policy.requireParent > policy.teenSelfMin) {
+      toast({
+        title: "Invalid configuration",
+        description: "Parent requirement age cannot be greater than teen self-signup age",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate teen payment age relationship
+    if (policy.teenSelfMin && policy.teenPayMin && policy.teenPayMin < policy.teenSelfMin) {
+      toast({
+        title: "Invalid payment age",
+        description: "Teen payment age must be greater than or equal to teen self-signup age",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate logical age progression
+    if (policy.audience !== "adult" && policy.maxAge && policy.teenPayMin && policy.teenPayMin > policy.maxAge) {
+      toast({
+        title: "Invalid configuration",
+        description: "Teen payment age cannot exceed maximum program age",
         variant: "destructive",
       });
       return;
