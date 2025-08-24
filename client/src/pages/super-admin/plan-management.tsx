@@ -357,11 +357,40 @@ export default function PlanManagement() {
         );
 
       case 'enum':
-        const options = feature.optionsJson?.values || [];
+        // Fallback options for common enum features if not set in database
+        const getEnumOptions = (featureKey: string, optionsFromDB: string[] = []) => {
+          if (optionsFromDB.length > 0) {
+            return optionsFromDB;
+          }
+          
+          // Common fallback options based on feature type
+          switch (featureKey) {
+            case 'analytics.level':
+              return ['none', 'basic', 'advanced', 'ai_powered'];
+            case 'core.session_management':
+            case 'session_management':
+              return ['basic', 'advanced', 'premium'];
+            case 'core.waitlist_management':
+            case 'waitlist_management':
+              return ['disabled', 'basic', 'advanced'];
+            case 'comm.email_gateway':
+            case 'email_gateway':
+              return ['sendgrid', 'mailgun', 'custom'];
+            case 'integrations.payment_gateway':
+            case 'payment_gateway':
+              return ['stripe', 'braintree', 'both'];
+            default:
+              return ['basic', 'advanced', 'premium'];
+          }
+        };
+        
+        const options = getEnumOptions(feature.key, feature.optionsJson?.values);
+        const currentVariantValue = getVariantValue(currentValue);
+        
         return (
           <div className="flex items-center gap-2">
             <Select
-              value={getVariantValue(currentValue)}
+              value={currentVariantValue}
               onValueChange={(value) => handleFeatureChange(feature.key, { variant: value }, planCode)}
               disabled={isSaving}
             >
@@ -369,11 +398,15 @@ export default function PlanManagement() {
                 <SelectValue placeholder="Select option" />
               </SelectTrigger>
               <SelectContent>
-                {options.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
+                {options.length > 0 ? (
+                  options.map((option: string) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>No options available</SelectItem>
+                )}
               </SelectContent>
             </Select>
             {!isCompact && isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -644,6 +677,28 @@ export default function PlanManagement() {
                         </td>
                         {plans.map(plan => {
                           const value = feature.plans[plan.code];
+                          // Use same enum options logic as main features
+                          const getEnumOptionsForComparison = (featureKey: string) => {
+                            switch (featureKey) {
+                              case 'analytics.level':
+                                return ['none', 'basic', 'advanced', 'ai_powered'];
+                              case 'core.session_management':
+                              case 'session_management':
+                                return ['basic', 'advanced', 'premium'];
+                              case 'core.waitlist_management':
+                              case 'waitlist_management':
+                                return ['disabled', 'basic', 'advanced'];
+                              case 'comm.email_gateway':
+                              case 'email_gateway':
+                                return ['sendgrid', 'mailgun', 'custom'];
+                              case 'integrations.payment_gateway':
+                              case 'payment_gateway':
+                                return ['stripe', 'braintree', 'both'];
+                              default:
+                                return ['basic', 'advanced', 'premium'];
+                            }
+                          };
+
                           const featureData: Feature = {
                             key: featureKey,
                             name: feature.name,
@@ -651,7 +706,7 @@ export default function PlanManagement() {
                             type: feature.type as 'boolean' | 'enum' | 'limit',
                             value: value?.enabled ?? value?.variant ?? value?.limitValue ?? null,
                             displayOrder: 0,
-                            optionsJson: feature.type === 'enum' ? { values: ['basic', 'advanced', 'premium'] } : 
+                            optionsJson: feature.type === 'enum' ? { values: getEnumOptionsForComparison(featureKey) } : 
                                          feature.type === 'limit' ? { max: 999999, unit: '' } : null
                           };
                           
