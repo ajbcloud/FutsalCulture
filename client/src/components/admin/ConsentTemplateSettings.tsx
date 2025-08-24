@@ -117,7 +117,7 @@ export default function ConsentTemplateSettings() {
   const [customContent, setCustomContent] = useState<Record<string, string>>({});
 
   // Fetch current templates
-  const { data: templates, isLoading } = useQuery<ConsentTemplate[]>({
+  const { data: templates = [], isLoading } = useQuery<ConsentTemplate[]>({
     queryKey: ["/api/admin/consent-templates"],
     queryFn: () => fetch("/api/admin/consent-templates").then(res => res.json()),
   });
@@ -211,7 +211,7 @@ export default function ConsentTemplateSettings() {
   };
 
   const getActiveTemplate = (templateType: string) => {
-    return templates?.find(t => t.templateType === templateType && t.isActive);
+    return Array.isArray(templates) ? templates.find(t => t.templateType === templateType && t.isActive) : undefined;
   };
 
   const handleEditContent = (templateType: string) => {
