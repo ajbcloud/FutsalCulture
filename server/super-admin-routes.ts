@@ -772,6 +772,7 @@ export function setupSuperAdminRoutes(app: Express) {
     return askAnalytics(req, res);
   });
 
+  // Seed AI data endpoint
   app.post('/api/super-admin/ai/seed', isAuthenticated, isSuperAdmin, async (req: any, res) => {
     const { seedAIData } = await import('./controllers/superAdmin/aiAnalytics');
     return seedAIData(req, res);
