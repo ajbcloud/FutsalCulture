@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Users, Calendar, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 interface Tenant {
   tenantId: string;
@@ -32,6 +33,8 @@ export default function StateTenantsModal({
   stateName, 
   tenantCount 
 }: StateTenantsModalProps) {
+  const [, setLocation] = useLocation();
+  
   const { data: tenants, isLoading, error } = useQuery({
     queryKey: ['/api/super-admin/tenants-by-state', stateAbbr],
     queryFn: () => fetch(`/api/super-admin/tenants-by-state/${stateAbbr}`).then(res => res.json()),
@@ -139,9 +142,9 @@ export default function StateTenantsModal({
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        // Open tenant details in new tab to avoid losing Super Admin context
-                        const url = `/super-admin/tenant/${tenant.tenantId}`;
-                        window.open(url, '_blank');
+                        // Navigate to tenant management page with pre-populated search
+                        setLocation(`/super-admin/tenants?search=${encodeURIComponent(tenant.tenantName)}`);
+                        onClose(); // Close the modal
                       }}
                       data-testid={`view-tenant-${tenant.tenantId}`}
                     >

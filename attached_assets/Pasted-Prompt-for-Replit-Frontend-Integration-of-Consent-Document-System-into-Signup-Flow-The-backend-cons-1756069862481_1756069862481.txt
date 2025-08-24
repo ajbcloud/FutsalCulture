@@ -1,0 +1,119 @@
+Prompt for Replit: Frontend Integration of Consent Document System into Signup Flow
+The backend consent document system is now fully implemented with:
+
+
+Database schema for consent documents, digital signatures, and audit trails
+
+
+PDF generation service with legal formatting and signing
+
+
+APIs for template management, document signing, document access, and compliance reporting
+
+
+Object storage for secure archival and retrieval
+
+
+Full audit trail for access and modifications
+
+
+Next Step: Update the Signup Flow
+Update the frontend signup process to integrate with the new consent document system:
+
+
+Trigger Consent Flow During Signup
+
+
+When a new user (parent, player, or admin) signs up, the system must call the backend API to fetch the active consent template.
+
+
+Display the consent document in a modal or step within the signup flow.
+
+
+The document should be shown as a formatted PDF preview (generated via the backend).
+
+
+
+
+Digital Signature Capture
+
+
+Provide UI controls for digital signing (typed name, drawn signature, or system-generated digital signature).
+
+
+On confirmation, send the signed data back to the backend API, which will finalize and archive the PDF with the digital signature.
+
+
+
+
+Audit Trail Recording
+
+
+Every signup submission that includes consent must create an entry in the audit trail via the backend API.
+
+
+Include user ID, timestamp, document version, and signing metadata.
+
+
+
+
+Parent/Player Flow Considerations
+
+
+If the signup is for a parent, they must sign the consent before completing signup.
+
+
+If the signup is for a player under 18, the parent signature is required, and the flow must enforce parent consent before player account creation is finalized.
+
+
+If the signup is for a player 18 or older, the player can sign directly, and the parent step is skipped.
+
+
+
+
+Frontend API Integration
+
+
+Use the new backend endpoints for:
+
+
+GET /consent/template (fetch active template for the tenant)
+
+
+POST /consent/sign (submit signed document)
+
+
+GET /consent/access/{userId} (to verify consent status on login or account retrieval)
+
+
+
+
+
+
+UX Requirements
+
+
+Show progress indicators so users know the document is loading and being signed.
+
+
+If the user closes the consent modal without signing, the signup should not complete.
+
+
+Provide error handling if the document fails to load or signing fails (retry, show descriptive error).
+
+
+
+
+Admin & Compliance Access
+
+
+Ensure that completed signed documents are available through the Super Admin portal under each tenant’s consent management section.
+
+
+Tie the signed consent to the user profile so admins can see at a glance if consent is on file.
+
+
+
+
+Expected Result:
+When a new user signs up, the signup flow must automatically present the required consent document, capture a legal digital signature, finalize and archive the signed PDF, update the audit trail, and only then allow the signup process to complete.

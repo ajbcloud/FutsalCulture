@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +77,7 @@ interface TenantDetails {
 }
 
 export default function SuperAdminTenants() {
+  const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [planFilter, setPlanFilter] = useState<string>('all');
@@ -93,6 +95,15 @@ export default function SuperAdminTenants() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check for URL parameters on component mount and set search term
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      setSearchTerm(decodeURIComponent(searchParam));
+    }
+  }, [location]);
 
   // Fetch tenants list
   const { data: tenants = [], isLoading, error } = useQuery<Tenant[]>({
