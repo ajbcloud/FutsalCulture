@@ -44,6 +44,8 @@ export interface GeneratedDocument {
   fileName: string;
   digitalSignature: string;
   filePath?: string;
+  contentType: 'application/pdf' | 'text/html';
+  isHtmlFallback: boolean;
 }
 
 export class PDFGeneratorService {
@@ -95,7 +97,7 @@ export class PDFGeneratorService {
     };
   }
 
-  private async generateConsentPDF(data: ConsentFormData): Promise<Buffer> {
+  private async generateConsentPDF(data: ConsentFormData): Promise<{ buffer: Buffer; isHtmlFallback: boolean }> {
     try {
       const browser = await puppeteer.launch({
         headless: true,
@@ -121,7 +123,7 @@ export class PDFGeneratorService {
           timeout: 30000 
         });
 
-        const pdfBuffer = await page.pdf({
+        const pdfUint8Array = await page.pdf({
           format: 'A4',
           margin: {
             top: '1in',
@@ -142,8 +144,10 @@ export class PDFGeneratorService {
             </div>
           `
         });
+        
+        const pdfBuffer = Buffer.from(pdfUint8Array);
 
-        return pdfBuffer;
+        return { buffer: pdfBuffer, isHtmlFallback: false };
       } finally {
         await browser.close();
       }
@@ -151,7 +155,7 @@ export class PDFGeneratorService {
       console.error('Puppeteer failed to generate PDF:', error);
       // Fallback: Return a simple HTML representation as a fallback
       // This will create a basic PDF-like document that can be viewed
-      return this.generateFallbackPDF(data);
+      return { buffer: this.generateFallbackPDF(data), isHtmlFallback: true };
     }
   }
 
@@ -335,6 +339,20 @@ export class PDFGeneratorService {
           .consent-content li {
             margin-bottom: 5px;
           }
+          
+          /* Print-specific styles */
+          @media print {
+            body {
+              margin: 0;
+              padding: 20px;
+            }
+            .header div[style*="background"] {
+              display: none; /* Hide the notice when printing */
+            }
+            .letterhead, .header, .document-info, .content, .signature-section {
+              page-break-inside: avoid;
+            }
+          }
         </style>
       </head>
       <body>
@@ -352,7 +370,11 @@ export class PDFGeneratorService {
 
         <div class="header">
           <div class="title">${data.templateTitle}</div>
-          <div>Official Consent Document</div>
+          <div>Official Consent Document (HTML Format)</div>
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 14px;">
+            <strong>📄 Document Notice:</strong> This document is in HTML format as a fallback option. 
+            To save as PDF: Use your browser's Print function and select "Save as PDF" as the destination.
+          </div>
         </div>
 
         <div class="document-info">
@@ -437,11 +459,12 @@ export class PDFGeneratorService {
     }
     
     // Generate PDF
-    const pdfBuffer = await this.generateConsentPDF(data);
+    const { buffer: pdfBuffer, isHtmlFallback } = await this.generateConsentPDF(data);
     
     // Generate file name
     const timestamp = data.signedAt.toISOString().replace(/[:.]/g, '-');
-    const fileName = `consent-${data.templateType}-${data.playerId}-${timestamp}.pdf`;
+    const extension = isHtmlFallback ? 'html' : 'pdf';
+    const fileName = `consent-${data.templateType}-${data.playerId}-${timestamp}.${extension}`;
     
     // Generate digital signature
     const digitalSignature = this.generateDigitalSignature(data);
@@ -453,17 +476,18 @@ export class PDFGeneratorService {
     const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
     
     // Upload the PDF buffer to the presigned URL
+    const contentType = isHtmlFallback ? 'text/html' : 'application/pdf';
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       body: pdfBuffer,
       headers: {
-        'Content-Type': 'application/pdf',
+        'Content-Type': contentType,
         'Content-Length': pdfBuffer.length.toString(),
       }
     });
 
     if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload PDF: ${uploadResponse.statusText}`);
+      throw new Error(`Failed to upload document: ${uploadResponse.statusText}`);
     }
 
     // Get the file path from the upload URL
@@ -473,7 +497,9 @@ export class PDFGeneratorService {
       pdfBuffer,
       fileName,
       digitalSignature,
-      filePath
+      filePath,
+      contentType,
+      isHtmlFallback
     };
   }
 
