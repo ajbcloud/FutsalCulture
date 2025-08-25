@@ -683,6 +683,7 @@ export default function ConsentTemplateSettings() {
             const activeTemplate = getActiveTemplate(type.key);
             const allTemplates = getAllTemplatesForType(type.key);
             const isEditing = editingTemplate === type.key;
+            const hasCustomTemplate = allTemplates.some(template => template.isCustom);
             
             return (
               <Card key={type.key} className="border-l-4 border-l-primary/20">
@@ -693,7 +694,7 @@ export default function ConsentTemplateSettings() {
                       <CardDescription>{type.description}</CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                      {activeTemplate?.isCustom && (
+                      {hasCustomTemplate && (
                         <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
                           Custom Content
                         </span>
