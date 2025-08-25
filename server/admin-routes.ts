@@ -4209,8 +4209,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       }
       
       // Check if active template of this type already exists
-      const allTemplates = await storage.getAllConsentTemplatesForAdmin(tenantId);
-      const existing = allTemplates.find(t => t.templateType === templateType && t.isActive);
+      const allTemplates = await storage.getAllConsentTemplates(tenantId);
+      const existing = allTemplates.find((t: any) => t.templateType === templateType && t.isActive);
       if (existing) {
         return res.status(400).json({ error: 'An active template of this type already exists' });
       }

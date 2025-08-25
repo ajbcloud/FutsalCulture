@@ -204,7 +204,7 @@ export default function ConsentTemplateSettings() {
   // Fetch current templates
   const { data: templates = [], isLoading } = useQuery<ConsentTemplate[]>({
     queryKey: ["/api/admin/consent-templates"],
-    queryFn: () => fetch("/api/admin/consent-templates").then(res => res.json()),
+    retry: false,
   });
 
   // Upload file mutation
@@ -344,14 +344,7 @@ export default function ConsentTemplateSettings() {
 
   const toggleTemplateMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const response = await apiRequest(`/api/admin/consent-templates/${id}/toggle`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isActive }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return response;
+      return await apiRequest(`/api/admin/consent-templates/${id}/toggle`, 'PATCH', { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
