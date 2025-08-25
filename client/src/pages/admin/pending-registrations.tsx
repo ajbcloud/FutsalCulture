@@ -46,6 +46,7 @@ export default function AdminPendingRegistrations() {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState('');
+  const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none');
   const { toast } = useToast();
   
   // Refresh data when returning to page
@@ -168,10 +169,18 @@ export default function AdminPendingRegistrations() {
 
   // Bulk operations handlers
   const toggleSelectAll = () => {
-    if (selectedRegistrations.size === paginatedRegistrations.length) {
-      setSelectedRegistrations(new Set());
-    } else {
+    if (selectAllMode === 'none') {
+      // Select all on current page
       setSelectedRegistrations(new Set(paginatedRegistrations.map(r => r.id)));
+      setSelectAllMode('page');
+    } else if (selectAllMode === 'page') {
+      // Select all across all pages
+      setSelectedRegistrations(new Set(registrations.map(r => r.id)));
+      setSelectAllMode('all');
+    } else {
+      // Deselect all
+      setSelectedRegistrations(new Set());
+      setSelectAllMode('none');
     }
   };
 
@@ -183,6 +192,17 @@ export default function AdminPendingRegistrations() {
       newSelected.add(id);
     }
     setSelectedRegistrations(newSelected);
+    
+    // Update select all mode based on selection
+    if (newSelected.size === 0) {
+      setSelectAllMode('none');
+    } else if (newSelected.size === registrations.length) {
+      setSelectAllMode('all');
+    } else if (paginatedRegistrations.every(r => newSelected.has(r.id)) && newSelected.size === paginatedRegistrations.length) {
+      setSelectAllMode('page');
+    } else {
+      setSelectAllMode('none');
+    }
   };
 
   const handleBulkApprove = async () => {
@@ -216,6 +236,7 @@ export default function AdminPendingRegistrations() {
       });
 
       setSelectedRegistrations(new Set());
+      setSelectAllMode('none');
       fetchPendingRegistrations();
       
       // Invalidate queries
@@ -277,6 +298,7 @@ export default function AdminPendingRegistrations() {
       });
 
       setSelectedRegistrations(new Set());
+      setSelectAllMode('none');
       setBulkRejectReason('');
       setShowBulkRejectDialog(false);
       fetchPendingRegistrations();
@@ -315,6 +337,9 @@ export default function AdminPendingRegistrations() {
           {selectedRegistrations.size > 0 && (
             <p className="text-sm text-muted-foreground mt-1">
               {selectedRegistrations.size} selected
+              {selectAllMode === 'all' && (
+                <span className="ml-2 text-blue-500 font-medium">(All {registrations.length} items)</span>
+              )}
             </p>
           )}
         </div>
@@ -402,17 +427,33 @@ export default function AdminPendingRegistrations() {
             <TableHeader>
               <TableRow className="border-border hover:bg-muted/50">
                 <TableHead className="w-12">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors"
-                    data-testid="checkbox-select-all"
-                  >
-                    {selectedRegistrations.size === paginatedRegistrations.length && paginatedRegistrations.length > 0 ? (
-                      <CheckSquare className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Square className="w-4 h-4 text-muted-foreground/30" />
+                  <div className="flex flex-col items-center gap-1">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors"
+                      data-testid="checkbox-select-all"
+                      title={
+                        selectAllMode === 'none' 
+                          ? 'Select all on this page' 
+                          : selectAllMode === 'page' 
+                          ? `Select all ${registrations.length} items` 
+                          : 'Deselect all'
+                      }
+                    >
+                      {selectAllMode === 'all' ? (
+                        <CheckSquare className="w-4 h-4 text-blue-500" />
+                      ) : selectAllMode === 'page' ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted-foreground/30" />
+                      )}
+                    </button>
+                    {selectAllMode === 'page' && registrations.length > paginatedRegistrations.length && (
+                      <div className="text-xs text-blue-500 hover:underline cursor-pointer" onClick={toggleSelectAll}>
+                        Select all {registrations.length}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 </TableHead>
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Name</TableHead>
