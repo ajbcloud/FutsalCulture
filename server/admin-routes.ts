@@ -3204,7 +3204,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       
       const parentsWithCounts = await Promise.all(
         filteredUsers.map(async (user) => {
-          const userPlayers = await storage.getPlayersByParent(user.id);
+          const userPlayers = await storage.getPlayersByParent(user.id, tenantId);
           return {
             id: user.id,
             firstName: user.firstName,
