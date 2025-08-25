@@ -50,6 +50,7 @@ import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
+import ForgotPassword from "@/pages/ForgotPassword";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
@@ -76,6 +77,7 @@ function Router() {
         <Route path="/join" component={Join} />
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/login" component={Login} />
+        <Route path="/forgot" component={ForgotPassword} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/profile" component={Profile} />
