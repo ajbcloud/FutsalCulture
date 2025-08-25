@@ -196,6 +196,10 @@ export default function ConsentTemplateSettings() {
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [customContent, setCustomContent] = useState<Record<string, string>>({});
   const [showMergeFields, setShowMergeFields] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTemplateType, setNewTemplateType] = useState('');
+  const [newTemplateTitle, setNewTemplateTitle] = useState('');
+  const [newTemplateContent, setNewTemplateContent] = useState('');
 
   // Fetch current templates
   const { data: templates = [], isLoading } = useQuery<ConsentTemplate[]>({
@@ -365,6 +369,31 @@ export default function ConsentTemplateSettings() {
     },
   });
 
+  // Create custom template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: async (data: { templateType: string; title: string; content: string }) => {
+      return await apiRequest('/api/admin/consent-templates', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
+      setShowCreateForm(false);
+      setNewTemplateType('');
+      setNewTemplateTitle('');
+      setNewTemplateContent('');
+      toast({
+        title: "Template created",
+        description: "New consent form template has been created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Creation failed",
+        description: error.message || "Failed to create template",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileUpload = (templateType: string) => async () => {
     const response = await fetch("/api/admin/consent-templates/upload", {
       method: "POST",
@@ -389,8 +418,42 @@ export default function ConsentTemplateSettings() {
     return Array.isArray(templates) ? templates.filter(t => t.templateType === templateType) : [];
   };
 
+  // Get all unique template types (both predefined and custom)
+  const allTemplateTypes = React.useMemo(() => {
+    const predefined = TEMPLATE_TYPES.map(t => ({ ...t, isPredefined: true }));
+    const custom = Array.isArray(templates) 
+      ? templates
+          .filter(t => !TEMPLATE_TYPES.some(predefined => predefined.key === t.templateType))
+          .map(t => ({
+            key: t.templateType,
+            label: t.title,
+            description: `Custom consent form`,
+            isPredefined: false
+          }))
+          .filter((type, index, arr) => arr.findIndex(t => t.key === type.key) === index) // Remove duplicates
+      : [];
+    return [...predefined, ...custom];
+  }, [templates]);
+
   const handleToggleTemplate = (template: ConsentTemplate) => {
     toggleTemplateMutation.mutate({ id: template.id, isActive: !template.isActive });
+  };
+
+  const handleCreateTemplate = () => {
+    if (!newTemplateType.trim() || !newTemplateTitle.trim()) {
+      toast({
+        title: "Validation error",
+        description: "Template type and title are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createTemplateMutation.mutate({
+      templateType: newTemplateType.trim().toLowerCase().replace(/\s+/g, '_'),
+      title: newTemplateTitle.trim(),
+      content: newTemplateContent.trim() || '',
+    });
   };
 
   const handleEditContent = (templateType: string) => {
@@ -500,7 +563,88 @@ export default function ConsentTemplateSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {TEMPLATE_TYPES.map((type) => {
+          {/* Create New Template Button */}
+          <Card className="border-dashed border-2 border-muted">
+            <CardContent className="p-6">
+              {!showCreateForm ? (
+                <div className="text-center">
+                  <Button 
+                    onClick={() => setShowCreateForm(true)}
+                    className="w-full"
+                    data-testid="button-create-template"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Create Custom Consent Form
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Create your own consent form type beyond the default templates
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Create Custom Consent Form</h3>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowCreateForm(false)}
+                      disabled={createTemplateMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="template-type">Template Type (Internal ID)</Label>
+                      <Input
+                        id="template-type"
+                        value={newTemplateType}
+                        onChange={(e) => setNewTemplateType(e.target.value)}
+                        placeholder="e.g., equipment, transportation, emergency"
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Use lowercase letters, numbers, and underscores only
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="template-title">Display Title</Label>
+                      <Input
+                        id="template-title"
+                        value={newTemplateTitle}
+                        onChange={(e) => setNewTemplateTitle(e.target.value)}
+                        placeholder="e.g., Equipment Usage Agreement"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="template-content">Initial Content (Optional)</Label>
+                      <Textarea
+                        id="template-content"
+                        value={newTemplateContent}
+                        onChange={(e) => setNewTemplateContent(e.target.value)}
+                        rows={6}
+                        placeholder="Enter HTML content for the consent form (you can edit this later)..."
+                        className="mt-1 font-mono text-sm"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleCreateTemplate}
+                      disabled={createTemplateMutation.isPending}
+                      className="w-full"
+                    >
+                      {createTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {allTemplateTypes.map((type) => {
             const activeTemplate = getActiveTemplate(type.key);
             const allTemplates = getAllTemplatesForType(type.key);
             const isEditing = editingTemplate === type.key;
@@ -514,9 +658,14 @@ export default function ConsentTemplateSettings() {
                       <CardDescription>{type.description}</CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
+                      {!type.isPredefined && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 rounded text-xs font-medium">
+                          Custom Type
+                        </span>
+                      )}
                       {activeTemplate?.isCustom && (
                         <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-                          Custom
+                          Custom Content
                         </span>
                       )}
                       <div className="flex items-center gap-2">

@@ -4198,6 +4198,40 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     }
   });
 
+  // Create new custom consent template
+  app.post('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { templateType, title, content } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!templateType || !title) {
+        return res.status(400).json({ error: 'Template type and title are required' });
+      }
+      
+      // Check if active template of this type already exists
+      const allTemplates = await storage.getAllConsentTemplatesForAdmin(tenantId);
+      const existing = allTemplates.find(t => t.templateType === templateType && t.isActive);
+      if (existing) {
+        return res.status(400).json({ error: 'An active template of this type already exists' });
+      }
+      
+      const template = await storage.createConsentTemplate({
+        tenantId,
+        templateType,
+        title,
+        content: content || '',
+        isCustom: true,
+        version: 1,
+        isActive: true,
+      });
+      
+      res.json(template);
+    } catch (error) {
+      console.error('Error creating consent template:', error);
+      res.status(500).json({ error: 'Failed to create consent template' });
+    }
+  });
+
   // Get all consent documents for admin view
   app.get('/api/admin/consent-documents', requireAdmin, async (req: Request, res: Response) => {
     try {
