@@ -2,16 +2,16 @@ export default function HomePlayHQ() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Navbar */}
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-gray-900">
+        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
           PlayHQ
         </a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#features" className="hover:opacity-80">Features</a>
           <a href="#pricing" className="hover:opacity-80">Pricing</a>
-          <a href="/login" className="rounded-xl px-4 py-2 border border-gray-300 hover:bg-gray-50">
+          <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent">
             Log in
           </a>
         </nav>
@@ -24,7 +24,7 @@ export default function HomePlayHQ() {
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
               Your club's HQ — for any sport
             </h1>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-4 text-lg text-muted-foreground">
               Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
@@ -39,7 +39,7 @@ export default function HomePlayHQ() {
               </a>
             </div>
           </div>
-          <div className="rounded-2xl shadow p-6 bg-white border border-gray-200">
+          <div className="rounded-2xl shadow p-6 bg-card border border-border">
             <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500 text-sm">
               Product screenshot
             </div>
