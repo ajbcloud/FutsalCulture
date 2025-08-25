@@ -181,7 +181,7 @@ export const players = pgTable("players", {
   avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   birthYear: integer("birth_year").notNull(),
   dateOfBirth: date("date_of_birth"),
-  ageBand: ageBandEnum("age_band"),
+  ageBand: ageBandEnum("age_band").notNull().default("child"),
   isTeen: boolean("is_teen").notNull().default(false),
   isAdult: boolean("is_adult").notNull().default(false),
   becameAdultAt: timestamp("became_adult_at"), // Track when player turned 18
