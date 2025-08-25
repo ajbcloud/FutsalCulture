@@ -130,7 +130,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-lg">{plan.name}</CardTitle>
               <div className="text-2xl font-bold">
-                {plan.price === 0 ? 'Free' : `$${plan.price}/mo`}
+                {plan.price === 0 ? '$0/mo' : `$${plan.price}/mo`}
               </div>
               <div className="text-sm text-muted-foreground">
                 {plan.playerLimit === 'unlimited' ? 'Unlimited players' : `Up to ${plan.playerLimit} players`}
