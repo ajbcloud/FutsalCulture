@@ -4135,6 +4135,10 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       if (template && template.content) {
         templateContent = template.content;
         templateTitle = template.title;
+      } else if (template) {
+        // Found template but no content - use title and template type
+        templateTitle = template.title;
+        templateContent = `<h3>${template.title}</h3><p>This is a custom consent form template. Content has not been configured yet.</p>`;
       } else {
         // Use default template
         const defaultTemplates: Record<string, any> = {
@@ -4275,7 +4279,9 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         
         const defaultTemplate = defaultTemplates[templateType];
         if (!defaultTemplate) {
-          return res.status(404).json({ error: 'Template type not found' });
+          // If it's not a default template type and no active template found, 
+          // this might be a custom template type without content
+          return res.status(404).json({ error: `No active consent template found for type '${templateType}'. Please activate a template or create content for this template type.` });
         }
         
         templateContent = defaultTemplate.content;
