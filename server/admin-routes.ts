@@ -3079,7 +3079,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).user?.tenantId;
+      const tenantId = (req as any).currentUser?.tenantId;
       if (!tenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
