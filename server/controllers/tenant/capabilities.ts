@@ -6,9 +6,9 @@ import {
   planFeatures, 
   tenantFeatureOverrides,
   tenantPlanAssignments,
-  tenants,
-  tenantPolicies
+  tenants
 } from '../../../shared/schema';
+import { tenantPolicies } from '../../../shared/db/schema/tenantPolicy';
 
 // Cache for tenant capabilities
 const capabilitiesCache = new Map<string, { data: any; expires: number }>();

@@ -504,6 +504,11 @@ export function setupAdminRoutes(app: any) {
   // Recent activity endpoint
   app.get('/api/admin/recent-activity', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
       const { date = 'today', before } = req.query;
       const now = new Date();
       
@@ -540,7 +545,10 @@ export function setupAdminRoutes(app: any) {
         .innerJoin(signups, eq(payments.signupId, signups.id))
         .innerJoin(players, eq(signups.playerId, players.id))
         .innerJoin(users, eq(players.parentId, users.id))
-        .where(sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`)
+        .where(and(
+          eq(players.tenantId, tenantId),
+          sql`${payments.paidAt} IS NOT NULL AND ${payments.paidAt} >= ${startTime} AND ${payments.paidAt} <= ${endTime}`
+        ))
         .orderBy(desc(payments.paidAt))
         .limit(10);
 
@@ -579,7 +587,10 @@ export function setupAdminRoutes(app: any) {
         .innerJoin(signups, eq(payments.signupId, signups.id))
         .innerJoin(players, eq(signups.playerId, players.id))
         .innerJoin(users, eq(players.parentId, users.id))
-        .where(sql`${payments.refundedAt} IS NOT NULL AND ${payments.refundedAt} >= ${startTime} AND ${payments.refundedAt} <= ${endTime}`)
+        .where(and(
+          eq(players.tenantId, tenantId),
+          sql`${payments.refundedAt} IS NOT NULL AND ${payments.refundedAt} >= ${startTime} AND ${payments.refundedAt} <= ${endTime}`
+        ))
         .orderBy(desc(payments.refundedAt))
         .limit(10);
 
@@ -608,7 +619,10 @@ export function setupAdminRoutes(app: any) {
       const recentPlayers = await db
         .select()
         .from(players)
-        .where(sql`${players.createdAt} >= ${startTime} AND ${players.createdAt} <= ${endTime}`)
+        .where(and(
+          eq(players.tenantId, tenantId),
+          sql`${players.createdAt} >= ${startTime} AND ${players.createdAt} <= ${endTime}`
+        ))
         .orderBy(desc(players.createdAt))
         .limit(10);
 
@@ -631,7 +645,10 @@ export function setupAdminRoutes(app: any) {
       const recentPlayerApprovals = await db
         .select()
         .from(players)
-        .where(sql`${players.approvedAt} >= ${startTime} AND ${players.approvedAt} <= ${endTime}`)
+        .where(and(
+          eq(players.tenantId, tenantId),
+          sql`${players.approvedAt} >= ${startTime} AND ${players.approvedAt} <= ${endTime}`
+        ))
         .orderBy(desc(players.approvedAt))
         .limit(5);
 
@@ -654,7 +671,10 @@ export function setupAdminRoutes(app: any) {
       const recentParents = await db
         .select()
         .from(users)
-        .where(sql`${users.createdAt} >= ${startTime} AND ${users.createdAt} <= ${endTime}`)
+        .where(and(
+          eq(users.tenantId, tenantId),
+          sql`${users.createdAt} >= ${startTime} AND ${users.createdAt} <= ${endTime}`
+        ))
         .orderBy(desc(users.createdAt))
         .limit(10);
 
@@ -677,7 +697,10 @@ export function setupAdminRoutes(app: any) {
       const recentParentApprovals = await db
         .select()
         .from(users)
-        .where(sql`${users.approvedAt} >= ${startTime} AND ${users.approvedAt} <= ${endTime}`)
+        .where(and(
+          eq(users.tenantId, tenantId),
+          sql`${users.approvedAt} >= ${startTime} AND ${users.approvedAt} <= ${endTime}`
+        ))
         .orderBy(desc(users.approvedAt))
         .limit(5);
 
@@ -702,7 +725,10 @@ export function setupAdminRoutes(app: any) {
       const recentHelpRequests = await db
         .select()
         .from(helpRequests)
-        .where(sql`${helpRequests.createdAt} >= ${startTime} AND ${helpRequests.createdAt} <= ${endTime}`)
+        .where(and(
+          eq(helpRequests.tenantId, tenantId),
+          sql`${helpRequests.createdAt} >= ${startTime} AND ${helpRequests.createdAt} <= ${endTime}`
+        ))
         .orderBy(desc(helpRequests.createdAt))
         .limit(5);
 
