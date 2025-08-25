@@ -1,0 +1,110 @@
+Goal
+- Rebrand the site for PlayHQ (playhq.app).
+- Keep the existing consumer “Futsal Culture” style page for reference, but move it to /landing.
+- Build a NEW, client-focused homepage at / targeted at club owners/admins (not parents/players).
+- Ensure /get-started -> existing /signups, and /login exists.
+- Do not break the current app at /app.
+
+Operating guardrails
+- Don’t remove existing signup/session features.
+- Avoid introducing missing imports (no references to components that don’t exist).
+- Use Tailwind classes already in the project; keep the codebase’s router choice (Wouter or React Router).
+- If a path/file differs, adapt to what’s actually in the repo, but keep the same behaviors and route mapping.
+
+1) Move the old page to /landing
+- Identify the current page that renders the “Elite Futsal Training” hero (consumer/parent-facing).
+- Do NOT delete it. Create a route for it at /landing (e.g., component OldLanding).
+- Update the main router so /landing shows that page and / no longer points to it.
+
+2) Create a brand-new PlayHQ client homepage at /
+Create a new page component (e.g., client/src/pages/HomePlayHQ.tsx) with a clean, multi-sport, admin/owner-focused design, then map it to /.
+
+Content + structure (client-focused):
+- Navbar:
+  - Left: PlayHQ wordmark (text link to /)
+  - Right: Links: Features, Pricing, Log in (-> /login)
+- Hero:
+  - Headline: “Your club’s HQ — for any sport”
+  - Subheadline: “Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.”
+  - Primary CTA button: “Get started free” -> /get-started (alias for /signups)
+  - Secondary link: “Talk to sales” -> mailto:sales@playhq.app
+  - Visual: simple placeholder card “Product screenshot” (no external libs)
+- Social proof (optional): small row of placeholder club logos (as neutral gray boxes)
+- “How it works” (3 steps):
+  1) Create your club → set up your tenant and basic settings
+  2) Invite coaches, players, and parents → email or share code
+  3) Run operations → schedules, payments, rosters
+- Feature grid (3–6 cards, concise):
+  - Universal onboarding — invite links + join by code
+  - Payments built-in — start free, upgrade anytime
+  - Multi-sport — configurable for soccer, futsal, basketball, volleyball, etc.
+  - Messaging & alerts — email/SMS (if in plan)
+  - Calendar & sessions — publish once, auto-notify
+  - Roles & permissions — owner, coach, parent, player
+- Pricing (3 cards):
+  - Free — key basics (email invites, basic calendar)
+  - Starter — unlimited members, CSV import, priority support
+  - Club — advanced analytics, SMS invites, custom domains
+  Each card has a “Choose plan” button → /get-started
+- Security & compliance blurb:
+  - “Secure by default — SSO options, audit logs, role-based access.”
+- FAQ (5 short Q&A for admins)
+- Footer:
+  - © {currentYear} PlayHQ
+  - Links: Terms (/terms), Privacy (/privacy)
+  - Small link: Status (placeholder #) and Support (mailto:support@playhq.app)
+
+Design notes:
+- White background, dark text; tasteful green→blue gradient accent only in hero.
+- Use accessible color contrast, proper h1/h2 hierarchy, focusable CTAs.
+- Ensure layouts are responsive (mobile-first).
+
+3) Router updates (keep current router system)
+- Detect whether the project uses Wouter or React Router.
+- Map routes:
+  - / -> NEW client homepage (HomePlayHQ)
+  - /landing -> OLD consumer page (what used to be at /)
+  - /get-started -> the existing /signups component (alias both paths)
+  - /login -> a simple login page (see step 4)
+  - Keep /app for the existing application shell/dashboard
+- Ensure 404 (NotFound) still works.
+
+4) Login page (minimal, no missing imports)
+- If a Login page already exists, update its links; else create client/src/pages/Login.tsx.
+- Include:
+  - Email/password form: POST /api/auth/login
+  - Links: “Forgot password?” -> /forgot (if exists); “New here? Get started” -> /get-started
+  - Optional SSO links if routes exist: /api/auth/google and /api/auth/microsoft
+- IMPORTANT: do NOT import a SocialButtons component unless you also create it. If not present, use plain <a> links.
+
+5) Update top-level navigation where appropriate
+- Ensure any global header on the new homepage shows “Log in” (-> /login) and NOT “Parent Login”.
+- Ensure “Get started free” (-> /get-started) is visible in the hero and pricing.
+
+6) SEO & meta
+- Add/ensure (via index.html or Helmet equivalent):
+  - <title>PlayHQ — Run your club or team with ease</title>
+  - <meta name="description" content="All-in-one HQ for clubs and teams: rosters, invites, payments, schedules, and messaging. Works for soccer, futsal, basketball, volleyball, and more.">
+  - Open Graph/Twitter tags (basic)
+  - Canonical to playhq.app (use current domain in dev)
+- No heavy external scripts. Keep performance solid.
+
+7) Brand cleanup (scoped)
+- Replace visible strings “Futsal Culture” with “PlayHQ” on the new homepage and navbar.
+- Do NOT mass-replace across the entire codebase; leave legacy copy in the old /landing page for now.
+
+8) Acceptance criteria
+- Visiting / shows the new PlayHQ client homepage (multi-sport, admin-first).
+- Visiting /landing shows the old consumer “Elite Futsal Training” page.
+- /get-started opens the existing signups flow (alias for /signups, keep both).
+- /login renders a working page; no missing imports or component errors.
+- App compiles and runs without errors; responsive on mobile and desktop.
+- No references to “Parent Login” on the new homepage.
+- “PlayHQ” wordmark and copy are visible in header and hero.
+- Old app continues to work at /app.
+
+9) Commit
+- Create a single commit: “feat(landing): new PlayHQ client-focused homepage; move old page to /landing; routing + SEO”
+- Leave a short summary in the commit description of routes changed.
+
+Proceed to implement these changes now. If any path differs, adapt to the project’s actual file/route names while preserving the route behavior and acceptance criteria above. Rebuild and ensure the preview at / shows the new PlayHQ homepage.

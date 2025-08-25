@@ -12,19 +12,21 @@ signupRouter.post("/signup/evaluate", async (req: any, res) => {
     const tenantId = req.body.tenantId || req.user?.tenantId;
     const { dob } = req.body; // ISO string
     
-    if (!tenantId) {
-      return res.status(400).json({ error: "Tenant ID required" });
-    }
-    
     if (!dob) {
       return res.status(400).json({ error: "Date of birth required" });
     }
-
-    // Get tenant policy
-    const [policy] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
     
-    // Use default policy if none exists
-    const policyData = policy || {
+    // For signup evaluation, we can use default policy if no tenant ID provided
+    let policyData;
+    
+    if (tenantId) {
+      // Get tenant-specific policy
+      const [policy] = await db.select().from(tenantPolicies).where(eq(tenantPolicies.tenantId, tenantId));
+      policyData = policy;
+    }
+    
+    // Use default policy if none exists for tenant or no tenant provided
+    policyData = policyData || {
       audienceMode: "mixed" as const,
       parentRequiredBelow: 13,
       teenSelfAccessAt: 13,

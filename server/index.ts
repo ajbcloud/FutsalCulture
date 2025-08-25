@@ -83,6 +83,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Mount public routes BEFORE authentication
+  app.use('/api', signupRouter);
+  
   const server = await registerRoutes(app);
   app.use(express.json());
 
@@ -94,7 +97,6 @@ app.use((req, res, next) => {
   
   // Mount age policy routes
   app.use('/api', policyRouter);
-  app.use('/api', signupRouter);
   app.use('/api', consentRouter);
   app.use('/api', guardianRouter);
 

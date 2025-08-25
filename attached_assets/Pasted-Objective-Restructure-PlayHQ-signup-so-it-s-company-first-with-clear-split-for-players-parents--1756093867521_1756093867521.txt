@@ -1,0 +1,113 @@
+Objective
+Restructure PlayHQ signup so it’s company-first, with clear split for players/parents:
+- /get-started => tenant (club/company) signup for admins/owners (PRIMARY)
+- /join => players/parents join flow (invite link or team code)
+- /signup (optional) => create personal account without a club; can join later
+Do not break the existing app at /app.
+
+Guardrails
+- Keep existing /signups component if it already exists; we can reuse it for /get-started.
+- Do not import components that don’t exist. If needed, create simple pages.
+- Tailwind only. Keep current router (Wouter or React Router).
+- Back-end: Express. Use existing db helpers/ORM if present; otherwise stub minimal logic safely.
+
+1) Routing changes
+- Map routes:
+  - “/” => new HomePlayHQ (already added earlier; leave intact)
+  - “/get-started” => Admin/Owner tenant signup page (company-first)
+  - “/join” => Player/Parent join page (invite token OR team/tenant code)
+  - “/signup” (optional) => personal account creation (no tenant yet)
+  - Keep “/app” as-is for logged-in users
+- If current /signups exists, alias /get-started -> existing /signups component, but update its UI/content per section 2.
+
+2) Company-first page (/get-started)
+Create (or refactor) page `client/src/pages/GetStarted.tsx` (or reuse existing) with:
+- H1: “Create your club on PlayHQ”
+- Sub: “Start free. Add coaches, players, and parents in minutes.”
+- Form fields (validated client-side):
+  - Organization/Club name (required)
+  - Contact name (required)
+  - Work email (required)
+  - Country, State/Province, City (optional)
+  - Sports (multi-select: Soccer, Futsal, Basketball, Volleyball, Other)
+  - Checkbox: I agree to Terms (/terms) and Privacy (/privacy) (required)
+- Hidden: plan_key = "free"
+- Buttons:
+  - Primary: “Create my club” -> POST /api/get-started
+  - Secondary: “Prefer Google/Microsoft?” -> links to /api/auth/google?intent=owner and /api/auth/microsoft?intent=owner (only add if these routes exist)
+- Success state: “Check your email to verify and set your password.” (link explains they’ll get a tenant code and can invite people)
+- Footer link: “Players & parents: join with a code” -> /join
+
+3) Players & parents page (/join)
+Create `client/src/pages/Join.tsx` with two panels:
+A) **Have an invite link?**
+   - If URL has ?token=… show “Accept invite” button -> POST /api/join/by-token
+B) **Have a team code?**
+   - Input: Team/Club code
+   - Email field (required); optional full name
+   - Button -> POST /api/join/by-code
+UX notes:
+- On success: redirect to /app.
+- If domain allow-list mismatch or approval required, show clear message:
+  “Pending approval from your club. We’ll email you when you’re in.”
+
+Add small link: “Don’t have a code? Create a personal account” -> /signup
+
+4) Personal account (optional) (/signup)
+Create `client/src/pages/PersonalSignup.tsx`:
+- H1: “Create your PlayHQ account”
+- Email + password (or SSO buttons if available)
+- Role selector: Parent or Player (default Parent)
+- DOB field **only** if role = Player (if under 13, require guardian email instead of password; show consent note)
+- POST /api/users/self-signup
+- After create: show “You’re set — now join your club” with link to /join.
+- Account is “unaffiliated”; cannot access club features until joined.
+
+5) Backend endpoints (create if missing; otherwise reuse and adapt)
+Implement or confirm these Express routes under /api with validation and safe error handling:
+- POST /api/get-started
+  Body: { org_name, contact_name, contact_email, city?, state?, country?, sports[], plan_key: "free", accept: true }
+  Flow: ensure user record (owner) -> create tenant (slug + 8-char code) -> create Stripe customer (if Stripe present) -> insert subscription plan “free” -> create email verification token -> send email (Resend) with link `${APP_URL}/verify?token=...`
+  Response: { ok: true }
+- GET /api/verify?token=...
+  Mark user email_verified, set session, redirect to /create-password (if local auth) or /app (if SSO).
+- POST /api/join/by-token
+  Body: { token }
+  Validate invite belongs to tenant; attach user (role from invite); expire invite; return { ok:true }.
+- POST /api/join/by-code
+  Body: { code, email, name? }
+  Lookup tenant by tenant_code; check domain allow-list if present; create or attach user as parent/player (pending if approvals required); return { ok:true, status: "joined" | "pending" }.
+- POST /api/users/self-signup
+  Body: { email, password? (if parent), role: "parent" | "player", dob?, guardian_email? }
+  Create unaffiliated user; if player<13 then require guardian email and record consent placeholder; send verify email; return { ok:true }.
+
+Email templates (Resend):
+- Verify: subject “Verify your email • PlayHQ” (CTA to /verify)
+- Invite: subject “Invitation to join {tenant} • PlayHQ”
+
+6) UI polish & copy
+- Each page uses clean, admin-first copy — no “Parent Login” on /get-started.
+- On /get-started, add a tiny line: “Players & parents: join with a code” → /join.
+- On /join, small note: “No code? Create a personal account” → /signup.
+
+7) Router wiring
+- Import and map:
+  - /get-started -> GetStarted page (company-first)
+  - /join -> Join page
+  - /signup -> PersonalSignup page (optional; add only if implemented)
+  - Keep /app intact
+- If an old /signups component exists, either:
+  - Replace its content with the company-first form, or
+  - Export it as GetStarted and set /get-started to it.
+
+8) Acceptance tests
+- /get-started shows company-first form; POST creates tenant and sends verify email; success screen renders.
+- /join with token joins immediately; with code + email joins or goes pending with helpful message.
+- /signup creates unaffiliated account and nudges to /join.
+- No missing imports; build succeeds; app runs.
+- Copy is PlayHQ-branded and multi-sport throughout these pages.
+
+9) Commit
+Create one commit:
+`feat(auth): split signup flows — company-first /get-started, /join for players/parents, optional /signup personal`
+Include a short summary of added endpoints and pages.
