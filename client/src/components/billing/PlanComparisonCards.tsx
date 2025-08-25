@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface PlanComparisonCardsProps {
   currentPlan: string;
+  isHomepage?: boolean;
 }
 
 // Get features to display for a plan, including inheritance note and new/upgraded features only
@@ -66,7 +67,7 @@ const getDisplayFeatures = (planId: string) => {
   return displayFeatures;
 };
 
-export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
+export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanComparisonCardsProps) {
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -156,7 +157,14 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
               </div>
 
               <div className="pt-4 border-t">
-                {isCurrent ? (
+                {isHomepage ? (
+                  <a
+                    href="/get-started"
+                    className="inline-flex items-center justify-center w-full rounded-md px-6 py-2 font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Get Started
+                  </a>
+                ) : isCurrent ? (
                   <Badge variant="secondary" className="w-full justify-center py-2">
                     Current Plan
                   </Badge>

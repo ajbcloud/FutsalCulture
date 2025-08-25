@@ -120,7 +120,7 @@ export default function HomePlayHQ() {
         <section id="pricing" className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">Simple pricing for every club</h2>
-            <PlanComparisonCards currentPlan="core" />
+            <PlanComparisonCards currentPlan="core" isHomepage={true} />
             <div className="mt-12">
               <FeatureGrid currentPlan="core" />
             </div>
