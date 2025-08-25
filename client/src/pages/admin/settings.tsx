@@ -919,29 +919,36 @@ export default function AdminSettings() {
             >
               Age Policy
             </TabsTrigger>
-            <TabsTrigger 
-              value="consent-forms" 
-              className={`w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3 ${
-                !isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={!isConsentFormsEnabled}
-            >
-              <div className="flex items-center">
-                Consent Forms
-                {!isConsentFormsEnabled && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+            {!isConsentFormsEnabled ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger 
+                      value="consent-forms" 
+                      className={`w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3 opacity-50 cursor-not-allowed`}
+                      disabled={true}
+                    >
+                      <div className="flex items-center">
+                        Consent Forms
                         <Info className="w-4 h-4 ml-2 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </TabsTrigger>
+                      </div>
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <TabsTrigger 
+                value="consent-forms" 
+                className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+              >
+                <div className="flex items-center">
+                  Consent Forms
+                </div>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -969,29 +976,36 @@ export default function AdminSettings() {
             <TabsTrigger value="age-policy" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Age Policy
             </TabsTrigger>
-            <TabsTrigger 
-              value="consent-forms" 
-              className={`data-[state=active]:bg-accent data-[state=active]:text-accent-foreground ${
-                !isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={!isConsentFormsEnabled}
-            >
-              <div className="flex items-center">
-                Consent Forms
-                {!isConsentFormsEnabled && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+            {!isConsentFormsEnabled ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger 
+                      value="consent-forms" 
+                      className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground opacity-50 cursor-not-allowed"
+                      disabled={true}
+                    >
+                      <div className="flex items-center">
+                        Consent Forms
                         <Info className="w-4 h-4 ml-2 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </TabsTrigger>
+                      </div>
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <TabsTrigger 
+                value="consent-forms" 
+                className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              >
+                <div className="flex items-center">
+                  Consent Forms
+                </div>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
