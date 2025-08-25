@@ -935,15 +935,17 @@ export default function AdminSettings() {
                   >
                     <div className="flex items-center">
                       Consent Forms
-                      {!isConsentFormsEnabled && <Info className="w-4 h-4 ml-2 text-muted-foreground" />}
+                      <Info className="w-4 h-4 ml-2 text-muted-foreground" />
                     </div>
                   </TabsTrigger>
                 </TooltipTrigger>
-                {!isConsentFormsEnabled && (
-                  <TooltipContent side="right" className="max-w-sm">
+                <TooltipContent side="right" className="max-w-sm">
+                  {!isConsentFormsEnabled ? (
                     <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
-                  </TooltipContent>
-                )}
+                  ) : (
+                    <p>Manage digital consent forms that parents must sign during registration and session booking. Upload custom templates or use built-in forms.</p>
+                  )}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </TabsList>
