@@ -439,6 +439,39 @@ export default function ConsentTemplateSettings() {
     toggleTemplateMutation.mutate({ id: template.id, isActive: !template.isActive });
   };
 
+  const handleToggleSwitch = (templateType: string, checked: boolean) => {
+    const activeTemplate = getActiveTemplate(templateType);
+    const allTemplates = getAllTemplatesForType(templateType);
+
+    if (checked && !activeTemplate) {
+      // Switch turned ON - need to activate or create a template
+      if (allTemplates.length > 0) {
+        // There are existing templates, activate the most recent one
+        const template = allTemplates[0];
+        handleToggleTemplate({ ...template, isActive: false });
+      } else {
+        // No templates exist, create a default one
+        const templateTitles: Record<string, string> = {
+          medical: "Medical Information Release Form",
+          liability: "Liability Waiver",
+          photo: "Photo/Video Release",
+          privacy: "Privacy Policy Consent"
+        };
+        
+        const defaultContent = DEFAULT_TEMPLATES[templateType as keyof typeof DEFAULT_TEMPLATES]?.content || '';
+        
+        createTemplateMutation.mutate({
+          templateType,
+          title: templateTitles[templateType] || `${templateType} Consent Form`,
+          content: defaultContent,
+        });
+      }
+    } else if (!checked && activeTemplate) {
+      // Switch turned OFF - deactivate the active template
+      handleToggleTemplate(activeTemplate);
+    }
+  };
+
   const handleCreateTemplate = () => {
     if (!newTemplateType.trim() || !newTemplateTitle.trim()) {
       toast({
@@ -676,28 +709,15 @@ export default function ConsentTemplateSettings() {
                         }`}>
                           {activeTemplate ? 'Required' : 'Optional'}
                         </span>
-                        {allTemplates.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Enable:</span>
-                            <Switch
-                              checked={Boolean(activeTemplate)}
-                              onCheckedChange={(checked) => {
-                                if (allTemplates.length > 0) {
-                                  const template = allTemplates[0]; // Get the most recent template
-                                  if (checked && !activeTemplate) {
-                                    // Activate the template
-                                    handleToggleTemplate({ ...template, isActive: false });
-                                  } else if (!checked && activeTemplate) {
-                                    // Deactivate the template
-                                    handleToggleTemplate(activeTemplate);
-                                  }
-                                }
-                              }}
-                              disabled={toggleTemplateMutation.isPending}
-                              data-testid={`switch-${type.key}`}
-                            />
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Enable:</span>
+                          <Switch
+                            checked={Boolean(activeTemplate)}
+                            onCheckedChange={(checked) => handleToggleSwitch(type.key, checked)}
+                            disabled={toggleTemplateMutation.isPending || createTemplateMutation.isPending}
+                            data-testid={`switch-${type.key}`}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
