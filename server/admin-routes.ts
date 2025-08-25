@@ -4390,7 +4390,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Sign consent documents for a player (called during signup)
   app.post('/api/consent/sign', async (req: Request, res: Response) => {
     try {
-      const { playerId, parentId, templateTypes, signatureData, consentGiven } = req.body;
+      const { playerId, parentId, templateTypes, signatureData, consentGiven, signedAt } = req.body;
       const tenantId = (req as any).currentUser?.tenantId;
       const userAgent = req.get('User-Agent') || '';
       const ipAddress = req.ip || '';
@@ -4398,6 +4398,9 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       if (!playerId || !parentId || !templateTypes || !Array.isArray(templateTypes)) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
+
+      // Use the timestamp from when the user actually completed the form, or current time as fallback
+      const completionTimestamp = signedAt ? new Date(signedAt) : new Date();
 
       const pdfGenerator = new SimplePDFGeneratorService();
       const results = [];
@@ -4421,7 +4424,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           continue;
         }
 
-        // Generate PDF document
+        // Generate PDF document using the actual completion timestamp
         const pdfData = await pdfGenerator.generateAndStoreConsentDocument({
           tenantId,
           playerId,
@@ -4431,12 +4434,12 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           templateType,
           templateTitle: template.title,
           templateContent: template.content || `Default ${templateType} consent form content`,
-          signedAt: new Date(),
+          signedAt: completionTimestamp,
           ipAddress,
           userAgent
         });
 
-        // Create consent document record
+        // Create consent document record using the same timestamp
         const documentData = insertConsentDocumentSchema.parse({
           tenantId,
           playerId,
@@ -4448,7 +4451,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           pdfFilePath: pdfData.filePath,
           pdfFileName: pdfData.fileName,
           pdfFileSize: pdfData.pdfBuffer.length,
-          signedAt: new Date(),
+          signedAt: completionTimestamp,
           signerIpAddress: ipAddress,
           signerUserAgent: userAgent,
           digitalSignature: pdfData.digitalSignature
@@ -4456,7 +4459,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
 
         const document = await storage.createConsentDocument(documentData);
 
-        // Create signature record
+        // Create signature record using the same timestamp
         const signatureRecord = insertConsentSignatureSchema.parse({
           documentId: document.id,
           tenantId,
@@ -4466,7 +4469,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           signatureMethod: 'electronic',
           signatureData: signatureData || {},
           consentGiven: consentGiven || true,
-          signedAt: new Date(),
+          signedAt: completionTimestamp,
           ipAddress,
           userAgent
         });

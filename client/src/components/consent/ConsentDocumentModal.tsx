@@ -233,6 +233,9 @@ export default function ConsentDocumentModal({
 
     setIsSigning(true);
     try {
+      // Capture the exact timestamp when the user completes the signing
+      const completionTimestamp = new Date().toISOString();
+      
       const signaturePayload = {
         playerId: playerData.id,
         parentId: isParentSigning ? parentData?.id : undefined,
@@ -242,13 +245,11 @@ export default function ConsentDocumentModal({
           signatureMethod: signatureData.signatureMethod,
           drawnSignature: signatureData.drawnSignature
         },
-        consentGiven: true
+        consentGiven: true,
+        signedAt: completionTimestamp
       };
 
-      const response = await apiRequest('/api/consent/sign', {
-        method: 'POST',
-        body: JSON.stringify(signaturePayload)
-      });
+      const response = await apiRequest('POST', '/api/consent/sign', signaturePayload);
 
       // Response is successful if no error is thrown
       setSignedDocuments(prev => [...prev, currentTemplate.id]);
