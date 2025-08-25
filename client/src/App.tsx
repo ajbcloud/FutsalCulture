@@ -50,6 +50,9 @@ import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -73,52 +76,56 @@ function Router() {
         <Route path="/join" component={Join} />
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/login" component={Login} />
-            <Route path="/sessions" component={Sessions} />
-            <Route path="/sessions/:id" component={SessionDetail} />
-            <Route path="/session/:id/payment" component={SessionPayment} />
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/calendar" component={Calendar} />
-            <Route path="/profile" component={Profile} />
-            <Route path="/multi-checkout" component={MultiCheckout} />
-            <Route path="/player-invite/:token" component={PlayerInvite} />
-            <Route path="/parent2-invite/:token" component={Parent2Invite} />
-            <Route path="/help" component={Help} />
-            <Route path="/my-help-requests" component={MyHelpRequests} />
-            {(user?.isAdmin || user?.isAssistant) && (
-              <>
-                <Route path="/admin" component={AdminDashboard} />
-                <Route path="/admin/dashboard" component={AdminDashboard} />
-                <Route path="/admin/sessions" component={AdminSessions} />
-                <Route path="/admin/sessions/new" component={AdminSessionDetail} />
-                <Route path="/admin/sessions/:id/waitlist" component={AdminSessionWaitlist} />
-                <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
-                <Route path="/admin/payments" component={AdminPayments} />
-                <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
-                <Route path="/admin/access-codes" component={AdminAccessCodes} />
-                <Route path="/admin/players" component={AdminPlayers} />
-                <Route path="/admin/parents" component={AdminParents} />
-                <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />
-                <Route path="/admin/communications" component={AdminCommunications} />
-                <Route path="/admin/analytics" component={AdminAnalytics} />
-                <Route path="/admin/player-development" component={AdminPlayerDevelopment} />
-                <Route path="/admin/help-requests" component={AdminHelpRequests} />
-                <Route path="/admin/settings" component={AdminSettings} />
-                <Route path="/admin/integrations" component={AdminIntegrations} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/sessions" component={Sessions} />
+        <Route path="/sessions/:id" component={SessionDetail} />
+        <Route path="/session/:id/payment" component={SessionPayment} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/calendar" component={Calendar} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/multi-checkout" component={MultiCheckout} />
+        <Route path="/player-invite/:token" component={PlayerInvite} />
+        <Route path="/parent2-invite/:token" component={Parent2Invite} />
+        <Route path="/help" component={Help} />
+        <Route path="/my-help-requests" component={MyHelpRequests} />
+        {(user?.isAdmin || user?.isAssistant) && (
+          <>
+            <Route path="/admin" component={AdminDashboard} />
+            <Route path="/admin/dashboard" component={AdminDashboard} />
+            <Route path="/admin/sessions" component={AdminSessions} />
+            <Route path="/admin/sessions/new" component={AdminSessionDetail} />
+            <Route path="/admin/sessions/:id/waitlist" component={AdminSessionWaitlist} />
+            <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
+            <Route path="/admin/payments" component={AdminPayments} />
+            <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
+            <Route path="/admin/access-codes" component={AdminAccessCodes} />
+            <Route path="/admin/players" component={AdminPlayers} />
+            <Route path="/admin/parents" component={AdminParents} />
+            <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />
+            <Route path="/admin/communications" component={AdminCommunications} />
+            <Route path="/admin/analytics" component={AdminAnalytics} />
+            <Route path="/admin/player-development" component={AdminPlayerDevelopment} />
+            <Route path="/admin/help-requests" component={AdminHelpRequests} />
+            <Route path="/admin/settings" component={AdminSettings} />
+            <Route path="/admin/integrations" component={AdminIntegrations} />
 
-                <Route path="/admin/payment" component={AdminPayment} />
-              </>
-            )}
-            {user?.isSuperAdmin && (
-              <>
-                <Route path="/super-admin" component={SuperAdmin} />
-                <Route path="/super-admin/:page" component={SuperAdmin} />
-                <Route path="/super-admin/:page/:tab" component={SuperAdmin} />
-                <Route path="/super-admin/:page/:tab/:subTab" component={SuperAdmin} />
-              </>
-            )}
+            <Route path="/admin/payment" component={AdminPayment} />
+          </>
+        )}
+        {user?.isSuperAdmin && (
+          <>
+            <Route path="/super-admin" component={SuperAdmin} />
+            <Route path="/super-admin/:page" component={SuperAdmin} />
+            <Route path="/super-admin/:page/:tab" component={SuperAdmin} />
+            <Route path="/super-admin/:page/:tab/:subTab" component={SuperAdmin} />
+          </>
+        )}
         <Route component={NotFound} />
       </Switch>
-      
+
       {/* Cookie Consent Banner - shows globally */}
       <CookieConsentBanner />
     </div>
