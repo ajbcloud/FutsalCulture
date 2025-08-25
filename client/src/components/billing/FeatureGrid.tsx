@@ -7,9 +7,10 @@ import { getPlan } from "@/lib/planUtils";
 
 interface FeatureGridProps {
   currentPlan: string;
+  isHomepage?: boolean;
 }
 
-export function FeatureGrid({ currentPlan }: FeatureGridProps) {
+export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProps) {
   // Define feature categories and their features in display order
   const featureCategories = {
     'Core Features': [
@@ -113,7 +114,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                       <div className="text-sm text-muted-foreground">
                         {plan.price === 0 ? '$0/mo' : `$${plan.price}/mo`}
                       </div>
-                      {plan.id === currentPlan && (
+                      {plan.id === currentPlan && !isHomepage && (
                         <Badge variant="secondary" className="text-xs">Current</Badge>
                       )}
                     </div>

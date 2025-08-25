@@ -122,7 +122,7 @@ export default function HomePlayHQ() {
             <h2 className="text-3xl font-bold text-center mb-12">Simple pricing for every club</h2>
             <PlanComparisonCards currentPlan="core" isHomepage={true} />
             <div className="mt-12">
-              <FeatureGrid currentPlan="core" />
+              <FeatureGrid currentPlan="core" isHomepage={true} />
             </div>
           </div>
         </section>
