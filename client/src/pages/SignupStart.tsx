@@ -26,15 +26,13 @@ export default function SignupStart() {
 
     setLoading(true);
     try {
-      const response = await apiRequest("/api/signup/evaluate", {
-        method: "POST",
-        body: JSON.stringify({ 
-          dob,
-          tenantId: localStorage.getItem("tenantId") || undefined 
-        }),
+      const response = await apiRequest("POST", "/api/signup/evaluate", { 
+        dob,
+        tenantId: localStorage.getItem("tenantId") || undefined 
       });
 
-      const { outcome, policy } = response;
+      const result = await response.json();
+      const { outcome, policy } = result;
       
       // Store policy outcome for use in next screens
       sessionStorage.setItem("signupPolicy", JSON.stringify(outcome));
