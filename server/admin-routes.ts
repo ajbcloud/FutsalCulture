@@ -9,7 +9,7 @@ import { hasFeature } from "../shared/feature-flags";
 import Stripe from "stripe";
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
-import { PDFGeneratorService } from './services/pdfGenerator';
+import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -4146,7 +4146,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       }
       
       // Create sample data for preview
-      const pdfGenerator = new PDFGeneratorService();
+      const pdfGenerator = new SimplePDFGeneratorService();
       const sampleData = {
         tenantId,
         playerId: 'sample-player-id',
