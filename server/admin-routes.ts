@@ -2985,12 +2985,17 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
       const { filter, parentId } = req.query;
       
       // If parentId is provided, filter by specific parent
       const allUsers = parentId 
-        ? await db.select().from(users).where(eq(users.id, parentId as string))
-        : await db.select().from(users);
+        ? await db.select().from(users).where(and(eq(users.id, parentId as string), eq(users.tenantId, tenantId)))
+        : await db.select().from(users).where(eq(users.tenantId, tenantId));
       
       // If filtering by name and no parentId specified
       let filteredUsers = allUsers;
