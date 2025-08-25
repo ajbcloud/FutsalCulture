@@ -18,7 +18,7 @@ export interface PlanConfig {
 export const plans: PlanConfig[] = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Starter',
     price: 0,
     playerLimit: 10,
     features: {
