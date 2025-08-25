@@ -1838,6 +1838,107 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Bulk Approve Registrations
+  app.post('/api/admin/registrations/bulk-approve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { registrations } = req.body; // Array of {id, type} objects
+      const adminUserId = (req as any).currentUser?.id;
+      
+      if (!Array.isArray(registrations) || registrations.length === 0) {
+        return res.status(400).json({ message: 'No registrations provided' });
+      }
+
+      const results = { approved: 0, failed: 0, errors: [] as string[] };
+
+      for (const registration of registrations) {
+        try {
+          if (registration.type === 'parent') {
+            await db.update(users)
+              .set({
+                isApproved: true,
+                registrationStatus: 'approved',
+                approvedAt: new Date(),
+                approvedBy: adminUserId,
+              })
+              .where(eq(users.id, registration.id));
+          } else if (registration.type === 'player') {
+            await db.update(players)
+              .set({
+                isApproved: true,
+                registrationStatus: 'approved',
+                approvedAt: new Date(),
+                approvedBy: adminUserId,
+              })
+              .where(eq(players.id, registration.id));
+          }
+          results.approved++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to approve ${registration.type} ${registration.id}`);
+        }
+      }
+
+      res.json({
+        message: `Bulk approval completed: ${results.approved} approved, ${results.failed} failed`,
+        results
+      });
+    } catch (error) {
+      console.error('Error bulk approving registrations:', error);
+      res.status(500).json({ message: 'Failed to bulk approve registrations' });
+    }
+  });
+
+  // Bulk Reject Registrations
+  app.post('/api/admin/registrations/bulk-reject', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { registrations, reason } = req.body; // Array of {id, type} objects and reason
+      const adminUserId = (req as any).currentUser?.id;
+      
+      if (!Array.isArray(registrations) || registrations.length === 0) {
+        return res.status(400).json({ message: 'No registrations provided' });
+      }
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: 'Rejection reason is required' });
+      }
+
+      const results = { rejected: 0, failed: 0, errors: [] as string[] };
+
+      for (const registration of registrations) {
+        try {
+          if (registration.type === 'parent') {
+            await db.update(users)
+              .set({
+                registrationStatus: 'rejected',
+                rejectedAt: new Date(),
+                rejectedBy: adminUserId,
+                rejectionReason: reason,
+              })
+              .where(eq(users.id, registration.id));
+          } else if (registration.type === 'player') {
+            await db.update(players)
+              .set({
+                registrationStatus: 'rejected',
+              })
+              .where(eq(players.id, registration.id));
+          }
+          results.rejected++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to reject ${registration.type} ${registration.id}`);
+        }
+      }
+
+      res.json({
+        message: `Bulk rejection completed: ${results.rejected} rejected, ${results.failed} failed`,
+        results
+      });
+    } catch (error) {
+      console.error('Error bulk rejecting registrations:', error);
+      res.status(500).json({ message: 'Failed to bulk reject registrations' });
+    }
+  });
+
   // Reject Registration
   app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req: Request, res: Response) => {
     try {

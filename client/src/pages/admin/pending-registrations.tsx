@@ -16,7 +16,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { format } from 'date-fns';
-import { Check, X, User, Users } from 'lucide-react';
+import { Check, X, User, Users, CheckSquare, Square } from 'lucide-react';
 import { queryClient } from '../../lib/queryClient';
 import { Pagination } from '../../components/pagination';
 
@@ -41,6 +41,11 @@ export default function AdminPendingRegistrations() {
   const [paginatedRegistrations, setPaginatedRegistrations] = useState<PendingRegistration[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  // Bulk operations state
+  const [selectedRegistrations, setSelectedRegistrations] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState('');
   const { toast } = useToast();
   
   // Refresh data when returning to page
@@ -161,6 +166,137 @@ export default function AdminPendingRegistrations() {
     }
   };
 
+  // Bulk operations handlers
+  const toggleSelectAll = () => {
+    if (selectedRegistrations.size === paginatedRegistrations.length) {
+      setSelectedRegistrations(new Set());
+    } else {
+      setSelectedRegistrations(new Set(paginatedRegistrations.map(r => r.id)));
+    }
+  };
+
+  const toggleSelectRegistration = (id: string) => {
+    const newSelected = new Set(selectedRegistrations);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedRegistrations(newSelected);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedRegistrations.size === 0) {
+      toast({
+        title: "Error",
+        description: "Please select registrations to approve",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBulkProcessing(true);
+    try {
+      const selectedData = registrations
+        .filter(r => selectedRegistrations.has(r.id))
+        .map(r => ({ id: r.id, type: r.type }));
+
+      const response = await fetch('/api/admin/registrations/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrations: selectedData }),
+      });
+
+      if (!response.ok) throw new Error('Failed to bulk approve registrations');
+      
+      const result = await response.json();
+      toast({
+        title: "Success",
+        description: result.message,
+      });
+
+      setSelectedRegistrations(new Set());
+      fetchPendingRegistrations();
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+    } catch (error) {
+      console.error('Error bulk approving registrations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to bulk approve registrations",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedRegistrations.size === 0) {
+      toast({
+        title: "Error",
+        description: "Please select registrations to reject",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bulkRejectReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for bulk rejection",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBulkProcessing(true);
+    try {
+      const selectedData = registrations
+        .filter(r => selectedRegistrations.has(r.id))
+        .map(r => ({ id: r.id, type: r.type }));
+
+      const response = await fetch('/api/admin/registrations/bulk-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          registrations: selectedData,
+          reason: bulkRejectReason 
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to bulk reject registrations');
+      
+      const result = await response.json();
+      toast({
+        title: "Success",
+        description: result.message,
+      });
+
+      setSelectedRegistrations(new Set());
+      setBulkRejectReason('');
+      setShowBulkRejectDialog(false);
+      fetchPendingRegistrations();
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+    } catch (error) {
+      console.error('Error bulk rejecting registrations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to bulk reject registrations",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -174,10 +310,84 @@ export default function AdminPendingRegistrations() {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Pending Registrations</h1>
-        <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/50">
-          {registrations.length} Pending
-        </Badge>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Pending Registrations</h1>
+          {selectedRegistrations.size > 0 && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {selectedRegistrations.size} selected
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {selectedRegistrations.size > 0 && (
+            <>
+              <Button
+                onClick={handleBulkApprove}
+                disabled={bulkProcessing}
+                className="bg-green-600 hover:bg-green-700"
+                data-testid="button-bulk-approve"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Approve Selected ({selectedRegistrations.size})
+              </Button>
+              <Dialog open={showBulkRejectDialog} onOpenChange={setShowBulkRejectDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={bulkProcessing}
+                    className="border-red-600 text-red-400 hover:bg-red-900/30"
+                    data-testid="button-bulk-reject"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Reject Selected ({selectedRegistrations.size})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Reject Registrations</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="bulk-reason">Reason for rejection</Label>
+                      <Textarea
+                        id="bulk-reason"
+                        value={bulkRejectReason}
+                        onChange={(e) => setBulkRejectReason(e.target.value)}
+                        placeholder="Enter reason for rejecting these registrations..."
+                        className="mt-2"
+                        rows={3}
+                        data-testid="textarea-bulk-reject-reason"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowBulkRejectDialog(false);
+                          setBulkRejectReason('');
+                        }}
+                        data-testid="button-cancel-bulk-reject"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleBulkReject}
+                        disabled={bulkProcessing || !bulkRejectReason.trim()}
+                        className="bg-red-600 hover:bg-red-700"
+                        data-testid="button-confirm-bulk-reject"
+                      >
+                        {bulkProcessing ? 'Rejecting...' : 'Reject'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/50">
+            {registrations.length} Pending
+          </Badge>
+        </div>
       </div>
 
       {registrations.length === 0 ? (
@@ -191,6 +401,19 @@ export default function AdminPendingRegistrations() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-muted/50">
+                <TableHead className="w-12">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors"
+                    data-testid="checkbox-select-all"
+                  >
+                    {selectedRegistrations.size === paginatedRegistrations.length && paginatedRegistrations.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Square className="w-4 h-4 text-muted-foreground/30" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Name</TableHead>
                 <TableHead className="text-muted-foreground">Email</TableHead>
@@ -203,6 +426,19 @@ export default function AdminPendingRegistrations() {
             <TableBody>
               {paginatedRegistrations.map((registration) => (
                 <TableRow key={registration.id} className="border-zinc-700 hover:bg-zinc-800/30">
+                  <TableCell>
+                    <button
+                      onClick={() => toggleSelectRegistration(registration.id)}
+                      className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors"
+                      data-testid={`checkbox-select-${registration.id}`}
+                    >
+                      {selectedRegistrations.has(registration.id) ? (
+                        <CheckSquare className="w-4 h-4 text-primary" />
+                      ) : (
+                        <Square className="w-4 h-4 text-muted-foreground/30" />
+                      )}
+                    </button>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {registration.type === 'parent' ? (
