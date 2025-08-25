@@ -375,7 +375,10 @@ export default function ConsentTemplateSettings() {
   // Create custom template mutation
   const createTemplateMutation = useMutation({
     mutationFn: async (data: { templateType: string; title: string; content: string }) => {
-      return await apiRequest('POST', '/api/admin/consent-templates', data);
+      return await apiRequest('POST', '/api/admin/consent-templates', { 
+        ...data, 
+        isCustom: true 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
