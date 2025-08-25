@@ -399,20 +399,24 @@ export default function SuperAdminTenants() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <div className="grid grid-cols-12 gap-4 p-4 font-medium border-b bg-muted/50">
+            <div className="grid grid-cols-13 gap-4 p-4 font-medium border-b bg-muted/50">
               <div className="col-span-3">Organization</div>
+              <div className="col-span-2">Tenant ID</div>
               <div className="col-span-2">Status</div>
               <div className="col-span-1">Users</div>
               <div className="col-span-1">Players</div>
               <div className="col-span-2">Revenue</div>
-              <div className="col-span-2">Last Active</div>
+              <div className="col-span-1">Last Active</div>
               <div className="col-span-1">Actions</div>
             </div>
             {filteredTenants.map((tenant) => (
-              <div key={tenant.id} className="grid grid-cols-12 gap-4 p-4 border-b last:border-b-0 hover:bg-muted/25">
+              <div key={tenant.id} className="grid grid-cols-13 gap-4 p-4 border-b last:border-b-0 hover:bg-muted/25">
                 <div className="col-span-3">
                   <div className="font-medium">{tenant.name}</div>
                   <div className="text-sm text-muted-foreground">{tenant.subdomain}.playhq.app</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="font-mono text-sm text-muted-foreground">{tenant.id}</div>
                 </div>
                 <div className="col-span-2">
                   <Badge variant={
@@ -433,7 +437,7 @@ export default function SuperAdminTenants() {
                   <div className="font-medium">${(tenant.revenue / 100).toLocaleString()}</div>
                   <div className="text-xs text-muted-foreground">{tenant.sessionCount} sessions</div>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <div className="text-sm">{new Date(tenant.lastActive).toLocaleDateString()}</div>
                 </div>
                 <div className="col-span-1">
