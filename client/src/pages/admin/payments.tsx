@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { AGE_GROUPS, calculateAgeGroupFromAge } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
-import { FEATURE_KEYS } from '@shared/schema';
+import { FEATURE_KEYS } from '@shared/feature-flags';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export default function AdminPayments() {

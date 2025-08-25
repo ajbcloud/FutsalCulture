@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePlanFeatures, useHasFeature } from '@/hooks/use-feature-flags';
-import { FEATURE_KEYS } from '@shared/schema';
+import { FEATURE_KEYS } from '@shared/feature-flags';
 import { 
   Settings2, 
   Mail, 

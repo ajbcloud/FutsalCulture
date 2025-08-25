@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { apiRequest } from '@/lib/queryClient';
 import { useHasFeature } from '@/hooks/use-feature-flags';
 import { useAuth } from '@/contexts/AuthContext';
-import { FEATURE_KEYS } from '@shared/schema';
+import { FEATURE_KEYS } from '@shared/feature-flags';
 
 // Schemas for the forms
 const personalRequestSchema = z.object({

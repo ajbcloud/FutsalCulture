@@ -31,7 +31,7 @@ import {
   Mail
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
-import { FEATURE_KEYS } from "@shared/schema";
+import { FEATURE_KEYS } from "@shared/feature-flags";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },

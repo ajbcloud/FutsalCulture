@@ -18,7 +18,7 @@ import { Link } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
-import { FEATURE_KEYS } from '@shared/schema';
+import { FEATURE_KEYS } from '@shared/feature-flags';
 import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
 import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
 import { FeatureGrid } from '../../components/billing/FeatureGrid';

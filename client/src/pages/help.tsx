@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHasFeature } from "@/hooks/use-feature-flags";
-import { FEATURE_KEYS } from "@shared/schema";
+import { FEATURE_KEYS } from "@shared/feature-flags";
 import { Mail, Phone, Clock, MapPin, Sparkles, Crown, MessageSquare, History } from "lucide-react";
 import { Link } from "wouter";
 
