@@ -46,7 +46,7 @@ export const plans: PlanConfig[] = [
   },
   {
     id: 'core',
-    name: 'Starter',
+    name: 'Core',
     price: 99,
     playerLimit: 150,
     features: {
