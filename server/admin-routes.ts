@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
+import { processAgeTransitions } from './services/ageTransition';
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -1990,7 +1991,7 @@ export function setupAdminRoutes(app: any) {
             value = JSON.parse(value);
           } catch (e) {
             // If parsing fails, treat as string and split by comma
-            value = value.split(',').map(s => s.trim()).filter(s => s);
+            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
           }
         }
         
@@ -2964,7 +2965,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
 
       // If only updating portal access, check age with current birth year
       if (updateData.canAccessPortal === true && !updateData.birthYear) {
-        const age = new Date().getFullYear() - currentPlayer[0].birthYear;
+        const age = calculateAge(new Date(currentPlayer[0].birthYear, 0, 1));
         if (age < MINIMUM_PORTAL_AGE) {
           return res.status(400).json({ 
             message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
@@ -4386,7 +4387,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      const pdfGenerator = new PDFGeneratorService();
+      const pdfGenerator = new SimplePDFGeneratorService();
       const results = [];
 
       // Get player and parent info for PDF generation
