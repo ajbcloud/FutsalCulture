@@ -972,9 +972,9 @@ export function TrialSettings() {
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold">Business Logic Summary</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-                    <h5 className="font-semibold text-blue-800 mb-2">Trial Lifecycle</h5>
-                    <div className="space-y-1 text-sm text-blue-700">
+                  <div className="p-4 border bg-card rounded-lg">
+                    <h5 className="font-semibold text-foreground mb-2">Trial Lifecycle</h5>
+                    <div className="space-y-1 text-sm text-muted-foreground">
                       <div>• Duration: {settings.durationDays} days</div>
                       <div>• Extensions: {settings.maxExtensions} x {settings.extensionDurationDays} days</div>
                       <div>• Plan: {settings.defaultTrialPlan}</div>
@@ -982,9 +982,9 @@ export function TrialSettings() {
                     </div>
                   </div>
 
-                  <div className="p-4 border border-green-200 bg-green-50 rounded-lg">
-                    <h5 className="font-semibold text-green-800 mb-2">Data Protection</h5>
-                    <div className="space-y-1 text-sm text-green-700">
+                  <div className="p-4 border bg-card rounded-lg">
+                    <h5 className="font-semibold text-foreground mb-2">Data Protection</h5>
+                    <div className="space-y-1 text-sm text-muted-foreground">
                       <div>• Retention: {settings.dataRetentionAfterTrialDays} days</div>
                       <div>• Preserve on downgrade: {settings.planTransitionRules.preserveDataOnDowngrade ? 'Yes' : 'No'}</div>
                       <div>• Archive advanced data: {settings.planTransitionRules.archiveAdvancedFeatureData ? 'Yes' : 'No'}</div>
@@ -992,9 +992,9 @@ export function TrialSettings() {
                     </div>
                   </div>
 
-                  <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-                    <h5 className="font-semibold text-red-800 mb-2">Security Measures</h5>
-                    <div className="space-y-1 text-sm text-red-700">
+                  <div className="p-4 border bg-card rounded-lg">
+                    <h5 className="font-semibold text-foreground mb-2">Security Measures</h5>
+                    <div className="space-y-1 text-sm text-muted-foreground">
                       <div>• Multiple trials: {settings.preventMultipleTrials ? 'Blocked' : 'Allowed'}</div>
                       <div>• Email limit: {settings.abusePreventionRules.maxTrialsPerEmail}</div>
                       <div>• IP limit: {settings.abusePreventionRules.maxTrialsPerIP}</div>
@@ -1002,9 +1002,9 @@ export function TrialSettings() {
                     </div>
                   </div>
 
-                  <div className="p-4 border border-purple-200 bg-purple-50 rounded-lg">
-                    <h5 className="font-semibold text-purple-800 mb-2">Grace Periods</h5>
-                    <div className="space-y-1 text-sm text-purple-700">
+                  <div className="p-4 border bg-card rounded-lg">
+                    <h5 className="font-semibold text-foreground mb-2">Grace Periods</h5>
+                    <div className="space-y-1 text-sm text-muted-foreground">
                       <div>• Standard: {settings.gracePeriodDays} days</div>
                       <div>• Payment: {settings.paymentMethodGracePeriodHours} hours</div>
                       <div>• Feature access: {settings.planTransitionRules.featureAccessGracePeriod} days</div>
