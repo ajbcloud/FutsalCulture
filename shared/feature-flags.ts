@@ -1,4 +1,32 @@
-import { PlanLevel, FEATURE_KEYS, type FeatureKey } from './schema';
+import { PlanLevel, type FeatureKey } from './schema';
+
+// Feature key constants
+export const FEATURE_KEYS = {
+  SESSION_MANAGEMENT: 'session_management',
+  LOCATION_LINKS: 'location_links',
+  PARENT_PORTAL: 'parent_portal',
+  WAITLIST_MANUAL: 'waitlist_manual',
+  WAITLIST_AUTO_PROMOTE: 'waitlist_auto_promote',
+  NOTIFICATIONS_EMAIL: 'notifications_email',
+  NOTIFICATIONS_SMS: 'notifications_sms',
+  ANALYTICS_BASIC: 'analytics_basic',
+  ANALYTICS_ADVANCED: 'analytics_advanced',
+  PAYMENTS_ENABLED: 'payments_enabled',
+  INTEGRATIONS_CALENDAR: 'integrations_calendar',
+  INTEGRATIONS_MAILCHIMP: 'integrations_mailchimp',
+  INTEGRATIONS_QUICKBOOKS: 'integrations_quickbooks',
+  INTEGRATIONS_BRAINTREE: 'integrations_braintree',
+  INTEGRATIONS_ZAPIER: 'integrations_zapier',
+  API_READ_ONLY: 'api_read_only',
+  API_FULL_ACCESS: 'api_full_access',
+  MULTI_TENANT: 'multi_tenant',
+  SSO: 'sso',
+  SUPPORT_STANDARD: 'support_standard',
+  SUPPORT_PRIORITY: 'support_priority',
+  BULK_OPERATIONS: 'bulk_operations',
+  PLAYER_DEVELOPMENT: 'player_development',
+  FEATURE_REQUESTS: 'feature_requests',
+} as const;
 
 // Feature configurations for each plan level
 export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {

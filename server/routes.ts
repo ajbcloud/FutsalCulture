@@ -11,8 +11,7 @@ import {
   systemSettings,
   joinWaitlistSchema,
   leaveWaitlistSchema,
-  promoteWaitlistSchema,
-  waitlistSettingsSchema
+  promoteWaitlistSchema
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";

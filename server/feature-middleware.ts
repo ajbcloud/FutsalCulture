@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { hasFeature } from '../shared/feature-flags';
-import { PlanLevel, FeatureKey, FEATURE_KEYS } from '../shared/schema';
+import { PlanLevel, FeatureKey } from '../shared/schema';
+import { FEATURE_KEYS } from '../shared/feature-flags';
 import { db } from './db';
 import { tenants } from '../shared/schema';
 import { eq } from 'drizzle-orm';

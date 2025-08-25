@@ -5,7 +5,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { isAuthenticated } from './replitAuth';
 import { storage } from './storage';
 import { hasFeature } from '@shared/feature-flags';
-import { FEATURE_KEYS } from '@shared/schema';
+import { FEATURE_KEYS } from '@shared/feature-flags';
 
 const router = Router();
 
