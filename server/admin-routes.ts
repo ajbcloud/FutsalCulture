@@ -731,6 +731,8 @@ export function setupAdminRoutes(app: any) {
   // Legacy stats endpoint for backwards compatibility
   app.get('/api/admin/stats', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      
       // For now, return basic stats using existing methods
       const sessions = await storage.getSessions({});
       const analytics = await storage.getAnalytics();
@@ -746,13 +748,23 @@ export function setupAdminRoutes(app: any) {
         return sessionDate >= weekStart && sessionDate < weekEnd;
       }).length;
 
-      // Get pending payments
-      const pendingSignups = await storage.getPendingPaymentSignups();
+      // Get pending payments for current tenant only
+      const pendingSignups = await storage.getPendingPaymentSignups(tenantId);
       const pendingPayments = pendingSignups.length;
 
-      // Get pending registrations
-      const pendingUsers = await db.select().from(users).where(eq(users.registrationStatus, 'pending'));
-      const pendingPlayers = await db.select().from(players).where(eq(players.registrationStatus, 'pending'));
+      // Get pending registrations for current tenant only
+      const pendingUsers = await db.select().from(users).where(
+        and(
+          eq(users.registrationStatus, 'pending'),
+          tenantId ? eq(users.tenantId, tenantId) : sql`true`
+        )
+      );
+      const pendingPlayers = await db.select().from(players).where(
+        and(
+          eq(players.registrationStatus, 'pending'),
+          tenantId ? eq(players.tenantId, tenantId) : sql`true`
+        )
+      );
       const totalPendingRegistrations = pendingUsers.length + pendingPlayers.length;
 
       // Generate pending tasks
