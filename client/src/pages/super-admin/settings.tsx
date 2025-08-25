@@ -44,7 +44,6 @@ import {
   Settings2,
   TrendingUp,
   Timer,
-  Bell,
   Eye,
   EyeOff,
   Copy,
@@ -1360,60 +1359,6 @@ export default function SuperAdminSettings() {
                 </CardContent>
               </Card>
 
-              {/* Notification Defaults */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bell className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle>Notification Defaults</CardTitle>
-                    </div>
-                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
-                  </div>
-                  <CardDescription>Default notification preferences for new tenants</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Session reminders</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Label className="font-normal text-sm">24 hours before</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Label className="font-normal text-sm">2 hours before</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch />
-                        <Label className="font-normal text-sm">30 min before</Label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Admin notifications</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Label className="font-normal text-sm">New registrations</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Label className="font-normal text-sm">Payment received</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Label className="font-normal text-sm">Session full</Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch />
-                        <Label className="font-normal text-sm">Daily summary</Label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </>
           )}
         </TabsContent>
