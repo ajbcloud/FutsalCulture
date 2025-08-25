@@ -18,7 +18,7 @@ export function decrypt(encB64: string): string {
   const tag = buf.subarray(12, 28);
   const data = buf.subarray(28);
   const key = Buffer.from(SECRET_KEY, SECRET_KEY.length === 64 ? 'hex' : 'base64');
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv, { authTagLength: 16 });
   decipher.setAuthTag(tag);
   const dec = Buffer.concat([decipher.update(data), decipher.final()]);
   return dec.toString('utf8');
