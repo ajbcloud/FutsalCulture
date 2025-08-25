@@ -136,9 +136,11 @@ export default function PlanManagement() {
   });
 
   // Fetch tenants for override management
-  const { data: tenants = [] } = useQuery({
+  const { data: tenants = [], isError: tenantsError } = useQuery({
     queryKey: ['/api/super-admin/tenants'],
-    enabled: activeTab === 'tenant-overrides'
+    enabled: activeTab === 'tenant-overrides',
+    retry: false,
+    staleTime: 0
   });
 
   // Fetch tenant overrides
@@ -872,11 +874,16 @@ export default function PlanManagement() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Tenants</SelectItem>
-                      {(tenants as any[])?.map(tenant => (
+                      {Array.isArray(tenants) && tenants.map(tenant => (
                         <SelectItem key={tenant.id} value={tenant.id}>
                           {tenant.name} ({tenant.planName})
                         </SelectItem>
                       ))}
+                      {tenantsError && (
+                        <SelectItem value="" disabled>
+                          Error loading tenants
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <Button variant="outline" onClick={() => setShowOverrideDialog(true)}>
