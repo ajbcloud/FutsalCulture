@@ -46,6 +46,9 @@ import NotFound from "@/pages/not-found";
 import SignupStart from "@/pages/SignupStart";
 import SignupParentFlow from "@/pages/SignupParentFlow";
 import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
+import GetStarted from "@/pages/GetStarted";
+import Join from "@/pages/Join";
+import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
 
 function Router() {
@@ -66,7 +69,9 @@ function Router() {
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
         <Route path="/signups" component={SignupStart} />
-        <Route path="/get-started" component={SignupStart} />
+        <Route path="/get-started" component={GetStarted} />
+        <Route path="/join" component={Join} />
+        <Route path="/signup" component={PersonalSignup} />
         <Route path="/login" component={Login} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />

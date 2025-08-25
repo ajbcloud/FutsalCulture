@@ -12,6 +12,9 @@ import policyRouter from './routes/policy';
 import signupRouter from './routes/signup';
 import consentRouter from './routes/consent';
 import guardianRouter from './routes/guardian';
+import companySignupRouter from './routes/company-signup';
+import joinRouter from './routes/join';
+import personalSignupRouter from './routes/personal-signup';
 
 const app = express();
 
@@ -85,6 +88,9 @@ app.use((req, res, next) => {
 (async () => {
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);
+  app.use('/api', companySignupRouter);
+  app.use('/api', joinRouter);
+  app.use('/api', personalSignupRouter);
   
   const server = await registerRoutes(app);
   app.use(express.json());
