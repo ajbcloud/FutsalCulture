@@ -693,11 +693,6 @@ export default function ConsentTemplateSettings() {
                       <CardDescription>{type.description}</CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                      {!type.isPredefined && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 rounded text-xs font-medium">
-                          Custom Type
-                        </span>
-                      )}
                       {activeTemplate?.isCustom && (
                         <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
                           Custom Content
