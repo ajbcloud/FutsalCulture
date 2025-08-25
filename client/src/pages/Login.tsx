@@ -1,4 +1,3 @@
-
 export default function Login(){
   return (
     <div className="mx-auto max-w-md p-10 space-y-6">
@@ -9,6 +8,17 @@ export default function Login(){
         <button className="w-full rounded-2xl bg-black text-white px-6 py-3">Log in</button>
       </form>
       <div className="text-center text-sm"><a className="underline" href="/forgot">Forgot password?</a></div>
+
+      <div className="pt-6 border-t">
+        <div className="flex flex-col gap-3">
+          <a href="/api/auth/google" className="border rounded-xl p-3 text-center">Continue with Google</a>
+          <a href="/api/auth/microsoft" className="border rounded-xl p-3 text-center">Continue with Microsoft</a>
+        </div>
+      </div>
+
+      <div className="text-center text-sm">
+        New here? <a className="underline" href="/get-started">Create your club</a>
+      </div>
     </div>
   );
 }

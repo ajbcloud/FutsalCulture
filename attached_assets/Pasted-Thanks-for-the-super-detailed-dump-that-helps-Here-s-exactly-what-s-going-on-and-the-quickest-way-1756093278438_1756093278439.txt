@@ -1,0 +1,206 @@
+Thanks for the super detailed dump — that helps. Here’s exactly what’s going on and the quickest way to get you to a PlayHQ-branded, multi-sport landing with Get started + Log in, and wiring that into your existing /signups page.
+
+What happened
+
+/ is still routed to your old “Futsal Culture” hero (“Elite Futsal Training”), so you’re seeing the old page.
+
+The Replit agent briefly mounted /api to an onboarding router that wasn’t imported, then removed the mount. That’s why you didn’t see the new signup/email pieces.
+
+Login.tsx compiled only after the agent stripped the social buttons because the SocialButtons component didn’t exist.
+
+Fix it now (copy/paste)
+
+Below are drop-in patches that don’t guess your DB schema. They keep your existing /signups flow and only replace the landing, add a /login page, and hook the routes correctly. After this, you’ll have:
+
+/ → new PlayHQ landing (multi-sport)
+
+/get-started → alias to your existing /signups
+
+/login → email/password form + Google/Microsoft links (no missing component)
+
+(Optional) mount /api/get-started + /api/verify once you’re ready; import line included.
+
+1) New landing (PlayHQ)
+
+Create/replace client/src/pages/Landing.tsx:
+
+export default function Landing(){
+  return (
+    <div className="min-h-screen bg-white text-gray-900">
+      <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
+        <a href="/" className="text-xl font-extrabold tracking-tight">PlayHQ</a>
+        <nav className="flex items-center gap-6 text-sm">
+          <a href="#features" className="hover:opacity-80">Features</a>
+          <a href="#pricing" className="hover:opacity-80">Pricing</a>
+          <a href="/login" className="rounded-xl px-4 py-2 border hover:bg-gray-50">Log in</a>
+        </nav>
+      </header>
+
+      <main>
+        <section className="mx-auto max-w-6xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
+              Your club’s HQ — for any sport
+            </h1>
+            <p className="mt-4 text-lg text-gray-600">
+              Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
+            </p>
+            <div className="mt-8 flex gap-4">
+              <a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">
+                Get started free
+              </a>
+              <a href="#pricing" className="underline">See pricing</a>
+            </div>
+          </div>
+          <div className="rounded-2xl shadow p-6 bg-white border">
+            <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500">
+              Product screenshot
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-6xl px-6 grid md:grid-cols-3 gap-8">
+            <Feature title="Universal onboarding" text="Owners invite coaches, players, and parents; late joiners use a secure tenant code." />
+            <Feature title="Payments built-in" text="Free to start, upgrade anytime for advanced tools and analytics." />
+            <Feature title="Multi-sport" text="Configure team sizes, seasons, and age groups for any sport." />
+          </div>
+        </section>
+
+        <section id="pricing" className="py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-3xl font-bold mb-6">Simple pricing</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <PriceCard name="Free" price="$0" features={["Up to 50 members","Email invites","Basic calendar"]} />
+              <PriceCard name="Starter" price="$49" features={["Unlimited members","CSV import","Priority support"]} />
+              <PriceCard name="Club" price="$99" features={["Advanced analytics","SMS invites","Custom domains"]} />
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 flex items-center justify-between">
+        <div>© {new Date().getFullYear()} PlayHQ</div>
+        <div className="flex gap-6"><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div>
+      </footer>
+    </div>
+  );
+}
+
+function Feature({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow border">
+      <div className="font-semibold">{title}</div>
+      <div className="text-gray-600 mt-2">{text}</div>
+    </div>
+  );
+}
+
+function PriceCard({ name, price, features }: { name: string; price: string; features: string[] }) {
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow border">
+      <div className="font-bold text-lg">{name}</div>
+      <div className="text-4xl font-extrabold mt-2">{price}<span className="text-base font-medium">/mo</span></div>
+      <ul className="mt-4 space-y-2">
+        {features.map(f => (<li key={f} className="flex items-center gap-2"><span>•</span><span>{f}</span></li>))}
+      </ul>
+      <div className="mt-6">
+        <a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">Get started</a>
+      </div>
+    </div>
+  );
+}
+
+2) Router: point / at the new landing, move old page to /app, alias /get-started → /signups
+
+Open your main router (client/src/App.tsx or client/src/main.tsx).
+Do three things:
+
+Import the new page:
+
+import Landing from "@/pages/Landing";
+import Login from "@/pages/Login"; // next section
+import SignupStart from "@/pages/SignupStart"; // your existing /signups component
+
+
+Make sure the first route is the homepage:
+
+<Route exact path="/" component={Landing} />
+
+
+Keep /signups and add an alias:
+
+<Route path="/signups" component={SignupStart} />
+<Route path="/get-started" component={SignupStart} />
+<Route path="/login" component={Login} />
+
+
+Move your current “main app” page (whatever shows the old hero) to /app:
+
+<Route path="/app" component={Dashboard /* or whatever your old root component is */} />
+
+
+Tip: if you’re on React Router v6, swap component={X} for element={<X/>} and Switch → Routes.
+
+3) Minimal /login (no missing components)
+
+Create/replace client/src/pages/Login.tsx:
+
+export default function Login(){
+  return (
+    <div className="mx-auto max-w-md p-10 space-y-6">
+      <h1 className="text-2xl font-bold">Log in to PlayHQ</h1>
+      <form method="POST" action="/api/auth/login" className="space-y-3">
+        <input name="email" type="email" required placeholder="Email" className="w-full border rounded-xl p-3" />
+        <input name="password" type="password" required placeholder="Password" className="w-full border rounded-xl p-3" />
+        <button className="w-full rounded-2xl bg-black text-white px-6 py-3">Log in</button>
+      </form>
+      <div className="text-center text-sm"><a className="underline" href="/forgot">Forgot password?</a></div>
+
+      <div className="pt-6 border-t">
+        <div className="flex flex-col gap-3">
+          <a href="/api/auth/google" className="border rounded-xl p-3 text-center">Continue with Google</a>
+          <a href="/api/auth/microsoft" className="border rounded-xl p-3 text-center">Continue with Microsoft</a>
+        </div>
+      </div>
+
+      <div className="text-center text-sm">
+        New here? <a className="underline" href="/get-started">Create your club</a>
+      </div>
+    </div>
+  );
+}
+
+4) (Optional) Mount the onboarding API properly
+
+If you already created server/routes/onboarding.ts, import and mount it (the undefined import is what broke the server before):
+
+server/index.ts
+
+import onboarding from "./routes/onboarding";
+// ...
+app.use(express.json());
+app.use("/api", onboarding);
+
+
+If you don’t have that route file yet, keep the mount commented out for now so the app runs, and we can wire it after the landing is live.
+
+Domain & email links
+
+Prod domain: playhq.app. In Replit’s Deploy → Domains, attach playhq.app (and www.playhq.app if you want) and follow the DNS prompts.
+
+Dev/preview: the .replit.dev URL you see in the top-right is fine while you iterate.
+
+When you enable email verification, make sure the link you send uses APP_URL=https://playhq.app so users land on the right host.
+
+Quick smoke test
+
+Restart the app (or rebuild the client).
+
+Visit / → you should see PlayHQ multi-sport landing.
+
+Click Get started → you should land on your existing /signups flow.
+
+Click Log in → simple login with Google/Microsoft options.
+
+Navigate to /app → you should see the old main page there (not on / anymore).

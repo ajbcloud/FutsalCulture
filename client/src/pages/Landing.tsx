@@ -1,8 +1,4 @@
 
-```tsx
-import CTA from "../shared/CTA"; // optional
-import SocialButtons from "../components/SocialButtons"; // optional
-
 export default function Landing(){
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -19,14 +15,12 @@ export default function Landing(){
         <section className="mx-auto max-w-6xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Your club’s HQ — for any sport</h1>
-            <p className="mt-4 text-lg text-gray-600">Rosters, invites, payments, and schedules in one place.</p>
+            <p className="mt-4 text-lg text-gray-600">
+              Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
+            </p>
             <div className="mt-8 flex gap-4">
               <a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">Get started free</a>
               <a href="#pricing" className="underline">See pricing</a>
-            </div>
-            <div className="mt-8 hidden md:block">
-              {/* Show SSO shortcuts from the landing too (optional) */}
-              <SocialButtons />
             </div>
           </div>
           <div className="rounded-2xl shadow p-6 bg-white border">
@@ -37,9 +31,9 @@ export default function Landing(){
 
         <section id="features" className="bg-gray-50 py-16">
           <div className="mx-auto max-w-6xl px-6 grid md:grid-cols-3 gap-8">
-            <Feature title="Universal onboarding" text="Owners invite coaches, players, and parents." />
-            <Feature title="Payments built‑in" text="Free to start, upgrade anytime for advanced tools." />
-            <Feature title="Multi‑sport" text="Configure team sizes, seasons, and age groups for any sport." />
+            <Feature title="Universal onboarding" text="Owners invite coaches, players, and parents; late joiners use a secure tenant code." />
+            <Feature title="Payments built-in" text="Free to start, upgrade anytime for advanced tools and analytics." />
+            <Feature title="Multi-sport" text="Configure team sizes, seasons, and age groups for any sport." />
           </div>
         </section>
 
@@ -47,9 +41,9 @@ export default function Landing(){
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold mb-6">Simple pricing</h2>
             <div className="grid md:grid-cols-3 gap-8">
-              <PriceCard name="Free" price="$0" features={["Up to 50 members", "Email invites"]} />
-              <PriceCard name="Starter" price="$49" features={["Unlimited members", "CSV import"]} />
-              <PriceCard name="Club" price="$99" features={["Advanced analytics", "SMS invites"]} />
+              <PriceCard name="Free" price="$0" features={["Up to 50 members","Email invites","Basic calendar"]} />
+              <PriceCard name="Starter" price="$49" features={["Unlimited members","CSV import","Priority support"]} />
+              <PriceCard name="Club" price="$99" features={["Advanced analytics","SMS invites","Custom domains"]} />
             </div>
           </div>
         </section>
@@ -78,4 +72,3 @@ function PriceCard({ name, price, features }: { name: string; price: string; fea
     <div className="mt-6"><a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">Get started</a></div>
   </div>
 ); }
-```
