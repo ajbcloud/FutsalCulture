@@ -227,7 +227,7 @@ export default function ConsentTemplateSettings() {
       // Extract filename from URL for display
       const fileName = fileUrl.split('/').pop() || 'custom-template.pdf';
       
-      return apiRequest("/api/admin/consent-templates", "POST", {
+      return apiRequest("POST", "/api/admin/consent-templates", {
         templateType,
         title: templateTitles[templateType] || `Custom ${templateType} Template`,
         filePath: fileUrl,
@@ -262,7 +262,7 @@ export default function ConsentTemplateSettings() {
         privacy: "Privacy Policy Consent"
       };
       
-      return apiRequest("/api/admin/consent-templates", "POST", {
+      return apiRequest("POST", "/api/admin/consent-templates", {
         templateType,
         title: templateTitles[templateType] || `Custom ${templateType} Template`,
         content,
@@ -289,7 +289,7 @@ export default function ConsentTemplateSettings() {
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      return apiRequest(`/api/admin/consent-templates/${templateId}`, "DELETE");
+      return apiRequest("DELETE", `/api/admin/consent-templates/${templateId}`);
     },
     onSuccess: () => {
       toast({
@@ -307,14 +307,16 @@ export default function ConsentTemplateSettings() {
     },
   });
 
-  // Preview PDF mutation
+  // Preview PDF mutation  
   const previewMutation = useMutation({
     mutationFn: async (templateType: string) => {
+      // For PDF preview, we need to handle the blob response specially
       const response = await fetch(`/api/admin/consent-templates/${templateType}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include' // Important: include cookies for authentication
       });
       
       if (!response.ok) {
@@ -350,7 +352,7 @@ export default function ConsentTemplateSettings() {
 
   const toggleTemplateMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return await apiRequest(`/api/admin/consent-templates/${id}/toggle`, 'PATCH', { isActive });
+      return await apiRequest('PATCH', `/api/admin/consent-templates/${id}/toggle`, { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
@@ -371,7 +373,7 @@ export default function ConsentTemplateSettings() {
   // Create custom template mutation
   const createTemplateMutation = useMutation({
     mutationFn: async (data: { templateType: string; title: string; content: string }) => {
-      return await apiRequest('/api/admin/consent-templates', 'POST', data);
+      return await apiRequest('POST', '/api/admin/consent-templates', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/consent-templates'] });
@@ -394,12 +396,8 @@ export default function ConsentTemplateSettings() {
   });
 
   const handleFileUpload = (templateType: string) => async () => {
-    const response = await fetch("/api/admin/consent-templates/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    const { uploadURL } = await response.json();
-    return { method: 'PUT' as const, url: uploadURL };
+    const response = await apiRequest("POST", "/api/admin/consent-templates/upload", {});
+    return { method: 'PUT' as const, url: response.uploadURL };
   };
 
   const handleUploadComplete = (templateType: string) => (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
