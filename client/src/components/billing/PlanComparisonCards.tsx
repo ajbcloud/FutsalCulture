@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface PlanComparisonCardsProps {
   currentPlan: string;
+  isLandingPage?: boolean;
 }
 
 // Get features to display for a plan, including inheritance note and new/upgraded features only
@@ -66,7 +67,7 @@ const getDisplayFeatures = (planId: string) => {
   return displayFeatures;
 };
 
-export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
+export function PlanComparisonCards({ currentPlan, isLandingPage = false }: PlanComparisonCardsProps) {
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -120,7 +121,7 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
               </div>
             )}
             
-            {isCurrent && (
+            {isCurrent && !isLandingPage && (
               <div className="absolute -top-2 right-2">
                 <Badge variant="secondary">Current Plan</Badge>
               </div>
@@ -156,18 +157,18 @@ export function PlanComparisonCards({ currentPlan }: PlanComparisonCardsProps) {
               </div>
 
               <div className="pt-4 border-t">
-                {isCurrent ? (
+                {isCurrent && !isLandingPage ? (
                   <Badge variant="secondary" className="w-full justify-center py-2">
                     Current Plan
                   </Badge>
-                ) : canUpgrade ? (
+                ) : isLandingPage || canUpgrade ? (
                   <Button
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={isLoading}
                     className="w-full"
                     variant={plan.id === 'elite' ? 'default' : 'outline'}
                   >
-                    {isLoading ? 'Loading...' : 'Upgrade'}
+                    {isLoading ? 'Loading...' : 'Get started'}
                   </Button>
                 ) : (
                   <Button variant="ghost" disabled className="w-full">
