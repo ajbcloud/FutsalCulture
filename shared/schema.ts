@@ -149,7 +149,6 @@ export const players = pgTable("players", {
   avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   birthYear: integer("birth_year").notNull(),
   dateOfBirth: date("date_of_birth"),
-  computedAge: integer("computed_age"),
   ageBand: ageBandEnum("age_band"),
   isTeen: boolean("is_teen").notNull().default(false),
   isAdult: boolean("is_adult").notNull().default(false),
