@@ -51,11 +51,24 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
       ]);
   }, [geoData]);
 
-  // Create lookup for state data
+  // Create lookup for state data with multiple key formats
   const stateData = useMemo(() => {
     const lookup: Record<string, StateTenantData> = {};
     geoData.forEach((item: StateTenantData) => {
+      // Create lookups for different possible state name formats
       lookup[item.stateCode] = item;
+      lookup[item.state] = item;
+      
+      // Handle common state abbreviations mapping
+      const stateAbbreviations: Record<string, string> = {
+        'California': 'CA', 'Texas': 'TX', 'Florida': 'FL', 'New York': 'NY', 
+        'Illinois': 'IL', 'Washington': 'WA', 'Arizona': 'AZ', 'Colorado': 'CO',
+        'Georgia': 'GA', 'North Carolina': 'NC'
+      };
+      
+      if (stateAbbreviations[item.state]) {
+        lookup[stateAbbreviations[item.state]] = item;
+      }
     });
     return lookup;
   }, [geoData]);
@@ -136,10 +149,23 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
                 <Geographies geography={geoUrl}>
                   {({ geographies }: { geographies: any[] }) =>
                     geographies.map((geo: any) => {
-                      const stateCode = geo.properties?.NAME;
-                      const stateInfo = stateData[stateCode];
+                      // Try multiple property names that might contain the state name
+                      const stateName = geo.properties?.NAME || geo.properties?.name;
+                      const stateAbbr = geo.properties?.STUSPS || geo.properties?.stusps;
+                      
+                      // Look up state info using multiple possible keys
+                      const stateInfo = stateData[stateName] || stateData[stateAbbr] || null;
                       const tenantCount = stateInfo?.tenantCount || 0;
-                      const fillColor = tenantCount > 0 ? colorScale(tenantCount) : "rgb(229, 231, 235)";
+                      
+                      // Use a more visible color scheme
+                      let fillColor = "rgb(229, 231, 235)"; // Default gray for states with no tenants
+                      if (tenantCount > 0) {
+                        // Simple blue gradient based on tenant count
+                        if (tenantCount >= 5) fillColor = "rgb(37, 99, 235)";      // blue-600
+                        else if (tenantCount >= 3) fillColor = "rgb(59, 130, 246)"; // blue-500  
+                        else if (tenantCount >= 2) fillColor = "rgb(96, 165, 250)"; // blue-400
+                        else fillColor = "rgb(147, 197, 253)";                      // blue-300
+                      }
 
                       return (
                         <Geography
@@ -148,13 +174,13 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
                           fill={fillColor}
                           stroke="rgb(148, 163, 184)"
                           strokeWidth={0.5}
-                          onMouseEnter={() => setHoveredState(stateCode)}
+                          onMouseEnter={() => setHoveredState(stateName)}
                           onMouseLeave={() => setHoveredState(null)}
                           style={{
                             default: { outline: "none" },
                             hover: { 
                               outline: "none",
-                              fill: tenantCount > 0 ? "rgb(59, 130, 246)" : "rgb(156, 163, 175)",
+                              fill: tenantCount > 0 ? "rgb(29, 78, 216)" : "rgb(156, 163, 175)",
                               strokeWidth: 1
                             },
                             pressed: { outline: "none" }
@@ -184,13 +210,10 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
           <div className="flex items-center justify-center space-x-4 text-xs">
             <span className="text-muted-foreground">Fewer</span>
             <div className="flex space-x-1">
-              {["rgb(247, 251, 255)", "rgb(198, 219, 239)", "rgb(158, 202, 225)", "rgb(107, 174, 214)", "rgb(49, 130, 189)"].map((color, i) => (
-                <div
-                  key={i}
-                  className="w-4 h-4 border border-gray-300"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
+              <div className="w-4 h-4 border border-gray-300" style={{ backgroundColor: "rgb(147, 197, 253)" }} title="1 tenant" />
+              <div className="w-4 h-4 border border-gray-300" style={{ backgroundColor: "rgb(96, 165, 250)" }} title="2 tenants" />
+              <div className="w-4 h-4 border border-gray-300" style={{ backgroundColor: "rgb(59, 130, 246)" }} title="3-4 tenants" />
+              <div className="w-4 h-4 border border-gray-300" style={{ backgroundColor: "rgb(37, 99, 235)" }} title="5+ tenants" />
             </div>
             <span className="text-muted-foreground">More</span>
           </div>
