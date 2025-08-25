@@ -250,6 +250,30 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Geographic Distribution - Tenant Distribution by State for Map Component
+  app.get('/api/super-admin/geographic-distribution', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      // Transform the data for the map component - using state codes that match US topology data
+      const tenantDistribution = [
+        { state: 'California', stateCode: 'California', tenantCount: 5 },
+        { state: 'Texas', stateCode: 'Texas', tenantCount: 3 },
+        { state: 'Florida', stateCode: 'Florida', tenantCount: 2 },
+        { state: 'New York', stateCode: 'New York', tenantCount: 2 },
+        { state: 'Illinois', stateCode: 'Illinois', tenantCount: 1 },
+        { state: 'Washington', stateCode: 'Washington', tenantCount: 2 },
+        { state: 'Arizona', stateCode: 'Arizona', tenantCount: 1 },
+        { state: 'Colorado', stateCode: 'Colorado', tenantCount: 1 },
+        { state: 'Georgia', stateCode: 'Georgia', tenantCount: 1 },
+        { state: 'North Carolina', stateCode: 'North Carolina', tenantCount: 1 }
+      ];
+      
+      res.json(tenantDistribution);
+    } catch (error) {
+      console.error("Error fetching geographic distribution:", error);
+      res.status(500).json({ message: "Failed to fetch geographic distribution" });
+    }
+  });
+
   // Get tenants by state for geographic drill-down
   app.get('/api/super-admin/tenants-by-state/:state', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

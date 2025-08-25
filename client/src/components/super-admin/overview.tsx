@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Badge } from "@/components/ui/badge";
+import GeographicDistribution from "@/components/super-admin/geographic-distribution";
 import { 
   DollarSign, 
   Users, 
@@ -215,7 +216,12 @@ export default function SuperAdminOverview() {
         })}
       </div>
 
-      {/* Charts and additional content can be added here */}
+      {/* Geographic Distribution - Full Width */}
+      <div className="w-full">
+        <GeographicDistribution selectedTenant={selectedTenant} />
+      </div>
+
+      {/* Charts and additional content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
