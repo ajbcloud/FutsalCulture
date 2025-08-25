@@ -339,13 +339,18 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
 
   // Check if consent forms are enabled by fetching the current age policy settings
-  const { data: agePolicyData } = useQuery({
+  const { data: agePolicyData, refetch: refetchAgePolicy } = useQuery({
     queryKey: ["/api/admin/age-policy"],
     queryFn: () => fetch("/api/admin/age-policy", { credentials: 'include' }).then(res => res.json()),
     retry: false,
   });
 
-  const isConsentFormsEnabled = agePolicyData?.requireConsent === true;
+  // Handle all possible truthy values for requireConsent (boolean true, string 'true', number 1, string '1')
+  // This ensures compatibility regardless of how the value is stored in the database
+  const isConsentFormsEnabled = agePolicyData?.requireConsent === true || 
+                                agePolicyData?.requireConsent === 'true' || 
+                                agePolicyData?.requireConsent === 1 || 
+                                agePolicyData?.requireConsent === '1';
   const [saving, setSaving] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);

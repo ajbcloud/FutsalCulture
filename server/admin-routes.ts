@@ -1898,11 +1898,18 @@ export function setupAdminRoutes(app: any) {
 
       const policyData = settings.reduce((acc, setting) => {
         let value: any = setting.value;
-        // Parse boolean values
-        if (value === 'true') value = true;
-        if (value === 'false') value = false;
-        // Parse numeric values
-        if (!isNaN(Number(value)) && setting.key !== 'audience') value = Number(value);
+        // Parse boolean values explicitly for requireConsent and enforceAgeGating
+        if (setting.key === 'requireConsent' || setting.key === 'enforceAgeGating') {
+          // Handle all possible boolean representations
+          value = value === 'true' || value === true || value === '1' || value === 1;
+        } else if (value === 'true' || value === '1') {
+          value = true;
+        } else if (value === 'false' || value === '0') {
+          value = false;
+        } else if (!isNaN(Number(value)) && setting.key !== 'audience') {
+          // Parse numeric values (but not for boolean fields)
+          value = Number(value);
+        }
         
         acc[setting.key] = value;
         return acc;
@@ -1936,7 +1943,7 @@ export function setupAdminRoutes(app: any) {
       }
 
       const policyData = req.body;
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.id || (req as any).currentUser?.id;
 
       // Save each policy setting to system settings
       for (const [key, value] of Object.entries(policyData)) {

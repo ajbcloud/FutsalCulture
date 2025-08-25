@@ -67,14 +67,12 @@ export default function AgePolicySettings() {
         title: "Policy saved",
         description: "Age policy settings have been updated successfully",
       });
-      // Invalidate both age policy and settings queries to ensure UI updates
+      // Invalidate and immediately refetch queries to ensure UI updates instantly
       queryClient.invalidateQueries({ queryKey: ["/api/admin/age-policy"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       
-      // Force refetch to ensure immediate UI update
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ["/api/admin/age-policy"] });
-      }, 100);
+      // Force immediate refetch to ensure real-time UI update
+      queryClient.refetchQueries({ queryKey: ["/api/admin/age-policy"] });
     },
     onError: (error) => {
       toast({
