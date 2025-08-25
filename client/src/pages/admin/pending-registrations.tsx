@@ -426,8 +426,8 @@ export default function AdminPendingRegistrations() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-muted/50">
-                <TableHead className="w-12">
-                  <div className="flex flex-col items-center gap-1">
+                <TableHead className="w-12 relative">
+                  <div className="flex items-center justify-center">
                     <button
                       onClick={toggleSelectAll}
                       className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors"
@@ -448,12 +448,19 @@ export default function AdminPendingRegistrations() {
                         <Square className="w-4 h-4 text-muted-foreground/30" />
                       )}
                     </button>
-                    {selectAllMode === 'page' && registrations.length > paginatedRegistrations.length && (
-                      <div className="text-xs text-blue-500 hover:underline cursor-pointer" onClick={toggleSelectAll}>
-                        Select all {registrations.length}
-                      </div>
-                    )}
                   </div>
+                  {/* Tooltip-style select all option */}
+                  {selectAllMode === 'page' && registrations.length > paginatedRegistrations.length && (
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 z-50">
+                      <div 
+                        className="bg-blue-600 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap cursor-pointer hover:bg-blue-700 transition-colors"
+                        onClick={toggleSelectAll}
+                      >
+                        Select all {registrations.length}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-blue-600"></div>
+                      </div>
+                    </div>
+                  )}
                 </TableHead>
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Name</TableHead>
