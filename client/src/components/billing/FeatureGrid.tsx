@@ -111,7 +111,7 @@ export function FeatureGrid({ currentPlan }: FeatureGridProps) {
                         {plan.name}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {plan.price === 0 ? 'Free' : `$${plan.price}/mo`}
+                        {plan.price === 0 ? '$0/mo' : `$${plan.price}/mo`}
                       </div>
                       {plan.id === currentPlan && (
                         <Badge variant="secondary" className="text-xs">Current</Badge>
