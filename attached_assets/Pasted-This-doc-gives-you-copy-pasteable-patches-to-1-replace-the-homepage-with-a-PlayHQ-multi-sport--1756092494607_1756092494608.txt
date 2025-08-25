@@ -1,0 +1,320 @@
+This doc gives you **copy‑pasteable patches** to (1) replace the homepage with a PlayHQ multi‑sport landing, (2) add Login + Signup entry points, and (3) wire the backend email‑verification and signup endpoints. It targets your current repo shape (client + server). If your exact files differ, keep the same logic and paths.
+
+---
+
+# 0) What’s changing
+
+* Root `/` now shows a **PlayHQ multi‑sport landing** with **Get started** and **Log in**.
+* Your original “main page” (dashboard) moves to `/app`.
+* Signup uses existing `/signups` (kept), with an alias **/get-started**.
+* Backend gets **/api/get-started** + **/api/verify** for email verification, and mounts routes.
+* Adds a minimal **/login** page (local + Google/Microsoft buttons), and a **Create Password** + **Forgot/Reset** flow if you don’t already have one.
+
+> Assumptions: client is React (Wouter or React Router), server is Express. Adjust imports as needed.
+
+---
+
+# 1) Frontend — Landing page (replace old homepage)
+
+**File:** `client/src/pages/Landing.tsx`  (create if missing)
+
+```tsx
+import CTA from "../shared/CTA"; // optional; remove if you don’t have one
+import SocialButtons from "../components/SocialButtons"; // optional (see §4)
+
+export default function Landing(){
+  return (
+    <div className="min-h-screen bg-white text-gray-900">
+      <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
+        <a href="/" className="text-xl font-extrabold tracking-tight">PlayHQ</a>
+        <nav className="flex items-center gap-6 text-sm">
+          <a href="#features" className="hover:opacity-80">Features</a>
+          <a href="#pricing" className="hover:opacity-80">Pricing</a>
+          <a href="/login" className="rounded-xl px-4 py-2 border hover:bg-gray-50">Log in</a>
+        </nav>
+      </header>
+
+      <main>
+        <section className="mx-auto max-w-6xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Your club’s HQ — for any sport</h1>
+            <p className="mt-4 text-lg text-gray-600">Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.</p>
+            <div className="mt-8 flex gap-4">
+              <a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">Get started free</a>
+              <a href="#pricing" className="underline">See pricing</a>
+            </div>
+            <div className="mt-8 hidden md:block">
+              {/* Show SSO shortcuts from the landing too (optional) */}
+              <SocialButtons />
+            </div>
+          </div>
+          <div className="rounded-2xl shadow p-6 bg-white border">
+            {/* Replace with a product screenshot/carousel */}
+            <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500">Product screenshot</div>
+          </div>
+        </section>
+
+        <section id="features" className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-6xl px-6 grid md:grid-cols-3 gap-8">
+            <Feature title="Universal onboarding" text="Owners invite coaches, players, and parents; late joiners use a secure tenant code." />
+            <Feature title="Payments built‑in" text="Free to start, upgrade anytime for advanced tools and analytics." />
+            <Feature title="Multi‑sport" text="Configure team sizes, seasons, and age groups for any sport." />
+          </div>
+        </section>
+
+        <section id="pricing" className="py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-3xl font-bold mb-6">Simple pricing</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <PriceCard name="Free" price="$0" features={["Up to 50 members", "Email invites", "Basic calendar"]} />
+              <PriceCard name="Starter" price="$49" features={["Unlimited members", "CSV import", "Priority support"]} />
+              <PriceCard name="Club" price="$99" features={["Advanced analytics", "SMS invites", "Custom domains"]} />
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 flex items-center justify-between">
+        <div>© {new Date().getFullYear()} PlayHQ</div>
+        <div className="flex gap-6"><a href="/terms">Terms</a><a href="/privacy">Privacy</a></div>
+      </footer>
+    </div>
+  );
+}
+
+function Feature({ title, text }: { title: string; text: string }){ return (
+  <div className="p-6 bg-white rounded-2xl shadow border">
+    <div className="font-semibold">{title}</div>
+    <div className="text-gray-600 mt-2">{text}</div>
+  </div>
+); }
+
+function PriceCard({ name, price, features }: { name: string; price: string; features: string[] }){ return (
+  <div className="p-6 bg-white rounded-2xl shadow border">
+    <div className="font-bold text-lg">{name}</div>
+    <div className="text-4xl font-extrabold mt-2">{price}<span className="text-base font-medium">/mo</span></div>
+    <ul className="mt-4 space-y-2">{features.map(f => (<li key={f} className="flex items-center gap-2"><span>•</span><span>{f}</span></li>))}</ul>
+    <div className="mt-6"><a href="/get-started" className="inline-flex items-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90">Get started</a></div>
+  </div>
+); }
+```
+
+---
+
+# 2) Frontend — Router: make `/` use the new Landing; move old dashboard to `/app`
+
+You likely use **Wouter**. Update the root router to route `/` → `Landing` and add `/app` → your old main page.
+
+**Option A (Wouter example):** `client/src/main.tsx` or `client/src/App.tsx`
+
+```tsx
+import { Route } from "wouter";
+import Landing from "./pages/Landing";
+import Dashboard from "./pages/Dashboard"; // your original main page component
+
+export default function App(){
+  return (
+    <>
+      <Route path="/" component={Landing} />
+      <Route path="/app" component={Dashboard} />
+      <Route path="/signups" component={Signups} />
+      <Route path="/get-started" component={Signups} />
+      <Route path="/login" component={Login} />
+      <Route path="/create-password" component={CreatePassword} />
+      <Route path="/forgot" component={Forgot} />
+      <Route path="/reset" component={Reset} />
+    </>
+  );
+}
+```
+
+**Option B (React Router v6):**
+
+```tsx
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Landing from "./pages/Landing";
+import Dashboard from "./pages/Dashboard";
+
+const router = createBrowserRouter([
+  { path: "/", element: <Landing /> },
+  { path: "/app", element: <Dashboard /> },
+  { path: "/signups", element: <Signups /> },
+  { path: "/get-started", element: <Signups /> },
+  { path: "/login", element: <Login /> },
+  { path: "/create-password", element: <CreatePassword /> },
+  { path: "/forgot", element: <Forgot /> },
+  { path: "/reset", element: <Reset /> }
+]);
+
+export default function App(){ return <RouterProvider router={router} />; }
+```
+
+> If your file names differ (e.g., `client/src/routes/index.tsx`), apply the same mapping.
+
+---
+
+# 3) Frontend — Login page (minimal)
+
+**File:** `client/src/pages/Login.tsx`
+
+```tsx
+import SocialButtons from "../components/SocialButtons";
+export default function Login(){
+  return (
+    <div className="mx-auto max-w-md p-10 space-y-6">
+      <h1 className="text-2xl font-bold">Log in to PlayHQ</h1>
+      <form method="POST" action="/api/auth/login" className="space-y-3">
+        <input name="email" type="email" required placeholder="Email" className="w-full border rounded-xl p-3" />
+        <input name="password" type="password" required placeholder="Password" className="w-full border rounded-xl p-3" />
+        <button className="w-full rounded-2xl bg-black text-white px-6 py-3">Log in</button>
+      </form>
+      <div className="text-center text-sm"><a className="underline" href="/forgot">Forgot password?</a></div>
+      <div className="pt-4 border-t"><SocialButtons /></div>
+    </div>
+  );
+}
+```
+
+---
+
+# 4) Frontend — Social buttons (Google/Microsoft)
+
+**File:** `client/src/components/SocialButtons.tsx` (create)
+
+```tsx
+export default function SocialButtons({ inviteToken }: { inviteToken?: string }){
+  const q = inviteToken ? `?inviteToken=${encodeURIComponent(inviteToken)}` : "";
+  return (
+    <div className="flex flex-col gap-3">
+      <a href={`/api/auth/google${q}`} className="border rounded-xl p-3 text-center">Continue with Google</a>
+      <a href={`/api/auth/microsoft${q}`} className="border rounded-xl p-3 text-center">Continue with Microsoft</a>
+    </div>
+  );
+}
+```
+
+---
+
+# 5) Backend — Onboarding routes (signup + verify)
+
+**File:** `server/routes/onboarding.ts`
+
+```ts
+import express from "express";
+import { db } from "../db"; // your db init
+import { tenants } from "../db/schema/tenants"; // adjust import paths
+import { tenant_users } from "../db/schema/tenantUsers";
+import { email_verifications } from "../db/schema/emailVerifications";
+import { subscriptions } from "../db/schema/subscriptions";
+import Stripe from "stripe";
+import { Resend } from "resend";
+
+const router = express.Router();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const resend = new Resend(process.env.RESEND_API_KEY!);
+
+function slugify(n: string){ return n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""); }
+function randomToken(len = 48){ const a = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; return Array.from(crypto.getRandomValues(new Uint8Array(len)), b => a[b % a.length]).join(""); }
+function tenantCode(){ const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let c = ""; for(let i=0;i<8;i++) c+= a[Math.floor(Math.random()*a.length)]; return c; }
+
+// POST /api/get-started
+router.post("/get-started", async (req, res) => {
+  const { org_name, contact_name, contact_email, city, state, country } = req.body || {};
+  if (!org_name || !contact_name || !contact_email) return res.status(400).json({ error: "Missing fields" });
+
+  // TODO: look up or create user record by email in your existing users table
+  const userId = await ensureUserByEmail(contact_email); // implement in your project
+
+  // unique slug
+  const base = slugify(org_name); let slug = base; let i = 1;
+  for(;;){ const exists = await db.query.tenants.findFirst({ where: (t,{eq})=> eq(t.slug, slug)}); if(!exists) break; i++; slug = `${base}-${i}`; }
+
+  const code = tenantCode();
+  const t = await db.insert(tenants).values({ name: org_name, slug, tenant_code: code, contact_name, contact_email, city, state, country }).returning();
+  await db.insert(tenant_users).values({ tenant_id: t[0].id, user_id: userId, role: "tenant_owner" });
+
+  const customer = await stripe.customers.create({ email: contact_email, name: org_name, metadata: { tenant_id: t[0].id } });
+  await db.insert(subscriptions).values({ tenant_id: t[0].id, stripe_customer_id: customer.id, plan_key: "free", status: "inactive" });
+
+  const token = randomToken(48); const expires = new Date(Date.now()+1000*60*60*24);
+  await db.insert(email_verifications).values({ user_id: userId, email: contact_email, token, expires_at: expires });
+  const link = `${process.env.APP_URL || ""}/verify?token=${token}`;
+  await resend.emails.send({ from: process.env.EMAIL_FROM!, to: contact_email, subject: "Verify your email • PlayHQ", html: `<p>Welcome to PlayHQ.</p><p><a href="${link}">Verify your email</a></p>` });
+
+  res.json({ ok: true });
+});
+
+// GET /api/verify?token=...
+router.get("/verify", async (req, res) => {
+  const token = String(req.query.token||""); if(!token) return res.status(400).send("Missing token");
+  const row = await db.query.email_verifications.findFirst({ where: (t,{eq})=> eq(t.token, token)});
+  if(!row) return res.status(400).send("Invalid token");
+  if(row.used_at) return res.status(400).send("Already used");
+  if(new Date(row.expires_at) < new Date()) return res.status(400).send("Expired");
+  await db.update(email_verifications).set({ used_at: new Date() }).where((t,{eq})=> eq(t.id, row.id));
+  await markUserVerified(row.user_id); // implement in your project
+  res.redirect("/create-password");
+});
+
+export default router;
+```
+
+**Mount it:** `server/index.ts`
+
+```ts
+import onboarding from "./routes/onboarding";
+// ... after app = express()
+app.use(express.json());
+app.use("/api", onboarding);
+```
+
+> If you already have these endpoints, keep the existing ones and align paths.
+
+---
+
+# 6) Frontend — Create Password / Forgot / Reset (if missing)
+
+**Files:** `client/src/pages/CreatePassword.tsx`, `client/src/pages/Forgot.tsx`, `client/src/pages/Reset.tsx`
+(Use the versions from the master prompt you already have; they post to `/api/auth/create-password`, `/api/auth/forgot`, `/api/auth/reset`.)
+
+---
+
+# 7) Environment (Replit Secrets)
+
+Set (or confirm):
+
+* `APP_URL=https://playhq.app` (or your preview domain)
+* `EMAIL_FROM=no-reply@playhq.app`
+* `RESEND_API_KEY=...`
+* `STRIPE_SECRET_KEY=...`
+* `STRIPE_PUBLISHABLE_KEY=...`
+* `STRIPE_WEBHOOK_SECRET=...`
+
+Optional SSO:
+
+* `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL=https://playhq.app/api/auth/google/callback`
+* `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI=https://playhq.app/api/auth/microsoft/callback`
+
+---
+
+# 8) Make `/get-started` point at your existing **/signups** page
+
+Add a lightweight alias route so both URLs work in the router (see §2). If your signup route file is named differently, import that component and map to `/get-started`.
+
+---
+
+# 9) Move the original main page to `/app`
+
+Import your original root page component (often `Home`, `Dashboard`, or similar) and route it at `/app` (see §2). Any links in the app shell pointing to `/` should be updated to `/app` for signed‑in navigation.
+
+---
+
+# 10) Rebuild & verify
+
+1. Rebuild the client (or restart dev server).
+2. Visit `/` → you should see the new PlayHQ landing (multi‑sport copy).
+3. Click **Get started** → should open **/get-started** (alias of /signups) and POST to `/api/get-started`.
+4. Check your inbox for a verification email; click it → redirected to **/create-password**.
+5. Log in → should land you in **/app** (old page).
+
+That’s it — this patch replaces your homepage, preserves your existing signup page, and wires the email verification flow. If your repo uses different paths, mirror the mapping exactly and keep the same endpoint names.
