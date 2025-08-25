@@ -9,7 +9,7 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2 } from 'lucide-react';
 import { CardDescription } from '@/components/ui/card';
 import { useBusinessName } from "@/contexts/BusinessContext";
@@ -335,6 +335,15 @@ export default function AdminSettings() {
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
   const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Fetch current tenant policy to check requireConsent status
+  const { data: tenantPolicy } = useQuery({
+    queryKey: ["/api/policy/tenant"],
+    queryFn: () => fetch("/api/policy/tenant", { credentials: 'include' }).then(res => res.json()),
+    retry: false,
+  });
+
+  const isConsentFormsEnabled = tenantPolicy?.requireConsent === true;
   const [saving, setSaving] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
@@ -911,9 +920,17 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger 
               value="consent-forms" 
-              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+              className={`w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3 ${
+                !isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={!isConsentFormsEnabled}
             >
               Consent Forms
+              {!isConsentFormsEnabled && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  Disabled
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -942,8 +959,19 @@ export default function AdminSettings() {
             <TabsTrigger value="age-policy" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Age Policy
             </TabsTrigger>
-            <TabsTrigger value="consent-forms" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+            <TabsTrigger 
+              value="consent-forms" 
+              className={`data-[state=active]:bg-accent data-[state=active]:text-accent-foreground ${
+                !isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={!isConsentFormsEnabled}
+            >
               Consent Forms
+              {!isConsentFormsEnabled && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  Disabled
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2410,7 +2438,45 @@ export default function AdminSettings() {
 
         {/* Consent Forms Tab */}
         <TabsContent value="consent-forms" className="space-y-6">
-          <ConsentTemplateSettings />
+          {isConsentFormsEnabled ? (
+            <ConsentTemplateSettings />
+          ) : (
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-foreground flex items-center">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Consent Forms
+                </CardTitle>
+                <CardDescription>
+                  Consent forms are currently disabled
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Shield className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Consent Forms Disabled</h3>
+                  <p className="text-muted-foreground mb-4">
+                    To configure consent forms, you must first enable "Require Consent Forms" in the Age Policy settings.
+                  </p>
+                  <div className="flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Switch to age-policy tab
+                        const agePolicyTab = document.querySelector('[value="age-policy"]') as HTMLButtonElement;
+                        if (agePolicyTab) {
+                          agePolicyTab.click();
+                        }
+                      }}
+                      data-testid="button-go-to-age-policy"
+                    >
+                      Go to Age Policy Settings
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         </Tabs>
       </AdminLayout>
