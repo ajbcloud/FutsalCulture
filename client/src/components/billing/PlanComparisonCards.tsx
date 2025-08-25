@@ -121,7 +121,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
               </div>
             )}
             
-            {isCurrent && (
+            {isCurrent && !isHomepage && (
               <div className="absolute -top-2 right-2">
                 <Badge variant="secondary">Current Plan</Badge>
               </div>
