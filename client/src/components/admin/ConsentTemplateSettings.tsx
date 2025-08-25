@@ -289,9 +289,7 @@ export default function ConsentTemplateSettings() {
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      return apiRequest(`/api/admin/consent-templates/${templateId}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/admin/consent-templates/${templateId}`);
     },
     onSuccess: () => {
       toast({
