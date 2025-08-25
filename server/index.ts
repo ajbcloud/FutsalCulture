@@ -84,6 +84,8 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  app.use(express.json());
+  app.use("/api", onboarding);
 
   // Mount superAdmin routes
   app.use('/api/super-admin', superAdminRoutes);

@@ -60,19 +60,14 @@ function Router() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <Switch>
-        {!isAuthenticated ? (
-          <>
-            <Route path="/" component={Landing} />
-            <Route path="/sessions" component={Sessions} />
-            <Route path="/sessions/:id" component={SessionDetail} />
-            <Route path="/help" component={Help} />
-            <Route path="/signup" component={SignupStart} />
-            <Route path="/signup/parent" component={SignupParentFlow} />
-            <Route path="/signup/player" component={SignupPlayerFlow} />
-          </>
-        ) : (
-          <>
-            <Route path="/" component={Dashboard} />
+        <Route path="/" component={Landing} />
+        <Route path="/app" component={Dashboard} />
+        <Route path="/signups" component={SignupStart} />
+        <Route path="/get-started" component={SignupStart} />
+        <Route path="/login" component={Login} />
+        <Route path="/create-password" component={CreatePassword} />
+        <Route path="/forgot" component={Forgot} />
+        <Route path="/reset" component={Reset} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/session/:id/payment" component={SessionPayment} />
