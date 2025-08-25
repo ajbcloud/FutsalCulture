@@ -7,10 +7,11 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2 } from 'lucide-react';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2, Info } from 'lucide-react';
 import { CardDescription } from '@/components/ui/card';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
@@ -336,14 +337,14 @@ export default function AdminSettings() {
   const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch current tenant policy to check requireConsent status
-  const { data: tenantPolicy } = useQuery({
-    queryKey: ["/api/policy/tenant"],
-    queryFn: () => fetch("/api/policy/tenant", { credentials: 'include' }).then(res => res.json()),
+  // Fetch current tenant capabilities to check requireConsent status
+  const { data: tenantCapabilities } = useQuery({
+    queryKey: ["/api/tenant/capabilities"],
+    queryFn: () => fetch("/api/tenant/capabilities", { credentials: 'include' }).then(res => res.json()),
     retry: false,
   });
 
-  const isConsentFormsEnabled = tenantPolicy?.requireConsent === true;
+  const isConsentFormsEnabled = tenantCapabilities?.policy?.requireConsent === true;
   const [saving, setSaving] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
@@ -925,12 +926,21 @@ export default function AdminSettings() {
               }`}
               disabled={!isConsentFormsEnabled}
             >
-              Consent Forms
-              {!isConsentFormsEnabled && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  Disabled
-                </Badge>
-              )}
+              <div className="flex items-center">
+                Consent Forms
+                {!isConsentFormsEnabled && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 ml-2 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -966,12 +976,21 @@ export default function AdminSettings() {
               }`}
               disabled={!isConsentFormsEnabled}
             >
-              Consent Forms
-              {!isConsentFormsEnabled && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  Disabled
-                </Badge>
-              )}
+              <div className="flex items-center">
+                Consent Forms
+                {!isConsentFormsEnabled && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 ml-2 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </TabsTrigger>
           </TabsList>
         </div>

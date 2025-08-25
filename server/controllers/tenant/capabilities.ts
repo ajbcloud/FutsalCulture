@@ -6,7 +6,8 @@ import {
   planFeatures, 
   tenantFeatureOverrides,
   tenantPlanAssignments,
-  tenants
+  tenants,
+  tenantPolicies
 } from '../../../shared/schema';
 
 // Cache for tenant capabilities
@@ -115,10 +116,18 @@ export async function getTenantCapabilities(req: Request, res: Response) {
       };
     }
 
+    // Get tenant policy for age requirements and consent settings
+    const [policy] = await db
+      .select()
+      .from(tenantPolicies)
+      .where(eq(tenantPolicies.tenantId, tenantId))
+      .limit(1);
+
     const result = {
       tenantId,
       planCode,
       capabilities,
+      policy: policy || null,
       cachedAt: new Date().toISOString()
     };
 
