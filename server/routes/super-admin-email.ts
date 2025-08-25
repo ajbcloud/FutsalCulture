@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { sendEmail } from "../emailService";
-import { drizzleDb as db } from "../storage";
+import { db } from "../db";
 import { users, tenants } from "../../shared/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -250,10 +250,6 @@ router.get("/templates", (req: any, res) => {
     id: key,
     name: key.charAt(0).toUpperCase() + key.slice(1),
     subject: (emailTemplates as any)[key].subject
-  }));
-    id: key,
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    subject: emailTemplates[key].subject
   }));
   
   res.json({ templates });
