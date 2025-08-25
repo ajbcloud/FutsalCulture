@@ -40,7 +40,7 @@ export default function HomePlayHQ() {
             </div>
           </div>
           <div className="rounded-2xl shadow p-6 bg-card border border-border">
-            <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500 text-sm">
+            <div className="aspect-video w-full bg-gray-100 dark:bg-gray-800 rounded-xl grid place-items-center text-gray-500 dark:text-gray-400 text-sm">
               Product screenshot
             </div>
           </div>
@@ -57,7 +57,7 @@ export default function HomePlayHQ() {
         </section>
 
         {/* How it works */}
-        <section className="bg-gray-50 py-16">
+        <section className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">How it works</h2>
             <div className="grid md:grid-cols-3 gap-8">
@@ -114,7 +114,7 @@ export default function HomePlayHQ() {
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="bg-gray-50 py-16">
+        <section id="pricing" className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">Simple pricing for every club</h2>
             <div className="grid md:grid-cols-3 gap-8">
@@ -148,7 +148,7 @@ export default function HomePlayHQ() {
         </section>
 
         {/* FAQ */}
-        <section className="bg-gray-50 py-16">
+        <section className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-4xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">Frequently asked questions</h2>
             <div className="space-y-8">
@@ -211,19 +211,19 @@ function HowItWorksStep({ number, title, description }: { number: string; title:
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="p-6 bg-white rounded-2xl shadow border border-gray-200">
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+    <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{title}</h3>
+      <p className="text-gray-600 dark:text-gray-300">{description}</p>
     </div>
   );
 }
 
 function PricingCard({ name, price, features }: { name: string; price: string; features: string[] }) {
   return (
-    <div className="p-6 bg-white rounded-2xl shadow border border-gray-200">
-      <div className="font-bold text-lg">{name}</div>
-      <div className="text-4xl font-extrabold mt-2">
-        {price}<span className="text-base font-medium">/mo</span>
+    <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+      <div className="font-bold text-lg text-gray-900 dark:text-white">{name}</div>
+      <div className="text-4xl font-extrabold mt-2 text-gray-900 dark:text-white">
+        {price}<span className="text-base font-medium text-gray-600 dark:text-gray-400">/mo</span>
       </div>
       <ul className="mt-4 space-y-2">
         {features.map((feature, i) => (
@@ -248,8 +248,8 @@ function PricingCard({ name, price, features }: { name: string; price: string; f
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-2">{question}</h3>
-      <p className="text-gray-600">{answer}</p>
+      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{question}</h3>
+      <p className="text-gray-600 dark:text-gray-300">{answer}</p>
     </div>
   );
 }
