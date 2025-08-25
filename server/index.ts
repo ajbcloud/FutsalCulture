@@ -15,6 +15,7 @@ import guardianRouter from './routes/guardian';
 import companySignupRouter from './routes/company-signup';
 import joinRouter from './routes/join';
 import personalSignupRouter from './routes/personal-signup';
+import { superAdminEmailRouter } from './routes/super-admin-email';
 
 const app = express();
 
@@ -97,6 +98,9 @@ app.use((req, res, next) => {
 
   // Mount superAdmin routes
   app.use('/api/super-admin', superAdminRoutes);
+  
+  // Mount super admin email routes
+  app.use('/api/super-admin', superAdminEmailRouter);
   
   // Mount admin campaigns routes
   app.use('/api/admin', adminCampaignsRoutes);

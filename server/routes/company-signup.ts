@@ -53,8 +53,43 @@ companySignupRouter.post("/get-started", async (req: any, res) => {
       isAdmin: true
     }).returning();
     
-    // TODO: Send verification email with Resend
-    // await sendVerificationEmail(validatedData.contact_email, verificationToken);
+    // Send welcome email
+    const { sendEmail } = await import('../emailService');
+    await sendEmail({
+      to: validatedData.contact_email,
+      from: 'welcome@playhq.app',
+      subject: 'Welcome to PlayHQ - Your Club is Ready!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+          <p>Hi ${validatedData.contact_name},</p>
+          <p>Congratulations! Your club <strong>${validatedData.org_name}</strong> has been successfully created on PlayHQ.</p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>Your Club Details:</h3>
+            <p><strong>Club Name:</strong> ${validatedData.org_name}</p>
+            <p><strong>Contact Email:</strong> ${validatedData.contact_email}</p>
+            <p><strong>Club URL:</strong> https://${tenantSlug}.playhq.app</p>
+          </div>
+          
+          <p>You can now log in to your admin dashboard to:</p>
+          <ul>
+            <li>Set up your first training sessions</li>
+            <li>Invite players and parents</li>
+            <li>Configure payment settings</li>
+            <li>Customize your club settings</li>
+          </ul>
+          
+          <p><a href="https://playhq.app/login" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Get Started →</a></p>
+          
+          <p>If you have any questions, our support team is here to help at <a href="mailto:support@playhq.app">support@playhq.app</a></p>
+          
+          <p>Welcome to the PlayHQ family!</p>
+          <p>The PlayHQ Team</p>
+        </div>
+      `,
+      text: `Welcome to PlayHQ!\n\nHi ${validatedData.contact_name},\n\nCongratulations! Your club "${validatedData.org_name}" has been successfully created on PlayHQ.\n\nYour club URL: https://${tenantSlug}.playhq.app\n\nYou can now log in to set up your sessions, invite players and parents, and configure your club.\n\nGet started: https://playhq.app/login\n\nFor support, contact us at support@playhq.app\n\nWelcome to PlayHQ!`
+    });
     
     console.log(`Created tenant ${tenant.name} for ${validatedData.contact_email}`);
     
