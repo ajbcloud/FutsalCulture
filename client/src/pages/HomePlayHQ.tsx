@@ -178,7 +178,7 @@ export default function HomePlayHQ() {
             </div>
           </div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-900">Status</a>
+            <a href="/status" className="hover:text-gray-900">Status</a>
             <a href="mailto:support@playhq.app" className="hover:text-gray-900">Support</a>
           </div>
         </div>

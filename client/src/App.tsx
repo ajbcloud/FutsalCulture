@@ -53,6 +53,7 @@ import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Status from "./pages/Status";
 
 
 function Router() {
@@ -80,6 +81,7 @@ function Router() {
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
+        <Route path="/status" component={Status} />
         <Route path="/profile" component={Profile} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/sessions" component={Sessions} />
