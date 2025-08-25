@@ -7,8 +7,8 @@ import crypto from 'crypto';
 import { getPolicies, updatePolicies, getTenantDefaults, updateTenantDefaults, getTrialSettings, updateTrialSettings } from './controllers/superAdmin/platformSettings';
 import { trialManager } from './trial-management';
 
-// Hardcoded super admin failsafe - cannot be removed or modified by any database operation
-const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Replit username for failsafe admin
+// Super admin email for authentication
+const SUPER_ADMIN_EMAIL = "admin@playhq.app";
 
 // Store active impersonation sessions in memory (in production, use Redis or DB)
 const impersonationSessions = new Map<string, {
@@ -18,36 +18,23 @@ const impersonationSessions = new Map<string, {
   expiresAt: Date;
 }>();
 
-// Middleware to check super admin access with hardcoded failsafe
+// Middleware to check super admin access
 async function isSuperAdmin(req: any, res: any, next: any) {
   try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
+    const user = req.user;
+    if (!user) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Check hardcoded failsafe super admin first
-    if (userId === FAILSAFE_SUPER_ADMIN_ID || userId === '45392508') {
-      console.log(`✓ Failsafe super admin access granted to user: ${userId}`);
+    // Check if user is super admin by email or database flag
+    if (user.email === SUPER_ADMIN_EMAIL || user.isSuperAdmin) {
+      console.log(`✓ Super admin access granted to user: ${user.email}`);
       next();
       return;
     }
 
-    const user = await storage.getUser(userId);
-    if (!user?.isSuperAdmin) {
-      return res.status(403).json({ message: "Super admin access required" });
-    }
-
-    next();
+    return res.status(403).json({ message: "Super admin access required" });
   } catch (error) {
-    // Even if database fails, allow failsafe admin access
-    const userId = req.user?.claims?.sub;
-    if (userId === FAILSAFE_SUPER_ADMIN_ID) {
-      console.log(`✓ Failsafe super admin access granted (DB error bypass) to user: ${userId}`);
-      next();
-      return;
-    }
-    
     console.error("Super admin middleware error:", error);
     res.status(500).json({ message: "Authentication error" });
   }

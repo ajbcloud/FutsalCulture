@@ -1,58 +1,98 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { apiRequest } from '@/lib/queryClient';
-import type { User } from '@shared/schema';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin?: boolean;
+  isAssistant?: boolean;
+  isSuperAdmin?: boolean;
+  tenantId?: string;
+  planId?: string;
+  billingStatus?: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  refreshAuth: () => Promise<void>;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
     try {
-      const response = await apiRequest("GET", "/api/auth/user");
-      const text = await response.text();
+      const response = await fetch('/api/auth/user', {
+        credentials: 'include'
+      });
       
-      if (!text) {
-        setUser(null);
-        return;
-      }
-      
-      const userData = JSON.parse(text);
-      setUser(userData);
-    } catch (error: any) {
-      if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
-        setUser(null);
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
       } else {
-        console.error("Auth error:", error);
         setUser(null);
       }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      setUser(null);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  const refreshAuth = async () => {
-    setIsLoading(true);
-    await fetchUser();
   };
 
   useEffect(() => {
     fetchUser();
   }, []);
 
+  const login = async (email: string, password: string) => {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Login failed');
+    }
+
+    await fetchUser();
+  };
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
+  };
+
+  const refreshUser = async () => {
+    await fetchUser();
+  };
+
   const value = {
     user,
-    isLoading,
-    isAuthenticated: !!user,
-    refreshAuth,
+    loading,
+    login,
+    logout,
+    refreshUser
   };
 
   return (

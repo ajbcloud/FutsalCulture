@@ -33,18 +33,18 @@ import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public ingestion endpoints (BEFORE auth middleware since they're public)
   app.use('/api/public', publicIngestionRoutes);
-  
+
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
 
   // Auth middleware
   await setupAuth(app);
-  
+
   // Platform policy middleware (must be after auth)
   app.use(maintenanceMode); // Check maintenance mode for all routes
   app.use(enforceSessionTimeout); // Check session timeout for all authenticated routes
   app.use(enforceMFA); // Enforce MFA requirements
-  
+
   // Impersonation context middleware (must be after auth and policies)
   app.use(impersonationContext);
 
@@ -54,9 +54,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       let user = await storage.getUser(userId);
-      
+
       // Apply failsafe super admin permissions if this is the hardcoded admin
       if (userId === FAILSAFE_SUPER_ADMIN_ID) {
         if (user) {
@@ -87,14 +87,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log("✓ Failsafe super admin permissions applied:", { id: user.id, isSuperAdmin: user.isSuperAdmin });
       }
-      
+
       // Log user for debugging
       console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant, isSuperAdmin: user?.isSuperAdmin });
-      
+
       res.json(user);
     } catch (error) {
       // Even if database fails, provide failsafe admin access
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       if (userId === FAILSAFE_SUPER_ADMIN_ID) {
         console.log("✓ Database error - providing failsafe super admin access");
         const failsafeUser = {
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         return res.json(failsafeUser);
       }
-      
+
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
@@ -124,9 +124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/consent/missing/:playerId', isAuthenticated, async (req: any, res) => {
     try {
       const { playerId } = req.params;
-      const parentId = req.user.claims.sub;
+      const parentId = req.user.id;
       const tenantId = req.user?.tenantId;
-      
+
       const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
       res.json(missingForms);
     } catch (error) {
@@ -137,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = updateUserSchema.parse(req.body);
       const user = await storage.updateUser(userId, validatedData);
       res.json(user);
@@ -200,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get tenant ID from various sources
-      const targetTenantId = tenantId || req.user?.claims?.tenantId || req.session?.user?.tenantId;
+      const targetTenantId = tenantId || req.user?.tenantId || req.session?.user?.tenantId;
       if (!targetTenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
@@ -210,12 +210,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(systemSettings)
         .where(eq(systemSettings.key, 'autoApproveRegistrations'))
         .limit(1);
-      
+
       const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0;
 
       // Create user with validated consent
       const userData = {
-        id: req.user?.claims?.sub || email.split('@')[0] + '-' + Date.now(),
+        id: req.user?.id || email.split('@')[0] + '-' + Date.now(),
         firstName,
         lastName,
         email,
@@ -288,14 +288,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sessions', async (req: any, res) => {
     try {
       const { ageGroup, location, status, gender, includePast } = req.query;
-      
+
       // Get tenant ID from authenticated user, or allow all sessions for non-authenticated users
       let tenantId;
-      if (req.user?.claims?.sub) {
-        const user = await storage.getUser(req.user.claims.sub);
+      if (req.user?.id) {
+        const user = await storage.getUser(req.user.id);
         tenantId = user?.tenantId;
       }
-      
+
       const sessions = await storage.getSessions({
         ageGroup: ageGroup as string,
         location: location as string,
@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId: tenantId || undefined,
         includePast: includePast === 'true',
       });
-      
+
       console.log('Sessions API called:', { 
         tenantId, 
         sessionsCount: sessions.length, 
@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         futureSessions: sessions.filter(s => new Date(s.startTime) > new Date()).length,
         todaySessions: sessions.filter(s => new Date(s.startTime).toDateString() === new Date().toDateString()).length
       });
-      
+
       // Check if our specific session is included
       const testSession = sessions.find(s => s.id === 'a9e03e7b-5622-4e6a-a06f-243b7ac7acc1');
       if (testSession) {
@@ -326,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.log('Test session NOT found in results');
       }
-      
+
       if (sessions.length > 0) {
         const sampleSession = sessions[0];
         console.log('Sample session data:', { 
@@ -338,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isPast: new Date(sampleSession.startTime) < new Date()
         });
       }
-      
+
       // Add signup count to each session
       const sessionsWithCounts = await Promise.all(
         sessions.map(async (session) => {
@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { ...session, signupsCount };
         })
       );
-      
+
       res.json(sessionsWithCounts);
     } catch (error) {
       console.error("Error fetching sessions:", error);
@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
-      
+
       const signupsCount = await storage.getSignupsCount(session.id);
       res.json({ ...session, signupsCount });
     } catch (error) {
@@ -373,28 +373,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/session-filters", async (req: Request, res: Response) => {
     try {
       let tenantId = null;
-      
+
       if (req.user) {
-        const user = await storage.getUser(req.user.claims.sub);
+        const user = await storage.getUser(req.user.id);
         tenantId = user?.tenantId;
       }
-      
+
       // Get all sessions for the tenant (including past) to build comprehensive filter options
       const sessions = await storage.getSessions({ tenantId: tenantId || undefined, includePast: true });
-      
+
       // Extract unique values for age groups and genders from sessions
       const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(session => session.ageGroups || [])));
       const uniqueGenders = Array.from(new Set(sessions.flatMap(session => session.genders || [])));
-      
+
       // Get configured locations from admin settings
       let availableLocations = ['Turf City', 'Sports Hub', 'Jurong East']; // Default fallback
-      
+
       if (tenantId) {
         try {
           const settings = await db.select()
             .from(systemSettings)
             .where(eq(systemSettings.tenantId, tenantId));
-          
+
           const locationsSetting = settings.find(s => s.key === 'availableLocations');
           if (locationsSetting?.value) {
             try {
@@ -413,15 +413,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Keep default locations on error
         }
       }
-      
+
       const filters = {
         ageGroups: uniqueAgeGroups.sort(),
         locations: availableLocations.sort(),
         genders: uniqueGenders.sort(),
       };
-      
+
       console.log('Session filters generated:', { tenantId, totalSessions: sessions.length, filters });
-      
+
       res.json(filters);
     } catch (error) {
       console.error("Error fetching session filters:", error);
@@ -434,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertHelpRequestSchema.parse(req.body);
       const helpRequest = await storage.createHelpRequest(validatedData);
-      
+
       // Send email notification to support team
       try {
         const { sendHelpRequestNotification } = await import('./emailService');
@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Failed to send help request notification email:", emailError);
         // Don't fail the request if email fails
       }
-      
+
       res.status(201).json(helpRequest);
     } catch (error) {
       console.error("Error creating help request:", error);
@@ -465,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = req.params.id;
       const { canAccessPortal, canBookAndPay } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       // Get player and verify ownership
       const player = await storage.getPlayer(playerId);
@@ -496,7 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = req.params.id;
       const { method } = req.body; // 'email' or 'sms'
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       // Get player and verify ownership
       const player = await storage.getPlayer(playerId);
@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/invite/validate/:token', async (req, res) => {
     try {
       const { token } = req.params;
-      
+
       // Decode token (simplified - in production use JWT verification)
       let playerId: string;
       try {
@@ -581,7 +581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { token } = req.params;
       const { firstName, lastName, email, password } = req.body;
-      
+
       // Decode token (simplified - in production use JWT verification)
       let playerId: string;
       try {
@@ -630,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Parent 2 invite routes
   app.post('/api/parent2/invite', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { method, email, phoneNumber } = req.body;
 
       if (!method || (method !== 'email' && method !== 'sms')) {
@@ -669,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/parent2-invite/validate/:token', async (req, res) => {
     try {
       const { token } = req.params;
-      
+
       // Decode token (simplified - in production use JWT verification)
       let parentId: string;
       try {
@@ -705,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { token } = req.params;
       const { firstName, lastName, email, phone } = req.body;
-      
+
       // Decode token (simplified - in production use JWT verification)
       let parent1Id: string;
       try {
@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player routes
   app.get('/api/players', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const players = await storage.getPlayersByParent(userId);
       res.json(players);
     } catch (error) {
@@ -760,8 +760,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Consent documents for parent - get all signed consent forms
   app.get('/api/parent/consent-documents', isAuthenticated, async (req: any, res) => {
     try {
-      const parentId = req.user.claims.sub;
-      
+      const parentId = req.user.id;
+
       // Get user's tenant information
       const user = await storage.getUser(parentId);
       if (!user || !user.tenantId) {
@@ -781,8 +781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: playerId } = req.params;
       const { page = '1', limit = '20' } = req.query;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       const pageNum = parseInt(page as string, 10);
       const limitNum = parseInt(limit as string, 20);
       const offset = (pageNum - 1) * limitNum;
@@ -800,7 +800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import('./db');
       const { players, signups, futsalSessions } = await import('../shared/schema');
       const { eq, and, desc, sql } = await import('drizzle-orm');
-      
+
       // Verify player belongs to admin's tenant
       const [player] = await db.select()
         .from(players)
@@ -879,8 +879,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id: playerId } = req.params;
       const { page = '1', limit = '20' } = req.query;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       const pageNum = parseInt(page as string, 10);
       const limitNum = parseInt(limit as string, 20);
       const offset = (pageNum - 1) * limitNum;
@@ -895,7 +895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import('./db');
       const { players, signups, futsalSessions } = await import('../shared/schema');
       const { eq, and, desc, sql, or } = await import('drizzle-orm');
-      
+
       const [player] = await db.select()
         .from(players)
         .where(and(
@@ -1002,21 +1002,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/players', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user's tenant information
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Assign default tenant if user doesn't have one (for existing users)
       let tenantId = user.tenantId;
       if (!tenantId) {
         // Get the first available tenant or create a default one
         const { db } = await import("./db");
         const { tenants } = await import("@shared/schema");
-        
+
         const existingTenants = await db.select().from(tenants).limit(1);
         if (existingTenants.length > 0) {
           tenantId = existingTenants[0].id;
@@ -1026,19 +1026,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No tenant available for player creation" });
         }
       }
-      
+
       // Check if auto-approve is enabled
       const { db } = await import("./db");
       const { systemSettings } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
-      
+
       const autoApproveSetting = await db.select()
         .from(systemSettings)
         .where(eq(systemSettings.key, 'autoApproveRegistrations'))
         .limit(1);
-      
+
       const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
-      
+
       const validatedData = insertPlayerSchema.parse({
         ...req.body,
         tenantId,
@@ -1046,7 +1046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isApproved: autoApprove,
         registrationStatus: autoApprove ? 'approved' : 'pending',
       });
-      
+
       const player = await storage.createPlayer(validatedData);
       res.json(player);
     } catch (error) {
@@ -1079,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Signup routes (Booking Access Control: Login required)
   app.get('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const signups = await storage.getSignupsByParent(userId);
       res.json(signups);
     } catch (error) {
@@ -1091,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/signups', isAuthenticated, async (req: any, res) => {
     try {
       const { playerId, sessionId, accessCode, fromWaitlistOffer, offerId, reserveOnly } = req.body;
-      
+
       // Special handling for waitlist offers
       if (fromWaitlistOffer && offerId) {
         // Verify the waitlist offer exists and is still valid
@@ -1099,21 +1099,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!offer || offer.id !== offerId || offer.offerStatus !== 'offered') {
           return res.status(400).json({ message: "Invalid or expired waitlist offer" });
         }
-        
+
         // Check if offer has expired
         const now = new Date();
         if (offer.offerExpiresAt && offer.offerExpiresAt < now) {
           return res.status(400).json({ message: "Waitlist offer has expired" });
         }
-        
+
         // Mark the waitlist offer as accepted and create signup
         const updatedOffer = await storage.acceptWaitlistOffer(offerId);
-        
+
         // Create signup with paid = true since this is from a waitlist promotion
         const session = await storage.getSession(sessionId);
-        const userId = req.user.claims.sub;
+        const userId = req.user.id;
         const currentUser = await storage.getUser(userId);
-        
+
         const signup = await storage.createSignup({
           tenantId: currentUser?.tenantId || session.tenantId,
           playerId,
@@ -1123,9 +1123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Remove the waitlist entry since player is now signed up
         await storage.leaveWaitlist(sessionId, playerId);
-        
+
         const player = await storage.getPlayer(playerId);
-        
+
         return res.json({
           ...signup,
           player,
@@ -1133,18 +1133,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Successfully confirmed spot from waitlist offer"
         });
       }
-      
+
       // Regular signup flow
       // Check if signup already exists
       const existing = await storage.checkExistingSignup(playerId, sessionId);
       if (existing) {
         return res.status(400).json({ message: "Player already signed up for this session" });
       }
-      
+
       // Check for missing consent forms
-      const parentId = req.user.claims.sub;
+      const parentId = req.user.id;
       const tenantId = req.user?.tenantId;
-      
+
       try {
         const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
         if (missingForms.length > 0) {
@@ -1158,15 +1158,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error checking consent forms during signup:', error);
         // Don't block signup if consent check fails
       }
-      
+
       // Check session capacity
       const session = await storage.getSession(sessionId);
       const signupsCount = await storage.getSignupsCount(sessionId);
-      
+
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
-      
+
       if (signupsCount >= session.capacity) {
         return res.status(400).json({ message: "Session is full" });
       }
@@ -1176,23 +1176,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!accessCode || accessCode.trim().length === 0) {
           return res.status(400).json({ message: "Access code is required for this session" });
         }
-        
+
         if (accessCode.trim().toUpperCase() !== session.accessCode) {
           return res.status(400).json({ message: "Invalid access code" });
         }
       }
-      
+
       // Check if session is open for booking based on constraints
       const now = new Date();
       const sessionDate = new Date(session.startTime);
-      
+
       // Check if session has no time constraints
       if (!session.noTimeConstraints) {
         // Check for days before booking constraint
         if (session.daysBeforeBooking && session.daysBeforeBooking > 0) {
           const daysBeforeMs = session.daysBeforeBooking * 24 * 60 * 60 * 1000;
           const bookingOpenTime = new Date(sessionDate.getTime() - daysBeforeMs);
-          
+
           if (now < bookingOpenTime) {
             const openDate = bookingOpenTime.toLocaleDateString();
             const openTime = bookingOpenTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -1205,12 +1205,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const sessionDay = sessionDate.toLocaleDateString();
             return res.status(400).json({ message: `Booking opens at 8:00 AM on ${sessionDay}` });
           }
-          
+
           const bookingOpenTime = new Date(sessionDate);
           const hour = session.bookingOpenHour ?? 8;
           const minute = session.bookingOpenMinute ?? 0;
           bookingOpenTime.setHours(hour, minute, 0, 0);
-          
+
           if (now < bookingOpenTime) {
             const openTime = bookingOpenTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
             return res.status(400).json({ message: `Booking opens at ${openTime} on session day` });
@@ -1218,14 +1218,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       // If noTimeConstraints is true, skip all time validation
-      
+
       // Get current user to access tenantId
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const currentUser = await storage.getUser(userId);
-      
+
       // Calculate reservation expiry (1 hour from now) if this is a reservation
       const reservationExpiresAt = reserveOnly ? new Date(Date.now() + 60 * 60 * 1000) : null;
-      
+
       // Create signup with appropriate payment status
       const signup = await storage.createSignup({
         tenantId: currentUser?.tenantId || session.tenantId,
@@ -1237,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get player and session details for response
       const player = await storage.getPlayer(playerId);
-      
+
       res.json({
         ...signup,
         player,
@@ -1278,13 +1278,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.query;
       const user = req.user;
-      
+
       if (!user || !user.tenantId) {
         return res.status(400).json({ message: "User tenant not found" });
       }
 
       let payments = [];
-      
+
       if (status === 'pending') {
         payments = await storage.getPendingPaymentSignups(user.tenantId);
       } else if (status === 'paid') {
@@ -1297,7 +1297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
         payments = [...pending, ...paid];
       }
-      
+
       res.json(payments);
     } catch (error) {
       console.error("Error fetching admin payments:", error);
@@ -1309,7 +1309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { signupId } = req.params;
       const signup = await storage.getSignupWithDetails(signupId);
-      
+
       if (!signup) {
         return res.status(404).json({ message: "Signup not found" });
       }
@@ -1317,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // TODO: Implement SMS/email reminder service
       // For now, just return success
       console.log(`Payment reminder sent for signup ${signupId}`);
-      
+
       res.json({ success: true, message: "Payment reminder sent" });
     } catch (error) {
       console.error("Error sending payment reminder:", error);
@@ -1329,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { signupId } = req.params;
       const signup = await storage.updateSignupPaymentStatus(signupId, true);
-      
+
       if (!signup) {
         return res.status(404).json({ message: "Signup not found" });
       }
@@ -1346,7 +1346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { signupId } = req.params;
       const signup = await storage.updateSignupPaymentStatus(signupId, true);
-      
+
       if (!signup) {
         return res.status(404).json({ message: "Signup not found" });
       }
@@ -1364,10 +1364,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { paymentId } = req.params;
       const { reason } = req.body;
       const user = req.user;
-      
+
       // Process refund (placeholder - would integrate with actual payment system)
       const refund = await storage.processRefund(paymentId, reason, user.id);
-      
+
       res.json({ success: true, refund });
     } catch (error) {
       console.error("Error processing refund:", error);
@@ -1379,8 +1379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/multi-checkout', isAuthenticated, async (req: any, res) => {
     try {
       const { sessions } = req.body;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       if (!sessions || sessions.length === 0) {
         return res.status(400).json({ message: "No sessions selected" });
       }
@@ -1388,25 +1388,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create all signups without payment processing
       const signupPromises = sessions.map(async (sessionData: any) => {
         const { sessionId, playerId } = sessionData;
-        
+
         // Check if signup already exists
         const existing = await storage.checkExistingSignup(playerId, sessionId);
         if (existing) {
           throw new Error(`Player already signed up for session ${sessionId}`);
         }
-        
+
         // Check session capacity
         const session = await storage.getSession(sessionId);
         const signupsCount = await storage.getSignupsCount(sessionId);
-        
+
         if (!session) {
           throw new Error(`Session ${sessionId} not found`);
         }
-        
+
         if (signupsCount >= session.capacity) {
           throw new Error(`Session ${sessionId} is full`);
         }
-        
+
         // Create signup with paid set to true (no payment required)
         return await storage.createSignup({
           tenantId: session.tenantId,
@@ -1428,8 +1428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/sessions/:sessionId/waitlist/join', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user's tenant information
       const user = await storage.getUser(userId);
       if (!user || !user.tenantId) {
@@ -1493,8 +1493,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/sessions/:sessionId/waitlist/leave', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user's tenant information
       const user = await storage.getUser(userId);
       if (!user || !user.tenantId) {
@@ -1526,8 +1526,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sessions/:sessionId/waitlist', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information
       const user = await storage.getUser(userId);
       if (!user) {
@@ -1540,7 +1540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const waitlistEntries = await storage.getWaitlistBySession(sessionId, user.tenantId);
-      
+
       res.json(waitlistEntries);
     } catch (error) {
       console.error("Error fetching waitlist:", error);
@@ -1552,8 +1552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/sessions/:sessionId/waitlist-count', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information and check admin access
       const user = await storage.getUser(userId);
       if (!user || (!user.isAdmin && !user.isAssistant)) {
@@ -1561,7 +1561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const waitlistCount = await storage.getWaitlistCount(sessionId);
-      
+
       res.json(waitlistCount);
     } catch (error) {
       console.error("Error fetching waitlist count:", error);
@@ -1572,8 +1572,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/sessions/:sessionId/waitlist', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information and check admin access
       const user = await storage.getUser(userId);
       if (!user || (!user.isAdmin && !user.isAssistant)) {
@@ -1581,7 +1581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const waitlistEntries = await storage.getWaitlistBySession(sessionId, user.tenantId);
-      
+
       res.json(waitlistEntries);
     } catch (error) {
       console.error("Error fetching waitlist for admin:", error);
@@ -1591,8 +1591,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/waitlists', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user's tenant information
       const user = await storage.getUser(userId);
       if (!user || !user.tenantId) {
@@ -1600,7 +1600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const waitlistEntries = await storage.getWaitlistByParent(userId, user.tenantId);
-      
+
       res.json(waitlistEntries);
     } catch (error) {
       console.error("Error fetching waitlists:", error);
@@ -1612,8 +1612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/admin/sessions/:sessionId/waitlist/settings', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information and check admin access
       const user = await storage.getUser(userId);
       if (!user || (!user.isAdmin && !user.isAssistant)) {
@@ -1621,9 +1621,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = waitlistSettingsSchema.parse(req.body);
-      
+
       const updatedSession = await storage.updateWaitlistSettings(sessionId, validatedData);
-      
+
       res.json(updatedSession);
     } catch (error) {
       console.error("Error updating waitlist settings:", error);
@@ -1637,8 +1637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/sessions/:sessionId/waitlist/promote', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information and check admin access
       const user = await storage.getUser(userId);
       if (!user || (!user.isAdmin && !user.isAssistant)) {
@@ -1647,9 +1647,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = promoteWaitlistSchema.parse(req.body);
       const { playerId } = validatedData;
-      
+
       const promotedEntry = await storage.promoteFromWaitlist(sessionId, playerId);
-      
+
       if (!promotedEntry) {
         return res.status(404).json({ message: "No waitlist entry found to promote" });
       }
@@ -1670,8 +1670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/sessions/:sessionId/waitlist/expire-offer', isAuthenticated, async (req: any, res) => {
     try {
       const { waitlistId } = req.body;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user information and check admin access
       const user = await storage.getUser(userId);
       if (!user || (!user.isAdmin && !user.isAssistant)) {
@@ -1679,7 +1679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.expireWaitlistOffer(waitlistId);
-      
+
       res.json({ message: "Offer expired successfully" });
     } catch (error) {
       console.error("Error expiring waitlist offer:", error);
@@ -1690,13 +1690,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Offer routes (for waitlist promotion)
   app.get('/api/player/offers', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const offers = await storage.getPlayerOffers(userId, user.tenantId);
       res.json(offers);
     } catch (error) {
@@ -1708,17 +1708,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/player/offers/:offerId/accept', isAuthenticated, async (req: any, res) => {
     try {
       const { offerId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Verify the offer belongs to the current user
       const user = await storage.getUser(userId);
       const offers = await storage.getPlayerOffers(userId, user?.tenantId);
       const offer = offers.find(o => o.id === offerId);
-      
+
       if (!offer) {
         return res.status(404).json({ message: "Offer not found or expired" });
       }
-      
+
       const result = await storage.acceptWaitlistOffer(offerId);
       res.json(result);
     } catch (error) {
@@ -1733,17 +1733,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/player/offers/:offerId/cancel', isAuthenticated, async (req: any, res) => {
     try {
       const { offerId } = req.params;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Verify the offer belongs to the current user
       const user = await storage.getUser(userId);
       const offers = await storage.getPlayerOffers(userId, user?.tenantId);
       const offer = offers.find(o => o.id === offerId);
-      
+
       if (!offer) {
         return res.status(404).json({ message: "Offer not found" });
       }
-      
+
       await storage.cancelWaitlistOffer(offerId);
       res.json({ success: true });
     } catch (error) {
@@ -1774,8 +1774,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/checkout/apply-discount', isAuthenticated, async (req: any, res) => {
     try {
       const { code, playerId } = req.body;
-      const userId = req.user.claims.sub;
-      
+      const userId = req.user.id;
+
       // Get user to find tenant and parent info
       const user = await storage.getUser(userId);
       if (!user) {
@@ -1783,7 +1783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validation = await storage.validateDiscountCode(code, user.tenantId, playerId, userId);
-      
+
       if (!validation.valid) {
         return res.status(400).json({ message: validation.error });
       }
@@ -1806,7 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification preferences routes
   app.get('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const preferences = await storage.getNotificationPreferences(userId);
       res.json(preferences || { email: true, sms: false });
     } catch (error) {
@@ -1817,12 +1817,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertNotificationPreferencesSchema.parse({
         ...req.body,
         parentId: userId,
       });
-      
+
       const preferences = await storage.upsertNotificationPreferences(validatedData);
       res.json(preferences);
     } catch (error) {
@@ -1834,11 +1834,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes
   app.get('/api/admin/analytics', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-      
+
       const analytics = await storage.getAnalytics();
       res.json(analytics);
     } catch (error) {
@@ -1849,21 +1849,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/admin/sessions', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-      
+
       console.log('Full user object:', JSON.stringify(user, null, 2));
       console.log('Request body:', JSON.stringify(req.body, null, 2));
-      
+
       // Ensure we have a valid tenantId
       const tenantId = user.tenantId || user.tenant_id || user.id;
       if (!tenantId) {
         console.error('No tenantId found for user:', user);
         return res.status(400).json({ message: "User tenant information missing" });
       }
-      
+
       // Add tenantId to the request body and handle date conversion
       const sessionData = {
         ...req.body,
@@ -1883,9 +1883,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentWindowMinutes: req.body.paymentWindowMinutes ?? 60,
         autoPromote: req.body.autoPromote ?? true
       };
-      
+
       console.log('Session data before validation:', JSON.stringify(sessionData, null, 2));
-      
+
       const validatedData = insertSessionSchema.parse(sessionData);
       const session = await storage.createSession(validatedData);
       res.json(session);
@@ -1897,11 +1897,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/help-requests', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-      
+
       const helpRequests = await storage.getHelpRequests();
       res.json(helpRequests);
     } catch (error) {
@@ -1912,21 +1912,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-      
+
       const tenantId = user.tenantId;
       const role = req.query.role;
-      
+
       let users;
       if (role === 'parent') {
         users = await storage.getParentsByTenant(tenantId);
       } else {
         users = await storage.getUsersByTenant(tenantId);
       }
-      
+
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -1950,7 +1950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup billing routes
   const billingRoutes = await import('./billing-routes');
   app.use('/api', isAuthenticated, billingRoutes.default);
-  
+
   // Setup session billing routes for payment processing
   const sessionBillingRoutes = await import('./session-billing-routes');
   app.use('/api', isAuthenticated, sessionBillingRoutes.default);
@@ -1964,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api', isAuthenticated, tenantRoutes.default);
 
 
-  
+
   const featureRequestRoutes = await import('./feature-request-routes');
   app.use('/api/feature-requests', isAuthenticated, featureRequestRoutes.default);
 
@@ -1976,7 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = req.currentUser;
-      
+
       if (!currentUser || !currentUser.tenantId) {
         return res.status(400).json({ message: "User or tenant not found" });
       }
@@ -1992,7 +1992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(tenants.id, currentUser.tenantId));
 
       console.log(`🧪 DEBUG: Updated tenant ${currentUser.tenantId} to growth plan`);
-      
+
       res.json({ 
         success: true, 
         message: "Subscription updated to Growth plan",

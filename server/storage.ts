@@ -65,6 +65,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
   // Tenant operations
@@ -74,15 +75,16 @@ export interface IStorage {
   createTenant(tenant: TenantInsert): Promise<TenantSelect>;
   updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect>;
   deleteTenant(id: string): Promise<void>;
-  
+
   // User operations (required for Replit Auth) - now tenant-aware
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User>;
   updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
   updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void>;
-  
-  // Player operations - now tenant-aware  
+
+  // Player operations - now tenant-aware
   getPlayersByParent(parentId: string, tenantId?: string): Promise<PlayerWithSessionCount[]>;
   getPlayer(id: string, tenantId?: string): Promise<Player | undefined>;
   createPlayer(player: InsertPlayer): Promise<Player>;
@@ -90,14 +92,14 @@ export interface IStorage {
   updatePlayerSettings(playerId: string, settings: { canAccessPortal?: boolean; canBookAndPay?: boolean }): Promise<Player>;
   updatePlayerInvite(playerId: string, method: string, invitedAt: Date): Promise<Player>;
   deletePlayer(id: string): Promise<void>;
-  
+
   // Session operations - now tenant-aware
-  getSessions(filters?: { ageGroup?: string; location?: string; status?: string; tenantId?: string }): Promise<FutsalSession[]>;
+  getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string; tenantId?: string; includePast?: boolean }): Promise<FutsalSession[]>;
   getSession(id: string, tenantId?: string): Promise<FutsalSession | undefined>;
   createSession(session: InsertSession): Promise<FutsalSession>;
   updateSession(id: string, session: Partial<InsertSession>): Promise<FutsalSession>;
   updateSessionStatus(id: string, status: string): Promise<void>;
-  
+
   // Signup operations
   getSignupsByParent(parentId: string): Promise<Array<Signup & { player: Player; session: FutsalSession }>>;
   getSignupsBySession(sessionId: string): Promise<Array<Signup & { player: Player }>>;
@@ -119,26 +121,26 @@ export interface IStorage {
   getExpiredOffers(tenantId?: string): Promise<Waitlist[]>;
   reorderWaitlist(sessionId: string): Promise<void>;
   cleanupExpiredWaitlists(): Promise<number>;
-  
+
   // Waitlist offer operations
   getPlayerOffers(parentId: string, tenantId?: string): Promise<Array<Waitlist & { session: FutsalSession; player: Player }>>;
   createWaitlistOffer(waitlistId: string, paymentWindowMinutes: number): Promise<Waitlist>;
   acceptWaitlistOffer(offerId: string): Promise<{ waitlist: Waitlist; paymentUrl: string }>;
   cancelWaitlistOffer(offerId: string): Promise<void>;
   processExpiredOffers(tenantId?: string): Promise<number>;
-  
+
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(signupId: string, paidAt: Date): Promise<void>;
-  
+
   // Help request operations
   createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest>;
   getHelpRequests(): Promise<HelpRequest[]>;
-  
+
   // Notification preferences
   getNotificationPreferences(parentId: string): Promise<NotificationPreferences | undefined>;
   upsertNotificationPreferences(preferences: InsertNotificationPreferences): Promise<NotificationPreferences>;
-  
+
   // Analytics
   getAnalytics(): Promise<{
     totalPlayers: number;
@@ -150,7 +152,7 @@ export interface IStorage {
   // Service billing operations
   getServiceBilling(): Promise<ServiceBillingSelect | undefined>;
   upsertServiceBilling(billing: ServiceBillingInsert): Promise<ServiceBillingSelect>;
-  
+
   // Discount code operations
   getDiscountCodes(): Promise<DiscountCode[]>;
   getDiscountCode(code: string): Promise<DiscountCode | undefined>;
@@ -158,10 +160,10 @@ export interface IStorage {
   updateDiscountCode(id: string, discountCode: Partial<InsertDiscountCode>): Promise<DiscountCode>;
   deleteDiscountCode(id: string): Promise<void>;
   incrementDiscountCodeUsage(id: string): Promise<void>;
-  
+
   // Access code validation
   validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
-  
+
   // Super Admin operations
   getSuperAdminUserCount(): Promise<number>;
   getSuperAdminTotalRevenue(): Promise<number>;
@@ -192,39 +194,39 @@ export interface IStorage {
   getHelpRequestsForTenant(tenantId: string): Promise<HelpRequest[]>;
   replyToHelpRequest(id: string, message: string, adminId: string): Promise<HelpRequest | null>;
   resolveHelpRequest(id: string, adminId: string, resolutionNote?: string): Promise<HelpRequest | null>;
-  
+
   // Tenant feature override operations
   getTenantFeatureOverrides(tenantId?: string): Promise<any[]>;
   setTenantFeatureOverride(tenantId: string, featureKey: string, override: any, userId?: string, ip?: string, userAgent?: string): Promise<void>;
   removeTenantFeatureOverride(tenantId: string, featureKey: string): Promise<void>;
-  
+
   // Player Development operations
   getDevSkillCategories(tenantId: string): Promise<any[]>;
   createDevSkillCategory(data: any): Promise<any>;
   updateDevSkillCategory(id: string, tenantId: string, data: any): Promise<any>;
   deleteDevSkillCategory(id: string, tenantId: string): Promise<void>;
-  
+
   getDevSkills(tenantId: string, filters?: { categoryId?: string; ageBand?: string; sport?: string; status?: string }): Promise<any[]>;
   createDevSkill(data: any): Promise<any>;
   updateDevSkill(id: string, tenantId: string, data: any): Promise<any>;
   deleteDevSkill(id: string, tenantId: string): Promise<void>;
-  
+
   getDevSkillRubrics(skillId: string, tenantId: string): Promise<any[]>;
   upsertDevSkillRubrics(skillId: string, tenantId: string, rubrics: any[]): Promise<any[]>;
-  
+
   getPlayerAssessments(tenantId: string, filters?: { playerId?: string; assessedBy?: string; startDate?: string; endDate?: string }): Promise<any[]>;
   getPlayerAssessmentWithSkills(id: string, tenantId: string): Promise<any | null>;
   createPlayerAssessment(assessment: any, skillAssessments: any[]): Promise<any>;
   updatePlayerAssessment(id: string, tenantId: string, assessment: any, skillAssessments: any[]): Promise<any>;
   deletePlayerAssessment(id: string, tenantId: string): Promise<void>;
-  
+
   getPlayerGoals(tenantId: string, filters?: { playerId?: string; status?: string; createdBy?: string }): Promise<any[]>;
   getPlayerGoalWithUpdates(id: string, tenantId: string): Promise<any | null>;
   createPlayerGoal(data: any): Promise<any>;
   updatePlayerGoal(id: string, tenantId: string, data: any): Promise<any>;
   createPlayerGoalUpdate(data: any): Promise<any>;
   deletePlayerGoal(id: string, tenantId: string): Promise<void>;
-  
+
   getPlayerDevelopmentAnalytics(tenantId: string, filters?: { playerId?: string; startDate?: string; endDate?: string; skillCategoryId?: string }): Promise<any>;
   getPlayerProgressSnapshots(playerId: string, tenantId: string, filters?: { startDate?: string; endDate?: string; skillId?: string }): Promise<any[]>;
 
@@ -236,7 +238,7 @@ export interface IStorage {
   updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>): Promise<ConsentTemplate>;
   deactivateConsentTemplate(id: string, tenantId: string): Promise<void>;
   toggleConsentTemplate(id: string, tenantId: string, isActive: boolean): Promise<ConsentTemplate>;
-  
+
   createConsentDocument(document: InsertConsentDocument): Promise<ConsentDocument>;
   getConsentDocument(id: string, tenantId: string): Promise<ConsentDocument | undefined>;
   getConsentDocumentsByPlayer(playerId: string, tenantId: string): Promise<ConsentDocument[]>;
@@ -244,11 +246,11 @@ export interface IStorage {
   getAllConsentDocuments(tenantId: string): Promise<ConsentDocument[]>;
   getRequiredConsentTemplates(tenantId: string): Promise<ConsentTemplate[]>;
   checkMissingConsentForms(playerId: string, parentId: string, tenantId: string): Promise<ConsentTemplate[]>;
-  
+
   createConsentSignature(signature: InsertConsentSignature): Promise<ConsentSignature>;
   getConsentSignaturesByDocument(documentId: string): Promise<ConsentSignature[]>;
   getConsentSignaturesByPlayer(playerId: string, tenantId: string): Promise<ConsentSignature[]>;
-  
+
   logConsentDocumentAccess(access: InsertConsentDocumentAccess): Promise<ConsentDocumentAccess>;
   getConsentDocumentAccessLog(documentId: string): Promise<ConsentDocumentAccess[]>;
 }
@@ -288,15 +290,41 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
+    const userId = userData.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const [user] = await db.insert(users)
+      .values({
+        id: userId,
+        email: userData.email,
+        passwordHash: userData.passwordHash,
+        authProvider: userData.authProvider || 'local',
+        authProviderId: userData.authProviderId,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        phone: userData.phone,
+        tenantId: userData.tenantId,
+        isApproved: userData.isApproved ?? false,
+        registrationStatus: userData.registrationStatus ?? "pending",
+      })
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
-          updatedAt: new Date(),
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          phone: userData.phone,
+          updatedAt: sql`now()`,
         },
       })
       .returning();
@@ -342,7 +370,7 @@ export class DatabaseStorage implements IStorage {
     if (tenantId) {
       conditions.push(eq(players.tenantId, tenantId));
     }
-    
+
     // Get players with session counts using a simpler approach
     const playersList = await db.select()
       .from(players)
@@ -358,7 +386,7 @@ export class DatabaseStorage implements IStorage {
           eq(signups.playerId, player.id),
           eq(signups.paid, true)
         ));
-      
+
       playersWithCounts.push({
         ...player,
         sessionCount: countResult?.count || 0
@@ -420,16 +448,16 @@ export class DatabaseStorage implements IStorage {
 
   async getSessions(filters?: { ageGroup?: string; location?: string; status?: string; gender?: string; tenantId?: string; includePast?: boolean }): Promise<FutsalSession[]> {
     const conditions = [];
-    
+
     if (filters?.tenantId) {
       conditions.push(eq(futsalSessions.tenantId, filters.tenantId));
     }
-    
+
     // By default, only show future sessions unless explicitly requested to include past
     if (!filters?.includePast) {
       conditions.push(gte(futsalSessions.startTime, new Date()));
     }
-    
+
     if (filters?.ageGroup) {
       conditions.push(sql`${filters.ageGroup} = ANY(${futsalSessions.ageGroups})`);
     }
@@ -442,7 +470,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.gender) {
       conditions.push(sql`${filters.gender} = ANY(${futsalSessions.genders})`);
     }
-    
+
     const baseQuery = db.select({
       id: futsalSessions.id,
       tenantId: futsalSessions.tenantId,
@@ -478,11 +506,11 @@ export class DatabaseStorage implements IStorage {
       autoPromote: futsalSessions.autoPromote,
       createdAt: futsalSessions.createdAt,
     }).from(futsalSessions);
-    
+
     if (conditions.length > 0) {
       return await baseQuery.where(and(...conditions)).orderBy(futsalSessions.startTime);
     }
-    
+
     return await baseQuery.orderBy(futsalSessions.startTime);
   }
 
@@ -591,7 +619,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .where(eq(players.parentId, parentId))
       .orderBy(desc(futsalSessions.startTime));
-    
+
     return results as Array<Signup & { player: Player; session: FutsalSession }>;
   }
 
@@ -612,7 +640,7 @@ export class DatabaseStorage implements IStorage {
       .from(signups)
       .innerJoin(players, eq(signups.playerId, players.id))
       .where(eq(signups.sessionId, sessionId));
-    
+
     return results as Array<Signup & { player: Player }>;
   }
 
@@ -676,12 +704,12 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .innerJoin(users, eq(players.parentId, users.id))
       .where(
-        tenantId 
+        tenantId
           ? and(eq(signups.paid, false), eq(signups.tenantId, tenantId))
           : eq(signups.paid, false)
       )
       .orderBy(desc(signups.createdAt));
-    
+
     return results as Array<Signup & { player: Player; session: FutsalSession; parent: User }>;
   }
 
@@ -716,12 +744,12 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(players.parentId, users.id))
       .leftJoin(payments, eq(payments.signupId, signups.id))
       .where(
-        tenantId 
+        tenantId
           ? and(eq(signups.paid, true), eq(signups.tenantId, tenantId))
           : eq(signups.paid, true)
       )
       .orderBy(desc(signups.createdAt));
-    
+
     return results.map(result => ({
       ...result,
       transactionId: result.paymentId,
@@ -791,7 +819,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .innerJoin(users, eq(players.parentId, users.id))
       .where(eq(signups.id, signupId));
-    
+
     return result as (Signup & { player: Player; session: FutsalSession; parent: User }) | undefined;
   }
 
@@ -908,7 +936,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(helpRequests)
       .where(eq(helpRequests.id, id));
-    
+
     if (!request) return null;
 
     // Update reply history
@@ -927,7 +955,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(helpRequests.id, id))
       .returning();
-    
+
     return result || null;
   }
 
@@ -975,21 +1003,21 @@ export class DatabaseStorage implements IStorage {
     activeSessions: number;
   }> {
     const [playerCount] = await db.select({ count: count() }).from(players);
-    
+
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
-    
+
     const [monthlyPayments] = await db
       .select({ total: count() })
       .from(payments)
       .where(gte(payments.paidAt, startOfMonth));
-    
+
     const [activeSessionsCount] = await db
       .select({ count: count() })
       .from(futsalSessions)
       .where(eq(futsalSessions.status, "open"));
-    
+
     return {
       totalPlayers: playerCount.count,
       monthlyRevenue: (monthlyPayments.total || 0) * 10, // $10 per session
@@ -1006,7 +1034,7 @@ export class DatabaseStorage implements IStorage {
   async upsertServiceBilling(billingData: ServiceBillingInsert): Promise<ServiceBillingSelect> {
     // Check if record exists
     const existing = await this.getServiceBilling();
-    
+
     if (existing) {
       // Update existing record
       const [updated] = await db
@@ -1027,7 +1055,7 @@ export class DatabaseStorage implements IStorage {
       return created;
     }
   }
-  
+
   // Discount code operations
   async getDiscountCodes(): Promise<DiscountCode[]> {
     return await db.select().from(discountCodes).orderBy(desc(discountCodes.createdAt));
@@ -1128,18 +1156,18 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(discountCodes.id, id));
   }
-  
+
   // Access code validation
   async validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean> {
     const [session] = await db
       .select()
       .from(futsalSessions)
       .where(eq(futsalSessions.id, sessionId));
-      
+
     if (!session || !session.hasAccessCode || !session.accessCode) {
       return true; // No access code required
     }
-    
+
     return session.accessCode === accessCode;
   }
 
@@ -1231,7 +1259,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSuperAdminParents(filters?: { tenantId?: string; search?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
     const conditions = [eq(users.isAdmin, false)]; // Start with base condition
-    
+
     if (filters?.tenantId && filters.tenantId !== 'all') {
       conditions.push(eq(users.tenantId, filters.tenantId));
     }
@@ -1515,8 +1543,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSuperAdminTotalRevenue(): Promise<number> {
-    const [result] = await db.select({ 
-      total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` 
+    const [result] = await db.select({
+      total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
     }).from(payments).where(eq(payments.status, 'paid'));
     return result.total || 0;
   }
@@ -1578,7 +1606,7 @@ export class DatabaseStorage implements IStorage {
     // Mock usage trends data
     const trends = [];
     const days = timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : 30;
-    
+
     for (let i = days; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -1589,7 +1617,7 @@ export class DatabaseStorage implements IStorage {
         revenue: Math.floor(Math.random() * 1000) + 500
       });
     }
-    
+
     return trends;
   }
 
@@ -1598,7 +1626,7 @@ export class DatabaseStorage implements IStorage {
       // For now, return mock data since database schema update is pending
       // This will be replaced with real data once schema is properly updated
       console.log("Geographic analytics: Using mock data while schema updates are pending");
-      
+
       return {
         tenantsByState: [
           { state: 'CA', count: 12 },
@@ -1669,7 +1697,7 @@ export class DatabaseStorage implements IStorage {
     const userCount = await db.select({ count: count() })
       .from(users)
       .where(eq(users.tenantId, tenantId));
-    
+
     const playerCount = await db.select({ count: count() })
       .from(players)
       .where(eq(players.tenantId, tenantId));
@@ -1678,8 +1706,8 @@ export class DatabaseStorage implements IStorage {
       .from(futsalSessions)
       .where(eq(futsalSessions.tenantId, tenantId));
 
-    const revenue = await db.select({ 
-      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` 
+    const revenue = await db.select({
+      total: sql<number>`COALESCE(SUM(${payments.amount}), 0)`
     })
     .from(payments)
     .leftJoin(signups, eq(payments.signupId, signups.id))
@@ -1725,10 +1753,12 @@ export class DatabaseStorage implements IStorage {
 
   async createSuperAdminUser(userData: { email: string; firstName: string; lastName: string; role: 'super-admin' | 'platform-admin' }): Promise<any> {
     const userId = nanoid();
-    
+
     const newUser = {
       id: userId,
       email: userData.email,
+      passwordHash: null, // Password will be set separately upon first login or via reset
+      authProvider: 'local', // Default to local for password auth
       firstName: userData.firstName,
       lastName: userData.lastName,
       isAdmin: true,
@@ -1740,9 +1770,9 @@ export class DatabaseStorage implements IStorage {
       registrationStatus: 'completed' as const,
       tenantId: null // Super admins don't belong to specific tenants
     };
-    
+
     await db.insert(users).values(newUser);
-    
+
     return {
       id: newUser.id,
       email: newUser.email,
@@ -1767,23 +1797,23 @@ export class DatabaseStorage implements IStorage {
 
   async exportSuperAdminUsers(): Promise<string> {
     const users = await this.getSuperAdminUsers();
-    
+
     // Convert to CSV
     const headers = ['ID', 'Name', 'Email', 'Role', 'Organization', 'Status', 'Created'];
     const rows = users.map(user => [
       user.id,
       `${user.firstName} ${user.lastName}`,
       user.email,
-      user.isSuperAdmin ? 'Super Admin' : user.isAdmin ? 'Admin' : 'User',
+      user.role,
       user.tenantName || 'N/A',
       user.status,
       user.createdAt
     ]);
-    
+
     const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field}"`).join(','))
+      .map(row => row.map(field => `"${String(field ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    
+
     return csvContent;
   }
 
@@ -1838,7 +1868,7 @@ export class DatabaseStorage implements IStorage {
 
   async exportSuperAdminAnalytics(filters?: any): Promise<string> {
     const analytics = await this.getSuperAdminAnalytics(filters);
-    
+
     // Convert platform growth to CSV
     const headers = ['Date', 'Users', 'Revenue', 'Sessions', 'Tenants'];
     const rows = analytics.platformGrowth.map((day: any) => [
@@ -1848,11 +1878,11 @@ export class DatabaseStorage implements IStorage {
       day.sessions,
       day.tenants
     ]);
-    
+
     const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field}"`).join(','))
+      .map(row => row.map(field => `"${String(field ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    
+
     return csvContent;
   }
 
@@ -1946,7 +1976,7 @@ export class DatabaseStorage implements IStorage {
   async testIntegration(type: string, config: any): Promise<any> {
     // Mock implementation - would test actual integration
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate test delay
-    
+
     return {
       success: Math.random() > 0.2, // 80% success rate
       message: `${type} integration test completed`,
@@ -1956,7 +1986,7 @@ export class DatabaseStorage implements IStorage {
 
   async getSuperAdminUsers(filters?: any): Promise<any[]> {
     const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Hardcoded failsafe admin
-    
+
     // Get super admin users from database
     let query = db.select({
       id: users.id,
@@ -1993,16 +2023,16 @@ export class DatabaseStorage implements IStorage {
     }
 
     const dbUsers = await query.orderBy(desc(users.createdAt));
-    
+
     // Always include failsafe super admin if not already in results
     const failsafeExists = dbUsers.some(user => user.id === FAILSAFE_SUPER_ADMIN_ID);
-    
+
     const allUsers = [...dbUsers];
-    
-    if (!failsafeExists && (!filters?.search || 
-        'ajosephfinch'.includes(filters.search.toLowerCase()) || 
+
+    if (!failsafeExists && (!filters?.search ||
+        'ajosephfinch'.includes(filters.search.toLowerCase()) ||
         'failsafe admin'.includes(filters.search.toLowerCase()))) {
-      
+
       // Add virtual failsafe admin user
       allUsers.unshift({
         id: FAILSAFE_SUPER_ADMIN_ID,
@@ -2077,10 +2107,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async joinWaitlist(
-    sessionId: string, 
-    playerId: string, 
-    parentId: string, 
-    tenantId: string, 
+    sessionId: string,
+    playerId: string,
+    parentId: string,
+    tenantId: string,
     preferences: { notifyOnJoin?: boolean; notifyOnPositionChange?: boolean }
   ): Promise<Waitlist> {
     return await db.transaction(async (tx) => {
@@ -2257,7 +2287,7 @@ export class DatabaseStorage implements IStorage {
       .delete(waitlists)
       .where(
         sql`${waitlists.sessionId} IN (
-          SELECT id FROM ${futsalSessions} 
+          SELECT id FROM ${futsalSessions}
           WHERE end_time < ${cleanupThreshold}
         )`
       );
@@ -2296,7 +2326,7 @@ export class DatabaseStorage implements IStorage {
 
   async createWaitlistOffer(waitlistId: string, paymentWindowMinutes: number): Promise<Waitlist> {
     const offerExpiresAt = new Date(Date.now() + paymentWindowMinutes * 60 * 1000);
-    
+
     const [updatedWaitlist] = await db
       .update(waitlists)
       .set({
@@ -2486,13 +2516,13 @@ export class DatabaseStorage implements IStorage {
         skillId,
         tenantId,
       }));
-      
+
       return await db
         .insert(devSkillRubrics)
         .values(rubricsWithIds)
         .returning();
     }
-    
+
     return [];
   }
 
@@ -2679,7 +2709,7 @@ export class DatabaseStorage implements IStorage {
   async getPlayerDevelopmentAnalytics(tenantId: string, filters?: { playerId?: string; startDate?: string; endDate?: string; skillCategoryId?: string }): Promise<any> {
     // This is a comprehensive analytics method that would aggregate data from multiple tables
     // For now, returning basic statistics - can be expanded based on needs
-    
+
     const assessmentCount = await db
       .select({ count: count() })
       .from(playerAssessments)
@@ -2707,7 +2737,7 @@ export class DatabaseStorage implements IStorage {
   async getSuperAdminPlans(): Promise<any[]> {
     // Import plans from config and transform them to the format expected by the frontend
     const { plans } = await import('./config/plans.config');
-    
+
     return plans.map(plan => ({
       id: plan.id,
       name: plan.name,
@@ -2729,23 +2759,23 @@ export class DatabaseStorage implements IStorage {
   async updateSuperAdminPlan(planId: string, updates: any): Promise<any> {
     // In a production environment, this would update a database table
     // For now, we'll return the updated plan (you could write to a JSON file or database)
-    
+
     const plans = await this.getSuperAdminPlans();
     const planIndex = plans.findIndex(p => p.id === planId);
-    
+
     if (planIndex === -1) {
       throw new Error('Plan not found');
     }
-    
+
     const updatedPlan = {
       ...plans[planIndex],
       ...updates
     };
-    
+
     // Here you would normally persist the changes to a database
     // For now, we'll just return the updated plan
     console.log(`Plan ${planId} updated:`, updatedPlan);
-    
+
     return updatedPlan;
   }
 
@@ -2814,11 +2844,11 @@ export class DatabaseStorage implements IStorage {
         })
         .from(tenantFeatureOverrides)
         .leftJoin(tenants, eq(tenantFeatureOverrides.tenantId, tenants.id));
-      
+
       if (tenantId) {
         return await query.where(eq(tenantFeatureOverrides.tenantId, tenantId));
       }
-      
+
       return await query;
     } catch (error) {
       console.error('Error fetching tenant feature overrides:', error);
@@ -3097,7 +3127,7 @@ export class DatabaseStorage implements IStorage {
       templateId: result.templateId,
       templateType: result.templateType,
       templateTitle: result.templateTitle,
-      subjectName: result.subjectRole === 'player' 
+      subjectName: result.subjectRole === 'player'
         ? `${result.playerFirstName} ${result.playerLastName}`.trim()
         : `${result.parentFirstName} ${result.parentLastName}`.trim(),
       subjectRole: result.subjectRole,
@@ -3251,7 +3281,7 @@ export class DatabaseStorage implements IStorage {
     // For missing forms, we need to check what this parent should have signed
     // They should sign forms for themselves and their players
     const parentPlayers = await this.getPlayersByParent(parentId);
-    
+
     const completedTemplateIds = new Set(completedForms.map(form => form.templateId));
     const missingForms = allTemplates.filter(template => !completedTemplateIds.has(template.id));
 
@@ -3265,7 +3295,7 @@ export class DatabaseStorage implements IStorage {
         templateType: form.templateType,
         signedAt: form.signedAt,
         subjectRole: form.subjectRole,
-        subjectName: form.subjectRole === 'player' 
+        subjectName: form.subjectRole === 'player'
           ? `${form.playerFirstName || ''} ${form.playerLastName || ''}`.trim()
           : `${form.parentFirstName || ''} ${form.parentLastName || ''}`.trim()
       })),
@@ -3334,7 +3364,7 @@ export class DatabaseStorage implements IStorage {
   async checkMissingConsentForms(playerId: string, parentId: string, tenantId: string): Promise<ConsentTemplate[]> {
     // Get all required consent templates for this tenant
     const requiredTemplates = await this.getRequiredConsentTemplates(tenantId);
-    
+
     // Get all consent documents for this player
     const existingDocuments = await db
       .select({
@@ -3349,9 +3379,9 @@ export class DatabaseStorage implements IStorage {
           eq(consentDocuments.isActive, true)
         )
       );
-    
+
     const completedTypes = new Set(existingDocuments.map(doc => doc.templateType));
-    
+
     // Return templates that are required but not completed
     return requiredTemplates.filter(template => !completedTypes.has(template.templateType));
   }

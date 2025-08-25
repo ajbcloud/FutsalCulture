@@ -92,7 +92,7 @@ export const tenants = pgTable("tenants", {
   tenantCode: varchar("tenant_code").unique(),
   contactName: text("contact_name"),
   contactEmail: text("contact_email"),
-  
+
   // Comprehensive Trial Management Fields
   trialStartedAt: timestamp("trial_started_at"),
   trialEndsAt: timestamp("trial_ends_at"),
@@ -102,24 +102,24 @@ export const tenants = pgTable("tenants", {
   paymentMethodVerified: boolean("payment_method_verified").default(false),
   trialExtensionsUsed: integer("trial_extensions_used").default(0),
   maxTrialExtensions: integer("max_trial_extensions").default(1),
-  
+
   // Plan Transition Management
   pendingPlanChange: planLevelEnum("pending_plan_change"),
   pendingPlanChangeAt: timestamp("pending_plan_change_at"),
   lastPlanLevel: planLevelEnum("last_plan_level"),
   planChangeReason: varchar("plan_change_reason"), // trial_end, upgrade, downgrade, payment_failed
-  
+
   // Data Retention and Archival
   dataRetentionPolicy: jsonb("data_retention_policy").default(sql`'{"analytics": 90, "sessions": 365, "players": 730, "payments": 2555}'::jsonb`),
   archivedDataPaths: jsonb("archived_data_paths").default(sql`'{}'::jsonb`),
   dataCleanupScheduledAt: timestamp("data_cleanup_scheduled_at"),
-  
+
   // Abuse Prevention
   trialHistory: jsonb("trial_history").default(sql`'[]'::jsonb`), // Track all trial attempts
   signupIpAddress: varchar("signup_ip_address"),
   signupUserAgent: text("signup_user_agent"),
   riskScore: integer("risk_score").default(0), // 0-100 risk assessment
-  
+
   // Grace Period Management
   gracePeriodEndsAt: timestamp("grace_period_ends_at"),
   gracePeriodReason: varchar("grace_period_reason"), // payment_failed, trial_expired, plan_change
@@ -133,6 +133,9 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").references(() => tenants.id),
   email: varchar("email").unique(),
+  passwordHash: text("password_hash"), // Hashed password for local auth
+  authProvider: varchar("auth_provider"), // 'local', 'google', 'microsoft'
+  authProviderId: varchar("auth_provider_id"), // ID from the auth provider
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -1022,7 +1025,7 @@ export const platformSettings = pgTable("platform_settings", {
     "sessionCapacity": 20,
     "seedSampleContent": false
   }'::jsonb`),
-  
+
   // Comprehensive Trial Settings
   trialSettings: jsonb("trial_settings").notNull().default(sql`'{
     "enabled": true,
@@ -1736,141 +1739,6 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   createdAt: true,
 });
 
-// Type exports for plan levels
-export type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
-
-// Feature key constants
-export const FEATURE_KEYS = {
-  SESSION_MANAGEMENT: 'session_management',
-  LOCATION_LINKS: 'location_links', 
-  PARENT_PORTAL: 'parent_portal',
-  WAITLIST_MANUAL: 'waitlist_manual',
-  WAITLIST_AUTO_PROMOTE: 'waitlist_auto_promote',
-  NOTIFICATIONS_EMAIL: 'notifications_email',
-  NOTIFICATIONS_SMS: 'notifications_sms',
-  ANALYTICS_BASIC: 'analytics_basic',
-  ANALYTICS_ADVANCED: 'analytics_advanced',
-  PAYMENTS_ENABLED: 'payments_enabled',
-  INTEGRATIONS_CALENDAR: 'integrations_calendar',
-  INTEGRATIONS_MAILCHIMP: 'integrations_mailchimp',
-  INTEGRATIONS_QUICKBOOKS: 'integrations_quickbooks',
-  INTEGRATIONS_BRAINTREE: 'integrations_braintree',
-  INTEGRATIONS_ZAPIER: 'integrations_zapier',
-  API_READ_ONLY: 'api_read_only',
-  API_FULL_ACCESS: 'api_full_access',
-  MULTI_TENANT: 'multi_tenant',
-  SSO: 'sso',
-  SUPPORT_STANDARD: 'support_standard',
-  SUPPORT_PRIORITY: 'support_priority',
-  BULK_OPERATIONS: 'bulk_operations',
-  PLAYER_DEVELOPMENT: 'player_development',
-  FEATURE_REQUESTS: 'feature_requests', // Available to all plans with priority differences
-} as const;
-
-export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];
-
-export const waitlistSettingsSchema = z.object({
-  waitlistEnabled: z.boolean().optional(),
-  waitlistLimit: z.number().nullable().optional(),
-  paymentWindowMinutes: z.number().int().min(5).max(1440).optional(),
-  autoPromote: z.boolean().optional(),
-});
-
-// Types for upsert operations (includes id)
-export type UpsertUser = z.infer<typeof insertUserSchema> & { id?: string };
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type UpdateUser = z.infer<typeof updateUserSchema>;
-export type User = typeof users.$inferSelect;
-export type Player = typeof players.$inferSelect;
-export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
-
-// Extended player type with session count for dashboard
-export type PlayerWithSessionCount = Player & { sessionCount: number };
-export type FutsalSession = typeof futsalSessions.$inferSelect & {
-  signupsCount?: number;
-};
-export type InsertSession = z.infer<typeof insertSessionSchema>;
-export type Signup = typeof signups.$inferSelect;
-export type InsertSignup = z.infer<typeof insertSignupSchema>;
-export type Payment = typeof payments.$inferSelect;
-export type InsertPayment = z.infer<typeof insertPaymentSchema>;
-export type HelpRequest = typeof helpRequests.$inferSelect;
-export type InsertHelpRequest = z.infer<typeof insertHelpRequestSchema>;
-export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
-export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
-export type Integration = typeof integrations.$inferSelect;
-export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
-export type DiscountCode = typeof discountCodes.$inferSelect;
-export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
-export type Waitlist = typeof waitlists.$inferSelect;
-export type InsertWaitlist = z.infer<typeof insertWaitlistSchema>;
-export type JoinWaitlist = z.infer<typeof joinWaitlistSchema>;
-export type LeaveWaitlist = z.infer<typeof leaveWaitlistSchema>;
-export type PromoteWaitlist = z.infer<typeof promoteWaitlistSchema>;
-export type WaitlistSettings = z.infer<typeof waitlistSettingsSchema>;
-
-// Player Development Types
-export type DevSkillCategory = typeof devSkillCategories.$inferSelect;
-export type InsertDevSkillCategory = z.infer<typeof insertDevSkillCategorySchema>;
-export type DevSkill = typeof devSkills.$inferSelect;
-export type InsertDevSkill = z.infer<typeof insertDevSkillSchema>;
-export type DevSkillRubric = typeof devSkillRubrics.$inferSelect;
-export type InsertDevSkillRubric = z.infer<typeof insertDevSkillRubricSchema>;
-export type PlayerAssessment = typeof playerAssessments.$inferSelect;
-export type InsertPlayerAssessment = z.infer<typeof insertPlayerAssessmentSchema>;
-export type PlayerAssessmentItem = typeof playerAssessmentItems.$inferSelect;
-export type InsertPlayerAssessmentItem = z.infer<typeof insertPlayerAssessmentItemSchema>;
-export type PlayerGoal = typeof playerGoals.$inferSelect;
-export type InsertPlayerGoal = z.infer<typeof insertPlayerGoalSchema>;
-export type PlayerGoalUpdate = typeof playerGoalUpdates.$inferSelect;
-export type InsertPlayerGoalUpdate = z.infer<typeof insertPlayerGoalUpdateSchema>;
-export type TrainingPlan = typeof trainingPlans.$inferSelect;
-export type InsertTrainingPlan = z.infer<typeof insertTrainingPlanSchema>;
-export type TrainingPlanItem = typeof trainingPlanItems.$inferSelect;
-export type InsertTrainingPlanItem = z.infer<typeof insertTrainingPlanItemSchema>;
-export type Drill = typeof drillsLibrary.$inferSelect;
-export type InsertDrill = z.infer<typeof insertDrillSchema>;
-export type AttendanceSnapshot = typeof attendanceSnapshots.$inferSelect;
-export type InsertAttendanceSnapshot = z.infer<typeof insertAttendanceSnapshotSchema>;
-export type DevAchievement = typeof devAchievements.$inferSelect;
-export type InsertDevAchievement = z.infer<typeof insertDevAchievementSchema>;
-export type ProgressionSnapshot = typeof progressionSnapshots.$inferSelect;
-export type InsertProgressionSnapshot = z.infer<typeof insertProgressionSnapshotSchema>;
-
-// KPI & Billing Types
-export type TenantInvoice = typeof tenantInvoices.$inferSelect;
-export type TenantInvoiceLine = typeof tenantInvoiceLines.$inferSelect;
-export type DunningEvent = typeof dunningEvents.$inferSelect;
-export type PlanCatalog = typeof planCatalog.$inferSelect;
-export type TenantPlanAssignment = typeof tenantPlanAssignments.$inferSelect;
-export type TenantUsageDaily = typeof tenantUsageDaily.$inferSelect;
-
-// Webhook & Integration Health Types
-export type IntegrationWebhook = typeof integrationWebhooks.$inferSelect;
-export type InsertIntegrationWebhook = z.infer<typeof insertIntegrationWebhookSchema>;
-export type WebhookEvent = typeof webhookEvents.$inferSelect;
-export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
-export type WebhookAttempt = typeof webhookAttempts.$inferSelect;
-export type InsertWebhookAttempt = z.infer<typeof insertWebhookAttemptSchema>;
-export type IntegrationStatusPing = typeof integrationStatusPings.$inferSelect;
-export type InsertIntegrationStatusPing = z.infer<typeof insertIntegrationStatusPingSchema>;
-
-// Communication Types
-export type CommTemplate = typeof commTemplates.$inferSelect;
-export type InsertCommTemplate = z.infer<typeof insertCommTemplateSchema>;
-export type EmailEvent = typeof emailEvents.$inferSelect;
-export type InsertEmailEvent = z.infer<typeof insertEmailEventSchema>;
-export type SmsEvent = typeof smsEvents.$inferSelect;
-export type InsertSmsEvent = z.infer<typeof insertSmsEventSchema>;
-export type Unsubscribe = typeof unsubscribes.$inferSelect;
-export type InsertUnsubscribe = z.infer<typeof insertUnsubscribeSchema>;
-
-// Security & Audit Types
-export type ImpersonationEvent = typeof impersonationEvents.$inferSelect;
-export type InsertImpersonationEvent = z.infer<typeof insertImpersonationEventSchema>;
-export type AuditLog = typeof auditLogs.$inferSelect;
-export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
-
 // Communication Campaigns
 export const communicationCampaigns = pgTable('communication_campaigns', {
   id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -2141,7 +2009,7 @@ export type InsertTenantFeatureOverride = z.infer<typeof insertTenantFeatureOver
 export type FeatureAuditLog = typeof featureAuditLog.$inferSelect;
 export type InsertFeatureAuditLog = z.infer<typeof insertFeatureAuditLogSchema>;
 
-// Beta Onboarding System Tables
+// Beta onboarding System Tables
 
 // Tenant users for role-based access control
 export const tenantUsers = pgTable("tenant_users", {

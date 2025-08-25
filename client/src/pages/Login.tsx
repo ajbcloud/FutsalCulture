@@ -1,18 +1,89 @@
-export default function Login(){
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        navigate("/");
+      } else {
+        const data = await response.json();
+        setError(data.message || "Login failed");
+      }
+    } catch (error) {
+      setError("An error occurred during login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-md p-10 space-y-6">
       <h1 className="text-2xl font-bold">Log in to PlayHQ</h1>
-      <form method="POST" action="/api/auth/login" className="space-y-3">
-        <input name="email" type="email" required placeholder="Email" className="w-full border rounded-xl p-3" />
-        <input name="password" type="password" required placeholder="Password" className="w-full border rounded-xl p-3" />
-        <button className="w-full rounded-2xl bg-black text-white px-6 py-3">Log in</button>
+      
+      {error && (
+        <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <input
+          type="email"
+          required
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full border rounded-xl p-3"
+        />
+        <input
+          type="password"
+          required
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border rounded-xl p-3"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-2xl bg-black text-white px-6 py-3 disabled:opacity-50"
+        >
+          {loading ? "Logging in..." : "Log in"}
+        </button>
       </form>
-      <div className="text-center text-sm"><a className="underline" href="/forgot">Forgot password?</a></div>
+      
+      <div className="text-center text-sm">
+        <a className="underline" href="/forgot">Forgot password?</a>
+      </div>
 
       <div className="pt-6 border-t">
         <div className="flex flex-col gap-3">
-          <a href="/api/auth/google" className="border rounded-xl p-3 text-center">Continue with Google</a>
-          <a href="/api/auth/microsoft" className="border rounded-xl p-3 text-center">Continue with Microsoft</a>
+          <a href="/api/auth/google" className="border rounded-xl p-3 text-center">
+            Continue with Google
+          </a>
+          <a href="/api/auth/microsoft" className="border rounded-xl p-3 text-center">
+            Continue with Microsoft
+          </a>
         </div>
       </div>
 
