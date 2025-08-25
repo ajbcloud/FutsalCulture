@@ -1,3 +1,6 @@
+import { PlanComparisonCards } from "@/components/billing/PlanComparisonCards";
+import { FeatureGrid } from "@/components/billing/FeatureGrid";
+
 export default function HomePlayHQ() {
   const currentYear = new Date().getFullYear();
 
@@ -117,22 +120,9 @@ export default function HomePlayHQ() {
         <section id="pricing" className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">Simple pricing for every club</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <PricingCard
-                name="Free"
-                price="$0"
-                features={["Email invites", "Basic calendar", "Up to 50 members"]}
-              />
-              <PricingCard
-                name="Starter"
-                price="$49"
-                features={["Unlimited members", "CSV import", "Priority support"]}
-              />
-              <PricingCard
-                name="Club"
-                price="$99"
-                features={["Advanced analytics", "SMS invites", "Custom domains"]}
-              />
+            <PlanComparisonCards currentPlan="free" />
+            <div className="mt-12">
+              <FeatureGrid currentPlan="free" />
             </div>
           </div>
         </section>
@@ -218,32 +208,6 @@ function FeatureCard({ title, description }: { title: string; description: strin
   );
 }
 
-function PricingCard({ name, price, features }: { name: string; price: string; features: string[] }) {
-  return (
-    <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
-      <div className="font-bold text-lg text-gray-900 dark:text-white">{name}</div>
-      <div className="text-4xl font-extrabold mt-2 text-gray-900 dark:text-white">
-        {price}<span className="text-base font-medium text-gray-600 dark:text-gray-400">/mo</span>
-      </div>
-      <ul className="mt-4 space-y-2">
-        {features.map((feature, i) => (
-          <li key={i} className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-6">
-        <a
-          href="/get-started"
-          className="inline-flex items-center justify-center w-full rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90 transition-opacity"
-        >
-          Choose plan
-        </a>
-      </div>
-    </div>
-  );
-}
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   return (
