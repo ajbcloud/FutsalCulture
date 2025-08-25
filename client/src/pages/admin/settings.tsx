@@ -310,6 +310,7 @@ export default function AdminSettings() {
     sessionCapacityWarning: 3,
     paymentReminderMinutes: 60,
     paymentSubmissionTimeMinutes: 30,
+    refundCutoffMinutes: 60,
     weekdayStart: 'monday',
     weekdayEnd: 'sunday',
     fiscalYearType: 'calendar',

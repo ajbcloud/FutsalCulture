@@ -4671,20 +4671,14 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   app.get('/api/admin/players/:playerId/consent-status', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { playerId } = req.params;
-      const tenantId = req.user?.tenantId;
+      const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
       
       if (!tenantId) {
         return res.status(400).json({ error: 'Tenant ID required' });
       }
 
-      // Import age transition functions
-      const { getConsentStatusWithAgeTransition, processAgeTransitions } = await import('../services/ageTransition');
-      
-      // Process any age transitions for this player first
-      await processAgeTransitions(tenantId);
-      
-      // Get consent status with age transition awareness
-      const consentStatus = await getConsentStatusWithAgeTransition(playerId, tenantId);
+      // Get consent status for this player
+      const consentStatus = await storage.getPlayerConsentStatus(tenantId, playerId);
       res.json(consentStatus);
     } catch (error) {
       console.error('Error fetching player consent status:', error);
@@ -4696,7 +4690,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   app.get('/api/admin/parents/:parentId/consent-status', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { parentId } = req.params;
-      const tenantId = req.user?.tenantId;
+      const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
       
       if (!tenantId) {
         return res.status(400).json({ error: 'Tenant ID required' });
