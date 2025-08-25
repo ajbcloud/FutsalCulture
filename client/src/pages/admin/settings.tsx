@@ -337,14 +337,14 @@ export default function AdminSettings() {
   const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch current tenant capabilities to check requireConsent status
-  const { data: tenantCapabilities } = useQuery({
-    queryKey: ["/api/tenant/capabilities"],
-    queryFn: () => fetch("/api/tenant/capabilities", { credentials: 'include' }).then(res => res.json()),
+  // Check if consent forms are enabled by fetching the current age policy settings
+  const { data: agePolicyData } = useQuery({
+    queryKey: ["/api/admin/age-policy"],
+    queryFn: () => fetch("/api/admin/age-policy", { credentials: 'include' }).then(res => res.json()),
     retry: false,
   });
 
-  const isConsentFormsEnabled = tenantCapabilities?.policy?.requireConsent === true;
+  const isConsentFormsEnabled = agePolicyData?.requireConsent === true;
   const [saving, setSaving] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
