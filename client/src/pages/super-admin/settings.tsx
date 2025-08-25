@@ -52,6 +52,7 @@ import {
   Building
 } from 'lucide-react';
 import { debounce } from 'lodash';
+import { TrialSettings } from '@/components/super-admin/trial-settings';
 
 // Type definitions
 interface Policies {
@@ -523,6 +524,11 @@ export default function SuperAdminSettings() {
             <Shield className="h-4 w-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Policies</span>
             <span className="sm:hidden">Policy</span>
+          </TabsTrigger>
+          <TabsTrigger value="trial-settings" className="text-xs sm:text-sm">
+            <Timer className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Trial Settings</span>
+            <span className="sm:hidden">Trials</span>
           </TabsTrigger>
           <TabsTrigger value="tenant-defaults" className="text-xs sm:text-sm">
             <Package className="h-4 w-4 mr-1 sm:mr-2" />
@@ -1301,66 +1307,13 @@ export default function SuperAdminSettings() {
                 </CardContent>
               </Card>
 
-              {/* Trial Settings */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Timer className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle>Trial Settings</CardTitle>
-                    </div>
-                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
-                  </div>
-                  <CardDescription>Configure trial period for new tenants</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Trial duration (days)</Label>
-                      <Input
-                        type="number"
-                        defaultValue="14"
-                        min={0}
-                        max={90}
-                      />
-                      <p className="text-xs text-muted-foreground">0 = No trial period</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Trial plan</Label>
-                      <Select defaultValue="growth">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="core">Core</SelectItem>
-                          <SelectItem value="growth">Growth</SelectItem>
-                          <SelectItem value="elite">Elite</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Auto-convert to free</Label>
-                      <p className="text-sm text-muted-foreground">Automatically downgrade after trial ends</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Require payment method</Label>
-                      <p className="text-sm text-muted-foreground">Credit card required for trial</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </CardContent>
-              </Card>
 
             </>
           )}
+        </TabsContent>
+
+        <TabsContent value="trial-settings" className="space-y-4 mt-6">
+          <TrialSettings />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 mt-6">

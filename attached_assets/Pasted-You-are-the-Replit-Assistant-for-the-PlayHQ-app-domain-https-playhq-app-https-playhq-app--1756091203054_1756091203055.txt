@@ -1,0 +1,1117 @@
+You are the Replit Assistant for the PlayHQ app (domain: [https://playhq.app](https://playhq.app)). Your job is to implement a production‑ready landing + signup + onboarding system with **audit‑first, safe, stepwise changes**. BRAND = "PlayHQ" throughout. Do **NOT** make destructive changes. Always create git checkpoints and ask for approval before each change group.
+
+---
+
+# 0) Operating mode
+
+* **AUDIT\_FIRST = true**
+* **INTERACTIVE\_GATES = true**
+* **BRAND = PlayHQ**
+* **DOMAIN = playhq.app**
+* **EMAIL\_FROM default = [no-reply@playhq.app](mailto:no-reply@playhq.app)** (respect existing value if set)
+* **STACK\_FLEX = true** → If project uses Next.js, map server routes to Next API routes; if Express, use Express; if Remix/Nest/etc., adapt similarly.
+
+## Safety rules
+
+1. **Never overwrite unrelated files.** Limit diffs to planned changes.
+2. **Use git.** If repo is not git‑initialized, `git init`.
+3. Create a working branch `playhq-onboarding`.
+4. After each step (A1, A2, … / B1, B2, …), **stop** and print a summary + “Type `APPROVE <step>` to continue or `ABORT` to stop”.
+5. Write artifacts:
+
+   * `AUDIT.md` — inventory & findings
+   * `CHANGEPLAN.md` — proposed change list with rationale
+   * `BREAKING.md` — any potentially breaking modifications
+   * `POST_DEPLOY_CHECKLIST.md`
+
+---
+
+# A) Audit phase (no code changes)
+
+**Goal:** Understand current stack, detect prior onboarding code, and surface conflicts/duplicates. Produce a plan. Then wait for approval.
+
+Run and capture results into `AUDIT.md`:
+
+1. Stack & deps
+
+   * Read `package.json` and list framework indicators: next, express, remix, nestjs, typescript, drizzle, prisma, sequelize, knex, stripe, resend, nodemailer, passport, auth libs.
+   * TS settings: `tsconfig.json` flags (`strict`, `noUnusedLocals`, `noUnusedParameters`).
+2. File inventory (top 200 most relevant):
+
+   * Directories: `src`, `server`, `app`, `pages/api`, `api`, `routes`, `backend`, `db`, `schemas`.
+   * Scan for files containing any of: `tenant`, `invites?`, `verify`, `stripe`, `subscription`, `billing`, `join`, `onboarding`, `consent`, `policy`, `privacy`, `terms`, `user`, `auth`, `oauth`, `google`, `microsoft`.
+3. Env usage
+
+   * List env keys used in repo; compare to required keys below.
+4. Database layer
+
+   * Detect ORM (Drizzle/Prisma/etc.).
+   * Enumerate schema models/table names.
+   * Spot *prior* tables similar to: `tenants`, `tenant_users`, `invites`, `email_verifications`, `subscriptions`, `plan_features`, `audit_events`, `parent_player_links`, `consent_records`, `user_policy_acceptances`, `email_bounces`.
+5. Routes/endpoints inventory
+
+   * Enumerate existing auth/signup/verify/invite/join/billing endpoints.
+6. Frontend inventory
+
+   * Landing page presence, `/get-started`, `/join`, `/billing` routes/pages.
+7. Conflicts & overlaps
+
+   * Flag duplicate implementations (e.g., multiple `invite` routes), legacy code, dead files.
+8. Lint & type hygiene
+
+   * If ESLint present, run. If not, skip. Collect error counts.
+9. Security surface
+
+   * Check for helmet/csurf/rate‑limit/validation, cookie settings, CORS.
+
+Produce `AUDIT.md` and `CHANGEPLAN.md` containing:
+
+* Summary table of findings
+* Proposed changes grouped into **Change Groups** (G1, G2, …) with:
+
+  * Files to add/modify/remove
+  * Risk level
+  * Rollback path
+  * Estimated effort
+* Mark any **keep vs. replace** recommendations for pre‑existing onboarding logic (prefer reuse where compatible)
+
+**STOP HERE.** Await user: `APPROVE AUDIT` or `ABORT`.
+
+---
+
+# B) Required env (no secrets hardcoded)
+
+Add (or confirm) the following keys in Replit Secrets — **but only after approval**:
+
+* `APP_NAME=PlayHQ`
+* `APP_URL=https://playhq.app` (or your preview URL)
+* `API_URL=/api`
+* `DATABASE_URL=` (Postgres)
+* `SESSION_SECRET=`
+* `EMAIL_FROM=no-reply@playhq.app`
+* `RESEND_API_KEY=`
+* `STRIPE_SECRET_KEY=`
+* `STRIPE_PUBLISHABLE_KEY=`
+* `STRIPE_WEBHOOK_SECRET=`
+* `RATE_LIMIT_WINDOW_MS=60000`
+* `RATE_LIMIT_MAX=100`
+* Optional OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI`
+
+Write/update `src/lib/env.ts` (or framework equivalent) **without** breaking existing imports. Use feature‑detection if another env helper exists.
+
+**Gate:** Wait for `APPROVE B`.
+
+---
+
+# C) Database schema (Drizzle preferred, adapt if Prisma/Knex)
+
+If Drizzle exists, add/merge the following tables. If similar tables exist, **migrate** or **extend**, do not duplicate. If non‑Drizzle ORM detected, generate equivalent models/migrations.
+
+Tables (ids are uuid/ulid acceptable):
+
+* `tenants(id, name, slug, tenant_code, contact_name, contact_email, city, state, country, status, allowed_domains, created_at)`
+* `users(id, email, password_hash, name, email_verified, provider, created_at)`
+* `tenant_users(id, tenant_id, user_id, role, created_at)`
+* `invites(id, tenant_id, email, role, token, expires_at, used_at, created_at)`
+* `email_verifications(id, user_id, email, token, expires_at, used_at, created_at)`
+* `subscriptions(id, tenant_id, stripe_customer_id, stripe_subscription_id, plan_key, status, trial_end, current_period_end, created_at, updated_at)`
+* `plan_features(plan_key, feature_key, enabled, limits_json)`
+* `audit_events(id, actor_user_id, tenant_id, event_type, target_id, metadata_json, created_at)`
+* `parent_player_links(id, tenant_id, parent_user_id, player_user_id, created_at)`
+* `consent_records(id, tenant_id, child_user_id, parent_user_id, method, policy_version, ip, meta, created_at)`
+* `user_policy_acceptances(id, user_id, policy_type, version, ip, created_at)`
+* `email_bounces(id, email, provider, reason, event, created_at)`
+
+**Actions:**
+
+* Generate migrations; map to existing tables if present (no data loss). Write a migration note into `BREAKING.md` if renames are required.
+
+**Gate:** Wait for `APPROVE C`.
+
+---
+
+# D) Backend routes (Express or Next API)
+
+Create or merge **namespaced** endpoints under `/api`:
+
+* `POST /api/get-started` → create tenant + owner, Stripe customer, verification token, send email
+* `GET /api/verify?token=` → mark verification, then redirect to `/create-password`
+* `POST /api/invites` (owner/coach) → create invite + email
+* `POST /api/invites/resend`
+* `POST /api/invites/revoke`
+* `POST /api/join/by-token`
+* `POST /api/join/by-code`
+* `POST /api/billing/checkout` → Stripe Checkout session
+* `POST /api/webhooks/stripe` → subscription state sync
+* `POST /api/tenants/switch`
+* `POST /api/tenant/code/rotate`
+
+Security & hygiene:
+
+* Helmet, compression, CORS, rate limits on public endpoints, input validation (Zod), consistent error format.
+* Cookies: `Secure`, `HttpOnly`, `SameSite=Lax`.
+* RBAC check: role in `tenant_users` for tenant context.
+
+**Gate:** Wait for `APPROVE D`.
+
+---
+
+# E) Email service (Resend)
+
+Templates (BRAND=PlayHQ):
+
+* **Verify**: Subject `Verify your email • PlayHQ`, body with CTA to `${APP_URL}/verify?token=...`.
+* **Invite**: Subject `Invitation to join {tenant} • PlayHQ`.
+* **Welcome**: Subject `Welcome to {tenant} • PlayHQ`.
+* Sender: `EMAIL_FROM` (default `no-reply@playhq.app`).
+* Add bounce webhook endpoint (optional): `/api/webhooks/resend` → write to `email_bounces`.
+
+**Gate:** Wait for `APPROVE E`.
+
+---
+
+# F) Frontend (Vite React + Tailwind, or adapt to existing stack)
+
+Pages (SSR/SPA either is fine; preserve existing routes if present):
+
+* `/` Landing (production‑grade)
+
+  * Hero, features, pricing (Free/Starter/Club), CTA → `/get-started`
+  * Footer with **Terms** and **Privacy** links
+  * SEO: `<title>PlayHQ — Run your club with ease</title>`
+* `/get-started` Admin signup form
+
+  * Fields: org/club name, contact name, email, city, state, country, checkboxes for Terms/Privacy
+  * Hidden `plan_key=free`
+  * POST `/api/get-started` → success screen "Check your email"
+* `/join` Invite acceptance (token) and manual join (tenant code)
+* `/billing` Upgrade button calling `/api/billing/checkout`
+* `/terms`, `/privacy` placeholder docs (replace with real copy later)
+
+Branding: replace all previous names with **PlayHQ**.
+
+**Gate:** Wait for `APPROVE F`.
+
+---
+
+# G) Onboarding checklist (tenant dashboard)
+
+* Items: verify email, invite members, create first session, publish calendar, set notifications, optional: connect Stripe.
+* Store completion flags on tenant settings or derived from audit events.
+
+**Gate:** Wait for `APPROVE G`.
+
+---
+
+# H) Consent & policies
+
+* On any account creation, write `user_policy_acceptances` for Terms & Privacy (versioned).
+* For players under 13, require parent email, create `consent_records`, block child login until consent present.
+
+**Gate:** Wait for `APPROVE H`.
+
+---
+
+# I) Billing & plans
+
+* Seed `plan_features` for `free`, `starter`, `club`.
+* Stripe Checkout redirect for upgrades; webhook flips `subscriptions.status` and `plan_key`.
+* Banner on past\_due/canceled (from webhook).
+
+**Gate:** Wait for `APPROVE I`.
+
+---
+
+# J) Observability & support
+
+* Add `audit_events` on: tenant\_created, verify\_sent, verify\_completed, invite\_sent, invite\_accepted, joined\_by\_code, plan\_change, code\_rotated.
+* Super‑admin support console: search by email/tenant\_code, show audit timeline, resend verify/invite, rotate code (with confirmation), impersonation banner if you support it.
+
+**Gate:** Wait for `APPROVE J`.
+
+---
+
+# K) Security hardening
+
+* Rate limits on `/api/get-started`, `/api/join/*`, `/api/verify`, `/api/invites*`.
+* Optional CAPTCHA hook (Turnstile) — add stubs, can enable later.
+* Input validation via Zod schemas for all POST bodies.
+* Cookie settings hardened.
+* Domain allow‑list on manual joins.
+* Tenant code rotation + QR display.
+
+**Gate:** Wait for `APPROVE K`.
+
+---
+
+# L) SEO, accessibility, performance
+
+* Meta tags (title, description, OG/Twitter).
+* `robots.txt`, `sitemap.xml` placeholder.
+* Lighthouse budget: LCP < 2.5s on landing, no a11y criticals.
+
+**Gate:** Wait for `APPROVE L`.
+
+---
+
+# M) Seed + QA scripts
+
+* `scripts/seed.ts` → create a sample tenant + owner (`owner@playhq.app`).
+* `scripts/qa.md` → step‑by‑step acceptance tests (signup → verify → invite → accept → join by code → upgrade → webhook flips → rotate code → rate limits → email render checks).
+
+**Gate:** Wait for `APPROVE M`.
+
+---
+
+# N) Finalize
+
+* Build frontend (if applicable) and start server.
+* Print a summary of: endpoints, created files, ENV checklist, what to test.
+* Provide rollback instruction (`git checkout main` / revert commit).
+
+**STOP and present results at each gate.** Do not proceed without explicit `APPROVE` from the user.
+
+---
+
+# Required code & content blocks to generate *after approval per section*
+
+(These are the same as previous Playbook but **branded for PlayHQ** and adjusted to existing stack.)
+
+* Env helper (`src/lib/env.ts`) with `APP_NAME="PlayHQ"`, defaults for `EMAIL_FROM=no-reply@playhq.app`.
+* Drizzle (or ORM‑equivalent) schemas for all tables above.
+* Express or Next API routes implementing: get-started, verify, invites, join, billing checkout, stripe webhook, tenant switch, code rotate.
+* Email service (`src/lib/email.ts`) with PlayHQ subject lines.
+* Frontend pages with PlayHQ branding; landing hero copy: **“Run your club with ease.”** CTA → `/get-started`.
+* Security middleware, rate limits, CORS, helmet, compression.
+* Audit logger util.
+* Seed + QA docs.
+
+---
+
+# Branding replacements
+
+* Replace any "Futsal Culture" or other previous brand text with **PlayHQ**.
+* Replace `futsal` copy with **club**/ **team** wording where present, unless your existing product copy dictates otherwise.
+
+---
+
+# Compatibility notes
+
+* **If Next.js detected:**
+
+  * Create files under `app/api/*/route.ts` or `pages/api/*.ts` as appropriate.
+  * Use Edge/Node runtimes per project defaults.
+* **If Express detected:**
+
+  * Mount all routes under `/api` and static‑serve frontend `dist` if Vite used.
+* **If Prisma/Knex detected:**
+
+  * Generate equivalent schema & migrations; do not add Drizzle unless requested.
+
+---
+
+# Post‑deploy checklist (write to POST\_DEPLOY\_CHECKLIST.md)
+
+* [ ] Verify email deliverability (SPF/DKIM/DMARC for playhq.app)
+* [ ] Stripe webhook receives events
+* [ ] Signup → verify → create password
+* [ ] Invite sent/accepted flows
+* [ ] Join by code
+* [ ] Tenant code rotate & QR visible
+* [ ] Upgrade/downgrade banners
+* [ ] Admin support console basic search works
+* [ ] Error tracking (console or Sentry if configured)
+
+---
+
+# Output formatting
+
+At each gate, print:
+
+* What changed (or will change)
+* File list with reasons
+* `git status` and the next command to continue (`APPROVE <section>`)
+
+End of master prompt for **PlayHQ — Audit‑First Production Onboarding**.
+
+---
+
+# S) Multi‑sport landing copy (PlayHQ)
+
+**Goal:** Refresh copy and UI to speak to multiple sports (soccer, futsal, basketball, volleyball, lacrosse, etc.) without changing the technical flow.
+
+## Copy updates (apply during Section F after approval)
+
+* **SEO title:** `PlayHQ — Run your club or team with ease`
+* **SEO description:** `All‑in‑one HQ for clubs and teams: rosters, invites, payments, schedules, and messaging. Works for soccer, futsal, basketball, volleyball, and more.`
+* **Hero headline:** `Your club’s HQ — for any sport`
+* **Hero subtext:** `Rosters, invites, payments, and schedules in one place. For soccer, futsal, basketball, volleyball—your sport, your way.`
+* **Feature bullets:**
+
+  * `Universal onboarding` — Owners invite coaches, players, and parents; late joiners use a tenant code.
+  * `Payments built‑in` — Free to start, upgrade anytime for advanced tools.
+  * `Works across sports` — Configure team sizes, seasons, and age groups.
+* **Pricing card labels:** `Free`, `Starter`, `Club` (no change, brand to PlayHQ).
+
+## UI tweaks
+
+* Replace any sport‑specific imagery with generic/mixed‑sport visuals.
+* Keep `/get-started` CTA prominent. Add a `Sign in` link in the header for existing users.
+
+---
+
+# T) Google & Microsoft SSO (Audit‑first, gated)
+
+**Goal:** Offer OAuth alongside email+password without breaking existing flows. Respect invites/tenant context. Avoid duplicate accounts by linking identities to existing emails.\*\*
+
+## T1. Audit and plan (no code changes)
+
+* Detect if `passport`, `passport-google-oauth20`, `@azure/msal-node` or other auth libs already exist.
+* Inventory any existing OAuth routes (e.g., `/api/auth/google`), and any `provider` fields or identity tables.
+* Write findings to `AUDIT.md` and propose either **reuse** or **replace** in `CHANGEPLAN.md`.
+
+**Gate:** Wait for `APPROVE T1`.
+
+## T2. Minimal schema for identities (merge, don’t duplicate)
+
+If not present, add **one** table to support multiple providers per user:
+
+* `user_identities(id, user_id, provider, provider_user_id, email, email_verified, access_token_hash, refresh_token_hash, last_login, created_at)`
+
+  * Unique index on `(provider, provider_user_id)`
+  * Index on `user_id`
+
+**Schema (Drizzle):**
+
+```ts
+// src/db/schema/userIdentities.ts
+import { pgTable, varchar, timestamp, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const user_identities = pgTable("user_identities", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  user_id: varchar("user_id", { length: 36 }).notNull(),
+  provider: varchar("provider", { length: 40 }).notNull(), // "google" | "microsoft" | ...
+  provider_user_id: varchar("provider_user_id", { length: 128 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  email_verified: boolean("email_verified").notNull().default(false),
+  access_token_hash: varchar("access_token_hash", { length: 200 }),
+  refresh_token_hash: varchar("refresh_token_hash", { length: 200 }),
+  last_login: timestamp("last_login"),
+  created_at: timestamp("created_at").defaultNow().notNull()
+}, t => ({
+  uniq: uniqueIndex("uid_provider_key").on(t.provider, t.provider_user_id),
+  userIdx: index("uid_user_idx").on(t.user_id)
+}));
+```
+
+If you already store `provider` on `users`, keep it, but prefer `user_identities` for linking multiple providers safely.
+
+**Gate:** Wait for `APPROVE T2`.
+
+## T3. Dependencies (confirm or add)
+
+* `passport`, `passport-google-oauth20`, `@azure/msal-node` (or `passport-azure-ad-oauth2` if preferred)
+* Add env keys (confirm they exist):
+
+  * `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` (e.g., `https://playhq.app/api/auth/google/callback`)
+  * `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI` (e.g., `https://playhq.app/api/auth/microsoft/callback`)
+
+**Gate:** Wait for `APPROVE T3`.
+
+## T4. Server wiring (Express; adapt to Next API if detected)
+
+Create **non‑destructive** files, reuse existing session middleware.
+
+**`src/services/oauth/google.ts`**
+
+```ts
+import passport from "passport";
+import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
+import { env } from "../../lib/env";
+import { linkOrCreateIdentity } from "./linkIdentity";
+
+passport.use(new GoogleStrategy({
+  clientID: env.GOOGLE_CLIENT_ID!,
+  clientSecret: env.GOOGLE_CLIENT_SECRET!,
+  callbackURL: env.GOOGLE_CALLBACK_URL!,
+}, async (_accessToken, _refreshToken, profile: Profile, done) => {
+  try {
+    const email = profile.emails?.[0]?.value;
+    const emailVerified = !!profile.emails?.[0]?.verified;
+    const providerUserId = profile.id;
+    const user = await linkOrCreateIdentity({
+      provider: "google",
+      providerUserId,
+      email,
+      emailVerified,
+      name: profile.displayName,
+    });
+    return done(null, user);
+  } catch (e) { return done(e as Error); }
+}));
+
+export {};
+```
+
+**`src/services/oauth/microsoft.ts`**
+
+````ts
+import { ConfidentialClientApplication, Configuration, AuthorizationUrlRequest, AuthorizationCodeRequest } from "@azure/msal-node";
+import { env } from "../../lib/env";
+import { linkOrCreateIdentity } from "./linkIdentity";
+
+// Microsoft Identity Platform (multi-tenant)
+const msalConfig: Configuration = {
+  auth: {
+    clientId: env.MICROSOFT_CLIENT_ID!,
+    clientSecret: env.MICROSOFT_CLIENT_SECRET!,
+    authority: "https://login.microsoftonline.com/common"
+  },
+  system: { loggerOptions: { logLevel: 2 } }
+};
+
+const msalApp = new ConfidentialClientApplication(msalConfig);
+
+const SCOPES = ["openid", "profile", "email", "User.Read"]; // User.Read is for Graph /me
+
+export function getMicrosoftAuthUrl(state: string, nonce: string) {
+  const authCodeUrlParams: AuthorizationUrlRequest = {
+    redirectUri: env.MICROSOFT_REDIRECT_URI!,
+    scopes: SCOPES,
+    responseMode: "query",
+    state,
+    nonce
+  };
+  return msalApp.getAuthCodeUrl(authCodeUrlParams);
+}
+
+export async function handleMicrosoftCallback(code: string) {
+  const tokenRequest: AuthorizationCodeRequest = {
+    code,
+    redirectUri: env.MICROSOFT_REDIRECT_URI!,
+    scopes: SCOPES
+  };
+  const result = await msalApp.acquireTokenByCode(tokenRequest);
+  if (!result || !result.idTokenClaims) throw new Error("MS login failed");
+
+  // Claims documentation: https://learn.microsoft.com/azure/active-directory/develop/id-tokens
+  const claims: any = result.idTokenClaims;
+  const providerUserId = (claims.oid as string) || (claims.sub as string);
+  // Email can be in preferred_username, emails[0], or fetched via Graph
+  let email = (claims.preferred_username as string) || (claims.email as string) || undefined;
+
+  // If email not in ID token, fetch from Graph
+  if (!email && result.accessToken) {
+    try {
+      const graphRes = await fetch("https://graph.microsoft.com/v1.0/me", {
+        headers: { Authorization: `Bearer ${result.accessToken}` }
+      });
+      if (graphRes.ok) {
+        const me = await graphRes.json();
+        email = me.mail || me.userPrincipalName || undefined;
+      }
+    } catch {
+      // ignore, will error below if still missing
+    }
+  }
+  if (!providerUserId) throw new Error("Missing Microsoft user id");
+  if (!email) throw new Error("Microsoft did not return an email");
+
+  const user = await linkOrCreateIdentity({
+    provider: "microsoft",
+    providerUserId,
+    email,
+    emailVerified: true,
+    name: (claims.name as string) || undefined
+  });
+  return user;
+}
+```ts
+// If you already use a different MS strategy, reuse it. Otherwise implement with msal-node + your auth callback handler.
+````
+
+**`src/services/oauth/linkIdentity.ts`** (pseudo‑implementation hook; reuse your user/tenant tables)
+
+```ts
+import { db } from "../../db";
+import { users } from "../../db/schema/users";
+import { user_identities } from "../../db/schema/userIdentities"; // create if not present
+import { and, eq } from "drizzle-orm";
+
+export async function linkOrCreateIdentity(input: { provider: string; providerUserId: string; email?: string; emailVerified?: boolean; name?: string; }) {
+  // 1) If identity exists → return its user
+  const existing = await db.query.user_identities.findFirst({
+    where: (t, { eq, and }) => and(eq(t.provider, input.provider), eq(t.provider_user_id, input.providerUserId))
+  });
+  if (existing) {
+    await db.update(user_identities).set({ last_login: new Date() }).where(eq(user_identities.id, existing.id));
+    return db.query.users.findFirst({ where: (u, { eq }) => eq(u.id, existing.user_id) });
+  }
+  // 2) If email matches an existing user → link identity
+  let user = input.email ? await db.query.users.findFirst({ where: (u, { eq }) => eq(u.email, input.email!) }) : null;
+  if (!user) {
+    // 3) Create user (email may be undefined for some providers; require it)
+    if (!input.email) throw new Error("Provider did not return email");
+    const created = await db.insert(users).values({ email: input.email, name: input.name ?? null, email_verified: !!input.emailVerified, provider: input.provider }).returning();
+    user = created[0];
+  }
+  // 4) Create identity link
+  await db.insert(user_identities).values({
+    user_id: user.id,
+    provider: input.provider,
+    provider_user_id: input.providerUserId,
+    email: input.email ?? null,
+    email_verified: !!input.emailVerified,
+    last_login: new Date()
+  });
+  return user;
+}
+```
+
+**Routes (Express)**
+
+```ts
+// src/routes/auth.ts
+import express from "express";
+import passport from "passport";
+import crypto from "crypto";
+import "../services/oauth/google"; // registers Google strategy
+import { getMicrosoftAuthUrl, handleMicrosoftCallback } from "../services/oauth/microsoft";
+
+const router = express.Router();
+
+// --- Google ---
+router.get("/auth/google", (req, res, next) => {
+  if (req.query.inviteToken) req.session.inviteToken = String(req.query.inviteToken);
+  if (req.query.tenantId) req.session.oauthTenantId = String(req.query.tenantId);
+  next();
+}, passport.authenticate("google", { scope: ["email", "profile"] }));
+
+router.get("/auth/google/callback", passport.authenticate("google", { failureRedirect: "/login?social=fail" }), async (req, res) => {
+  const token = req.session.inviteToken as string | undefined;
+  if (token) return res.redirect(`/join?token=${encodeURIComponent(token)}`);
+  return res.redirect("/dashboard");
+});
+
+// --- Microsoft (MSAL) ---
+router.get("/auth/microsoft", async (req, res) => {
+  if (req.query.inviteToken) req.session.inviteToken = String(req.query.inviteToken);
+  if (req.query.tenantId) req.session.oauthTenantId = String(req.query.tenantId);
+  const state = crypto.randomBytes(16).toString("hex");
+  const nonce = crypto.randomBytes(16).toString("hex");
+  req.session.ms_state = state; req.session.ms_nonce = nonce;
+  const url = await getMicrosoftAuthUrl(state, nonce);
+  res.redirect(url);
+});
+
+router.get("/auth/microsoft/callback", async (req, res) => {
+  const { code, state } = req.query as { code?: string; state?: string };
+  if (!code) return res.redirect("/login?social=fail");
+  if (!state || state !== req.session.ms_state) return res.redirect("/login?social=fail");
+  try {
+    const user = await handleMicrosoftCallback(code);
+    // establish session login here (depends on your session impl)
+    req.user = { id: user.id, email: user.email, isVerified: !!user.email_verified } as any;
+    const token = req.session.inviteToken as string | undefined;
+    if (token) return res.redirect(`/join?token=${encodeURIComponent(token)}`);
+    return res.redirect("/dashboard");
+  } catch (e) {
+    return res.redirect("/login?social=fail");
+  }
+});
+
+export default router;
+```
+
+Mount under `/api` without interfering with current auth. If a legacy Google route exists, mark it in `CHANGEPLAN.md` and either reuse or deprecate.
+
+**Gate:** Wait for `APPROVE T4`.
+
+## T5. Frontend buttons
+
+* Add `Continue with Google` and `Continue with Microsoft` buttons to:
+
+  * Landing header (Sign in)
+  * `/get-started` success screen (optional)
+  * `/login` (if you have a dedicated page)
+* When accepting invites, include an SSO option: link to `/api/auth/google?inviteToken=<token>` so tenant context persists.
+
+**Gate:** Wait for `APPROVE T5`.
+
+## T6. Security notes
+
+* Trust provider email **only if verified** (Google provides `verified_email`; Microsoft varies — verify domain claim if enterprise).
+* Always link social identity to a user record; avoid creating duplicates by email match.
+* Respect tenant allow‑lists and join approvals even after SSO.
+
+**Gate:** Wait for `APPROVE T6`.
+
+## T7. QA for SSO
+
+* New owner uses Google to sign up → tenant + Stripe customer created post‑verify or post‑SSO depending on flow.
+* Invite acceptance via SSO: `/join?token=...` → click `Continue with Google` → returns, user is joined to correct tenant.
+* Existing email+password user later links Google: log in, click `Link Google` in account settings → subsequent Google logins map to the same user.
+* Duplicate prevention: attempt SSO with an email that already exists — verify it links, not duplicates.
+
+**Gate:** Wait for `APPROVE T7`.
+
+---
+
+# U) Two small brand updates
+
+* Default sender set to `no-reply@playhq.app`.
+* Ensure all in‑app mentions of the product read **PlayHQ** (search & replace any older names during Audit).
+
+---
+
+# V) One‑Shot Mode (no approval gates)
+
+**Goal:** You said “don’t wait, just add it.” This section lets Replit run the whole plan end‑to‑end **without prompts**. Keep the audit, but proceed automatically.
+
+**Enable one‑shot:** At the top of this prompt set:
+
+```
+AUDIT_FIRST = true
+INTERACTIVE_GATES = false
+```
+
+The assistant will:
+
+1. Run the Audit and write `AUDIT.md` / `CHANGEPLAN.md`.
+2. Proceed through env, schema, backend routes, emails, frontend, onboarding, consent, billing, observability, security, SEO, seed + QA, SSO (Google + Microsoft) **automatically**.
+3. Print final summary + smoke‑test instructions.
+
+---
+
+# W) Local auth: create password + reset (production‑grade)
+
+Adds the missing password creation page after email verification, plus forgot/reset flow.
+
+## W1. Library
+
+**`src/lib/password.ts`**
+
+```ts
+import bcrypt from "bcryptjs";
+const ROUNDS = 12;
+export async function hashPassword(pw: string) { return bcrypt.hash(pw, ROUNDS); }
+export async function verifyPassword(pw: string, hash: string) { return bcrypt.compare(pw, hash); }
+```
+
+## W2. Routes
+
+**`src/routes/authLocal.ts`**
+
+```ts
+import express from "express";
+import { db } from "../db";
+import { users } from "../db/schema/users";
+import { email_verifications } from "../db/schema/emailVerifications";
+import { randomToken } from "../utils/ids";
+import { hashPassword } from "../lib/password";
+import { eq } from "drizzle-orm";
+import { sendResetEmail } from "../lib/email";
+
+const router = express.Router();
+
+// After /verify redirects to /create-password, the client posts here
+router.post("/auth/create-password", async (req, res) => {
+  const { email, password } = req.body as { email: string; password: string };
+  if (!email || !password || password.length < 8) return res.status(400).json({ error: "Invalid" });
+  const u = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.email, email) });
+  if (!u) return res.status(404).json({ error: "User not found" });
+  const hash = await hashPassword(password);
+  await db.update(users).set({ password_hash: hash }).where(eq(users.id, u.id));
+  res.json({ ok: true });
+});
+
+// Request password reset
+router.post("/auth/forgot", async (req, res) => {
+  const { email } = req.body as { email: string };
+  if (!email) return res.json({ ok: true }); // don't leak existence
+  const u = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.email, email) });
+  if (!u) return res.json({ ok: true });
+  const token = randomToken(48);
+  const expires = new Date(Date.now() + 1000*60*30);
+  // Reuse email_verifications table for simplicity or add a dedicated reset table
+  await db.insert(email_verifications).values({ user_id: u.id, email, token, expires_at: expires });
+  await sendResetEmail(email, `${process.env.APP_URL}/reset?token=${token}`);
+  res.json({ ok: true });
+});
+
+// Complete password reset
+router.post("/auth/reset", async (req, res) => {
+  const { token, password } = req.body as { token: string; password: string };
+  if (!token || !password || password.length < 8) return res.status(400).json({ error: "Invalid" });
+  const row = await db.query.email_verifications.findFirst({ where: (t, { eq }) => eq(t.token, token) });
+  if (!row || new Date(row.expires_at) < new Date() || row.used_at) return res.status(400).json({ error: "Bad token" });
+  const hash = await hashPassword(password);
+  await db.update(users).set({ password_hash: hash }).where(eq(users.id, row.user_id!));
+  res.json({ ok: true });
+});
+
+export default router;
+```
+
+## W3. Email (add to `src/lib/email.ts`)
+
+```ts
+export async function sendResetEmail(to: string, link: string) {
+  await resend.emails.send({ from: FROM, to, subject: "Reset your password • PlayHQ", html: `<p>Reset your password.</p><p><a href="${link}">Set a new password</a></p>` });
+}
+```
+
+## W4. Frontend pages
+
+**`frontend/src/pages/CreatePassword.tsx`**
+
+```tsx
+import { useState } from "react";
+export default function CreatePassword() {
+  const params = new URLSearchParams(location.search);
+  const email = params.get("email") || ""; // or prefill from session
+  const [password, setPassword] = useState("");
+  async function submit(e:any){e.preventDefault();
+    const r = await fetch("/api/auth/create-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});
+    if(r.ok) location.href="/dashboard"; }
+  return (<form onSubmit={submit} className="mx-auto max-w-md p-8 space-y-4"><h1 className="text-2xl font-bold">Create a password</h1><input type="password" minLength={8} className="w-full border rounded-xl p-3" value={password} onChange={e=>setPassword(e.target.value)} placeholder="New password"/><button className="rounded-2xl bg-black text-white px-6 py-3">Save</button></form>);
+}
+```
+
+**`frontend/src/pages/Forgot.tsx`**
+
+```tsx
+import { useState } from "react";
+export default function Forgot(){
+  const [email,setEmail]=useState("");
+  async function submit(e:any){e.preventDefault(); await fetch("/api/auth/forgot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})}); alert("If that email exists, we sent a link.");}
+  return (<form onSubmit={submit} className="mx-auto max-w-md p-8 space-y-4"><h1 className="text-2xl font-bold">Forgot password</h1><input type="email" required className="w-full border rounded-xl p-3" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"/><button className="rounded-2xl bg-black text-white px-6 py-3">Send reset link</button></form>);
+}
+```
+
+Wire routes into the router: `/create-password`, `/forgot`, `/reset` (use a simple page similar to CreatePassword that posts token + new password).
+
+---
+
+# X) SSO buttons (frontend) + invite context
+
+Add Microsoft & Google buttons and preserve invite token.
+
+**Buttons component**
+
+```tsx
+// frontend/src/components/SocialButtons.tsx
+export default function SocialButtons({ inviteToken }: { inviteToken?: string }){
+  const q = inviteToken ? `?inviteToken=${encodeURIComponent(inviteToken)}` : "";
+  return (
+    <div className="flex flex-col gap-3">
+      <a href={`/api/auth/google${q}`} className="border rounded-xl p-3 text-center">Continue with Google</a>
+      <a href={`/api/auth/microsoft${q}`} className="border rounded-xl p-3 text-center">Continue with Microsoft</a>
+    </div>
+  );
+}
+```
+
+**Use on pages**
+
+* Landing header (Sign in modal or page)
+* `/get-started` success screen
+* `/join` when `token` exists: `const token = new URLSearchParams(location.search).get('token')` and render `<SocialButtons inviteToken={token||undefined} />`.
+
+---
+
+# Y) Security & CSP updates for prod
+
+Allow required third‑parties in CSP (Google/Microsoft/Stripe):
+
+* `script-src`: self; `https://js.stripe.com`
+* `connect-src`: self; your API; `https://api.stripe.com`; Microsoft & Google auth endpoints
+* `frame-src`: `https://js.stripe.com` `https://hooks.stripe.com`
+* `img-src`: self data blob
+  Update the existing Helmet config to include these origins.
+
+Harden cookies:
+
+* `Secure`, `HttpOnly`, `SameSite=Lax` on session cookies.
+
+Add domain allow‑list on manual join in `/api/join/by-code` (if `tenants.allowed_domains` present):
+
+```ts
+const domain = email.split("@")[1]?.toLowerCase();
+if (tenant.allowed_domains && Array.isArray(tenant.allowed_domains) && tenant.allowed_domains.length) {
+  if (!domain || !tenant.allowed_domains.map((d:string)=>d.toLowerCase()).includes(domain)) {
+    return res.status(403).json({ error: "Email domain not allowed for this club" });
+  }
+}
+```
+
+---
+
+# Z) DNS & email deliverability checklist for playhq.app
+
+* Add **SPF** record for your sender (per Resend docs).
+* Add **DKIM** CNAMEs provided by Resend.
+* Add **DMARC** TXT (start with `p=none` to monitor, then tighten).
+* Test with mail‑tester and ensure verification emails land in inbox.
+
+---
+
+# AA) Analytics & basic consent banner
+
+* Optional analytics (e.g., Plausible). Add script tag on Landing only.
+* Basic cookie banner (non‑tracking by default) to be compliant in the EU.
+
+---
+
+# AB) Final secrets (PlayHQ)
+
+Ensure **Replit Secrets** include:
+
+* `APP_NAME=PlayHQ`
+* `APP_URL=https://playhq.app` (or your preview URL)
+* `API_URL=/api`
+* `DATABASE_URL=postgres://...`
+* `SESSION_SECRET=...`
+* `EMAIL_FROM=no-reply@playhq.app`
+* `RESEND_API_KEY=...`
+* `STRIPE_SECRET_KEY=...`
+* `STRIPE_PUBLISHABLE_KEY=...`
+* `STRIPE_WEBHOOK_SECRET=...`
+* `RATE_LIMIT_WINDOW_MS=60000`
+* `RATE_LIMIT_MAX=100`
+* `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL=https://playhq.app/api/auth/google/callback`
+* `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_REDIRECT_URI=https://playhq.app/api/auth/microsoft/callback`
+
+---
+
+# AC) Final runbook (one‑shot)
+
+1. **Copy this entire prompt** into Replit Assistant.
+2. Ensure `INTERACTIVE_GATES = false`.
+3. Set all secrets listed above.
+4. Let it run. It will: audit → apply schema → backend routes → emails → frontend → SSO → billing → security → seed + QA.
+5. Build frontend (`npm --prefix frontend run build`) and start server.
+6. Smoke test: `/` → `/get-started` → verification email → `/create-password` → dashboard → invite self to tenant → accept via `/join?token=…` → test `/billing` upgrade (Stripe test key).
+
+This completes everything needed to start taking real signups at **PlayHQ.app** without further approvals.
+
+---
+
+# AD) Starter Legal Copy — Terms & Privacy (PlayHQ)
+
+**Goal:** Replace placeholder pages with production‑ready starter templates (not legal advice). You can launch with these while counsel finalizes.
+
+## Files
+
+**`frontend/src/pages/Terms.tsx`**
+
+```tsx
+export default function Terms(){
+  return (
+    <div className="mx-auto max-w-3xl p-10 prose">
+      <h1>PlayHQ Terms of Service</h1>
+      <p><strong>Last updated:</strong> {new Date().toISOString().slice(0,10)}</p>
+      <p><em>This starter template is provided for convenience and is not legal advice. Consult counsel for your final terms.</em></p>
+      <h2>1. Your relationship with PlayHQ</h2>
+      <p>These Terms govern your access to and use of the PlayHQ services, websites, and apps (collectively, the “Service”). By creating an account or using the Service, you agree to these Terms.</p>
+      <h2>2. Eligibility and accounts</h2>
+      <ul>
+        <li>You must be at least 18 to create an owner/administrator account. Minor player accounts require parental or guardian consent.</li>
+        <li>You are responsible for the security of your account and all activity under it.</li>
+      </ul>
+      <h2>3. Clubs, teams, and tenants</h2>
+      <p>When you create a club (a “Tenant”), you represent that you are authorized to do so and agree that you are responsible for the activity and content within that Tenant.</p>
+      <h2>4. Acceptable use</h2>
+      <ul>
+        <li>No unlawful, infringing, harassing, or abusive content.</li>
+        <li>No attempts to reverse engineer, bypass security, or disrupt the Service.</li>
+      </ul>
+      <h2>5. Payments and subscriptions</h2>
+      <p>Paid features are billed via Stripe. Plan terms, pricing, taxes, proration, and cancellation are described at checkout. You may cancel at any time; access continues until the end of the current billing period.</p>
+      <h2>6. Privacy</h2>
+      <p>Your use is subject to our <a href="/privacy">Privacy Policy</a>.</p>
+      <h2>7. Data ownership</h2>
+      <p>You retain rights to your content. You grant PlayHQ a limited license to host and process content solely to operate the Service.</p>
+      <h2>8. Children and parental consent</h2>
+      <p>Players under the age of 13 require verifiable parental consent before accessing features beyond basic invitations and account linking.</p>
+      <h2>9. Service changes</h2>
+      <p>We may modify or discontinue features with notice where reasonable. We will not materially reduce core paid features within an active paid term without proportionate remedies.</p>
+      <h2>10. Disclaimers and limitation of liability</h2>
+      <p>The Service is provided “as is” without warranties. To the maximum extent permitted by law, PlayHQ is not liable for indirect, incidental, special, consequential, or punitive damages.</p>
+      <h2>11. Indemnity</h2>
+      <p>You agree to defend and indemnify PlayHQ from third‑party claims arising from your use of the Service or violation of these Terms.</p>
+      <h2>12. Governing law</h2>
+      <p>These Terms are governed by the laws of your principal place of business or residence unless otherwise required by law. Venue and jurisdiction will be as permitted.</p>
+      <h2>13. Changes to these Terms</h2>
+      <p>We may update these Terms. If changes are material, we will provide notice. Continued use after the effective date constitutes acceptance.</p>
+      <h2>Contact</h2>
+      <p>Questions? Email <a href="mailto:support@playhq.app">support@playhq.app</a>.</p>
+    </div>
+  );
+}
+```
+
+**`frontend/src/pages/Privacy.tsx`**
+
+```tsx
+export default function Privacy(){
+  return (
+    <div className="mx-auto max-w-3xl p-10 prose">
+      <h1>PlayHQ Privacy Policy</h1>
+      <p><strong>Last updated:</strong> {new Date().toISOString().slice(0,10)}</p>
+      <p><em>This starter template is provided for convenience and is not legal advice. Consult counsel for your final policy.</em></p>
+      <h2>Information we collect</h2>
+      <ul>
+        <li>Account info: name, email, club name, role.</li>
+        <li>Roster data: player names, parent/guardian contacts, DOB (if provided by club).</li>
+        <li>Usage data: device, browser, IP address, and interactions with the Service.</li>
+        <li>Payment info: handled by Stripe; we do not store full card details.</li>
+      </ul>
+      <h2>How we use information</h2>
+      <ul>
+        <li>Provide and secure the Service (authentication, invites, scheduling).</li>
+        <li>Communicate transactional emails (verification, invites, receipts).</li>
+        <li>Improve features and support.</li>
+      </ul>
+      <h2>Legal bases</h2>
+      <p>We process personal data to perform our contract with you, with your consent (e.g., marketing), and to comply with legal obligations.</p>
+      <h2>Children’s data</h2>
+      <p>We require parental consent for players under 13. Clubs are responsible for providing accurate guardian contacts and obtaining appropriate consent in their jurisdiction.</p>
+      <h2>Sharing</h2>
+      <ul>
+        <li>Service providers (email, payments, hosting) under contract and only as needed.</li>
+        <li>Legal and safety: to comply with law, enforce policies, or protect rights.</li>
+      </ul>
+      <h2>Data retention</h2>
+      <p>We retain data while your account is active and as required by law. Club owners may request export or deletion subject to legal limits.</p>
+      <h2>Security</h2>
+      <p>We employ technical and organizational measures. No method is 100% secure.</p>
+      <h2>Your choices</h2>
+      <ul>
+        <li>Access, update, or delete your information via your account or by contacting support.</li>
+        <li>Opt out of non‑essential emails.</li>
+      </ul>
+      <h2>International transfers</h2>
+      <p>Data may be processed in the U.S. and other countries with appropriate safeguards.</p>
+      <h2>Changes to this Policy</h2>
+      <p>We may update this Policy. Material changes will be announced. Continued use indicates acceptance.</p>
+      <h2>Contact</h2>
+      <p>Email <a href="mailto:privacy@playhq.app">privacy@playhq.app</a>.</p>
+    </div>
+  );
+}
+```
+
+---
+
+# AE) Sentry Observability (backend + frontend)
+
+**Goal:** Add error and performance telemetry to ship safely.
+
+## Env (add to secrets)
+
+* `SENTRY_DSN` (project DSN)
+* `SENTRY_ENVIRONMENT` (e.g., `production`)
+* Optional: `SENTRY_RELEASE` (git sha or semver)
+
+## Install
+
+```
+npm add @sentry/node @sentry/react
+```
+
+## Backend (Express)
+
+**`src/observability/sentry.server.ts`**
+
+```ts
+import * as Sentry from "@sentry/node";
+import { env } from "../lib/env";
+
+export function initSentry(app: import("express").Express){
+  if(!process.env.SENTRY_DSN) return; // noop in dev
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.SENTRY_ENVIRONMENT || env.NODE_ENV,
+    release: process.env.SENTRY_RELEASE,
+    tracesSampleRate: 0.2,
+  });
+  app.use(Sentry.Handlers.requestHandler());
+}
+
+export const sentryErrorHandler = Sentry.Handlers.errorHandler();
+```
+
+In `src/server.ts` (or equivalent):
+
+```ts
+import { initSentry, sentryErrorHandler } from "./observability/sentry.server";
+// after app creation
+initSentry(app);
+// ... your routes
+app.use(sentryErrorHandler);
+```
+
+## Frontend (React, Vite)
+
+In `frontend/src/main.tsx`:
+
+```tsx
+import * as Sentry from "@sentry/react";
+Sentry.init({ dsn: (window as any).SENTRY_DSN || import.meta.env.VITE_SENTRY_DSN, environment: import.meta.env.MODE, tracesSampleRate: 0.2 });
+```
+
+Add `VITE_SENTRY_DSN` to a `.env` for the frontend if you want separate injection.
+
+## CSP additions
+
+Add to Helmet CSP `connect-src` and `script-src`:
+
+* `https://*.sentry.io`
+
+---
+
+# AF) Cookie Banner (minimal, no tracking by default)
+
+**`frontend/src/components/CookieBanner.tsx`**
+
+```tsx
+import { useEffect, useState } from "react";
+export default function CookieBanner(){
+  const [show,setShow]=useState(false);
+  useEffect(()=>{ setShow(!localStorage.getItem("phq-cookie-consent")); },[]);
+  if(!show) return null;
+  return (
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 bg-white border shadow rounded-xl p-4 max-w-xl">
+      <p className="text-sm">We use essential cookies to run PlayHQ. Optional analytics may be enabled later. See our <a className="underline" href="/privacy">Privacy Policy</a>.</p>
+      <div className="mt-3 flex gap-3 justify-end">
+        <button className="px-4 py-2 rounded-xl border" onClick={()=>{localStorage.setItem("phq-cookie-consent","dismissed"); setShow(false);}}>Dismiss</button>
+      </div>
+    </div>
+  );
+}
+```
+
+Render `<CookieBanner />` once in your app shell (e.g., `Landing` or a root layout).
+
+---
+
+# AG) CSP updates for providers
+
+Update your Helmet CSP config (existing section Y) to include:
+
+* Stripe: `https://js.stripe.com`, `https://api.stripe.com`, `https://hooks.stripe.com`
+* Google OAuth: `https://accounts.google.com`, `https://www.googleapis.com`
+* Microsoft OAuth: `https://login.microsoftonline.com`, `https://graph.microsoft.com`
+* Sentry: `https://*.sentry.io`
+
+---
+
+# AH) Final checklist delta
+
+* Replace placeholder Terms & Privacy with these pages.
+* Add Sentry DSN to secrets and confirm events are received.
+* Place `<SocialButtons />` on `/join` and `/login` (if present) and `<CookieBanner />` on root.
+* Re‑run Lighthouse — verify a11y and performance budgets.
+* Send yourself a full onboarding email chain and confirm inbox placement (SPF/DKIM/DMARC).
