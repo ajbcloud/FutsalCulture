@@ -1880,6 +1880,93 @@ export function setupAdminRoutes(app: any) {
     }
   });
 
+  // Age Policy endpoints
+  app.get('/api/admin/age-policy', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      // Get age policy settings from system settings
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(and(
+          eq(systemSettings.tenantId, tenantId),
+          sql`${systemSettings.key} IN ('audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent')`
+        ));
+
+      const policyData = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse boolean values
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        // Parse numeric values
+        if (!isNaN(Number(value)) && setting.key !== 'audience') value = Number(value);
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Set defaults if no settings exist
+      const defaultPolicy = {
+        audience: "youth",
+        minAge: 5,
+        maxAge: 18,
+        requireParent: 13,
+        teenSelfMin: 13,
+        teenPayMin: 16,
+        enforceAgeGating: true,
+        requireConsent: false,
+        ...policyData
+      };
+
+      res.json(defaultPolicy);
+    } catch (error) {
+      console.error('Error fetching age policy:', error);
+      res.status(500).json({ error: 'Failed to fetch age policy' });
+    }
+  });
+
+  app.put('/api/admin/age-policy', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      const policyData = req.body;
+      const userId = (req as any).user?.id;
+
+      // Save each policy setting to system settings
+      for (const [key, value] of Object.entries(policyData)) {
+        if (['audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent'].includes(key)) {
+          await db.insert(systemSettings)
+            .values({
+              tenantId,
+              key,
+              value: String(value),
+              updatedBy: userId,
+              updatedAt: new Date()
+            })
+            .onConflictDoUpdate({
+              target: [systemSettings.tenantId, systemSettings.key],
+              set: {
+                value: String(value),
+                updatedBy: userId,
+                updatedAt: new Date()
+              }
+            });
+        }
+      }
+
+      res.json({ success: true, message: 'Age policy updated successfully' });
+    } catch (error) {
+      console.error('Error updating age policy:', error);
+      res.status(500).json({ error: 'Failed to update age policy' });
+    }
+  });
+
   // Admin Settings
   app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
