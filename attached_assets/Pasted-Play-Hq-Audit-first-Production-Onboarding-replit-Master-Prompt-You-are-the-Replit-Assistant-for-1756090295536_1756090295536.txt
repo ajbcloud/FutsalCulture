@@ -1,0 +1,403 @@
+Play Hq — Audit‑first Production Onboarding (replit Master Prompt)
+
+You are the Replit Assistant for the PlayHQ app (domain: https://playhq.app). Your job is to implement a production‑ready landing + signup + onboarding system with audit‑first, safe, stepwise changes. BRAND = "PlayHQ" throughout. Do NOT make destructive changes. Always create git checkpoints and ask for approval before each change group.
+
+0) Operating mode
+
+AUDIT_FIRST = true
+
+INTERACTIVE_GATES = true
+
+BRAND = PlayHQ
+
+DOMAIN = playhq.app
+
+EMAIL_FROM default = no-reply@playhq.app (respect existing value if set)
+
+STACK_FLEX = true → If project uses Next.js, map server routes to Next API routes; if Express, use Express; if Remix/Nest/etc., adapt similarly.
+
+Safety rules
+
+Never overwrite unrelated files. Limit diffs to planned changes.
+
+Use git. If repo is not git‑initialized, git init.
+
+Create a working branch playhq-onboarding.
+
+After each step (A1, A2, … / B1, B2, …), stop and print a summary + “Type APPROVE <step> to continue or ABORT to stop”.
+
+Write artifacts:
+
+AUDIT.md — inventory & findings
+
+CHANGEPLAN.md — proposed change list with rationale
+
+BREAKING.md — any potentially breaking modifications
+
+POST_DEPLOY_CHECKLIST.md
+
+A) Audit phase (no code changes)
+
+Goal: Understand current stack, detect prior onboarding code, and surface conflicts/duplicates. Produce a plan. Then wait for approval.
+
+Run and capture results into AUDIT.md:
+
+Stack & deps
+
+Read package.json and list framework indicators: next, express, remix, nestjs, typescript, drizzle, prisma, sequelize, knex, stripe, resend, nodemailer, passport, auth libs.
+
+TS settings: tsconfig.json flags (strict, noUnusedLocals, noUnusedParameters).
+
+File inventory (top 200 most relevant):
+
+Directories: src, server, app, pages/api, api, routes, backend, db, schemas.
+
+Scan for files containing any of: tenant, invites?, verify, stripe, subscription, billing, join, onboarding, consent, policy, privacy, terms, user, auth, oauth, google, microsoft.
+
+Env usage
+
+List env keys used in repo; compare to required keys below.
+
+Database layer
+
+Detect ORM (Drizzle/Prisma/etc.).
+
+Enumerate schema models/table names.
+
+Spot prior tables similar to: tenants, tenant_users, invites, email_verifications, subscriptions, plan_features, audit_events, parent_player_links, consent_records, user_policy_acceptances, email_bounces.
+
+Routes/endpoints inventory
+
+Enumerate existing auth/signup/verify/invite/join/billing endpoints.
+
+Frontend inventory
+
+Landing page presence, /get-started, /join, /billing routes/pages.
+
+Conflicts & overlaps
+
+Flag duplicate implementations (e.g., multiple invite routes), legacy code, dead files.
+
+Lint & type hygiene
+
+If ESLint present, run. If not, skip. Collect error counts.
+
+Security surface
+
+Check for helmet/csurf/rate‑limit/validation, cookie settings, CORS.
+
+Produce AUDIT.md and CHANGEPLAN.md containing:
+
+Summary table of findings
+
+Proposed changes grouped into Change Groups (G1, G2, …) with:
+
+Files to add/modify/remove
+
+Risk level
+
+Rollback path
+
+Estimated effort
+
+Mark any keep vs. replace recommendations for pre‑existing onboarding logic (prefer reuse where compatible)
+
+STOP HERE. Await user: APPROVE AUDIT or ABORT.
+
+B) Required env (no secrets hardcoded)
+
+Add (or confirm) the following keys in Replit Secrets — but only after approval:
+
+APP_NAME=PlayHQ
+
+APP_URL=https://playhq.app (or your preview URL)
+
+API_URL=/api
+
+DATABASE_URL= (Postgres)
+
+SESSION_SECRET=
+
+EMAIL_FROM=no-reply@playhq.app
+
+RESEND_API_KEY=
+
+STRIPE_SECRET_KEY=
+
+STRIPE_PUBLISHABLE_KEY=
+
+STRIPE_WEBHOOK_SECRET=
+
+RATE_LIMIT_WINDOW_MS=60000
+
+RATE_LIMIT_MAX=100
+
+Optional OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL, MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI
+
+Write/update src/lib/env.ts (or framework equivalent) without breaking existing imports. Use feature‑detection if another env helper exists.
+
+Gate: Wait for APPROVE B.
+
+C) Database schema (Drizzle preferred, adapt if Prisma/Knex)
+
+If Drizzle exists, add/merge the following tables. If similar tables exist, migrate or extend, do not duplicate. If non‑Drizzle ORM detected, generate equivalent models/migrations.
+
+Tables (ids are uuid/ulid acceptable):
+
+tenants(id, name, slug, tenant_code, contact_name, contact_email, city, state, country, status, allowed_domains, created_at)
+
+users(id, email, password_hash, name, email_verified, provider, created_at)
+
+tenant_users(id, tenant_id, user_id, role, created_at)
+
+invites(id, tenant_id, email, role, token, expires_at, used_at, created_at)
+
+email_verifications(id, user_id, email, token, expires_at, used_at, created_at)
+
+subscriptions(id, tenant_id, stripe_customer_id, stripe_subscription_id, plan_key, status, trial_end, current_period_end, created_at, updated_at)
+
+plan_features(plan_key, feature_key, enabled, limits_json)
+
+audit_events(id, actor_user_id, tenant_id, event_type, target_id, metadata_json, created_at)
+
+parent_player_links(id, tenant_id, parent_user_id, player_user_id, created_at)
+
+consent_records(id, tenant_id, child_user_id, parent_user_id, method, policy_version, ip, meta, created_at)
+
+user_policy_acceptances(id, user_id, policy_type, version, ip, created_at)
+
+email_bounces(id, email, provider, reason, event, created_at)
+
+Actions:
+
+Generate migrations; map to existing tables if present (no data loss). Write a migration note into BREAKING.md if renames are required.
+
+Gate: Wait for APPROVE C.
+
+D) Backend routes (Express or Next API)
+
+Create or merge namespaced endpoints under /api:
+
+POST /api/get-started → create tenant + owner, Stripe customer, verification token, send email
+
+GET /api/verify?token= → mark verification, then redirect to /create-password
+
+POST /api/invites (owner/coach) → create invite + email
+
+POST /api/invites/resend
+
+POST /api/invites/revoke
+
+POST /api/join/by-token
+
+POST /api/join/by-code
+
+POST /api/billing/checkout → Stripe Checkout session
+
+POST /api/webhooks/stripe → subscription state sync
+
+POST /api/tenants/switch
+
+POST /api/tenant/code/rotate
+
+Security & hygiene:
+
+Helmet, compression, CORS, rate limits on public endpoints, input validation (Zod), consistent error format.
+
+Cookies: Secure, HttpOnly, SameSite=Lax.
+
+RBAC check: role in tenant_users for tenant context.
+
+Gate: Wait for APPROVE D.
+
+E) Email service (Resend)
+
+Templates (BRAND=PlayHQ):
+
+Verify: Subject Verify your email • PlayHQ, body with CTA to ${APP_URL}/verify?token=....
+
+Invite: Subject Invitation to join {tenant} • PlayHQ.
+
+Welcome: Subject Welcome to {tenant} • PlayHQ.
+
+Sender: EMAIL_FROM (default no-reply@playhq.app).
+
+Add bounce webhook endpoint (optional): /api/webhooks/resend → write to email_bounces.
+
+Gate: Wait for APPROVE E.
+
+F) Frontend (Vite React + Tailwind, or adapt to existing stack)
+
+Pages (SSR/SPA either is fine; preserve existing routes if present):
+
+/ Landing (production‑grade)
+
+Hero, features, pricing (Free/Starter/Club), CTA → /get-started
+
+Footer with Terms and Privacy links
+
+SEO: <title>PlayHQ — Run your club with ease</title>
+
+/get-started Admin signup form
+
+Fields: org/club name, contact name, email, city, state, country, checkboxes for Terms/Privacy
+
+Hidden plan_key=free
+
+POST /api/get-started → success screen "Check your email"
+
+/join Invite acceptance (token) and manual join (tenant code)
+
+/billing Upgrade button calling /api/billing/checkout
+
+/terms, /privacy placeholder docs (replace with real copy later)
+
+Branding: replace all previous names with PlayHQ.
+
+Gate: Wait for APPROVE F.
+
+G) Onboarding checklist (tenant dashboard)
+
+Items: verify email, invite members, create first session, publish calendar, set notifications, optional: connect Stripe.
+
+Store completion flags on tenant settings or derived from audit events.
+
+Gate: Wait for APPROVE G.
+
+H) Consent & policies
+
+On any account creation, write user_policy_acceptances for Terms & Privacy (versioned).
+
+For players under 13, require parent email, create consent_records, block child login until consent present.
+
+Gate: Wait for APPROVE H.
+
+I) Billing & plans
+
+Seed plan_features for free, starter, club.
+
+Stripe Checkout redirect for upgrades; webhook flips subscriptions.status and plan_key.
+
+Banner on past_due/canceled (from webhook).
+
+Gate: Wait for APPROVE I.
+
+J) Observability & support
+
+Add audit_events on: tenant_created, verify_sent, verify_completed, invite_sent, invite_accepted, joined_by_code, plan_change, code_rotated.
+
+Super‑admin support console: search by email/tenant_code, show audit timeline, resend verify/invite, rotate code (with confirmation), impersonation banner if you support it.
+
+Gate: Wait for APPROVE J.
+
+K) Security hardening
+
+Rate limits on /api/get-started, /api/join/*, /api/verify, /api/invites*.
+
+Optional CAPTCHA hook (Turnstile) — add stubs, can enable later.
+
+Input validation via Zod schemas for all POST bodies.
+
+Cookie settings hardened.
+
+Domain allow‑list on manual joins.
+
+Tenant code rotation + QR display.
+
+Gate: Wait for APPROVE K.
+
+L) SEO, accessibility, performance
+
+Meta tags (title, description, OG/Twitter).
+
+robots.txt, sitemap.xml placeholder.
+
+Lighthouse budget: LCP < 2.5s on landing, no a11y criticals.
+
+Gate: Wait for APPROVE L.
+
+M) Seed + QA scripts
+
+scripts/seed.ts → create a sample tenant + owner (owner@playhq.app).
+
+scripts/qa.md → step‑by‑step acceptance tests (signup → verify → invite → accept → join by code → upgrade → webhook flips → rotate code → rate limits → email render checks).
+
+Gate: Wait for APPROVE M.
+
+N) Finalize
+
+Build frontend (if applicable) and start server.
+
+Print a summary of: endpoints, created files, ENV checklist, what to test.
+
+Provide rollback instruction (git checkout main / revert commit).
+
+STOP and present results at each gate. Do not proceed without explicit APPROVE from the user.
+
+Required code & content blocks to generate after approval per section
+
+(These are the same as previous Playbook but branded for PlayHQ and adjusted to existing stack.)
+
+Env helper (src/lib/env.ts) with APP_NAME="PlayHQ", defaults for EMAIL_FROM=no-reply@playhq.app.
+
+Drizzle (or ORM‑equivalent) schemas for all tables above.
+
+Express or Next API routes implementing: get-started, verify, invites, join, billing checkout, stripe webhook, tenant switch, code rotate.
+
+Email service (src/lib/email.ts) with PlayHQ subject lines.
+
+Frontend pages with PlayHQ branding; landing hero copy: “Run your club with ease.” CTA → /get-started.
+
+Security middleware, rate limits, CORS, helmet, compression.
+
+Audit logger util.
+
+Seed + QA docs.
+
+Branding replacements
+
+Replace any "Futsal Culture" or other previous brand text with PlayHQ.
+
+Replace futsal copy with club/ team wording where present, unless your existing product copy dictates otherwise.
+
+Compatibility notes
+
+If Next.js detected:
+
+Create files under app/api/*/route.ts or pages/api/*.ts as appropriate.
+
+Use Edge/Node runtimes per project defaults.
+
+If Express detected:
+
+Mount all routes under /api and static‑serve frontend dist if Vite used.
+
+If Prisma/Knex detected:
+
+Generate equivalent schema & migrations; do not add Drizzle unless requested.
+
+Post‑deploy checklist (write to POST_DEPLOY_CHECKLIST.md)
+
+
+
+
+Output formatting
+
+At each gate, print:
+
+What changed (or will change)
+
+File list with reasons
+
+git status and the next command to continue (APPROVE <section>)
+
+End of master prompt for PlayHQ — Audit‑First Production Onboarding.
+
+Amazing—got it. I put a brand-safe, audit-first Replit master prompt in the canvas that:
+
+Renames everything to PlayHQ (domain playhq.app, sender no-reply@playhq.app
+).
+
+Audits your existing repo before touching code, writes AUDIT.md + CHANGEPLAN.md, and stops for approval at each gate.
+
+Only then implements landing + /get-started signup, email verification, invites, join by code, Stripe upgrades, consent/policy logging, security hardening, and QA/seed scripts—step by step with git checkpoints.

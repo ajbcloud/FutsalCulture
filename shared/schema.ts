@@ -92,6 +92,38 @@ export const tenants = pgTable("tenants", {
   tenantCode: varchar("tenant_code").unique(),
   contactName: text("contact_name"),
   contactEmail: text("contact_email"),
+  
+  // Comprehensive Trial Management Fields
+  trialStartedAt: timestamp("trial_started_at"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  trialPlan: planLevelEnum("trial_plan"),
+  billingStatus: varchar("billing_status").default("none"), // none, trial, active, past_due, cancelled, pending_downgrade
+  paymentMethodRequired: boolean("payment_method_required").default(false),
+  paymentMethodVerified: boolean("payment_method_verified").default(false),
+  trialExtensionsUsed: integer("trial_extensions_used").default(0),
+  maxTrialExtensions: integer("max_trial_extensions").default(1),
+  
+  // Plan Transition Management
+  pendingPlanChange: planLevelEnum("pending_plan_change"),
+  pendingPlanChangeAt: timestamp("pending_plan_change_at"),
+  lastPlanLevel: planLevelEnum("last_plan_level"),
+  planChangeReason: varchar("plan_change_reason"), // trial_end, upgrade, downgrade, payment_failed
+  
+  // Data Retention and Archival
+  dataRetentionPolicy: jsonb("data_retention_policy").default(sql`'{"analytics": 90, "sessions": 365, "players": 730, "payments": 2555}'::jsonb`),
+  archivedDataPaths: jsonb("archived_data_paths").default(sql`'{}'::jsonb`),
+  dataCleanupScheduledAt: timestamp("data_cleanup_scheduled_at"),
+  
+  // Abuse Prevention
+  trialHistory: jsonb("trial_history").default(sql`'[]'::jsonb`), // Track all trial attempts
+  signupIpAddress: varchar("signup_ip_address"),
+  signupUserAgent: text("signup_user_agent"),
+  riskScore: integer("risk_score").default(0), // 0-100 risk assessment
+  
+  // Grace Period Management
+  gracePeriodEndsAt: timestamp("grace_period_ends_at"),
+  gracePeriodReason: varchar("grace_period_reason"), // payment_failed, trial_expired, plan_change
+  gracePeriodNotificationsSent: integer("grace_period_notifications_sent").default(0),
 });
 
 
@@ -989,6 +1021,44 @@ export const platformSettings = pgTable("platform_settings", {
     "bookingWindowHours": 8,
     "sessionCapacity": 20,
     "seedSampleContent": false
+  }'::jsonb`),
+  
+  // Comprehensive Trial Settings
+  trialSettings: jsonb("trial_settings").notNull().default(sql`'{
+    "enabled": true,
+    "durationDays": 14,
+    "defaultTrialPlan": "growth",
+    "autoConvertToFree": true,
+    "requirePaymentMethod": false,
+    "allowPlanChangeDuringTrial": true,
+    "maxExtensions": 1,
+    "extensionDurationDays": 7,
+    "gracePeriodDays": 3,
+    "dataRetentionAfterTrialDays": 30,
+    "autoCleanupExpiredTrials": true,
+    "preventMultipleTrials": true,
+    "riskAssessmentEnabled": true,
+    "paymentMethodGracePeriodHours": 72,
+    "notificationSchedule": {
+      "trialStart": [0],
+      "trialReminders": [7, 3, 1],
+      "trialExpiry": [0, 1, 3],
+      "gracePeriod": [0, 1, 2]
+    },
+    "planTransitionRules": {
+      "preserveDataOnDowngrade": true,
+      "archiveAdvancedFeatureData": true,
+      "playerLimitEnforcement": "soft",
+      "featureAccessGracePeriod": 7
+    },
+    "abusePreventionRules": {
+      "maxTrialsPerEmail": 1,
+      "maxTrialsPerIP": 3,
+      "maxTrialsPerPaymentMethod": 1,
+      "cooldownBetweenTrialsDays": 90,
+      "requirePhoneVerification": false,
+      "requireCreditCardVerification": false
+    }
   }'::jsonb`),
   updatedBy: varchar("updated_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),

@@ -3,6 +3,9 @@ import { storage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import crypto from 'crypto';
+// Import platform settings controllers
+import { getPolicies, updatePolicies, getTenantDefaults, updateTenantDefaults, getTrialSettings, updateTrialSettings } from './controllers/superAdmin/platformSettings';
+import { trialManager } from './trial-management';
 
 // Hardcoded super admin failsafe - cannot be removed or modified by any database operation
 const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Replit username for failsafe admin
@@ -1111,6 +1114,78 @@ export function setupSuperAdminRoutes(app: Express) {
   app.put('/api/super-admin/settings/tenant-defaults', isAuthenticated, isSuperAdmin, async (req: any, res) => {
     const { updateTenantDefaults } = await import('./controllers/superAdmin/platformSettings');
     return updateTenantDefaults(req, res);
+  });
+
+  // Comprehensive Trial Settings routes
+  app.get('/api/super-admin/settings/trial-settings', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { getTrialSettings } = await import('./controllers/superAdmin/platformSettings');
+    return getTrialSettings(req, res);
+  });
+
+  app.put('/api/super-admin/settings/trial-settings', isAuthenticated, isSuperAdmin, async (req: any, res) => {
+    const { updateTrialSettings } = await import('./controllers/superAdmin/platformSettings');
+    return updateTrialSettings(req, res);
+  });
+
+  // Trial Management API routes
+  app.post('/api/super-admin/trials/start', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId, trialPlan, paymentMethodProvided, ipAddress, userAgent } = req.body;
+      const result = await trialManager.startTrial(tenantId, {
+        trialPlan,
+        paymentMethodProvided,
+        ipAddress,
+        userAgent
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Error starting trial:', error);
+      res.status(500).json({ error: 'Failed to start trial' });
+    }
+  });
+
+  app.post('/api/super-admin/trials/check-eligibility', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { email, ipAddress, paymentMethodId } = req.body;
+      const result = await trialManager.checkTrialEligibility(email, ipAddress, paymentMethodId);
+      res.json(result);
+    } catch (error) {
+      console.error('Error checking trial eligibility:', error);
+      res.status(500).json({ error: 'Failed to check trial eligibility' });
+    }
+  });
+
+  app.post('/api/super-admin/trials/process-expired', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      await trialManager.processExpiredTrials();
+      res.json({ success: true, message: 'Expired trials processed successfully' });
+    } catch (error) {
+      console.error('Error processing expired trials:', error);
+      res.status(500).json({ error: 'Failed to process expired trials' });
+    }
+  });
+
+  app.put('/api/super-admin/trials/:tenantId/plan-change', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const { newPlan, reason } = req.body;
+      const result = await trialManager.handleTrialPlanChange(tenantId, newPlan, reason);
+      res.json(result);
+    } catch (error) {
+      console.error('Error changing trial plan:', error);
+      res.status(500).json({ error: 'Failed to change trial plan' });
+    }
+  });
+
+  app.post('/api/super-admin/trials/:tenantId/expire', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const result = await trialManager.processTrialExpiration(tenantId);
+      res.json(result);
+    } catch (error) {
+      console.error('Error expiring trial:', error);
+      res.status(500).json({ error: 'Failed to expire trial' });
+    }
   });
 
   // Impersonation routes
