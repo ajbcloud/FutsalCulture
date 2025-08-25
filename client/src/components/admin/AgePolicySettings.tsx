@@ -33,8 +33,8 @@ export default function AgePolicySettings() {
   
   // Fetch current policy
   const { data: currentPolicy, isLoading: loadingPolicy } = useQuery<TenantPolicy>({
-    queryKey: ["/api/policy/tenant"],
-    queryFn: () => fetch("/api/policy/tenant").then(res => res.json()),
+    queryKey: ["/api/admin/age-policy"],
+    queryFn: () => fetch("/api/admin/age-policy", { credentials: 'include' }).then(res => res.json()),
   });
 
   // Local state for form
@@ -60,14 +60,14 @@ export default function AgePolicySettings() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<TenantPolicy>) => {
-      return apiRequest("/api/policy/tenant", "PATCH", data);
+      return apiRequest("PUT", "/api/admin/age-policy", data);
     },
     onSuccess: () => {
       toast({
         title: "Policy saved",
         description: "Age policy settings have been updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/policy/tenant"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/age-policy"] });
     },
     onError: (error) => {
       toast({
