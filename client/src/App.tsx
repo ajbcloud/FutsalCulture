@@ -45,6 +45,7 @@ import NotFound from "@/pages/not-found";
 import SignupStart from "@/pages/SignupStart";
 import SignupParentFlow from "@/pages/SignupParentFlow";
 import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
+import Login from "@/pages/Login";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -65,9 +66,6 @@ function Router() {
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={SignupStart} />
         <Route path="/login" component={Login} />
-        <Route path="/create-password" component={CreatePassword} />
-        <Route path="/forgot" component={Forgot} />
-        <Route path="/reset" component={Reset} />
             <Route path="/sessions" component={Sessions} />
             <Route path="/sessions/:id" component={SessionDetail} />
             <Route path="/session/:id/payment" component={SessionPayment} />
@@ -111,8 +109,6 @@ function Router() {
                 <Route path="/super-admin/:page/:tab/:subTab" component={SuperAdmin} />
               </>
             )}
-          </>
-        )}
         <Route component={NotFound} />
       </Switch>
       

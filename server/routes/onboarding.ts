@@ -1,5 +1,4 @@
 
-```ts
 import express from "express";
 import { db } from "../db"; // your db init
 import { tenants } from "../db/schema/tenants"; // adjust import paths
@@ -57,4 +56,3 @@ router.get("/verify", async (req, res) => {
 });
 
 export default router;
-```
