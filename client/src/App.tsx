@@ -10,7 +10,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import ErrorBoundary from "@/components/error-boundary";
 import CookieConsentBanner from "@/components/ui/cookie-consent";
-import Landing from "@/pages/landing";
+import HomePlayHQ from "@/pages/HomePlayHQ";
+import FutsalLanding from "@/pages/FutsalLanding";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
 import Dashboard from "@/pages/dashboard";
@@ -61,7 +62,8 @@ function Router() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <Switch>
-        <Route path="/" component={Landing} />
+        <Route path="/" component={HomePlayHQ} />
+        <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={SignupStart} />

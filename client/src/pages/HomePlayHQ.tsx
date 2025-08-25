@@ -1,0 +1,255 @@
+export default function HomePlayHQ() {
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <div className="min-h-screen bg-white text-gray-900">
+      {/* Navbar */}
+      <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
+        <a href="/" className="text-xl font-extrabold tracking-tight text-gray-900">
+          PlayHQ
+        </a>
+        <nav className="flex items-center gap-6 text-sm">
+          <a href="#features" className="hover:opacity-80">Features</a>
+          <a href="#pricing" className="hover:opacity-80">Pricing</a>
+          <a href="/login" className="rounded-xl px-4 py-2 border border-gray-300 hover:bg-gray-50">
+            Log in
+          </a>
+        </nav>
+      </header>
+
+      <main>
+        {/* Hero Section */}
+        <section className="mx-auto max-w-6xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              Your club's HQ — for any sport
+            </h1>
+            <p className="mt-4 text-lg text-gray-600">
+              Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <a
+                href="/get-started"
+                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90 transition-opacity"
+              >
+                Get started free
+              </a>
+              <a href="mailto:sales@playhq.app" className="underline text-gray-700 hover:text-gray-900 py-3">
+                Talk to sales
+              </a>
+            </div>
+          </div>
+          <div className="rounded-2xl shadow p-6 bg-white border border-gray-200">
+            <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500 text-sm">
+              Product screenshot
+            </div>
+          </div>
+        </section>
+
+        {/* Social Proof */}
+        <section className="mx-auto max-w-6xl px-6 py-8">
+          <p className="text-center text-sm text-gray-500 mb-6">Trusted by clubs worldwide</p>
+          <div className="flex justify-center items-center gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="w-16 h-8 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-3xl font-bold text-center mb-12">How it works</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <HowItWorksStep
+                number="1"
+                title="Create your club"
+                description="Set up your tenant and basic settings in minutes"
+              />
+              <HowItWorksStep
+                number="2"
+                title="Invite coaches, players, and parents"
+                description="Send email invites or share your unique club code"
+              />
+              <HowItWorksStep
+                number="3"
+                title="Run operations"
+                description="Manage schedules, payments, and rosters effortlessly"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section id="features" className="py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-3xl font-bold text-center mb-12">Everything you need to run your club</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <FeatureCard
+                title="Universal onboarding"
+                description="Invite links and join by code make it easy for everyone to get started"
+              />
+              <FeatureCard
+                title="Payments built-in"
+                description="Start free, upgrade anytime for advanced tools and analytics"
+              />
+              <FeatureCard
+                title="Multi-sport"
+                description="Configurable for soccer, futsal, basketball, volleyball, and more"
+              />
+              <FeatureCard
+                title="Messaging & alerts"
+                description="Keep everyone informed with email and SMS notifications"
+              />
+              <FeatureCard
+                title="Calendar & sessions"
+                description="Publish once, auto-notify everyone about schedule changes"
+              />
+              <FeatureCard
+                title="Roles & permissions"
+                description="Owner, coach, parent, player roles with appropriate access"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-6xl px-6">
+            <h2 className="text-3xl font-bold text-center mb-12">Simple pricing for every club</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <PricingCard
+                name="Free"
+                price="$0"
+                features={["Email invites", "Basic calendar", "Up to 50 members"]}
+              />
+              <PricingCard
+                name="Starter"
+                price="$49"
+                features={["Unlimited members", "CSV import", "Priority support"]}
+              />
+              <PricingCard
+                name="Club"
+                price="$99"
+                features={["Advanced analytics", "SMS invites", "Custom domains"]}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Security */}
+        <section className="py-16">
+          <div className="mx-auto max-w-4xl px-6 text-center">
+            <h2 className="text-2xl font-bold mb-4">Secure by default</h2>
+            <p className="text-lg text-gray-600">
+              SSO options, audit logs, role-based access, and more security features to keep your club data safe.
+            </p>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="bg-gray-50 py-16">
+          <div className="mx-auto max-w-4xl px-6">
+            <h2 className="text-3xl font-bold text-center mb-12">Frequently asked questions</h2>
+            <div className="space-y-8">
+              <FAQItem
+                question="How quickly can I get my club set up?"
+                answer="Most clubs are up and running within 15 minutes. Create your club, invite your first members, and start scheduling immediately."
+              />
+              <FAQItem
+                question="Do you support multiple sports?"
+                answer="Yes! PlayHQ works for soccer, futsal, basketball, volleyball, and many other sports. Configure team sizes, seasons, and age groups for your specific sport."
+              />
+              <FAQItem
+                question="How does billing work?"
+                answer="Start free with basic features. Upgrade anytime to unlock advanced tools, unlimited members, and priority support."
+              />
+              <FAQItem
+                question="Can parents and players access the system?"
+                answer="Absolutely. Invite parents and players with appropriate permissions. They can view schedules, make payments, and stay updated on club activities."
+              />
+              <FAQItem
+                question="Is my data secure?"
+                answer="Security is our top priority. We use enterprise-grade encryption, regular backups, and comply with data protection standards."
+              />
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 border-t">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div>© {currentYear} PlayHQ</div>
+            <div className="flex gap-6">
+              <a href="/terms" className="hover:text-gray-900">Terms</a>
+              <a href="/privacy" className="hover:text-gray-900">Privacy</a>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-gray-900">Status</a>
+            <a href="mailto:support@playhq.app" className="hover:text-gray-900">Support</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function HowItWorksStep({ number, title, description }: { number: string; title: string; description: string }) {
+  return (
+    <div className="text-center">
+      <div className="w-12 h-12 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center mx-auto mb-4">
+        {number}
+      </div>
+      <h3 className="text-xl font-semibold mb-2">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function FeatureCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow border border-gray-200">
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function PricingCard({ name, price, features }: { name: string; price: string; features: string[] }) {
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow border border-gray-200">
+      <div className="font-bold text-lg">{name}</div>
+      <div className="text-4xl font-extrabold mt-2">
+        {price}<span className="text-base font-medium">/mo</span>
+      </div>
+      <ul className="mt-4 space-y-2">
+        {features.map((feature, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <span className="text-green-600">✓</span>
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6">
+        <a
+          href="/get-started"
+          className="inline-flex items-center justify-center w-full rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90 transition-opacity"
+        >
+          Choose plan
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-2">{question}</h3>
+      <p className="text-gray-600">{answer}</p>
+    </div>
+  );
+}
