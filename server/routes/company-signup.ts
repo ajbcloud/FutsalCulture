@@ -88,9 +88,10 @@ companySignupRouter.get("/verify", async (req: any, res) => {
     res.redirect("/login");
     return;
     
-    if (!user) {
-      return res.status(400).json({ error: "Invalid or expired verification token" });
-    }
+    // TODO: Implement proper user verification
+    // if (!user) {
+    //   return res.status(400).json({ error: "Invalid or expired verification token" });
+    // }
     
     // This is handled above with early return
   } catch (error) {
