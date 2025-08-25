@@ -415,7 +415,7 @@ export default function ConsentTemplateSettings() {
   };
 
   const getAllTemplatesForType = (templateType: string) => {
-    return Array.isArray(templates) ? templates.filter(t => t.templateType === templateType) : [];
+    return Array.isArray(templates) ? templates.filter(t => t.templateType === templateType && t.isActive) : [];
   };
 
   // Get all unique template types (both predefined and custom)
@@ -423,7 +423,7 @@ export default function ConsentTemplateSettings() {
     const predefined = TEMPLATE_TYPES.map(t => ({ ...t, isPredefined: true }));
     const custom = Array.isArray(templates) 
       ? templates
-          .filter(t => !TEMPLATE_TYPES.some(predefined => predefined.key === t.templateType))
+          .filter(t => t.isActive && !TEMPLATE_TYPES.some(predefined => predefined.key === t.templateType))
           .map(t => ({
             key: t.templateType,
             label: t.title,
@@ -681,7 +681,7 @@ export default function ConsentTemplateSettings() {
             const activeTemplate = getActiveTemplate(type.key);
             const allTemplates = getAllTemplatesForType(type.key);
             const isEditing = editingTemplate === type.key;
-            const hasCustomTemplate = allTemplates.some(template => template.isCustom);
+            const hasCustomTemplate = templates.filter(t => t.templateType === type.key && t.isCustom).length > 0;
             
             return (
               <Card key={type.key} className="border-l-4 border-l-primary/20">
