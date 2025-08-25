@@ -503,6 +503,7 @@ export default function ConsentTemplateSettings() {
           {TEMPLATE_TYPES.map((type) => {
             const activeTemplate = getActiveTemplate(type.key);
             const allTemplates = getAllTemplatesForType(type.key);
+            const isEditing = editingTemplate === type.key;
             
             return (
               <Card key={type.key} className="border-l-4 border-l-primary/20">
@@ -553,27 +554,112 @@ export default function ConsentTemplateSettings() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <ObjectUploader
-                    maxNumberOfFiles={1}
-                    maxFileSize={10485760} // 10MB
-                    onGetUploadParameters={handleFileUpload(type.key)}
-                    onComplete={handleUploadComplete(type.key)}
-                    buttonClassName="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload Custom Form
-                  </ObjectUploader>
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          You can use any merge fields shown above in your template content. They will be automatically replaced with actual data when documents are generated.
+                        </AlertDescription>
+                      </Alert>
+                      <div>
+                        <Label htmlFor={`content-${type.key}`}>Template Content (HTML with Merge Fields)</Label>
+                        <Textarea
+                          id={`content-${type.key}`}
+                          value={customContent[type.key] || ''}
+                          onChange={(e) => setCustomContent({ ...customContent, [type.key]: e.target.value })}
+                          rows={10}
+                          className="font-mono text-sm"
+                          placeholder="Enter HTML content for the consent form..."
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleSaveContent(type.key)}
+                          disabled={saveContentMutation.isPending}
+                          data-testid={`button-save-${type.key}`}
+                        >
+                          Save Content
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setEditingTemplate(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex gap-2 flex-wrap">
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={10485760} // 10MB
+                          onGetUploadParameters={handleFileUpload(type.key)}
+                          onComplete={handleUploadComplete(type.key)}
+                          buttonClassName="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Custom Form
+                        </ObjectUploader>
 
-                  {activeTemplate && (
-                    <div className="text-sm text-muted-foreground">
-                      {activeTemplate.isCustom ? (
-                        activeTemplate.filePath ? (
-                          `Custom file: ${activeTemplate.fileName} (${Math.round((activeTemplate.fileSize || 0) / 1024)} KB)`
-                        ) : (
-                          "Custom content template"
-                        )
-                      ) : (
-                        "Using default template"
+                        <Button
+                          variant="outline"
+                          onClick={() => handleEditContent(type.key)}
+                          className="flex items-center gap-2"
+                          data-testid={`button-edit-${type.key}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Edit Content
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={() => handlePreviewPDF(type.key)}
+                          className="flex items-center gap-2"
+                          data-testid={`button-preview-${type.key}`}
+                        >
+                          <Download className="h-4 w-4" />
+                          Preview PDF
+                        </Button>
+
+                        {activeTemplate?.filePath && (
+                          <Button
+                            variant="outline"
+                            onClick={() => window.open(`/objects/${activeTemplate.filePath}`, '_blank')}
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                        )}
+
+                        {activeTemplate?.isCustom && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteMutation.mutate(activeTemplate.id)}
+                            disabled={deleteMutation.isPending}
+                            className="flex items-center gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Remove Custom
+                          </Button>
+                        )}
+                      </div>
+
+                      {activeTemplate && (
+                        <div className="text-sm text-muted-foreground">
+                          {activeTemplate.isCustom ? (
+                            activeTemplate.filePath ? (
+                              `Custom file: ${activeTemplate.fileName} (${Math.round((activeTemplate.fileSize || 0) / 1024)} KB)`
+                            ) : (
+                              "Custom content template"
+                            )
+                          ) : (
+                            "Using default template"
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
