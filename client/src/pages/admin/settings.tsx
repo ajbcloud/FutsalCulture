@@ -925,29 +925,31 @@ export default function AdminSettings() {
             >
               Age Policy
             </TabsTrigger>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger 
-                    value="consent-forms" 
-                    className={`w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3 ${!isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={!isConsentFormsEnabled}
-                  >
-                    <div className="flex items-center">
-                      Consent Forms
-                      <Info className="w-4 h-4 ml-2 text-muted-foreground" />
-                    </div>
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-sm">
-                  {!isConsentFormsEnabled ? (
-                    <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
-                  ) : (
-                    <p>Manage digital consent forms that parents must sign during registration and session booking. Upload custom templates or use built-in forms.</p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <TabsTrigger 
+              value="consent-forms" 
+              className={`w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3 ${!isConsentFormsEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!isConsentFormsEnabled}
+            >
+              <div className="flex items-center w-full">
+                <span>Consent Forms</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="ml-2 inline-flex">
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-sm">
+                      {!isConsentFormsEnabled ? (
+                        <p>To access consent forms, enable "Require Consent Forms" under Age Policy settings.</p>
+                      ) : (
+                        <p>Manage digital consent forms that parents must sign during registration and session booking. Upload custom templates or use built-in forms.</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </TabsTrigger>
           </TabsList>
         </div>
 
