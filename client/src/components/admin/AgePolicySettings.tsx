@@ -233,8 +233,8 @@ export default function AgePolicySettings() {
                 type="number"
                 min="3"
                 max="100"
-                value={policy.minAge}
-                onChange={(e) => setPolicy({ ...policy, minAge: parseInt(e.target.value) })}
+                value={policy.minAge || 5}
+                onChange={(e) => setPolicy({ ...policy, minAge: parseInt(e.target.value) || 5 })}
                 data-testid="input-min-age"
               />
             </div>
@@ -265,8 +265,8 @@ export default function AgePolicySettings() {
                 type="number"
                 min={policy.minAge}
                 max="18"
-                value={policy.requireParent}
-                onChange={(e) => setPolicy({ ...policy, requireParent: parseInt(e.target.value) })}
+                value={policy.requireParent || 13}
+                onChange={(e) => setPolicy({ ...policy, requireParent: parseInt(e.target.value) || 13 })}
                 data-testid="input-require-parent"
               />
               <p className="text-sm text-muted-foreground">
@@ -287,7 +287,7 @@ export default function AgePolicySettings() {
                 min={policy.requireParent || 13}
                 max="18"
                 value={policy.teenSelfMin || 13}
-                onChange={(e) => setPolicy({ ...policy, teenSelfMin: parseInt(e.target.value) })}
+                onChange={(e) => setPolicy({ ...policy, teenSelfMin: parseInt(e.target.value) || 13 })}
                 data-testid="input-teen-self-min"
               />
               <p className="text-sm text-muted-foreground">
@@ -308,7 +308,7 @@ export default function AgePolicySettings() {
                 min={policy.teenSelfMin || 13}
                 max="18"
                 value={policy.teenPayMin || 16}
-                onChange={(e) => setPolicy({ ...policy, teenPayMin: parseInt(e.target.value) })}
+                onChange={(e) => setPolicy({ ...policy, teenPayMin: parseInt(e.target.value) || 16 })}
                 data-testid="input-teen-pay-min"
               />
               <p className="text-sm text-muted-foreground">
@@ -328,7 +328,7 @@ export default function AgePolicySettings() {
               </div>
               <Switch
                 id="enforceAgeGating"
-                checked={policy.enforceAgeGating}
+                checked={policy.enforceAgeGating || false}
                 onCheckedChange={(checked) => 
                   setPolicy({ ...policy, enforceAgeGating: checked })
                 }
@@ -344,7 +344,7 @@ export default function AgePolicySettings() {
               </div>
               <Switch
                 id="requireConsent"
-                checked={policy.requireConsent}
+                checked={policy.requireConsent || false}
                 onCheckedChange={(checked) => 
                   setPolicy({ ...policy, requireConsent: checked })
                 }
