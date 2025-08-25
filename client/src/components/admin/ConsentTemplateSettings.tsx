@@ -202,10 +202,16 @@ export default function ConsentTemplateSettings() {
   const [newTemplateContent, setNewTemplateContent] = useState('');
 
   // Fetch current templates
-  const { data: templates = [], isLoading } = useQuery<ConsentTemplate[]>({
+  const { data: templates = [], isLoading, error } = useQuery<ConsentTemplate[]>({
     queryKey: ["/api/admin/consent-templates"],
     retry: false,
   });
+
+  React.useEffect(() => {
+    if (error) {
+      console.error('Failed to fetch consent templates:', error);
+    }
+  }, [error]);
 
   // Upload file mutation
   const uploadMutation = useMutation({
