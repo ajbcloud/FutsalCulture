@@ -8,11 +8,7 @@ import { sendEmail, initEmail } from "../emailService";
 
 export const authVerificationRouter = Router();
 
-// Debug middleware to track requests
-authVerificationRouter.use((req, res, next) => {
-  console.log(`🔍 Auth verification route hit: ${req.method} ${req.path}`);
-  next();
-});
+// Auth verification routes are now working correctly
 
 // Utility functions
 function newToken() {
