@@ -230,18 +230,11 @@ export default function InvitationsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Invitations & Codes</h1>
-          <p className="text-muted-foreground">
-            Invite parents and players to join your organization
-          </p>
-        </div>
-        
-        <Button onClick={() => setActiveTab("invitations")} data-testid="button-invite-user">
-          <Users className="w-4 h-4 mr-2" />
-          Invite User
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Invitations & Codes</h1>
+        <p className="text-muted-foreground">
+          Invite parents and players to join your organization
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
