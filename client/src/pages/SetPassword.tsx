@@ -85,10 +85,11 @@ export default function SetPassword() {
         // Refresh user data in AuthContext before redirect
         await refreshUser();
         
-        // Redirect to appropriate dashboard
+        // Wait a bit longer to ensure user context is fully updated
         setTimeout(() => {
-          navigate(data.redirect || "/admin");
-        }, 1000);
+          // Force a page reload to ensure clean state
+          window.location.href = data.redirect || "/admin";
+        }, 1500);
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to set password");
