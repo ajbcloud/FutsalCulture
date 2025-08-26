@@ -194,12 +194,14 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
       userId = (req as any).user.id || (req as any).user.claims?.sub;
     }
-    // In development, allow the hardcoded super admin user to bypass auth
-    else if (process.env.NODE_ENV === 'development') {
+    // In development, always allow the hardcoded super admin user to bypass auth
+    if (process.env.NODE_ENV === 'development' && !userId) {
       userId = 'ajosephfinch';
       // IMPORTANT: Set the session so subsequent requests work
-      (req as any).session.userId = userId;
-      await new Promise((resolve) => (req as any).session.save(resolve));
+      if ((req as any).session) {
+        (req as any).session.userId = userId;
+        await new Promise((resolve) => (req as any).session.save(resolve));
+      }
       console.log("🔧 Development mode: Using failsafe admin ID and creating session");
     }
     
@@ -218,7 +220,8 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     }
     
     if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
+      console.log('❌ No userId found - failing authentication');
+      return res.status(401).json({ message: "Unauthorized" });
     }
     
     // Check user's admin status directly from database
