@@ -67,9 +67,7 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
     });
 
     // Send verification email
-    const app_url = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
-      : 'https://playhq.app';
+    const app_url = 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev';
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
@@ -184,9 +182,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
     });
 
     // Send verification email
-    const app_url = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
-      : 'https://playhq.app';
+    const app_url = 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev';
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
