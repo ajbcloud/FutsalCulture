@@ -709,15 +709,20 @@ export function setupAdminRoutes(app: any) {
         .limit(10);
 
       recentParents.forEach(user => {
+        const isAdmin = user.isAdmin || user.isSuperAdmin;
+        const userType = isAdmin ? 'admin' : 'parent';
+        const userIcon = isAdmin ? '👨‍💼' : '👨‍👩‍👧‍👦';
+        const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
+        
         activities.push({
-          id: `parent-reg-${user.id}`,
+          id: `${userType}-reg-${user.id}`,
           type: 'registration',
-          icon: '👨‍👩‍👧‍👦',
-          message: `New parent registered: ${user.firstName} ${user.lastName}`,
+          icon: userIcon,
+          message: `New ${userType} registered: ${user.firstName} ${user.lastName}`,
           timestamp: user.createdAt!,
           timeAgo: getTimeAgo(user.createdAt!),
           // Navigation metadata  
-          navigationUrl: '/admin/parents',
+          navigationUrl: navigationUrl,
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
         });
@@ -737,15 +742,19 @@ export function setupAdminRoutes(app: any) {
       console.log('Found parent approvals:', recentParentApprovals.length);
       
       recentParentApprovals.forEach(user => {
+        const isAdmin = user.isAdmin || user.isSuperAdmin;
+        const userType = isAdmin ? 'admin' : 'parent';
+        const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
+        
         activities.push({
-          id: `parent-approval-${user.id}`,
+          id: `${userType}-approval-${user.id}`,
           type: 'approval',
           icon: '✅',
-          message: `Parent registration approved: ${user.firstName} ${user.lastName}`,
+          message: `${userType.charAt(0).toUpperCase() + userType.slice(1)} registration approved: ${user.firstName} ${user.lastName}`,
           timestamp: user.approvedAt!,
           timeAgo: getTimeAgo(user.approvedAt!),
           // Navigation metadata  
-          navigationUrl: '/admin/parents',
+          navigationUrl: navigationUrl,
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
         });
