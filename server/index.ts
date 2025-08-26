@@ -93,9 +93,11 @@ app.use((req, res, next) => {
   app.use('/api', companySignupRouter);
   app.use('/api', joinRouter);
   app.use('/api', personalSignupRouter);
-  app.use('/api/auth', authVerificationRouter);
   
   const server = await registerRoutes(app);
+  
+  // Mount auth verification routes AFTER main routes to avoid being overridden
+  app.use('/api/auth', authVerificationRouter);
   app.use(express.json());
 
   // Mount superAdmin routes
