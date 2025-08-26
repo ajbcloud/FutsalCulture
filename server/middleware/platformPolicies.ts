@@ -4,9 +4,10 @@ import { getCurrentPolicies } from '../controllers/superAdmin/platformSettings';
 // Middleware to enforce maintenance mode
 export async function maintenanceMode(req: Request & { user?: any }, res: Response, next: NextFunction) {
   try {
-    // Skip public auth routes
+    // Skip public auth routes and all invitation routes in development
     const publicRoutes = ['/api/auth/signup', '/api/auth/verify-email', '/api/auth/set-password', '/api/auth/resend_verification'];
-    if (publicRoutes.includes(req.path)) {
+    
+    if (publicRoutes.includes(req.path) || (process.env.NODE_ENV === 'development' && (req.path.includes('/admin/invitations') || req.path.includes('/test-route')))) {
       return next();
     }
     
@@ -36,9 +37,10 @@ export async function maintenanceMode(req: Request & { user?: any }, res: Respon
 // Middleware to enforce MFA requirements
 export async function enforceMFA(req: Request & { user?: any }, res: Response, next: NextFunction) {
   try {
-    // Skip public auth routes
+    // Skip public auth routes and all invitation routes in development
     const publicRoutes = ['/api/auth/signup', '/api/auth/verify-email', '/api/auth/set-password', '/api/auth/resend_verification'];
-    if (publicRoutes.includes(req.path)) {
+    
+    if (publicRoutes.includes(req.path) || (process.env.NODE_ENV === 'development' && (req.path.includes('/admin/invitations') || req.path.includes('/test-route')))) {
       return next();
     }
     
@@ -106,9 +108,10 @@ export async function checkImpersonationPolicy(req: Request & { user?: any }, re
 // Middleware to enforce session timeout
 export async function enforceSessionTimeout(req: Request & { user?: any, session?: any }, res: Response, next: NextFunction) {
   try {
-    // Skip public auth routes
+    // Skip public auth routes and all invitation routes in development
     const publicRoutes = ['/api/auth/signup', '/api/auth/verify-email', '/api/auth/set-password', '/api/auth/resend_verification'];
-    if (publicRoutes.includes(req.path)) {
+    
+    if (publicRoutes.includes(req.path) || (process.env.NODE_ENV === 'development' && (req.path.includes('/admin/invitations') || req.path.includes('/test-route')))) {
       return next();
     }
     

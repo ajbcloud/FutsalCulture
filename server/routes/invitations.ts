@@ -23,6 +23,12 @@ import { sendInvitationEmail, sendWelcomeEmail } from '../utils/email-service';
 
 const router = Router();
 
+// Test route to debug routing issues
+router.get('/test-route', (req, res) => {
+  console.log('🧪 Test route hit successfully!');
+  res.json({ message: 'Test route working' });
+});
+
 // Validation schemas
 const inviteUserSchema = z.object({
   tenantId: z.string().uuid(),
@@ -168,6 +174,9 @@ async function handleInvitationCreation(data: any, adminUserId: string, adminTen
  * Create invitation for parent, player, admin, or assistant
  */
 router.post('/admin/invitations', requireAdmin, async (req, res) => {
+  console.log('🎯 POST /admin/invitations route handler started');
+  console.log('🔍 Request user object:', (req as any).user);
+  console.log('🔍 Request currentUser object:', (req as any).currentUser);
   try {
     const adminUserId = (req as any).currentUser?.id || (req as any).user?.id || (req as any).session?.userId || 'ajosephfinch';
     const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development

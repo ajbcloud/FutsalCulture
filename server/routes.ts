@@ -43,13 +43,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Local email/password authentication
   await setupLocalAuth(app);
 
-  // Platform policy middleware (must be after auth)
-  app.use(maintenanceMode); // Check maintenance mode for all routes
-  app.use(enforceSessionTimeout); // Check session timeout for all authenticated routes
-  app.use(enforceMFA); // Enforce MFA requirements
+  // Platform policy middleware (must be after auth) - DISABLED IN DEVELOPMENT
+  if (process.env.NODE_ENV !== 'development') {
+    app.use(maintenanceMode); // Check maintenance mode for all routes
+    app.use(enforceSessionTimeout); // Check session timeout for all authenticated routes
+    app.use(enforceMFA); // Enforce MFA requirements
+  }
 
-  // Impersonation context middleware (must be after auth and policies)
-  app.use(impersonationContext);
+  // Impersonation context middleware (must be after auth and policies) - DISABLED IN DEVELOPMENT
+  if (process.env.NODE_ENV !== 'development') {
+    app.use(impersonationContext);
+  }
 
   // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
   const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";

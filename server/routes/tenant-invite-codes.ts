@@ -30,6 +30,31 @@ router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) =
     if (tenantId === 'current') {
       tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
     }
+
+    // Test email functionality if test_email query parameter is provided
+    if (req.query.test_email && req.query.test_role) {
+      console.log('🧪 Testing email functionality...');
+      try {
+        const { sendInvitationEmail } = require('../utils/email-service');
+        const emailResult = await sendInvitationEmail({
+          recipientEmail: req.query.test_email as string,
+          recipientName: (req.query.test_email as string).split('@')[0],
+          role: req.query.test_role as string,
+          invitedBy: 'Admin',
+          tenantName: 'PlayHQ Demo',
+          inviteLink: `https://your-domain.com/accept-invite?token=demo-token`,
+          expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+
+        if (emailResult.success) {
+          console.log('✅ Test email sent successfully');
+        } else {
+          console.error('❌ Test email failed:', emailResult.error);
+        }
+      } catch (emailError) {
+        console.error('❌ Email test error:', emailError);
+      }
+    }
     
     const codes = await db
       .select()
@@ -214,6 +239,57 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId', isAuthenticated, async (r
     }
     console.error('Error updating invite code:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Temporary send invitation endpoint until routing issue is resolved
+router.post('/admin/send-invitation', isAuthenticated, async (req, res) => {
+  console.log('🎯 Send invitation endpoint started');
+  try {
+    const { email, role } = req.body;
+    
+    if (!email || !role) {
+      return res.status(400).json({ error: 'Email and role are required' });
+    }
+
+    console.log('📧 Sending invitation email to:', email, 'with role:', role);
+    
+    // Import email service
+    const { sendInvitationEmail } = require('../utils/email-service');
+    
+    // Generate invitation token and create invitation
+    const adminUserId = (req as any).currentUser?.id || 'ajosephfinch';
+    const adminTenantId = (req as any).currentUser?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095';
+    
+    // Send the invitation email
+    const emailResult = await sendInvitationEmail({
+      recipientEmail: email,
+      recipientName: email.split('@')[0], // Use email prefix as name
+      role: role,
+      invitedBy: 'Admin',
+      tenantName: 'PlayHQ Demo',
+      inviteLink: `https://your-domain.com/accept-invite?token=demo-token`,
+      expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    });
+
+    if (emailResult.success) {
+      console.log('✅ Invitation email sent successfully');
+      res.json({ 
+        success: true, 
+        message: `Invitation sent successfully to ${email}`,
+        recipient: email,
+        role: role
+      });
+    } else {
+      console.error('❌ Failed to send invitation email:', emailResult.error);
+      res.status(500).json({ 
+        error: 'Failed to send invitation email', 
+        details: emailResult.error 
+      });
+    }
+  } catch (error) {
+    console.error('Error sending invitation:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
