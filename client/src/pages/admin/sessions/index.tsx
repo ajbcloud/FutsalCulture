@@ -26,6 +26,7 @@ import { AGE_GROUPS } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import LocationLink from '@/components/LocationLink';
 import { useQuery } from '@tanstack/react-query';
+import { useHasFeature } from '@/hooks/use-feature-flags';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -34,6 +35,9 @@ export default function AdminSessions() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
+  
+  // Feature flags for premium features
+  const { hasFeature: hasBulkOperations } = useHasFeature('bulk_operations');
 
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [massUpdating, setMassUpdating] = useState(false);
@@ -295,26 +299,30 @@ export default function AdminSessions() {
               <span className="sm:hidden">Update ({selectedSessions.size})</span>
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            onClick={() => window.open('/api/admin/template/sessions', '_blank')}
-            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
-            size="sm"
-          >
-            <Download className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">Download Template</span>
-            <span className="sm:hidden">Template</span>
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => setShowImportModal(true)}
-            className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
-            size="sm"
-          >
-            <Upload className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">Import CSV</span>
-            <span className="sm:hidden">Import</span>
-          </Button>
+          {hasBulkOperations && (
+            <Button 
+              variant="outline" 
+              onClick={() => window.open('/api/admin/template/sessions', '_blank')}
+              className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
+              size="sm"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Download Template</span>
+              <span className="sm:hidden">Template</span>
+            </Button>
+          )}
+          {hasBulkOperations && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowImportModal(true)}
+              className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
+              size="sm"
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Import CSV</span>
+              <span className="sm:hidden">Import</span>
+            </Button>
+          )}
           <Link href="/admin/sessions/new">
             <Button className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-2 h-9" size="sm">
               <Plus className="w-4 h-4 mr-1" />
