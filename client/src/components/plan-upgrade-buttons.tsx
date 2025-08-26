@@ -101,7 +101,21 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
   return (
     <div className={className}>
       <Button 
-        onClick={() => window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank')}
+        onClick={async () => {
+          try {
+            const response = await fetch('/api/billing/portal', { method: 'POST' });
+            const data = await response.json();
+            if (data.url) {
+              window.location.href = data.url;
+            } else {
+              // Fallback to direct Stripe portal
+              window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank');
+            }
+          } catch (error) {
+            // Fallback to direct Stripe portal
+            window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank');
+          }
+        }}
         variant="outline"
         className="w-full flex items-center gap-2"
         size="sm"

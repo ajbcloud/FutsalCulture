@@ -23,8 +23,18 @@ export function ManageSubscriptionButton({
       setIsLoading(true);
 
       if (planId === 'free' || billingStatus === 'none') {
-        // Open upgrade flow - redirect to plans page with upgrade mode
-        window.location.href = '/admin/settings?tab=plans-features&upgrade=true';
+        // Open Stripe checkout for Core plan upgrade
+        const tenantId = (window as any).currentUser?.tenantId || 'test-tenant';
+        const currentDomain = window.location.origin;
+        
+        const paymentLink = 'https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00'; // Core plan link
+        const params = new URLSearchParams({
+          client_reference_id: tenantId,
+          success_url: `${currentDomain}/admin/settings?upgrade=success&plan=core`,
+          cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
+        });
+        
+        window.location.href = `${paymentLink}?${params.toString()}`;
       } else {
         // Open Stripe billing portal
         const response = await apiRequest('POST', '/api/billing/portal');
