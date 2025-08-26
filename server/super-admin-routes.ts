@@ -243,19 +243,21 @@ export function setupSuperAdminRoutes(app: Express) {
   // Geographic Distribution - Tenant Distribution by State for Map Component
   app.get('/api/super-admin/geographic-distribution', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
-      // Transform the data for the map component - using state codes that match US topology data
-      const tenantDistribution = [
-        { state: 'California', stateCode: 'California', tenantCount: 5 },
-        { state: 'Texas', stateCode: 'Texas', tenantCount: 3 },
-        { state: 'Florida', stateCode: 'Florida', tenantCount: 2 },
-        { state: 'New York', stateCode: 'New York', tenantCount: 2 },
-        { state: 'Illinois', stateCode: 'Illinois', tenantCount: 1 },
-        { state: 'Washington', stateCode: 'Washington', tenantCount: 2 },
-        { state: 'Arizona', stateCode: 'Arizona', tenantCount: 1 },
-        { state: 'Colorado', stateCode: 'Colorado', tenantCount: 1 },
-        { state: 'Georgia', stateCode: 'Georgia', tenantCount: 1 },
-        { state: 'North Carolina', stateCode: 'North Carolina', tenantCount: 1 }
-      ];
+      // Get real tenant data grouped by state
+      const tenants = await storage.getTenants();
+      
+      // Group tenants by state and count them
+      const stateDistribution = tenants.reduce((acc: any, tenant) => {
+        const state = tenant.state || 'Unknown';
+        if (!acc[state]) {
+          acc[state] = { state: state, stateCode: state, tenantCount: 0 };
+        }
+        acc[state].tenantCount++;
+        return acc;
+      }, {});
+      
+      // Convert to array format expected by the component
+      const tenantDistribution = Object.values(stateDistribution);
       
       res.json(tenantDistribution);
     } catch (error) {

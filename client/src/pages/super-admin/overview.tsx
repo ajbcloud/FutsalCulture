@@ -60,23 +60,16 @@ export default function SuperAdminOverview() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Process real tenant data with fallback to mock data
-  const tenants = tenantsData || [
-    { id: '1', name: 'Default Futsal Club', subdomain: 'default', createdAt: new Date().toISOString(), status: 'active' },
-    { id: '2', name: 'Elite Soccer Academy', subdomain: 'elite-soccer', createdAt: new Date().toISOString(), status: 'active' },
-    { id: '3', name: 'Youth Sports Center', subdomain: 'youth-sports', createdAt: new Date().toISOString(), status: 'inactive' },
-  ];
+  // Use real tenant data - all tenants are considered "active" since they exist in the database
+  const tenants = tenantsData || [];
 
-  // Filter tenants based on status
-  const filteredTenants = tenants.filter((tenant: any) => {
-    if (tenantStatusFilter === 'all') return true;
-    return tenant.status === tenantStatusFilter;
-  });
+  // Filter tenants based on status (simplified since we don't have a status field)
+  const filteredTenants = tenants;
 
   const metrics: SuperAdminMetrics = {
     totalRevenue: analyticsData?.totalRevenue || 12450,
     totalPlayers: analyticsData?.totalPlayers || 156,
-    activeTenants: tenants.filter((t: any) => t.status === 'active').length || 3,
+    activeTenants: tenants.length,
     totalSessions: analyticsData?.totalSessions || 48,
     monthlyGrowth: analyticsData?.monthlyGrowth || 15.2,
   };
