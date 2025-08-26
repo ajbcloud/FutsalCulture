@@ -51,9 +51,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      let userId;
+      
+      // Check for local session first (password-based users)
+      if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Fall back to Replit Auth user
+      else if (req.user?.id) {
+        userId = req.user.id;
+      }
+      // No authentication found
+      else {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       let user = await storage.getUser(userId);
 
       // Apply failsafe super admin permissions if this is the hardcoded admin
