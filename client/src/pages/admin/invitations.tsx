@@ -421,7 +421,7 @@ export default function InvitationsPage() {
                   {inviteCodes.map((code) => (
                     <div
                       key={code.id}
-                      className={`border rounded-lg p-4 ${!code.isActive ? 'opacity-50 bg-gray-50' : 'bg-white'}`}
+                      className={`border rounded-lg p-4 ${!code.isActive ? 'opacity-50 bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -433,10 +433,10 @@ export default function InvitationsPage() {
                           </div>
                           
                           {code.description && (
-                            <p className="text-sm text-black dark:text-white mb-2">{code.description}</p>
+                            <p className="text-sm text-gray-800 dark:text-gray-200 mb-2">{code.description}</p>
                           )}
                           
-                          <div className="flex items-center gap-4 text-sm text-black dark:text-white">
+                          <div className="flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
                             <span>Used: {code.usageCount} times</span>
                             {code.maxUsage && (
                               <span>Limit: {code.maxUsage}</span>
