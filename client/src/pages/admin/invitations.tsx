@@ -36,6 +36,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
+import AdminLayout from "@/components/admin-layout";
 
 interface TenantInviteCode {
   id: string;
@@ -229,15 +230,16 @@ export default function InvitationsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Invitations & Codes</h1>
-        <p className="text-muted-foreground">
-          Invite parents and players to join your organization
-        </p>
-      </div>
+    <AdminLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Invitations & Codes</h1>
+          <p className="text-muted-foreground">
+            Invite parents and players to join your organization
+          </p>
+        </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="invitations" data-testid="tab-sent-invitations">
             Sent Invitations
@@ -499,9 +501,9 @@ export default function InvitationsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
 
-      {/* Edit Code Dialog */}
+        {/* Edit Code Dialog */}
       <Dialog open={editCodeDialogOpen} onOpenChange={setEditCodeDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -557,7 +559,8 @@ export default function InvitationsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-    </div>
+        </Dialog>
+      </div>
+    </AdminLayout>
   );
 }
