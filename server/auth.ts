@@ -226,6 +226,85 @@ export async function setupAuth(app: Express) {
       });
     });
   });
+
+  // Organization/Club signup endpoint
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { 
+        org_name, 
+        contact_name, 
+        contact_email, 
+        country, 
+        state, 
+        city, 
+        zip_code,
+        sports, 
+        plan_key, 
+        accept 
+      } = req.body;
+
+      // Validate required fields
+      if (!org_name || !contact_name || !contact_email || !accept) {
+        return res.status(400).json({ 
+          error: "Missing required fields: org_name, contact_name, contact_email, and accept terms" 
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(contact_email);
+      if (existingUser) {
+        return res.status(400).json({ error: "User with this email already exists" });
+      }
+
+      // Import necessary modules
+      const { db } = await import("./db");
+      const { tenants } = await import("../shared/schema");
+      const { nanoid } = await import("nanoid");
+
+      // Generate tenant slug and code
+      const tenantSlug = org_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50);
+      
+      const tenantCode = nanoid(8).toUpperCase();
+
+      // Create tenant
+      const [tenant] = await db.insert(tenants).values({
+        name: org_name,
+        subdomain: tenantSlug,
+        city,
+        state,
+        country
+      }).returning();
+
+      // Create owner user
+      const user = await storage.upsertUser({
+        email: contact_email,
+        firstName: contact_name.split(' ')[0] || contact_name,
+        lastName: contact_name.split(' ').slice(1).join(' ') || '',
+        tenantId: tenant.id,
+        isAdmin: true,
+        isApproved: true,
+        registrationStatus: 'active'
+      });
+
+      // Send welcome email (TODO: implement email service)
+      console.log(`Created tenant ${tenant.name} for ${contact_email}`);
+      
+      res.json({ 
+        success: true,
+        message: "Club created successfully! You can now log in.",
+        tenantId: tenant.id,
+        tenantSlug: tenantSlug
+      });
+    } catch (error) {
+      console.error("Organization signup error:", error);
+      res.status(500).json({ error: "Failed to create club. Please try again." });
+    }
+  });
 }
 
 export const isAuthenticated = (req: any, res: any, next: any) => {

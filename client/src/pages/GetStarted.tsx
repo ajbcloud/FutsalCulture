@@ -140,8 +140,13 @@ export default function GetStarted() {
       });
 
       if (response.ok) {
-        // Redirect to email verification page
-        navigate(`/verify-email-sent?email=${encodeURIComponent(formData.contact_email)}`);
+        const data = await response.json();
+        toast({
+          title: "Success!",
+          description: data.message || "Your club has been created successfully!",
+        });
+        // Redirect to login page
+        navigate("/login");
       } else {
         const data = await response.json();
         throw new Error(data.error || "Failed to create club");
