@@ -817,20 +817,31 @@ export function setupAdminRoutes(app: any) {
       const pendingSignups = await storage.getPendingPaymentSignups(tenantId);
       const pendingPayments = pendingSignups.length;
 
-      // Get pending registrations for current tenant only
-      const pendingUsers = await db.select().from(users).where(
-        and(
-          eq(users.registrationStatus, 'pending'),
-          tenantId ? eq(users.tenantId, tenantId) : sql`true`
-        )
-      );
-      const pendingPlayers = await db.select().from(players).where(
-        and(
-          eq(players.registrationStatus, 'pending'),
-          tenantId ? eq(players.tenantId, tenantId) : sql`true`
-        )
-      );
-      const totalPendingRegistrations = pendingUsers.length + pendingPlayers.length;
+      // Check if auto-approve is enabled before getting pending registrations
+      const autoApproveSetting = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+        .limit(1);
+      
+      const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
+      
+      // Get pending registrations for current tenant only (if auto-approve is disabled)
+      let totalPendingRegistrations = 0;
+      if (!autoApprove) {
+        const pendingUsers = await db.select().from(users).where(
+          and(
+            eq(users.registrationStatus, 'pending'),
+            tenantId ? eq(users.tenantId, tenantId) : sql`true`
+          )
+        );
+        const pendingPlayers = await db.select().from(players).where(
+          and(
+            eq(players.registrationStatus, 'pending'),
+            tenantId ? eq(players.tenantId, tenantId) : sql`true`
+          )
+        );
+        totalPendingRegistrations = pendingUsers.length + pendingPlayers.length;
+      }
 
       // Generate pending tasks
       const pendingTasks = [];

@@ -1,0 +1,186 @@
+Goal
+Enable admins to invite parents or players and auto associate them to the correct tenant. Add a tenant level invite code that users can enter during signup or later to join a tenant. Support users who belong to more than one tenant and show sessions across all of their tenants.
+
+Scope of work
+
+Data model updates, Drizzle ORM with Postgres
+• tenants table, add columns
+invite_code text unique not null,
+invite_code_updated_at timestamptz not null default now(),
+invite_code_updated_by uuid references users(id)
+• tenant_memberships table, new
+id uuid pk,
+tenant_id uuid not null references tenants(id),
+user_id uuid not null references users(id),
+role text not null check role in parent, player, coach, admin,
+status text not null check status in active, pending,
+created_at timestamptz default now(),
+unique on tenant_id, user_id, role
+• players table, add optional user_id uuid references users(id) to support players age 13 and older who have their own login
+• invite_tokens table, new
+id uuid pk,
+token text unique not null, store a random string,
+tenant_id uuid not null references tenants(id),
+invited_email text not null,
+role text not null check role in parent, player,
+player_id uuid null references players(id) for player specific invites,
+purpose text not null check purpose in signup_welcome, add_membership, player_link,
+expires_at timestamptz not null default now() plus interval 7 days,
+used_at timestamptz null,
+created_by uuid not null references users(id),
+created_at timestamptz default now()
+
+Migration tasks
+• Create tenant_memberships and invite_tokens, add columns to tenants and players, add unique and foreign keys
+• Backfill tenants.invite_code with a secure random uppercase code length 8 for existing tenants
+
+Admin workflows
+
+A. Manual create parent or player
+• Add actions in Admin portal
+Invite Parent, fields email, first_name, last_name, tenant_id
+Invite Player, fields email optional, first_name, last_name, birthdate, tenant_id, link to an existing parent optional
+• On submit
+Create or upsert the person record
+For parent, create a user record with status pending and no password yet if email is new
+For player, always create a player record, and if email is provided and the player is 13 or older, create a user record pending with player_id linked
+Create an invite_tokens row with purpose signup_welcome, role based on the action, and tenant_id
+Send the welcome email with a deep link that contains the token
+Create a tenant_memberships row with status pending for the new user if user_id already exists, otherwise create after acceptance
+• Emails use existing SendGrid integration with variables
+{{recipient_name}}, {{tenant_name}}, {{accept_url}}
+Subject
+You have been invited to join {{tenant_name}} on PlayHQ
+Body call to action button goes to
+{{APP_URL}}/accept-invite?token={{token}}
+
+B. Tenant invite code management
+• In Admin, Tenant Settings shows current invite_code, last updated time, and a Rotate Code button
+• Rotate generates a new random uppercase alphanumeric code length between 8 and 12, saves invite_code and invite_code_updated fields, invalidates the previous code immediately
+• Add a minimal audit entry through the existing audit system, include who changed the code
+
+Public signup and profile flows
+
+A. Signup page updates
+• Add optional field Invite Code
+• If provided, lookup tenants by invite_code. On successful account creation, create tenant_memberships with status active for the user with role parent by default. If the signup was from a player specific invite token, respect that role
+• If code is invalid, show a clear error and allow the user to continue without a tenant
+
+B. Accept invite flow
+• New page at /accept-invite that reads the token
+• Validate token is present, not expired, not used
+• If the email already has a user, prompt to sign in and then consume the token to attach membership
+• If no user, continue with account creation for that email, set password, accept terms, then consume token
+• On consume
+Mark token used_at
+Create tenant_memberships with status active for the user and role from token
+If token contains player_id and the user is for a player age 13 or older, link players.user_id to this user
+
+C. Add a tenant later
+• In Parent or Player profile, add a section Join a club or group with an input for Invite Code
+• On submit
+Lookup tenant by invite_code
+If the user already has membership for that tenant and role, show Already joined
+Otherwise create tenant_memberships with status active
+• For parents who manage one or more players, allow them to choose whether the code adds only the parent, only a selected player, or both, based on tenant policy. Default to parent plus all managed players
+
+Multi tenant access and sessions calendar
+
+• A user can have memberships in multiple tenants
+• The Sessions list and calendar should query sessions where session.tenant_id is in the set of
+all tenant_ids where the current user has membership status active, plus
+all tenant_ids where any player linked to the current user has membership status active
+• Add a filter control to toggle which tenants are included in the view. Default is All My Tenants
+• Deduplicate if the same session appears more than once through any relationship
+• Ensure permissions for signup actions and roster visibility honor the tenant of each session
+
+API endpoints, server side
+
+All routes require CSRF and RBAC as in the rest of the app.
+
+• POST /api/admin/invitations
+Body { tenantId, email, role, playerId optional }
+Creates invite_tokens, sends email, returns 201 with invite id
+
+• POST /api/admin/tenants/:tenantId/rotate-invite-code
+Only tenant admins may call. Returns the new code
+
+• GET /api/tenants/by-invite-code/:code
+Returns { tenantId, tenantName } or 404
+
+• POST /api/signup/accept-invite
+Body { token, password, profile fields as needed }
+Creates or links user, consumes token, creates membership, returns success
+
+• POST /api/memberships/add-by-code
+Auth required
+Body { code, scope: parent or player, playerId optional }
+Adds membership for current user and optional player, returns updated memberships
+
+Email templates, SendGrid setup
+
+• Reuse current SendGrid integration
+Required envs
+SENDGRID_API_KEY
+EMAIL_FROM_NAME
+EMAIL_FROM_ADDRESS
+APP_URL, front end base
+VITE_API_URL on the client
+• Create a simple dynamic template with name Tenant Welcome Invite
+Variables
+recipient_name
+tenant_name
+accept_url
+• Tracking is on, sandbox off in production
+• Log send attempts and responses for audit
+
+Security and validation
+
+• Invite tokens are random length 48 or more, stored as plain text token and optional hashed_token for server side compare. Single use. Default expiry 7 days
+• Rate limit attempts to join by invite code, for example 20 attempts per IP per day
+• On rotate invite_code, immediately invalidate the old code by replacing the value
+• Validate that only tenant admins can view or rotate codes or send invites for that tenant
+• Unique constraint on tenant_memberships to prevent duplicate rows
+
+UI changes
+
+• Admin
+Tenant Settings section with current invite code, copy to clipboard, rotate code button
+Invite Parent and Invite Player actions on tenant People pages
+• Public Signup
+Add optional Invite Code field, helper text says Optional, enter a club or group code if you have one
+• Profile
+New Join a club or group card with Invite Code input and a Join button
+• Sessions
+Add tenant filter chips for All, or individual tenant names
+
+Testing checklist
+
+• Admin invite parent, email arrives, link creates account and membership, user lands in tenant home
+• Admin invite player with email age 13 or older, email arrives, link creates account, links to player, membership created
+• Signup with code at registration, membership created correctly
+• Add code later from profile, membership created
+• Rotate code, old code fails, new code works
+• User with two tenant memberships sees sessions from both, filter works
+• Duplicate membership attempts do not create duplicates
+• Tokens cannot be reused or used after expiry
+• Audit entries exist for invite creation and code rotation
+
+Acceptance criteria
+
+• Admin can invite parents and players by email and the welcome email contains a working accept link
+• Tenants have an invite code that can be rotated by admins at any time
+• Users can enter an invite code during signup to join a tenant
+• Users without a tenant can later enter a code from their profile to join
+• Parents and players can belong to multiple tenants
+• Sessions view shows sessions across all of a user’s tenants, with a filter to narrow the view
+• All new database structures and endpoints have unit tests and happy path integration tests
+• All new UI is styled and responsive to match the current design system, includes helpful validation and error states
+
+Notes and implementation hints
+
+• Use zod for request validation as elsewhere in the codebase
+• Use existing auth middleware and audit logging utilities
+• Use Drizzle migrations for schema changes and seed scripts to backfill invite codes
+• Generate invite codes with a secure random source, uppercase alphanumeric only, avoid ambiguous characters like O and zero if you prefer
+• Keep all user facing copy in i18n resources for later localization
