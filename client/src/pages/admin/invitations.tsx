@@ -87,7 +87,9 @@ export default function InvitationsPage() {
   const { data: invitations = [], isLoading: invitationsLoading } = useQuery<Invitation[]>({
     queryKey: ['/api/admin/invitations'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/invitations');
+      const response = await fetch('/api/admin/invitations', {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Failed to fetch invitations');
       return response.json();
     },
@@ -97,7 +99,9 @@ export default function InvitationsPage() {
   const { data: tenantCode, isLoading: codeLoading, error: codeError } = useQuery<TenantCode>({
     queryKey: ['/api/admin/tenant/invite-code'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/tenant/invite-code');
+      const response = await fetch('/api/admin/tenant/invite-code', {
+        credentials: 'include',
+      });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch invite code');
@@ -114,6 +118,7 @@ export default function InvitationsPage() {
       const response = await fetch('/api/admin/invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
       
@@ -147,6 +152,7 @@ export default function InvitationsPage() {
     mutationFn: async () => {
       const response = await fetch('/api/admin/tenants/current/rotate-invite-code', {
         method: 'POST',
+        credentials: 'include',
       });
       
       if (!response.ok) {
