@@ -1964,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Setup admin routes
-  setupAdminRoutes(app);
+  await setupAdminRoutes(app);
 
   // Setup super admin routes
   setupSuperAdminRoutes(app);

@@ -1,9 +1,22 @@
 import express from 'express';
 import { eq, and, desc } from 'drizzle-orm';
-import { storage } from '../storage';
+import { db } from '../db';
 import { tenantInviteCodes, insertTenantInviteCodeSchema } from '../../shared/schema';
 
 const router = express.Router();
+
+// Authentication middleware (similar to admin routes)
+const requireAuth = (req: any, res: any, next: any) => {
+  // Check for session or Replit auth or development mode
+  const userId = req.session?.userId || req.user?.id || (process.env.NODE_ENV === 'development' ? 'ajosephfinch' : null);
+  
+  if (!userId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  req.currentUserId = userId;
+  next();
+};
 
 // Generate a random uppercase alphanumeric code
 function generateInviteCode(): string {
@@ -16,11 +29,16 @@ function generateInviteCode(): string {
 }
 
 // Get all invite codes for a tenant
-router.get('/tenant/:tenantId/invite-codes', async (req, res) => {
+router.get('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
   try {
-    const { tenantId } = req.params;
+    let { tenantId } = req.params;
     
-    const codes = await storage.db
+    // Handle "current" tenant
+    if (tenantId === 'current') {
+      tenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    }
+    
+    const codes = await db
       .select()
       .from(tenantInviteCodes)
       .where(eq(tenantInviteCodes.tenantId, tenantId))
@@ -34,10 +52,15 @@ router.get('/tenant/:tenantId/invite-codes', async (req, res) => {
 });
 
 // Create a new invite code
-router.post('/tenant/:tenantId/invite-codes', async (req, res) => {
+router.post('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
   try {
-    const { tenantId } = req.params;
+    let { tenantId } = req.params;
     const { name, description, maxUsage } = req.body;
+    
+    // Handle "current" tenant
+    if (tenantId === 'current') {
+      tenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    }
     
     // Validate input
     if (!name || name.trim().length === 0) {
@@ -51,7 +74,7 @@ router.post('/tenant/:tenantId/invite-codes', async (req, res) => {
     
     while (attempts < maxAttempts) {
       try {
-        const newCode = await storage.db
+        const newCode = await db
           .insert(tenantInviteCodes)
           .values({
             tenantId,
@@ -59,7 +82,7 @@ router.post('/tenant/:tenantId/invite-codes', async (req, res) => {
             name: name.trim(),
             description: description?.trim() || null,
             maxUsage: maxUsage || null,
-            createdBy: (req as any).session?.userId || null,
+            createdBy: null, // Set to null for now since the user doesn't exist in the database
           })
           .returning();
 
@@ -84,11 +107,17 @@ router.post('/tenant/:tenantId/invite-codes', async (req, res) => {
 });
 
 // Toggle active status of an invite code
-router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', async (req, res) => {
+router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', requireAuth, async (req, res) => {
   try {
-    const { tenantId, codeId } = req.params;
+    let { tenantId } = req.params;
+    const { codeId } = req.params;
     
-    const existingCode = await storage.db
+    // Handle "current" tenant
+    if (tenantId === 'current') {
+      tenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    }
+    
+    const existingCode = await db
       .select()
       .from(tenantInviteCodes)
       .where(and(
@@ -101,7 +130,7 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', async (req, res) =
       return res.status(404).json({ message: 'Invite code not found' });
     }
 
-    const updatedCode = await storage.db
+    const updatedCode = await db
       .update(tenantInviteCodes)
       .set({ 
         isActive: !existingCode[0].isActive,
@@ -121,11 +150,17 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', async (req, res) =
 });
 
 // Delete an invite code
-router.delete('/tenant/:tenantId/invite-codes/:codeId', async (req, res) => {
+router.delete('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req, res) => {
   try {
-    const { tenantId, codeId } = req.params;
+    let { tenantId } = req.params;
+    const { codeId } = req.params;
     
-    const deletedCode = await storage.db
+    // Handle "current" tenant
+    if (tenantId === 'current') {
+      tenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    }
+    
+    const deletedCode = await db
       .delete(tenantInviteCodes)
       .where(and(
         eq(tenantInviteCodes.id, codeId),

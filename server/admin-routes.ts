@@ -324,7 +324,7 @@ async function createRecurringSessions(baseSessionData: any, storage: any) {
   return sessions;
 }
 
-export function setupAdminRoutes(app: any) {
+export async function setupAdminRoutes(app: any) {
   // New comprehensive dashboard metrics endpoint  
   app.get('/api/admin/dashboard-metrics', requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -5226,7 +5226,6 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   });
 
   // Import and use tenant invite codes routes
-  import('./routes/tenant-invite-codes').then(module => {
-    app.use('/api/admin', module.default);
-  });
+  const { default: tenantInviteCodesRoutes } = await import('./routes/tenant-invite-codes.js');
+  app.use('/api/admin', tenantInviteCodesRoutes);
 }
