@@ -23,33 +23,43 @@ export default function HomePlayHQ() {
 
       <main>
         {/* Hero Section */}
-        <section className="mx-auto max-w-6xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-              Your club's HQ — for any sport
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <a
-                href="/get-started"
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-3 font-medium bg-black text-white hover:opacity-90 transition-opacity"
-              >
-                Get started free
-              </a>
-              <a href="mailto:sales@playhq.app" className="underline text-gray-700 hover:text-gray-900 py-3">
-                Talk to sales
-              </a>
+        <section className="mx-auto max-w-7xl px-6 py-16">
+          <div className="grid lg:grid-cols-5 gap-8 lg:gap-12 items-center">
+            {/* Text Content */}
+            <div className="lg:col-span-2 text-center lg:text-left">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                Your club's HQ — for any sport
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed">
+                Rosters, invites, payments, and schedules in one place. Soccer, futsal, basketball, volleyball—your sport, your way.
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <a
+                  href="/get-started"
+                  className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-medium bg-black text-white hover:opacity-90 transition-opacity"
+                >
+                  Get started free
+                </a>
+                <a href="mailto:sales@playhq.app" className="underline text-gray-700 hover:text-gray-900 py-4 text-lg">
+                  Talk to sales
+                </a>
+              </div>
             </div>
-          </div>
-          <div className="rounded-2xl shadow p-4 bg-card border border-border">
-            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
-              <img 
-                src={adminDashboardImg} 
-                alt="PlayHQ Admin Dashboard" 
-                className="w-full h-auto object-contain rounded-xl"
-              />
+            
+            {/* Dashboard Screenshot - Now Much Larger */}
+            <div className="lg:col-span-3 mt-8 lg:mt-0">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-600 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
+                <div className="relative bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
+                  <img 
+                    src={adminDashboardImg} 
+                    alt="PlayHQ Admin Dashboard - Complete sports club management interface showing analytics, player management, and session scheduling"
+                    className="w-full h-auto object-cover"
+                    loading="eager"
+                    style={{ minHeight: '400px', maxHeight: '600px' }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>
