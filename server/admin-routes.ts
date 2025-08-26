@@ -1780,6 +1780,19 @@ export function setupAdminRoutes(app: any) {
   // Pending Registrations Management
   app.get('/api/admin/pending-registrations', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // Check if auto-approve is enabled
+      const autoApproveSetting = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+        .limit(1);
+      
+      const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
+      
+      // If auto-approve is enabled, return empty array since nothing should be pending
+      if (autoApprove) {
+        return res.json([]);
+      }
+
       const pendingUsers = await db.select({
         id: users.id,
         firstName: users.firstName,
