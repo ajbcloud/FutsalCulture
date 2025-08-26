@@ -178,24 +178,18 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
   try {
     let userId;
     
-    // Check for local session first (password-based users)
+    // Check for local session first (password-based users)  
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
     }
     // Fall back to Replit Auth user
-    else if ((req as any).user?.claims?.sub) {
-      userId = (req as any).user.claims.sub;
-    }
-    // Also check direct req.user.id format
     else if ((req as any).user?.id) {
       userId = (req as any).user.id;
     }
-    
     // In development, allow the hardcoded super admin user to bypass auth
-    const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
-    if (process.env.NODE_ENV === 'development' && !userId) {
-      userId = FAILSAFE_SUPER_ADMIN_ID;
-      // Also set the session for future requests
+    else if (process.env.NODE_ENV === 'development') {
+      userId = 'ajosephfinch';
+      // IMPORTANT: Set the session so subsequent requests work
       (req as any).session.userId = userId;
       await new Promise((resolve) => (req as any).session.save(resolve));
       console.log("🔧 Development mode: Using failsafe admin ID and creating session");
@@ -209,7 +203,7 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     let user = await storage.getUser(userId);
     
     // Apply failsafe super admin permissions if this is the hardcoded admin
-    if (userId === FAILSAFE_SUPER_ADMIN_ID) {
+    if (userId === 'ajosephfinch') {
       if (user) {
         // Ensure failsafe admin always has super admin permissions
         user = {

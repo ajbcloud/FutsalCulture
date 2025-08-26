@@ -121,7 +121,11 @@ async function handleInvitationCreation(data: any, adminUserId: string, adminTen
     .returning();
   
   // Send invitation email
-  const inviteUrl = `${process.env.APP_URL || 'http://localhost:5000'}/accept-invite?token=${token}`;
+  // For production, use playhq.app. For development, use replit dev URL  
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://playhq.app' 
+    : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
+  const inviteUrl = `${baseUrl}/accept-invite?token=${token}`;
   
   try {
     // Get tenant and admin info for email
