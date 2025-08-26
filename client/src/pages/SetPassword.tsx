@@ -78,17 +78,13 @@ export default function SetPassword() {
       if (response.ok) {
         const data = await response.json();
         toast({
-          title: "Success!",
-          description: "Your password has been set and your account is verified.",
+          title: "Account Created Successfully!",
+          description: "Your password has been set. Please log in to access your admin dashboard.",
         });
         
-        // Refresh user data in AuthContext before redirect
-        await refreshUser();
-        
-        // Wait a bit longer to ensure user context is fully updated
+        // Redirect to login page after successful password setting
         setTimeout(() => {
-          // Force a page reload to ensure clean state
-          window.location.href = data.redirect || "/admin";
+          navigate("/login");
         }, 1500);
       } else {
         const errorData = await response.json();

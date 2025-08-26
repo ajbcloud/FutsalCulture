@@ -343,24 +343,11 @@ authVerificationRouter.post("/set_password", async (req, res) => {
       return res.status(500).json({ ok: false, error: "User not found" });
     }
 
-    // Set session using the same approach as the regular login
-    if ((req as any).session) {
-      (req as any).session.userId = user.id;
-      (req as any).session.user = {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isAdmin: user.isAdmin,
-        tenantId: user.tenantId,
-      };
-    }
-
     console.log(`User ${user.email} verified and password set`);
 
     return res.json({ 
       ok: true, 
-      redirect: user.isAdmin ? "/admin" : "/dashboard"
+      message: "Password set successfully. Please log in to continue."
     });
 
   } catch (error) {
