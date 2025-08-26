@@ -127,14 +127,14 @@ export default function InvitationsPage() {
   // Fetch invite codes
   const { data: inviteCodes = [], isLoading: codesLoading, error: codesError, refetch: refetchCodes } = useQuery<TenantInviteCode[]>({
     queryKey: ['/api/admin/tenant/current/invite-codes'],
-    enabled: activeTab === "codes",
+    enabled: true, // Always enabled to debug the authentication issue
   });
 
   // Debug logging for invite codes
   console.log('Invite Codes Debug:', { 
     inviteCodes, 
     codesLoading, 
-    codesError, 
+    codesError: codesError?.message, 
     activeTab,
     inviteCodesLength: inviteCodes.length 
   });
