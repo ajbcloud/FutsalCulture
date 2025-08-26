@@ -359,6 +359,25 @@ export async function setupAdminRoutes(app: any) {
     try {
       const now = new Date();
       
+      // Get tenant ID from authenticated user - CRITICAL FOR MULTI-TENANT ISOLATION
+      const tenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+      const isSuperAdmin = (req as any).currentUser?.isSuperAdmin;
+      
+      if (!tenantId && !isSuperAdmin) {
+        console.error('❌ CRITICAL: No tenant ID found for user', (req as any).currentUser?.id);
+        return res.status(400).json({ error: 'Tenant context required' });
+      }
+
+      // For super admins without tenant context, use the first available tenant for demo purposes
+      let contextTenantId = tenantId;
+      if (!tenantId && isSuperAdmin) {
+        const firstTenant = await db.query.tenants.findFirst();
+        contextTenantId = firstTenant?.id;
+        console.log('🔧 Super admin accessing dashboard with fallback tenant:', contextTenantId);
+      }
+
+      console.log('🏢 Dashboard metrics for tenant:', contextTenantId, 'user:', (req as any).currentUser?.id, 'isSuperAdmin:', isSuperAdmin);
+      
       // Date boundaries for calculations
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -371,12 +390,13 @@ export async function setupAdminRoutes(app: any) {
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
 
-      // 1. Monthly Revenue (current month only)
+      // 1. Monthly Revenue (current month only) - TENANT SCOPED
       const monthlyRevenueResult = await db
         .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
         .from(payments)
         .where(
           and(
+            eq(payments.tenantId, contextTenantId), // TENANT FILTER
             sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, firstOfMonth),
             lte(payments.paidAt, now)
@@ -384,12 +404,13 @@ export async function setupAdminRoutes(app: any) {
         );
       const monthlyCents = Number(monthlyRevenueResult[0]?.sum || 0);
 
-      // 2. YTD Revenue (year to date)
+      // 2. YTD Revenue (year to date) - TENANT SCOPED
       const ytdRevenueResult = await db
         .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
         .from(payments)
         .where(
           and(
+            eq(payments.tenantId, contextTenantId), // TENANT FILTER
             sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, startOfYear),
             lte(payments.paidAt, now)
@@ -399,6 +420,7 @@ export async function setupAdminRoutes(app: any) {
 
       // Debug log to verify calculations and growth data
       console.log('→ revenue calculations:', { 
+        tenantId, 
         monthlyCents, 
         ytdCents, 
         monthlyType: typeof monthlyCents,
@@ -408,53 +430,80 @@ export async function setupAdminRoutes(app: any) {
         debugTimestamp: new Date().toISOString()
       });
 
-      // 3. Total Revenue (All Time)
+      // 3. Total Revenue (All Time) - TENANT SCOPED
       const totalRevenueResult = await db
         .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
         .from(payments)
-        .where(sql`${payments.paidAt} IS NOT NULL`);
+        .where(
+          and(
+            eq(payments.tenantId, contextTenantId), // TENANT FILTER
+            sql`${payments.paidAt} IS NOT NULL`
+          )
+        );
       const totalRevenue = Number(totalRevenueResult[0]?.sumCents || 0);
 
-      // 4. Total Players (All Time)
+      // 4. Total Players (All Time) - TENANT SCOPED
       const totalPlayersResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(players);
+        .from(players)
+        .where(eq(players.tenantId, contextTenantId)); // TENANT FILTER
       const totalPlayers = totalPlayersResult[0]?.count || 0;
 
-      // 5. New Players This Month (July 2025)
+      // 5. New Players This Month - TENANT SCOPED
       const monthlyPlayersResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(players)
-        .where(sql`EXTRACT(MONTH FROM ${players.createdAt}) = 7 AND EXTRACT(YEAR FROM ${players.createdAt}) = 2025`);
+        .where(
+          and(
+            eq(players.tenantId, contextTenantId), // TENANT FILTER
+            gte(players.createdAt, firstOfMonth),
+            lte(players.createdAt, now)
+          )
+        );
       const monthlyPlayers = monthlyPlayersResult[0]?.count || 0;
 
-      // 6. Total Signups/Registrations (All Time)
+      // 6. Total Signups/Registrations (All Time) - TENANT SCOPED
       const totalSignupsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(signups);
+        .from(signups)
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .where(eq(futsalSessions.tenantId, contextTenantId)); // TENANT FILTER
       const totalSignups = totalSignupsResult[0]?.count || 0;
 
-      // 7. Sessions This Week (simplified - current week in July 2025)
+      // 7. Sessions This Week - TENANT SCOPED
       const weeklySessionsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(futsalSessions)
-        .where(sql`EXTRACT(WEEK FROM ${futsalSessions.startTime}) = EXTRACT(WEEK FROM CURRENT_DATE) AND EXTRACT(YEAR FROM ${futsalSessions.startTime}) = 2025`);
+        .where(
+          and(
+            eq(futsalSessions.tenantId, tenantId), // TENANT FILTER
+            gte(futsalSessions.startTime, startOfWeek),
+            lte(futsalSessions.startTime, endOfWeek)
+          )
+        );
       const weeklySessions = weeklySessionsResult[0]?.count || 0;
 
-      // 8. Pending Payments (Needs attention)
+      // 8. Pending Payments (Needs attention) - TENANT SCOPED
       const pendingPaymentsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(signups)
-        .where(eq(signups.paid, false));
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .where(
+          and(
+            eq(futsalSessions.tenantId, tenantId), // TENANT FILTER
+            eq(signups.paid, false)
+          )
+        );
       const pendingPayments = pendingPaymentsResult[0]?.count || 0;
 
-      // 9. Active Parents (count all users for now)
+      // 9. Active Parents - TENANT SCOPED
       const activeParentsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(users);
+        .from(users)
+        .where(eq(users.tenantId, contextTenantId)); // TENANT FILTER
       const activeParents = activeParentsResult[0]?.count || 0;
 
-      // 10. Session Fill Rate (correct calculation - average fill rate per session)
+      // 10. Session Fill Rate (correct calculation - average fill rate per session) - TENANT SCOPED
       const fillRateResult = await db.execute(sql`
         SELECT 
           COALESCE(AVG(session_fill_rate), 0) as average_fill_rate
@@ -466,6 +515,7 @@ export async function setupAdminRoutes(app: any) {
             (COUNT(s.id)::numeric / fs.capacity) * 100 as session_fill_rate
           FROM futsal_sessions fs
           LEFT JOIN signups s ON fs.id = s.session_id
+          WHERE fs.tenant_id = ${contextTenantId}
           GROUP BY fs.id, fs.capacity
         ) session_stats
       `);
@@ -483,12 +533,13 @@ export async function setupAdminRoutes(app: any) {
       const prevWeekStart = new Date(startOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
       const prevWeekEnd = new Date(endOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-      // 1. Revenue Growth (current month vs last month)
+      // 1. Revenue Growth (current month vs last month) - TENANT SCOPED
       const lastMonthRevenueResult = await db
         .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
         .from(payments)
         .where(
           and(
+            eq(payments.tenantId, contextTenantId), // TENANT FILTER
             sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, firstOfLastMonth),
             lte(payments.paidAt, endOfLastMonth)
@@ -498,12 +549,13 @@ export async function setupAdminRoutes(app: any) {
       // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
       const revenueGrowth = lastMonthCents === 0 ? (monthlyCents > 0 ? 100 : 0) : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
 
-      // 2. Player Growth (current month vs last month new registrations)
+      // 2. Player Growth (current month vs last month new registrations) - TENANT SCOPED
       const lastMonthPlayersResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(players)
         .where(
           and(
+            eq(players.tenantId, tenantId), // TENANT FILTER
             gte(players.createdAt, firstOfLastMonth),
             lte(players.createdAt, endOfLastMonth)
           )
@@ -513,12 +565,14 @@ export async function setupAdminRoutes(app: any) {
       let playersGrowth = lastMonthPlayers === 0 ? (monthlyPlayers > 0 ? 100 : 0) : Math.round(((monthlyPlayers - lastMonthPlayers) / lastMonthPlayers) * 100);
       if (!isFinite(playersGrowth)) playersGrowth = monthlyPlayers > 0 ? 100 : 0;
 
-      // 3. Signups Growth (current month vs last month)
+      // 3. Signups Growth (current month vs last month) - TENANT SCOPED
       const thisMonthSignupsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(signups)
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
         .where(
           and(
+            eq(futsalSessions.tenantId, tenantId), // TENANT FILTER
             gte(signups.createdAt, firstOfMonth),
             lte(signups.createdAt, now)
           )
@@ -528,8 +582,10 @@ export async function setupAdminRoutes(app: any) {
       const lastMonthSignupsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(signups)
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
         .where(
           and(
+            eq(futsalSessions.tenantId, tenantId), // TENANT FILTER
             gte(signups.createdAt, firstOfLastMonth),
             lte(signups.createdAt, endOfLastMonth)
           )
@@ -539,12 +595,13 @@ export async function setupAdminRoutes(app: any) {
       let registrationsGrowth = lastMonthSignups === 0 ? (thisMonthSignups > 0 ? 100 : 0) : Math.round(((thisMonthSignups - lastMonthSignups) / lastMonthSignups) * 100);
       if (!isFinite(registrationsGrowth)) registrationsGrowth = thisMonthSignups > 0 ? 100 : 0;
 
-      // 4. Sessions Growth (current week vs last week)
+      // 4. Sessions Growth (current week vs last week) - TENANT SCOPED
       const lastWeekSessionsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(futsalSessions)
         .where(
           and(
+            eq(futsalSessions.tenantId, tenantId), // TENANT FILTER
             gte(futsalSessions.startTime, prevWeekStart),
             lte(futsalSessions.startTime, prevWeekEnd)
           )
@@ -553,7 +610,7 @@ export async function setupAdminRoutes(app: any) {
       // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
       const sessionsGrowth = lastWeekSessions === 0 ? (weeklySessions > 0 ? 100 : 0) : Math.round(((weeklySessions - lastWeekSessions) / lastWeekSessions) * 100);
 
-      // 5. YTD Growth (compare YTD revenue with last year's total revenue)
+      // 5. YTD Growth (compare YTD revenue with last year's total revenue) - TENANT SCOPED
       const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
       const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
       const lastYearRevenueResult = await db
@@ -561,6 +618,7 @@ export async function setupAdminRoutes(app: any) {
         .from(payments)
         .where(
           and(
+            eq(payments.tenantId, contextTenantId), // TENANT FILTER
             sql`${payments.paidAt} IS NOT NULL`,
             gte(payments.paidAt, lastYearStart),
             lte(payments.paidAt, lastYearEnd)
