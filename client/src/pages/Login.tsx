@@ -49,7 +49,7 @@ export default function Login() {
       <h1 className="text-2xl font-bold">Log in to PlayHQ</h1>
       
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-3 rounded-xl text-sm">
           {error}
         </div>
       )}
