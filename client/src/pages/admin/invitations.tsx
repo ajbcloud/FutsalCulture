@@ -70,6 +70,47 @@ export default function InvitationsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
+  // Send invitation mutation
+  const sendInvitationMutation = useMutation({
+    mutationFn: async (inviteData: { email: string; role: string }) => {
+      const response = await fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(inviteData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send invitation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Invitation sent successfully!" });
+      setInviteEmail('');
+      setSelectedRole('parent');
+      setIsInviting(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/invitations'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setIsInviting(false);
+    }
+  });
+
+  const handleSendInvitation = () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Error", description: "Please enter an email address", variant: "destructive" });
+      return;
+    }
+    
+    setIsInviting(true);
+    sendInvitationMutation.mutate({
+      email: inviteEmail.trim(),
+      role: selectedRole
+    });
+  };
+
   // Edit main invite code state
   const [editCodeDialogOpen, setEditCodeDialogOpen] = useState(false);
   const [editingCode, setEditingCode] = useState<TenantInviteCode | null>(null);
@@ -245,12 +286,13 @@ export default function InvitationsPage() {
                   >
                     <option value="parent">Parent</option>
                     <option value="player">Player</option>
-                    <option value="coach">Coach</option>
+                    <option value="admin">Admin</option>
+                    <option value="assistant">Assistant</option>
                   </select>
                 </div>
                 <div className="flex items-end">
                   <Button
-                    onClick={() => {}}
+                    onClick={handleSendInvitation}
                     disabled={isInviting || !inviteEmail}
                     className="w-full"
                     data-testid="button-send-invitation"

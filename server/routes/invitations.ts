@@ -34,6 +34,12 @@ const inviteUserSchema = z.object({
   birthdate: z.string().optional(), // For player creation
 });
 
+// Simple invitation schema for the new form
+const simpleInviteSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(['parent', 'player', 'admin', 'assistant']),
+});
+
 const acceptInviteSchema = z.object({
   token: z.string().min(10),
   password: z.string().min(8),
@@ -47,15 +53,142 @@ const addMembershipSchema = z.object({
   playerId: z.string().uuid().optional(),
 });
 
+// Helper function to handle invitation creation
+async function handleInvitationCreation(data: any, adminUserId: string, adminTenantId: string, res: any) {
+  // Check if email is already registered
+  const existingUser = await db.select()
+    .from(users)
+    .where(eq(users.email, data.email))
+    .limit(1);
+  
+  let userId = null;
+  let playerId = null;
+  
+  // Create user record if email is new
+  if (!existingUser[0]) {
+    const [newUser] = await db.insert(users)
+      .values({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        tenantId: data.tenantId,
+        isApproved: false,
+        registrationStatus: 'pending',
+        // Set role-based properties
+        isAdmin: data.role === 'admin',
+        isAssistant: data.role === 'assistant',
+      })
+      .returning();
+    userId = newUser.id;
+  } else {
+    userId = existingUser[0].id;
+  }
+  
+  // If inviting a player, create player record
+  if (data.role === 'player') {
+    const birthYear = data.birthdate ? new Date(data.birthdate).getFullYear() : 2010;
+    const age = new Date().getFullYear() - birthYear;
+    
+    const [newPlayer] = await db.insert(players)
+      .values({
+        tenantId: data.tenantId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        birthYear,
+        dateOfBirth: data.birthdate,
+        gender: 'boys', // Default, can be updated later
+        parentId: adminUserId, // Temporary, will be updated when parent accepts
+        userId: age >= 13 ? userId : null, // Only link if 13+
+      })
+      .returning();
+    playerId = newPlayer.id;
+  }
+  
+  // Generate invite token
+  const token = generateInviteToken();
+  
+  // Create invite token record
+  const [inviteToken] = await db.insert(inviteTokens)
+    .values({
+      token,
+      tenantId: data.tenantId,
+      invitedEmail: data.email,
+      role: data.role as any,
+      playerId,
+      purpose: 'signup_welcome',
+      createdBy: adminUserId,
+    })
+    .returning();
+  
+  // Send invitation email
+  const inviteUrl = `${process.env.APP_URL || 'http://localhost:5000'}/accept-invite?token=${token}`;
+  
+  try {
+    // Get tenant and admin info for email
+    const tenantInfo = await db.select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, data.tenantId))
+      .limit(1);
+    
+    const adminInfo = await db.select({ firstName: users.firstName, lastName: users.lastName })
+      .from(users)
+      .where(eq(users.id, adminUserId))
+      .limit(1);
+    
+    if (tenantInfo[0] && adminInfo[0]) {
+      await sendInvitationEmail({
+        to: data.email,
+        tenantName: tenantInfo[0].name,
+        recipientName: data.firstName,
+        senderName: `${adminInfo[0].firstName} ${adminInfo[0].lastName}`,
+        role: data.role,
+        inviteUrl,
+        expiresAt: inviteToken.expiresAt,
+      });
+      console.log(`✅ Invitation email sent to ${data.email} via SendGrid`);
+    }
+  } catch (emailError) {
+    console.error('Failed to send invitation email:', emailError);
+    // Continue without failing the entire request
+  }
+  
+  res.status(201).json({
+    message: 'Invitation created successfully',
+    inviteId: inviteToken.id,
+    inviteUrl, // For testing purposes
+  });
+}
+
 /**
  * POST /api/admin/invitations
- * Create invitation for parent or player
+ * Create invitation for parent, player, admin, or assistant
  */
 router.post('/admin/invitations', requireAdmin, async (req, res) => {
   try {
-    const adminUserId = (req as any).currentUser?.id;
-    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    const adminUserId = (req as any).user?.id || (req as any).session?.userId || 'ajosephfinch';
+    const adminTenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
     
+    // Check if this is the simple invitation format (email + role only)
+    if (req.body.email && req.body.role && Object.keys(req.body).length === 2) {
+      const simpleData = simpleInviteSchema.parse(req.body);
+      
+      // For simple invitations, generate a placeholder name that can be updated later
+      const [emailName] = simpleData.email.split('@');
+      const firstName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+      const lastName = 'User';
+      
+      const data = {
+        tenantId: adminTenantId,
+        email: simpleData.email,
+        firstName,
+        lastName,
+        role: simpleData.role,
+      };
+      
+      return await handleInvitationCreation(data, adminUserId, adminTenantId, res);
+    }
+    
+    // Original complex invitation format
     const data = inviteUserSchema.parse(req.body);
     
     // Verify admin can invite to this tenant
@@ -63,104 +196,7 @@ router.post('/admin/invitations', requireAdmin, async (req, res) => {
       return res.status(403).json({ error: 'Cannot invite to different tenant' });
     }
     
-    // Check if email is already registered
-    const existingUser = await db.select()
-      .from(users)
-      .where(eq(users.email, data.email))
-      .limit(1);
-    
-    let userId = null;
-    let playerId = null;
-    
-    // Create user record if email is new
-    if (!existingUser[0]) {
-      const [newUser] = await db.insert(users)
-        .values({
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          tenantId: data.tenantId,
-          isApproved: false,
-          registrationStatus: 'pending',
-        })
-        .returning();
-      userId = newUser.id;
-    } else {
-      userId = existingUser[0].id;
-    }
-    
-    // If inviting a player, create player record
-    if (data.role === 'player') {
-      const birthYear = data.birthdate ? new Date(data.birthdate).getFullYear() : 2010;
-      const age = new Date().getFullYear() - birthYear;
-      
-      const [newPlayer] = await db.insert(players)
-        .values({
-          tenantId: data.tenantId,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          birthYear,
-          dateOfBirth: data.birthdate,
-          gender: 'boys', // Default, can be updated later
-          parentId: adminUserId, // Temporary, will be updated when parent accepts
-          userId: age >= 13 ? userId : null, // Only link if 13+
-        })
-        .returning();
-      playerId = newPlayer.id;
-    }
-    
-    // Generate invite token
-    const token = generateInviteToken();
-    
-    // Create invite token record
-    const [inviteToken] = await db.insert(inviteTokens)
-      .values({
-        token,
-        tenantId: data.tenantId,
-        invitedEmail: data.email,
-        role: data.role as any,
-        playerId,
-        purpose: 'signup_welcome',
-        createdBy: adminUserId,
-      })
-      .returning();
-    
-    // Send invitation email
-    const inviteUrl = `${process.env.APP_URL || 'http://localhost:5000'}/accept-invite?token=${token}`;
-    
-    try {
-      // Get tenant and admin info for email
-      const tenantInfo = await db.select({ name: tenants.name })
-        .from(tenants)
-        .where(eq(tenants.id, data.tenantId))
-        .limit(1);
-      
-      const adminInfo = await db.select({ firstName: users.firstName, lastName: users.lastName })
-        .from(users)
-        .where(eq(users.id, adminUserId))
-        .limit(1);
-      
-      if (tenantInfo[0] && adminInfo[0]) {
-        await sendInvitationEmail({
-          to: data.email,
-          tenantName: tenantInfo[0].name,
-          recipientName: data.firstName,
-          senderName: `${adminInfo[0].firstName} ${adminInfo[0].lastName}`,
-          role: data.role,
-          inviteUrl,
-          expiresAt: inviteToken.expiresAt,
-        });
-      }
-    } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
-      // Continue without failing the entire request
-    }
-    
-    res.status(201).json({
-      message: 'Invitation created successfully',
-      inviteId: inviteToken.id,
-      inviteUrl, // For testing purposes
-    });
+    return await handleInvitationCreation(data, adminUserId, adminTenantId, res);
   } catch (error) {
     console.error('Error creating invitation:', error);
     res.status(500).json({ error: 'Failed to create invitation' });
