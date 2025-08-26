@@ -8,7 +8,7 @@ import {
   players, 
   tenantMemberships
 } from '../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireAdmin } from '../admin-routes';
 import { isAuthenticated as requireAuth } from '../auth';
 import { 
@@ -168,8 +168,119 @@ router.post('/admin/invitations', requireAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/tenant/invite-code
+ * Get current tenant's invite code (admin only)
+ */
+router.get('/admin/tenant/invite-code', requireAdmin, async (req, res) => {
+  try {
+    const adminTenantId = (req as any).currentUser?.tenantId;
+    
+    if (!adminTenantId) {
+      return res.status(403).json({ error: 'Admin tenant ID required' });
+    }
+    
+    // Get current tenant invite code
+    const tenantResult = await db.select({
+      inviteCode: tenants.inviteCode,
+      inviteCodeUpdatedAt: tenants.inviteCodeUpdatedAt,
+      inviteCodeUpdatedBy: tenants.inviteCodeUpdatedBy,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, adminTenantId))
+    .limit(1);
+    
+    if (!tenantResult[0]) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    
+    const tenant = tenantResult[0];
+    
+    // If no invite code exists, generate one
+    if (!tenant.inviteCode) {
+      const newCode = generateInviteCode(Math.floor(Math.random() * 5) + 8); // 8-12 chars
+      const adminUserId = (req as any).currentUser?.id;
+      
+      await db.update(tenants)
+        .set({
+          inviteCode: newCode,
+          inviteCodeUpdatedAt: new Date(),
+          inviteCodeUpdatedBy: adminUserId,
+        })
+        .where(eq(tenants.id, adminTenantId));
+      
+      return res.json({
+        inviteCode: newCode,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'system',
+      });
+    }
+    
+    // Get updater name if available
+    let updatedBy = 'system';
+    if (tenant.inviteCodeUpdatedBy) {
+      const updaterResult = await db.select({
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(users)
+      .where(eq(users.id, tenant.inviteCodeUpdatedBy))
+      .limit(1);
+      
+      if (updaterResult[0]) {
+        updatedBy = `${updaterResult[0].firstName} ${updaterResult[0].lastName}`;
+      }
+    }
+    
+    res.json({
+      inviteCode: tenant.inviteCode,
+      updatedAt: tenant.inviteCodeUpdatedAt?.toISOString(),
+      updatedBy,
+    });
+  } catch (error) {
+    console.error('Error fetching invite code:', error);
+    res.status(500).json({ error: 'Failed to fetch invite code' });
+  }
+});
+
+/**
+ * POST /api/admin/tenants/current/rotate-invite-code
+ * Rotate current tenant's invite code (admin only) - matches frontend expectation
+ */
+router.post('/admin/tenants/current/rotate-invite-code', requireAdmin, async (req, res) => {
+  try {
+    const adminUserId = (req as any).currentUser?.id;
+    const adminTenantId = (req as any).currentUser?.tenantId;
+    
+    if (!adminTenantId) {
+      return res.status(403).json({ error: 'Admin tenant ID required' });
+    }
+    
+    // Generate new invite code
+    const newCode = generateInviteCode(Math.floor(Math.random() * 5) + 8); // 8-12 chars
+    
+    // Update tenant
+    const [updatedTenant] = await db.update(tenants)
+      .set({
+        inviteCode: newCode,
+        inviteCodeUpdatedAt: new Date(),
+        inviteCodeUpdatedBy: adminUserId,
+      })
+      .where(eq(tenants.id, adminTenantId))
+      .returning();
+    
+    res.json({
+      message: 'Invite code rotated successfully',
+      inviteCode: newCode,
+    });
+  } catch (error) {
+    console.error('Error rotating invite code:', error);
+    res.status(500).json({ error: 'Failed to rotate invite code' });
+  }
+});
+
+/**
  * POST /api/admin/tenants/:tenantId/rotate-invite-code
- * Rotate tenant invite code (admin only)
+ * Rotate tenant invite code (admin only) - legacy endpoint
  */
 router.post('/admin/tenants/:tenantId/rotate-invite-code', requireAdmin, async (req, res) => {
   try {
@@ -202,6 +313,61 @@ router.post('/admin/tenants/:tenantId/rotate-invite-code', requireAdmin, async (
   } catch (error) {
     console.error('Error rotating invite code:', error);
     res.status(500).json({ error: 'Failed to rotate invite code' });
+  }
+});
+
+/**
+ * GET /api/admin/invitations
+ * Get all invitations for current tenant (admin only)
+ */
+router.get('/admin/invitations', requireAdmin, async (req, res) => {
+  try {
+    const adminTenantId = (req as any).currentUser?.tenantId;
+    
+    if (!adminTenantId) {
+      return res.status(403).json({ error: 'Admin tenant ID required' });
+    }
+    
+    // Get all invitations for this tenant
+    const invitations = await db.select({
+      id: inviteTokens.id,
+      email: inviteTokens.invitedEmail,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: inviteTokens.role,
+      status: sql<string>`
+        CASE 
+          WHEN ${inviteTokens.usedAt} IS NOT NULL THEN 'accepted'
+          WHEN ${inviteTokens.expiresAt} < NOW() THEN 'expired'
+          ELSE 'pending'
+        END
+      `.as('status'),
+      createdAt: inviteTokens.createdAt,
+      expiresAt: inviteTokens.expiresAt,
+      usedAt: inviteTokens.usedAt,
+    })
+    .from(inviteTokens)
+    .leftJoin(users, eq(users.email, inviteTokens.invitedEmail))
+    .where(eq(inviteTokens.tenantId, adminTenantId))
+    .orderBy(sql`${inviteTokens.createdAt} DESC`);
+    
+    // Format response to match frontend interface
+    const formattedInvitations = invitations.map(invite => ({
+      id: invite.id,
+      email: invite.email,
+      firstName: invite.firstName || invite.email.split('@')[0], // Fallback name
+      lastName: invite.lastName || '',
+      role: invite.role,
+      status: invite.status,
+      createdAt: invite.createdAt?.toISOString(),
+      expiresAt: invite.expiresAt?.toISOString(),
+      usedAt: invite.usedAt?.toISOString(),
+    }));
+    
+    res.json(formattedInvitations);
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    res.status(500).json({ error: 'Failed to fetch invitations' });
   }
 });
 
