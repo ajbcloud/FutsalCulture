@@ -426,7 +426,7 @@ export default function InvitationsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium">{code.name}</h3>
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{code.name}</h3>
                             <Badge variant={code.isActive ? "default" : "secondary"}>
                               {code.isActive ? "Active" : "Inactive"}
                             </Badge>
