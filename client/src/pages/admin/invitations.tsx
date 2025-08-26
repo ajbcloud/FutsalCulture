@@ -238,15 +238,16 @@ export default function InvitationsPage() {
             </p>
           </div>
           
-          <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2" data-testid="button-invite-user">
-                <UserPlus className="w-4 h-4" />
-                Invite User
-              </Button>
-            </DialogTrigger>
-            
-            <DialogContent className="sm:max-w-[425px]">
+          <div className="flex gap-2">
+            <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2" data-testid="button-invite-user">
+                  <UserPlus className="w-4 h-4" />
+                  Invite User
+                </Button>
+              </DialogTrigger>
+              
+              <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Invite New User</DialogTitle>
                 <DialogDescription>
@@ -360,8 +361,31 @@ export default function InvitationsPage() {
                   </DialogFooter>
                 </form>
               </Form>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+            
+            {selectedTab === 'codes' && (
+              <Button 
+                variant="outline"
+                onClick={handleRotateCode}
+                disabled={rotateCodeMutation.isPending}
+                className="flex items-center gap-2"
+                data-testid="button-create-code-header"
+              >
+                {rotateCodeMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className="w-4 h-4" />
+                    Create Invite Code
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
@@ -480,26 +504,8 @@ export default function InvitationsPage() {
                 ) : codeError ? (
                   <div className="text-center py-8">
                     <Shield className="w-12 h-12 mx-auto mb-4 text-red-500 opacity-50" />
-                    <p className="text-red-600 mb-4">Failed to load invite code</p>
-                    <p className="text-sm text-gray-500 mb-4">{(codeError as Error).message}</p>
-                    <Button
-                      onClick={handleRotateCode}
-                      disabled={rotateCodeMutation.isPending}
-                      className="flex items-center gap-2"
-                      data-testid="button-create-code"
-                    >
-                      {rotateCodeMutation.isPending ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <LinkIcon className="w-4 h-4" />
-                          Create Invite Code
-                        </>
-                      )}
-                    </Button>
+                    <p className="text-red-600 mb-2">Unable to load invite code</p>
+                    <p className="text-sm text-gray-500">Use the "Create Invite Code" button above to generate one</p>
                   </div>
                 ) : tenantCode ? (
                   <>
@@ -599,25 +605,8 @@ export default function InvitationsPage() {
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="mb-4">No invite code available</p>
-                    <Button
-                      onClick={handleRotateCode}
-                      disabled={rotateCodeMutation.isPending}
-                      className="flex items-center gap-2"
-                      data-testid="button-create-code"
-                    >
-                      {rotateCodeMutation.isPending ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <LinkIcon className="w-4 h-4" />
-                          Create Invite Code
-                        </>
-                      )}
-                    </Button>
+                    <p className="mb-2">No invite code available</p>
+                    <p className="text-sm">Use the "Create Invite Code" button above to generate one</p>
                   </div>
                 )}
               </CardContent>
