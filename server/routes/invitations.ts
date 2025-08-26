@@ -71,7 +71,7 @@ async function handleInvitationCreation(data: any, adminUserId: string, adminTen
   let playerId = null;
   
   // Create user record if email is new
-  if (!existingUser[0]) {
+  if (!existingUser?.[0]) {
     const [newUser] = await db.insert(users)
       .values({
         email: data.email,
@@ -529,7 +529,7 @@ router.post('/signup/accept-invite', async (req, res) => {
     
     let userId;
     
-    if (existingUser[0]) {
+    if (existingUser?.[0]) {
       // User exists - just link to tenant
       userId = existingUser[0].id;
     } else {
@@ -574,7 +574,7 @@ router.post('/signup/accept-invite', async (req, res) => {
           to: invite.invitedEmail,
           firstName: data.firstName || invite.invitedEmail.split('@')[0],
           tenantName: tenantInfo[0].name,
-          role: invite.role,
+          role: invite.role as "parent" | "player" | "admin" | "assistant",
         });
       }
     } catch (emailError) {
