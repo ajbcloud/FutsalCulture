@@ -173,7 +173,14 @@ router.post('/admin/invitations', requireAdmin, async (req, res) => {
  */
 router.get('/admin/tenant/invite-code', requireAdmin, async (req, res) => {
   try {
-    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    const adminUserId = (req as any).currentUser?.id;
+    let adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    
+    // For development mode with failsafe admin, use the hardcoded tenant ID
+    if (!adminTenantId && process.env.NODE_ENV === 'development' && adminUserId === 'ajosephfinch') {
+      adminTenantId = '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant
+      console.log('🔧 Development mode: Using hardcoded tenant ID for failsafe admin');
+    }
     
     if (!adminTenantId) {
       console.error('Missing tenant ID for user:', (req as any).currentUser);
@@ -250,7 +257,13 @@ router.get('/admin/tenant/invite-code', requireAdmin, async (req, res) => {
 router.post('/admin/tenants/current/rotate-invite-code', requireAdmin, async (req, res) => {
   try {
     const adminUserId = (req as any).currentUser?.id;
-    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    let adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    
+    // For development mode with failsafe admin, use the hardcoded tenant ID
+    if (!adminTenantId && process.env.NODE_ENV === 'development' && adminUserId === 'ajosephfinch') {
+      adminTenantId = '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant
+      console.log('🔧 Development mode: Using hardcoded tenant ID for failsafe admin');
+    }
     
     if (!adminTenantId) {
       return res.status(403).json({ error: 'Admin tenant ID required' });
