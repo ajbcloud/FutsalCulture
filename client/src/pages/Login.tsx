@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -8,6 +9,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
+  const { refreshUser } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +27,10 @@ export default function Login() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Refresh user context to get latest auth state
+        await refreshUser();
+        
         // Use server-provided redirect or default to home
         navigate(data.redirect || "/");
       } else {
