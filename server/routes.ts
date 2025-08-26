@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth as setupLocalAuth } from "./auth";
 import { 
   insertPlayerSchema, 
   insertSessionSchema, 
@@ -38,6 +39,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   await setupAuth(app);
+  
+  // Local email/password authentication
+  await setupLocalAuth(app);
 
   // Platform policy middleware (must be after auth)
   app.use(maintenanceMode); // Check maintenance mode for all routes
