@@ -195,7 +195,10 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
     if (process.env.NODE_ENV === 'development' && !userId) {
       userId = FAILSAFE_SUPER_ADMIN_ID;
-      console.log("🔧 Development mode: Using failsafe admin ID");
+      // Also set the session for future requests
+      (req as any).session.userId = userId;
+      await new Promise((resolve) => (req as any).session.save(resolve));
+      console.log("🔧 Development mode: Using failsafe admin ID and creating session");
     }
     
     if (!userId) {
@@ -221,6 +224,7 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
           id: userId,
           email: "ajosephfinch@gmail.com",
           tenantId: "8b976f98-3921-49f2-acf5-006f41d69095", // Liverpool tenant
+          tenant_id: "8b976f98-3921-49f2-acf5-006f41d69095", // Also add with underscore
           isAdmin: true,
           isSuperAdmin: true,
           isAssistant: false,

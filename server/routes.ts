@@ -70,7 +70,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In development, allow the hardcoded super admin user to bypass auth
       else if (process.env.NODE_ENV === 'development') {
         userId = FAILSAFE_SUPER_ADMIN_ID;
-        console.log("🔧 Development mode: Using failsafe admin ID for auth user endpoint");
+        // IMPORTANT: Set the session so subsequent requests work
+        req.session.userId = userId;
+        await new Promise((resolve) => req.session.save(resolve));
+        console.log("🔧 Development mode: Using failsafe admin ID and creating session");
       }
       // No authentication found
       else {
