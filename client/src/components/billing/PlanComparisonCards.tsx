@@ -111,7 +111,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
         const isLoading = upgradeLoading === plan.id;
 
         return (
-          <Card key={plan.id} className={`relative ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
+          <Card key={plan.id} className={`relative ${(isCurrent && !isHomepage) || (isHomepage && plan.id === 'growth') ? 'ring-2 ring-primary' : ''}`}>
             {plan.id === 'growth' && (
               <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
                 <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600">
