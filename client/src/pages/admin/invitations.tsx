@@ -30,6 +30,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Edit,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -68,11 +70,12 @@ export default function InvitationsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
-  // Multiple invite codes state
-  const [createCodeDialogOpen, setCreateCodeDialogOpen] = useState(false);
-  const [newCodeName, setNewCodeName] = useState('');
-  const [newCodeDescription, setNewCodeDescription] = useState('');
-  const [newCodeMaxUsage, setNewCodeMaxUsage] = useState<number | ''>('');
+  // Edit main invite code state
+  const [editCodeDialogOpen, setEditCodeDialogOpen] = useState(false);
+  const [editingCode, setEditingCode] = useState<TenantInviteCode | null>(null);
+  const [editCodeValue, setEditCodeValue] = useState('');
+  const [editCodeName, setEditCodeName] = useState('');
+  const [editCodeDescription, setEditCodeDescription] = useState('');
 
   // Fetch invite codes
   const { data: inviteCodes = [], isLoading: codesLoading, error: codesError, refetch: refetchCodes } = useQuery<TenantInviteCode[]>({
@@ -86,28 +89,29 @@ export default function InvitationsPage() {
     enabled: activeTab === "invitations",
   });
 
-  // Create new invite code mutation
-  const createCodeMutation = useMutation({
-    mutationFn: async (newCode: { name: string; description?: string; maxUsage?: number }) => {
-      const response = await fetch('/api/admin/tenant/current/invite-codes', {
-        method: 'POST',
+  // Update invite code mutation
+  const updateCodeMutation = useMutation({
+    mutationFn: async (updates: { id: string; code: string; name: string; description?: string }) => {
+      const response = await fetch(`/api/admin/tenant/current/invite-codes/${updates.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(newCode),
+        body: JSON.stringify({ code: updates.code, name: updates.name, description: updates.description }),
       });
-      if (!response.ok) throw new Error('Failed to create invite code');
+      if (!response.ok) throw new Error('Failed to update invite code');
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Invite code created successfully!" });
-      setCreateCodeDialogOpen(false);
-      setNewCodeName('');
-      setNewCodeDescription('');
-      setNewCodeMaxUsage('');
+      toast({ title: "Success", description: "Invite code updated successfully!" });
+      setEditCodeDialogOpen(false);
+      setEditingCode(null);
+      setEditCodeValue('');
+      setEditCodeName('');
+      setEditCodeDescription('');
       queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to create invite code", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update invite code", variant: "destructive" });
     }
   });
 
@@ -157,16 +161,25 @@ export default function InvitationsPage() {
     });
   };
 
-  const handleCreateCode = () => {
-    if (!newCodeName.trim()) {
-      toast({ title: "Error", description: "Please enter a name for the invite code", variant: "destructive" });
+  const handleEditCode = (code: TenantInviteCode) => {
+    setEditingCode(code);
+    setEditCodeValue(code.code);
+    setEditCodeName(code.name);
+    setEditCodeDescription(code.description || '');
+    setEditCodeDialogOpen(true);
+  };
+
+  const handleUpdateCode = () => {
+    if (!editingCode || !editCodeValue.trim() || !editCodeName.trim()) {
+      toast({ title: "Error", description: "Please fill in the code value and name", variant: "destructive" });
       return;
     }
     
-    createCodeMutation.mutate({
-      name: newCodeName.trim(),
-      description: newCodeDescription.trim() || undefined,
-      maxUsage: newCodeMaxUsage === '' ? undefined : Number(newCodeMaxUsage)
+    updateCodeMutation.mutate({
+      id: editingCode.id,
+      code: editCodeValue.trim().toUpperCase(),
+      name: editCodeName.trim(),
+      description: editCodeDescription.trim() || undefined
     });
   };
 
@@ -184,71 +197,10 @@ export default function InvitationsPage() {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button onClick={() => setActiveTab("invitations")} data-testid="button-invite-user">
-            <Users className="w-4 h-4 mr-2" />
-            Invite User
-          </Button>
-          <Dialog open={createCodeDialogOpen} onOpenChange={setCreateCodeDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-invite-code">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Invite Code
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Invite Code</DialogTitle>
-                <DialogDescription>
-                  Create a permanent invite code that parents and players can use to join your organization.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="code-name">Code Name *</Label>
-                  <Input
-                    id="code-name"
-                    placeholder="e.g., Parent Registration, Player Signup"
-                    value={newCodeName}
-                    onChange={(e) => setNewCodeName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="code-description">Description (Optional)</Label>
-                  <Textarea
-                    id="code-description"
-                    placeholder="Brief description of what this code is for"
-                    value={newCodeDescription}
-                    onChange={(e) => setNewCodeDescription(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="code-max-usage">Usage Limit (Optional)</Label>
-                  <Input
-                    id="code-max-usage"
-                    type="number"
-                    placeholder="Leave empty for unlimited usage"
-                    value={newCodeMaxUsage}
-                    onChange={(e) => setNewCodeMaxUsage(e.target.value === '' ? '' : Number(e.target.value))}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateCodeDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateCode} disabled={createCodeMutation.isPending}>
-                  {createCodeMutation.isPending ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Create Code
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Button onClick={() => setActiveTab("invitations")} data-testid="button-invite-user">
+          <Users className="w-4 h-4 mr-2" />
+          Invite User
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -398,10 +350,10 @@ export default function InvitationsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LinkIcon className="w-5 h-5" />
-                Static Invite Codes
+                Organization Invite Code
               </CardTitle>
               <p className="text-sm text-gray-600">
-                Create permanent codes that parents and players can use to join your organization
+                Your static invite code that parents and players can use to join your organization
               </p>
             </CardHeader>
             
@@ -488,6 +440,15 @@ export default function InvitationsPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleEditCode(code)}
+                            data-testid={`button-edit-code-${code.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => deleteCodeMutation.mutate(code.id)}
                             disabled={deleteCodeMutation.isPending}
                             data-testid={`button-delete-code-${code.id}`}
@@ -504,6 +465,64 @@ export default function InvitationsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Code Dialog */}
+      <Dialog open={editCodeDialogOpen} onOpenChange={setEditCodeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Invite Code</DialogTitle>
+            <DialogDescription>
+              Customize your organization's invite code that parents and players use to register.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-code-value">Invite Code *</Label>
+              <Input
+                id="edit-code-value"
+                placeholder="e.g., LIVERPOOL2025"
+                value={editCodeValue}
+                onChange={(e) => setEditCodeValue(e.target.value.toUpperCase())}
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Use 4-12 characters. Letters and numbers only. Avoid confusing characters (0, O, I, 1).
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="edit-code-name">Display Name *</Label>
+              <Input
+                id="edit-code-name"
+                placeholder="e.g., Main Registration Code"
+                value={editCodeName}
+                onChange={(e) => setEditCodeName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-code-description">Description (Optional)</Label>
+              <Textarea
+                id="edit-code-description"
+                placeholder="Brief description of what this code is for"
+                value={editCodeDescription}
+                onChange={(e) => setEditCodeDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCodeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateCode} disabled={updateCodeMutation.isPending}>
+              {updateCodeMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

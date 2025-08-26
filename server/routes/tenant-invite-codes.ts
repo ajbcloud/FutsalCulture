@@ -179,4 +179,49 @@ router.delete('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req,
   }
 });
 
+// Update an invite code
+router.patch('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req, res) => {
+  try {
+    let { tenantId } = req.params;
+    const { codeId } = req.params;
+    const { code, name, description } = req.body;
+    
+    // Handle "current" tenant
+    if (tenantId === 'current') {
+      tenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    }
+
+    // Validate input
+    if (!code || !name) {
+      return res.status(400).json({ message: 'Code and name are required' });
+    }
+
+    const updatedCode = await db
+      .update(tenantInviteCodes)
+      .set({ 
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
+        description: description?.trim() || null,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(tenantInviteCodes.id, codeId),
+        eq(tenantInviteCodes.tenantId, tenantId)
+      ))
+      .returning();
+
+    if (updatedCode.length === 0) {
+      return res.status(404).json({ message: 'Invite code not found' });
+    }
+
+    res.json(updatedCode[0]);
+  } catch (error: any) {
+    if (error.code === '23505' && error.constraint === 'tenant_invite_codes_code_unique') {
+      return res.status(400).json({ message: 'This code is already in use. Please choose a different code.' });
+    }
+    console.error('Error updating invite code:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
