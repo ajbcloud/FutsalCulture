@@ -433,10 +433,10 @@ export default function InvitationsPage() {
                           </div>
                           
                           {code.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{code.description}</p>
+                            <p className="text-sm text-foreground mb-2">{code.description}</p>
                           )}
                           
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-4 text-sm text-foreground">
                             <span>Used: {code.usageCount} times</span>
                             {code.maxUsage && (
                               <span>Limit: {code.maxUsage}</span>
