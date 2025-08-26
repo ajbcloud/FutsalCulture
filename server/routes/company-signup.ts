@@ -19,7 +19,9 @@ const getStartedSchema = z.object({
   accept: z.boolean().refine(val => val === true, "You must accept the terms")
 });
 
-// Company/tenant signup
+// OLD ENDPOINT - Replaced by /api/auth/signup with email verification
+// Keeping for reference but disabled
+/*
 companySignupRouter.post("/get-started", async (req: any, res) => {
   try {
     const validatedData = getStartedSchema.parse(req.body);
@@ -108,6 +110,7 @@ companySignupRouter.post("/get-started", async (req: any, res) => {
     res.status(500).json({ error: "Failed to create club" });
   }
 });
+*/
 
 // Email verification
 companySignupRouter.get("/verify", async (req: any, res) => {

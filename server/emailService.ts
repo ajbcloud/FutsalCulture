@@ -4,9 +4,20 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
 let mailService: MailService | null = null;
 
-if (SENDGRID_API_KEY) {
+export function initEmail() {
+  const key = process.env.SENDGRID_API_KEY;
+  if (!key) {
+    console.warn('SENDGRID_API_KEY not configured - emails will not be sent');
+    return;
+  }
   mailService = new MailService();
-  mailService.setApiKey(SENDGRID_API_KEY);
+  mailService.setApiKey(key);
+  console.log('✅ SendGrid initialized');
+}
+
+// Initialize on import if API key is available
+if (SENDGRID_API_KEY) {
+  initEmail();
 }
 
 interface EmailParams {

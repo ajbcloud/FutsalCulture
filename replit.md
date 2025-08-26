@@ -32,6 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Role-based Access**: Differentiates between parent and admin permissions.
 - **Session Storage**: PostgreSQL-backed session store using `connect-pg-simple`.
 - **Failsafe Super Admin**: Hardcoded super admin user (username: ajosephfinch) that cannot be removed or modified, providing security failsafe against administrative lockout.
+- **Email Verification System**: New signup flow with email-first verification, preventing users from setting passwords until email is confirmed. Uses secure tokens with 48-hour expiration and SendGrid for email delivery.
 
 ### Payment Processing
 - **Stripe**: Payment processing for bookings.

@@ -16,6 +16,7 @@ import companySignupRouter from './routes/company-signup';
 import joinRouter from './routes/join';
 import personalSignupRouter from './routes/personal-signup';
 import { superAdminEmailRouter } from './routes/super-admin-email';
+import authVerificationRouter from './routes/auth-verification';
 
 const app = express();
 
@@ -92,6 +93,7 @@ app.use((req, res, next) => {
   app.use('/api', companySignupRouter);
   app.use('/api', joinRouter);
   app.use('/api', personalSignupRouter);
+  app.use('/api/auth', authVerificationRouter);
   
   const server = await registerRoutes(app);
   app.use(express.json());

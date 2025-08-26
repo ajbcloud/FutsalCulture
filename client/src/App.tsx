@@ -51,6 +51,8 @@ import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
+import VerifyEmailSent from "@/pages/VerifyEmailSent";
+import SetPassword from "@/pages/SetPassword";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Status from "./pages/Status";
@@ -79,6 +81,8 @@ function Router() {
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/login" component={Login} />
         <Route path="/forgot" component={ForgotPassword} />
+        <Route path="/verify-email-sent" component={VerifyEmailSent} />
+        <Route path="/set-password" component={SetPassword} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />

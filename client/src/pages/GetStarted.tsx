@@ -22,7 +22,6 @@ export default function GetStarted() {
     accept: false
   });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -42,21 +41,23 @@ export default function GetStarted() {
 
     setLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/get-started", {
+      const response = await apiRequest("POST", "/api/auth/signup", {
         ...formData,
         plan_key: "free"
       });
 
       if (response.ok) {
-        setSuccess(true);
+        // Redirect to email verification page
+        navigate(`/verify-email-sent?email=${encodeURIComponent(formData.contact_email)}`);
       } else {
-        throw new Error("Failed to create club");
+        const data = await response.json();
+        throw new Error(data.error || "Failed to create club");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating club:", error);
       toast({
         title: "Error",
-        description: "Failed to create your club. Please try again.",
+        description: error.message || "Failed to create your club. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -71,37 +72,6 @@ export default function GetStarted() {
         ? prev.sports.filter(s => s !== sport)
         : [...prev.sports, sport]
     }));
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Building2 className="h-12 w-12 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl">Check your email!</CardTitle>
-            <CardDescription>
-              We've sent you a verification link to set up your password and get started with your club.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                You'll receive a tenant code that you can share with coaches, players, and parents to invite them to your club.
-              </p>
-              <Button 
-                onClick={() => navigate("/login")}
-                className="w-full"
-              >
-                Go to Login
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   return (
