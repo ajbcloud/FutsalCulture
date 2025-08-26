@@ -46,14 +46,14 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
         </Button>
         <Button 
           onClick={() => handleUpgrade('growth')}
-          className="bg-green-600 hover:bg-green-700 text-white w-full"
+          className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
           Upgrade to Growth ($199/mo)
         </Button>
         <Button 
           onClick={() => handleUpgrade('elite')}
-          className="bg-purple-600 hover:bg-purple-700 text-white w-full"
+          className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
           Upgrade to Elite ($499/mo)
@@ -67,14 +67,14 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
       <div className={`space-y-2 ${className}`}>
         <Button 
           onClick={() => handleUpgrade('growth')}
-          className="bg-green-600 hover:bg-green-700 text-white w-full"
+          className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
           Upgrade to Growth ($199/mo)
         </Button>
         <Button 
           onClick={() => handleUpgrade('elite')}
-          className="bg-purple-600 hover:bg-purple-700 text-white w-full"
+          className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
           Upgrade to Elite ($499/mo)
@@ -88,7 +88,7 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
       <div className={className}>
         <Button 
           onClick={() => handleUpgrade('elite')}
-          className="bg-purple-600 hover:bg-purple-700 text-white w-full"
+          className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
           Upgrade to Elite ($499/mo)

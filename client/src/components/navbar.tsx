@@ -107,7 +107,7 @@ export default function Navbar() {
                   <DropdownMenuSeparator />
                   
                   <DropdownMenuItem asChild>
-                    <Link href="/" className="cursor-pointer">
+                    <Link href="/dashboard" className="cursor-pointer">
                       <Home className="mr-2 h-4 w-4" />
                       Home
                     </Link>
@@ -165,7 +165,7 @@ export default function Navbar() {
               {isAuthenticated ? (
                 <>
                   <Link 
-                    href="/" 
+                    href="/dashboard" 
                     className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >

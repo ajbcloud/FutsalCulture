@@ -169,12 +169,27 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
-    if (!(req as any).user?.claims?.sub) {
+    let userId;
+    
+    // Check for local session first (password-based users)
+    if ((req as any).session?.userId) {
+      userId = (req as any).session.userId;
+    }
+    // Fall back to Replit Auth user
+    else if ((req as any).user?.claims?.sub) {
+      userId = (req as any).user.claims.sub;
+    }
+    // Also check direct req.user.id format
+    else if ((req as any).user?.id) {
+      userId = (req as any).user.id;
+    }
+    
+    if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
     // Check user's admin status directly from database
-    const user = await storage.getUser((req as any).user.claims.sub);
+    const user = await storage.getUser(userId);
     if (!user?.isAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
@@ -191,12 +206,27 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
 // Middleware to require full admin (not assistant)
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
-    if (!(req as any).user?.claims?.sub) {
+    let userId;
+    
+    // Check for local session first (password-based users)
+    if ((req as any).session?.userId) {
+      userId = (req as any).session.userId;
+    }
+    // Fall back to Replit Auth user
+    else if ((req as any).user?.claims?.sub) {
+      userId = (req as any).user.claims.sub;
+    }
+    // Also check direct req.user.id format
+    else if ((req as any).user?.id) {
+      userId = (req as any).user.id;
+    }
+    
+    if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
     // Check user's admin status directly from database
-    const user = await storage.getUser((req as any).user.claims.sub);
+    const user = await storage.getUser(userId);
     if (!user?.isAdmin) {
       return res.status(403).json({ message: "Full admin access required" });
     }
@@ -2079,6 +2109,17 @@ export function setupAdminRoutes(app: any) {
   app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
+      const currentUser = (req as any).currentUser;
+      
+      // Get tenant information for default business name and contact email
+      let tenantInfo = null;
+      if (tenantId) {
+        const [tenant] = await db.select()
+          .from(tenants)
+          .where(eq(tenants.id, tenantId))
+          .limit(1);
+        tenantInfo = tenant;
+      }
       
       // Get system settings from database for this tenant
       const settings = await db.select()
@@ -2106,16 +2147,20 @@ export function setupAdminRoutes(app: any) {
         return acc;
       }, {} as any);
 
+      // Use tenant's actual organization name and admin email as defaults
+      const defaultBusinessName = tenantInfo?.name || "Your Organization";
+      const defaultContactEmail = currentUser?.email || "admin@example.com";
+
       // Default settings if none exist
       const defaultSettings = {
         autoApproveRegistrations: true,
-        businessName: "Futsal Culture",
+        businessName: defaultBusinessName,
         businessLogo: "",
-        contactEmail: "admin@futsalculture.com",
-        supportEmail: "support@futsalculture.com",
-        supportPhone: "(555) 123-GOAL",
+        contactEmail: defaultContactEmail,
+        supportEmail: defaultContactEmail,
+        supportPhone: "",
         supportHours: "Monday - Friday",
-        supportLocation: "South Florida",
+        supportLocation: "",
         timezone: "America/New_York",
         emailNotifications: true,
         smsNotifications: false,
@@ -2129,12 +2174,8 @@ export function setupAdminRoutes(app: any) {
         // Fiscal year settings
         fiscalYearType: "calendar", // Default to calendar year
         fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
-        // Available locations for sessions - with structured location data
-        availableLocations: [
-          { name: "Turf City", addressLine1: "Turf City", city: "Singapore", country: "SG" },
-          { name: "Sports Hub", addressLine1: "Sports Hub", city: "Singapore", country: "SG" },
-          { name: "Jurong East", addressLine1: "Jurong East", city: "Singapore", country: "SG" }
-        ],
+        // New tenants start with empty locations (no sample data)
+        availableLocations: [],
         ...settingsMap
       };
       

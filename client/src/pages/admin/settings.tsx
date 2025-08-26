@@ -901,12 +901,6 @@ export default function AdminSettings() {
               Communications
             </TabsTrigger>
             <TabsTrigger 
-              value="security" 
-              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
-            >
-              Security
-            </TabsTrigger>
-            <TabsTrigger 
               value="plan" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
@@ -955,7 +949,7 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-8 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-7 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -964,9 +958,6 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="communications" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Communications
-            </TabsTrigger>
-            <TabsTrigger value="security" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              Security
             </TabsTrigger>
             <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Plan & Features
@@ -1801,90 +1792,6 @@ export default function AdminSettings() {
           </div>
         </TabsContent>
 
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-6">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Shield className="w-5 h-5 mr-2" />
-                Access & Security
-              </CardTitle>
-              <CardDescription>Manage access controls and security settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Admin Access</h4>
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                        Admin Portal Access
-                      </h4>
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                        Admin access is managed automatically based on your user role. Contact your super admin to modify access permissions.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Session Security</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-foreground">Automatic Logout</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically log out inactive admin sessions after 8 hours
-                      </p>
-                    </div>
-                    <Switch
-                      checked={true}
-                      disabled={true}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Data Protection</h4>
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <Lock className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-green-800 dark:text-green-200">
-                        Data Encryption
-                      </h4>
-                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                        All sensitive data is encrypted at rest and in transit. Payment information is handled by secure third-party processors and never stored directly.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Audit Log
-              </CardTitle>
-              <CardDescription>Recent administrative actions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="w-12 h-12 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Recent Activity</h3>
-                  <p>Administrative actions will appear here</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="plan" className="space-y-6">
           <PlanAndFeaturesContent />

@@ -84,8 +84,19 @@ export default function AgePolicySettings() {
   });
 
   const handleSave = () => {
+    // Ensure we have default values before validation
+    const validatedPolicy = {
+      minAge: 5,
+      maxAge: 18,
+      requireParent: 13,
+      teenSelfMin: 13,
+      teenPayMin: 16,
+      audience: "youth",
+      ...policy
+    };
+
     // Validation
-    if (policy.audience === "youth" && (!policy.maxAge || policy.maxAge > 18)) {
+    if (validatedPolicy.audience === "youth" && (!validatedPolicy.maxAge || validatedPolicy.maxAge > 18)) {
       toast({
         title: "Invalid age range",
         description: "Youth programs must have a maximum age of 18 or less",
@@ -95,7 +106,7 @@ export default function AgePolicySettings() {
     }
 
     // Validate parent requirement age
-    if (policy.requireParent && policy.requireParent < policy.minAge!) {
+    if (validatedPolicy.requireParent && validatedPolicy.requireParent < validatedPolicy.minAge) {
       toast({
         title: "Invalid parent requirement",
         description: "Parent requirement age must be greater than or equal to minimum age",
@@ -105,7 +116,7 @@ export default function AgePolicySettings() {
     }
 
     // Validate teen self-access relationship with parent requirement
-    if (policy.requireParent && policy.teenSelfMin && policy.requireParent > policy.teenSelfMin) {
+    if (validatedPolicy.requireParent && validatedPolicy.teenSelfMin && validatedPolicy.requireParent > validatedPolicy.teenSelfMin) {
       toast({
         title: "Invalid configuration",
         description: "Parent requirement age cannot be greater than teen self-signup age",
@@ -115,7 +126,7 @@ export default function AgePolicySettings() {
     }
 
     // Validate teen payment age relationship
-    if (policy.teenSelfMin && policy.teenPayMin && policy.teenPayMin < policy.teenSelfMin) {
+    if (validatedPolicy.teenSelfMin && validatedPolicy.teenPayMin && validatedPolicy.teenPayMin < validatedPolicy.teenSelfMin) {
       toast({
         title: "Invalid payment age",
         description: "Teen payment age must be greater than or equal to teen self-signup age",
@@ -125,7 +136,7 @@ export default function AgePolicySettings() {
     }
 
     // Validate logical age progression
-    if (policy.audience !== "adult" && policy.maxAge && policy.teenPayMin && policy.teenPayMin > policy.maxAge) {
+    if (validatedPolicy.audience !== "adult" && validatedPolicy.maxAge && validatedPolicy.teenPayMin && validatedPolicy.teenPayMin > validatedPolicy.maxAge) {
       toast({
         title: "Invalid configuration",
         description: "Teen payment age cannot exceed maximum program age",
@@ -134,7 +145,7 @@ export default function AgePolicySettings() {
       return;
     }
 
-    saveMutation.mutate(policy);
+    saveMutation.mutate(validatedPolicy);
   };
 
   const handleReset = () => {

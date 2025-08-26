@@ -42,7 +42,7 @@ const adminNavItems = [
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
-  { href: "/admin/communications", label: "Communications", icon: Mail },
+  { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
@@ -59,11 +59,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
+  const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
 
   // Filter navigation items based on feature access
   const visibleNavItems = adminNavItems.filter(item => {
     if (item.featureKey && item.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT) {
       return hasPlayerDevelopment;
+    }
+    if (item.featureKey && item.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS) {
+      return hasSmsNotifications;
     }
     return true;
   });
@@ -171,12 +175,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuSeparator />
                 
                 {/* Portal Navigation */}
-                <DropdownMenuItem asChild>
-                  <Link href="/" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    Parent Profile
-                  </Link>
-                </DropdownMenuItem>
                 
                 <DropdownMenuItem asChild>
                   <Link href="/admin" className="cursor-pointer">
