@@ -246,19 +246,48 @@ export function setupSuperAdminRoutes(app: Express) {
       // Get real tenant data grouped by state
       const tenants = await storage.getTenants();
       
+      // State name to abbreviation mapping
+      const stateToAbbrev: Record<string, string> = {
+        'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+        'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+        'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+        'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+        'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+        'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+        'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+        'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+        'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+        'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+        'District of Columbia': 'DC'
+      };
+      
+      console.log(`Fetched ${tenants.length} tenants for geographic distribution`);
+      
       // Group tenants by state and count them
       const stateDistribution = tenants.reduce((acc: any, tenant) => {
-        const state = tenant.state || 'Unknown';
-        if (!acc[state]) {
-          acc[state] = { state: state, stateCode: state, tenantCount: 0 };
+        if (!tenant.state) {
+          console.log(`Tenant ${tenant.name} has no state information`);
+          return acc;
         }
-        acc[state].tenantCount++;
+        
+        // Try to get state abbreviation, fallback to the state value if it's already an abbreviation
+        const stateAbbrev = stateToAbbrev[tenant.state] || tenant.state;
+        
+        if (!acc[stateAbbrev]) {
+          acc[stateAbbrev] = { 
+            state: tenant.state, 
+            stateCode: stateAbbrev, 
+            tenantCount: 0 
+          };
+        }
+        acc[stateAbbrev].tenantCount++;
         return acc;
       }, {});
       
       // Convert to array format expected by the component
       const tenantDistribution = Object.values(stateDistribution);
       
+      console.log('Geographic distribution result:', tenantDistribution);
       res.json(tenantDistribution);
     } catch (error) {
       console.error("Error fetching geographic distribution:", error);
