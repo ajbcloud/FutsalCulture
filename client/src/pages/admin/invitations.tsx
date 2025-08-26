@@ -130,6 +130,15 @@ export default function InvitationsPage() {
     enabled: activeTab === "codes",
   });
 
+  // Debug logging for invite codes
+  console.log('Invite Codes Debug:', { 
+    inviteCodes, 
+    codesLoading, 
+    codesError, 
+    activeTab,
+    inviteCodesLength: inviteCodes.length 
+  });
+
   // Fetch invitations
   const { data: invitations = [], isLoading: invitationsLoading, error: invitationsError, refetch: refetchInvitations } = useQuery<Invitation[]>({
     queryKey: ['/api/admin/invitations'],

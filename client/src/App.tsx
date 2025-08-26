@@ -59,7 +59,6 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Status from "./pages/Status";
 
-
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
