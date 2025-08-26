@@ -433,7 +433,7 @@ export default function InvitationsPage() {
                           </div>
                           
                           {code.description && (
-                            <p className="text-sm text-gray-600 mb-2">{code.description}</p>
+                            <p className="text-sm text-muted-foreground mb-2">{code.description}</p>
                           )}
                           
                           <div className="flex items-center gap-4 text-sm text-gray-500">
