@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 import { useQuery } from '@tanstack/react-query';
+import { useHasFeature } from '@/hooks/use-feature-flags';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -27,6 +28,9 @@ export default function AdminSessionDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const isNew = params?.id === 'new';
+  
+  // Feature flags for premium features
+  const { hasFeature: hasWaitlistFeature } = useHasFeature('waitlist_manual');
   
   // Fetch admin settings to get available locations
   const { data: adminSettings } = useQuery({
@@ -653,7 +657,8 @@ export default function AdminSessionDetail() {
           </div>
         </div>
 
-        {/* Waitlist Settings Section */}
+        {/* Waitlist Settings Section - Premium Feature */}
+        {hasWaitlistFeature ? (
         <div className="border-t border-border pt-6 mt-6">
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
             <Users className="w-5 h-5 mr-2" />
@@ -741,6 +746,23 @@ export default function AdminSessionDetail() {
             )}
           </div>
         </div>
+        ) : (
+          <div className="border-t border-border pt-6 mt-6">
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+              <div className="flex items-center">
+                <Users className="w-5 h-5 mr-3 text-orange-600 dark:text-orange-400" />
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                    Waitlist Settings - Premium Feature
+                  </h3>
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    Upgrade to Core plan or higher to enable waitlist functionality for your sessions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end mt-6 space-x-4">
           <Link href="/admin/sessions">

@@ -1,0 +1,15 @@
+Warning: Invalid prop `%s` supplied to `React.Fragment`. React.Fragment can only have `key` and `children` props.%s data-replit-metadata 
+    at AdminSessions (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/pages/admin/sessions/index.tsx:47:35)
+    at Route (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=359cd1a5:191:16)
+    at Switch (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=359cd1a5:247:17)
+    at div
+    at Router (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/App.tsx?v=S7oEzfYM-cXthnlianAzU:74:48)
+    at ErrorBoundary (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/components/error-boundary.tsx:10:5)
+    at Provider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2M7HY3UG.js?v=359cd1a5:38:15)
+    at TooltipProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=359cd1a5:64:5)
+    at TimezoneProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/contexts/TimezoneContext.tsx:21:36)
+    at AuthProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/contexts/AuthContext.tsx:20:32)
+    at BusinessProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/contexts/BusinessContext.tsx:21:36)
+    at ThemeProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/src/contexts/ThemeContext.tsx:20:33)
+    at QueryClientProvider (https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=359cd1a5:2934:3)
+    at App
