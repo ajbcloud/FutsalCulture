@@ -140,7 +140,23 @@ export const tenants = pgTable("tenants", {
   inviteCodeUpdatedBy: varchar("invite_code_updated_by").references(() => users.id),
 });
 
-
+// Tenant Invite Codes - Multiple static codes per tenant
+export const tenantInviteCodes = pgTable("tenant_invite_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 12 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(), // Friendly name like "Parent Registration" or "Player Signup"
+  description: text("description"), // Optional description
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0), // Track how many times it's been used
+  maxUsage: integer("max_usage"), // Optional usage limit (null = unlimited)
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("tenant_invite_codes_tenant_idx").on(table.tenantId),
+  index("tenant_invite_codes_code_idx").on(table.code),
+]);
 
 // User storage table for Replit Auth
 export const users = pgTable("users", {
@@ -2398,3 +2414,14 @@ export type TenantMembership = typeof tenantMemberships.$inferSelect;
 export type InsertTenantMembership = z.infer<typeof insertTenantMembershipSchema>;
 export type InviteToken = typeof inviteTokens.$inferSelect;
 export type InsertInviteToken = z.infer<typeof insertInviteTokenSchema>;
+
+// Tenant invite codes schemas and types
+export const insertTenantInviteCodeSchema = createInsertSchema(tenantInviteCodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+
+export type TenantInviteCode = typeof tenantInviteCodes.$inferSelect;
+export type InsertTenantInviteCode = z.infer<typeof insertTenantInviteCodeSchema>;

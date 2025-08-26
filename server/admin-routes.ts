@@ -5224,4 +5224,9 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       res.status(500).json({ error: 'Failed to fetch consent status' });
     }
   });
+
+  // Import and use tenant invite codes routes
+  import('./routes/tenant-invite-codes').then(module => {
+    app.use('/api/admin', module.default);
+  });
 }
