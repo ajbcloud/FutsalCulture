@@ -303,6 +303,15 @@ export default function GetStarted() {
               </div>
             </div>
 
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading}
+              data-testid="button-create-club"
+            >
+              {loading ? "Creating your club..." : "Create my club"}
+            </Button>
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="accept"
@@ -315,15 +324,6 @@ export default function GetStarted() {
                 I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a> *
               </Label>
             </div>
-
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-              data-testid="button-create-club"
-            >
-              {loading ? "Creating your club..." : "Create my club"}
-            </Button>
 
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">
