@@ -54,9 +54,8 @@ export default function HomePlayHQ() {
                   <img 
                     src={adminDashboardImg} 
                     alt="PlayHQ Admin Dashboard - Complete sports club management interface showing analytics, player management, and session scheduling"
-                    className="w-full h-auto object-cover"
+                    className="w-full h-auto object-contain"
                     loading="eager"
-                    style={{ minHeight: '400px', maxHeight: '600px' }}
                   />
                 </div>
               </div>
