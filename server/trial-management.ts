@@ -248,7 +248,7 @@ export class TrialManager {
         await db.update(tenants)
           .set({
             lastPlanLevel: tenant.trialPlan,
-            planLevel: 'core', // Free tier is represented as 'core' with restrictions
+            planLevel: 'free', // Free tier
             billingStatus: 'none',
             trialPlan: null,
             planChangeReason: 'trial_end',
@@ -435,7 +435,7 @@ export class TrialManager {
       await db.update(tenants)
         .set({
           lastPlanLevel: tenant.planLevel,
-          planLevel: 'core', // Free tier
+          planLevel: 'free', // Free tier
           billingStatus: 'none',
           trialPlan: null,
           planChangeReason: 'grace_period_expired',

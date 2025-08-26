@@ -35,7 +35,7 @@ export async function loadTenantMiddleware(req: Request, res: Response, next: Ne
 
     // Add to request object
     req.tenantId = tenantId;
-    req.planLevel = tenant[0].planLevel || 'core';
+    req.planLevel = tenant[0].planLevel || 'free';
     
     next();
   } catch (error) {

@@ -140,7 +140,7 @@ const defaultPolicies: Policies = {
 };
 
 const defaultTenantDefaults: TenantDefaults = {
-  defaultPlanCode: 'core',
+  defaultPlanCode: 'free',
   bookingWindowHours: 8,
   sessionCapacity: 20,
   seedSampleContent: false,

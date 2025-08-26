@@ -20,7 +20,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Plan level enum for feature flags (must be declared before tenants table)
-export const planLevelEnum = pgEnum("plan_level", ["core", "growth", "elite"]);
+export const planLevelEnum = pgEnum("plan_level", ["free", "core", "growth", "elite"]);
 
 // Registration status enum
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"]);
@@ -79,7 +79,7 @@ export const tenants = pgTable("tenants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   subdomain: varchar("subdomain").unique().notNull(),
-  planLevel: planLevelEnum("plan_level").default("core"),
+  planLevel: planLevelEnum("plan_level").default("free"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   // Geographic location fields for US map visualization
