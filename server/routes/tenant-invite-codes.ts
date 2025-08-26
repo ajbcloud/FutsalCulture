@@ -5,40 +5,11 @@ import { tenantInviteCodes, insertTenantInviteCodeSchema } from '../../shared/sc
 
 const router = express.Router();
 
-// Import the standard authentication middleware
-const isAuthenticated = (req: any, res: any, next: any) => {
-  let userId;
-  let tenantId;
-  
-  // Check for currentUser first (set by requireAdmin middleware)
-  if ((req as any).currentUser) {
-    userId = (req as any).currentUser.id;
-    tenantId = (req as any).currentUser.tenantId || (req as any).currentUser.tenant_id;
-  }
-  // Check for local session (password-based users)  
-  else if (req.session?.userId) {
-    userId = req.session.userId;
-    tenantId = req.session.tenantId;
-  }
-  // Fall back to Replit Auth user
-  else if (req.user?.id) {
-    userId = req.user.id;
-    tenantId = req.user.tenantId;
-  }
-  // In development, allow the hardcoded super admin user to bypass auth
-  else if (process.env.NODE_ENV === 'development') {
-    userId = 'ajosephfinch';
-    tenantId = '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant
-  }
-  // No authentication found
-  else {
-    return res.status(401).json({ message: "Authentication required" });
-  }
+// Import the requireAdmin middleware from admin-routes
+import { requireAdmin } from '../admin-routes';
 
-  req.currentUserId = userId;
-  req.userTenantId = tenantId;
-  next();
-};
+// Use requireAdmin middleware instead of custom auth
+const isAuthenticated = requireAdmin;
 
 // Generate a random uppercase alphanumeric code
 function generateInviteCode(): string {
