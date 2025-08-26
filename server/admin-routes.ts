@@ -191,12 +191,45 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
       userId = (req as any).user.id;
     }
     
+    // In development, allow the hardcoded super admin user to bypass auth
+    const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
+    if (process.env.NODE_ENV === 'development' && !userId) {
+      userId = FAILSAFE_SUPER_ADMIN_ID;
+      console.log("🔧 Development mode: Using failsafe admin ID");
+    }
+    
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
     // Check user's admin status directly from database
-    const user = await storage.getUser(userId);
+    let user = await storage.getUser(userId);
+    
+    // Apply failsafe super admin permissions if this is the hardcoded admin
+    if (userId === FAILSAFE_SUPER_ADMIN_ID) {
+      if (user) {
+        // Ensure failsafe admin always has super admin permissions
+        user = {
+          ...user,
+          isSuperAdmin: true,
+          isAdmin: true,
+        };
+      } else {
+        // If failsafe admin doesn't exist in database, create a minimal user object
+        console.log("⚠️ Failsafe super admin not found in database, creating virtual user");
+        user = {
+          id: userId,
+          email: "ajosephfinch@gmail.com",
+          tenantId: "8b976f98-3921-49f2-acf5-006f41d69095", // Liverpool tenant
+          isAdmin: true,
+          isSuperAdmin: true,
+          isAssistant: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+    }
+    
     if (!user?.isAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
