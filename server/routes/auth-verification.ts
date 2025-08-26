@@ -26,13 +26,21 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
   }
 
   try {
-    // Generate subdomain from organization name
-    const subdomain = organization_name
+    // Generate base subdomain from organization name
+    const baseSubdomain = organization_name
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
-      .substring(0, 50);
+      .substring(0, 45); // Leave room for -## suffix
+
+    // Find unique subdomain by appending numbers if needed
+    let subdomain = baseSubdomain;
+    let counter = 1;
+    while (await db.query.tenants.findFirst({ where: eq(tenants.subdomain, subdomain) })) {
+      subdomain = `${baseSubdomain}-${counter}`;
+      counter++;
+    }
 
     // Create tenant
     const [tenant] = await db.insert(tenants).values({
@@ -122,9 +130,7 @@ The PlayHQ Team`;
       if (error.message.includes('email')) {
         return res.status(400).json({ ok: false, error: "This email is already registered" });
       }
-      if (error.message.includes('subdomain')) {
-        return res.status(400).json({ ok: false, error: "This organization name is too similar to an existing one" });
-      }
+      // Removed subdomain uniqueness error - now handled automatically
     }
     return res.status(500).json({ ok: false, error: "Failed to create organization" });
   }
@@ -141,13 +147,21 @@ authVerificationRouter.post("/signup", async (req, res) => {
   }
 
   try {
-    // Generate subdomain from organization name
-    const subdomain = org_name
+    // Generate base subdomain from organization name
+    const baseSubdomain = org_name
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
-      .substring(0, 50);
+      .substring(0, 45); // Leave room for -## suffix
+
+    // Find unique subdomain by appending numbers if needed
+    let subdomain = baseSubdomain;
+    let counter = 1;
+    while (await db.query.tenants.findFirst({ where: eq(tenants.subdomain, subdomain) })) {
+      subdomain = `${baseSubdomain}-${counter}`;
+      counter++;
+    }
 
     // Create tenant
     const [tenant] = await db.insert(tenants).values({
@@ -237,9 +251,7 @@ The PlayHQ Team`;
       if (error.message.includes('email')) {
         return res.status(400).json({ ok: false, error: "This email is already registered" });
       }
-      if (error.message.includes('subdomain')) {
-        return res.status(400).json({ ok: false, error: "This organization name is too similar to an existing one" });
-      }
+      // Removed subdomain uniqueness error - now handled automatically
     }
     return res.status(500).json({ ok: false, error: "Failed to create organization" });
   }
