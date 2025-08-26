@@ -3289,20 +3289,20 @@ export class DatabaseStorage implements IStorage {
       totalTemplates: allTemplates.length,
       completedCount: completedForms.length,
       missingCount: missingForms.length,
-      completedForms: completedForms.map(form => ({
-        templateId: form.templateId,
-        templateTitle: form.templateTitle,
-        templateType: form.templateType,
-        signedAt: form.signedAt,
-        subjectRole: form.subjectRole,
-        subjectName: form.subjectRole === 'player'
-          ? `${form.playerFirstName || ''} ${form.playerLastName || ''}`.trim()
-          : `${form.parentFirstName || ''} ${form.parentLastName || ''}`.trim()
+      completedForms: (completedForms || []).map(form => ({
+        templateId: String(form?.templateId || ''),
+        templateTitle: String(form?.templateTitle || ''),
+        templateType: String(form?.templateType || ''),
+        signedAt: form?.signedAt || new Date(),
+        subjectRole: String(form?.subjectRole || ''),
+        subjectName: form?.subjectRole === 'player'
+          ? `${form?.playerFirstName || ''} ${form?.playerLastName || ''}`.trim()
+          : `${form?.parentFirstName || ''} ${form?.parentLastName || ''}`.trim()
       })),
-      missingForms: missingForms.map(template => ({
-        templateId: template.id,
-        templateTitle: template.title,
-        templateType: template.templateType,
+      missingForms: (missingForms || []).map(template => ({
+        templateId: String(template?.id || ''),
+        templateTitle: String(template?.title || ''),
+        templateType: String(template?.templateType || ''),
       }))
     };
   }

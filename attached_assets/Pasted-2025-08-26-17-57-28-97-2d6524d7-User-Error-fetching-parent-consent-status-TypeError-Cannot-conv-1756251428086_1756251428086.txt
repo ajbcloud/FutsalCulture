@@ -1,0 +1,88 @@
+2025-08-26 17:57:28.97
+2d6524d7
+User
+Error fetching parent consent status: TypeError: Cannot convert undefined or null to object
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at Function.entries ()
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at Array.reduce ()
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+2025-08-26 17:57:28.97
+2d6524d7
+User
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+2025-08-26 17:57:36.21
+2d6524d7
+User
+Error fetching parent consent status: TypeError: Cannot convert undefined or null to object
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at Function.entries ()
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at Array.reduce ()
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+2025-08-26 17:57:36.21
+2d6524d7
+User
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)

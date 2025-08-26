@@ -166,6 +166,10 @@ authVerificationRouter.post("/signup", async (req, res) => {
       counter++;
     }
 
+    // Generate tenant invite code
+    const { generateInviteCode } = await import('../utils/invite-helpers');
+    const inviteCode = generateInviteCode();
+
     // Create tenant
     const [tenant] = await db.insert(tenants).values({
       name: org_name,
@@ -175,6 +179,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
       country: country || null,
       contactName: contact_name,
       contactEmail: contact_email.toLowerCase(),
+      inviteCode,
     }).returning();
 
     // Create user with pending verification status
@@ -188,6 +193,17 @@ authVerificationRouter.post("/signup", async (req, res) => {
       verificationStatus: "pending_verify",
       authProvider: "local",
     }).returning();
+
+    // Create default invite code for new tenant
+    const { tenantInviteCodes } = await import('@shared/schema');
+    await db.insert(tenantInviteCodes).values({
+      tenantId: tenant.id,
+      code: generateInviteCode(),
+      name: 'Main Registration Code',
+      description: 'Primary code for parent and player registration',
+      isActive: true,
+      createdBy: user.id,
+    });
 
     // Create verification token
     const { raw, hash } = newToken();
