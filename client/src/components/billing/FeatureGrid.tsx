@@ -127,7 +127,7 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
                 <React.Fragment key={categoryName}>
                   <tr>
                     <td colSpan={plans.length + 1} className="p-4 bg-muted/30">
-                      <div className="font-bold text-lg uppercase tracking-wide category-header">
+                      <div className="font-bold text-lg uppercase tracking-wide">
                         {categoryName}
                       </div>
                     </td>
