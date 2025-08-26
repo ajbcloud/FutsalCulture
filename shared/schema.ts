@@ -151,6 +151,9 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret"),
   customerId: varchar("customer_id"),
+  // Email verification
+  emailVerifiedAt: timestamp("email_verified_at"),
+  verificationStatus: varchar("verification_status").default("pending_verify"), // pending_verify, verified
   // Registration approval system
   isApproved: boolean("is_approved").default(false),
   registrationStatus: registrationStatusEnum("registration_status").default("pending"),
@@ -168,6 +171,19 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("users_tenant_id_idx").on(table.tenantId),
+]);
+
+// Email verification tokens table
+export const emailVerificationTokens = pgTable("email_verification_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("email_verification_tokens_user_id_idx").on(table.userId),
+  index("email_verification_tokens_token_hash_idx").on(table.tokenHash),
 ]);
 
 // Gender enum for players and sessions
