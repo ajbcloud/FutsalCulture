@@ -28,7 +28,12 @@ router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) =
     
     // Handle "current" tenant
     if (tenantId === 'current') {
-      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      const currentUser = (req as any).currentUser;
+      tenantId = currentUser?.tenantId || currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      console.log('🔍 Tenant ID resolution:', { 
+        currentUser: currentUser ? { id: currentUser.id, tenantId: currentUser.tenantId, tenant_id: currentUser.tenant_id } : 'none',
+        resolvedTenantId: tenantId 
+      });
     }
 
     // Test email functionality if test_email query parameter is provided
@@ -65,7 +70,8 @@ router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) =
     res.json(codes);
   } catch (error) {
     console.error('Error fetching invite codes:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    res.status(500).json({ message: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
