@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Lock, CheckCircle, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SetPassword() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const [checking, setChecking] = useState(true);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -79,6 +81,9 @@ export default function SetPassword() {
           title: "Success!",
           description: "Your password has been set and your account is verified.",
         });
+        
+        // Refresh user data in AuthContext before redirect
+        await refreshUser();
         
         // Redirect to appropriate dashboard
         setTimeout(() => {
