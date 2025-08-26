@@ -5,15 +5,27 @@ import { tenantInviteCodes, insertTenantInviteCodeSchema } from '../../shared/sc
 
 const router = express.Router();
 
-// Authentication middleware (similar to admin routes)
-const requireAuth = (req: any, res: any, next: any) => {
-  // Check for session or Replit auth or development mode
-  const userId = req.session?.userId || req.user?.id || (process.env.NODE_ENV === 'development' ? 'ajosephfinch' : null);
+// Import the standard authentication middleware
+const isAuthenticated = (req: any, res: any, next: any) => {
+  let userId;
   
-  if (!userId) {
-    return res.status(401).json({ message: 'Authentication required' });
+  // Check for local session first (password-based users)  
+  if (req.session?.userId) {
+    userId = req.session.userId;
   }
-  
+  // Fall back to Replit Auth user
+  else if (req.user?.id) {
+    userId = req.user.id;
+  }
+  // In development, allow the hardcoded super admin user to bypass auth
+  else if (process.env.NODE_ENV === 'development') {
+    userId = 'ajosephfinch';
+  }
+  // No authentication found
+  else {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
   req.currentUserId = userId;
   next();
 };
@@ -29,7 +41,7 @@ function generateInviteCode(): string {
 }
 
 // Get all invite codes for a tenant
-router.get('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
+router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) => {
   try {
     let { tenantId } = req.params;
     
@@ -52,7 +64,7 @@ router.get('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
 });
 
 // Create a new invite code
-router.post('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
+router.post('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) => {
   try {
     let { tenantId } = req.params;
     const { name, description, maxUsage } = req.body;
@@ -107,7 +119,7 @@ router.post('/tenant/:tenantId/invite-codes', requireAuth, async (req, res) => {
 });
 
 // Toggle active status of an invite code
-router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', requireAuth, async (req, res) => {
+router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', isAuthenticated, async (req, res) => {
   try {
     let { tenantId } = req.params;
     const { codeId } = req.params;
@@ -150,7 +162,7 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', requireAuth, async
 });
 
 // Delete an invite code
-router.delete('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req, res) => {
+router.delete('/tenant/:tenantId/invite-codes/:codeId', isAuthenticated, async (req, res) => {
   try {
     let { tenantId } = req.params;
     const { codeId } = req.params;
@@ -180,7 +192,7 @@ router.delete('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req,
 });
 
 // Update an invite code
-router.patch('/tenant/:tenantId/invite-codes/:codeId', requireAuth, async (req, res) => {
+router.patch('/tenant/:tenantId/invite-codes/:codeId', isAuthenticated, async (req, res) => {
   try {
     let { tenantId } = req.params;
     const { codeId } = req.params;

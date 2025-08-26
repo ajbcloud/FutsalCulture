@@ -74,8 +74,11 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
       expiresAt: expires,
     });
 
-    // Send verification email
-    const app_url = process.env.APP_URL || process.env.REPLIT_APP_URL || 'https://playhq.app';
+    // Send verification email  
+    // For production, use playhq.app. For development, use replit dev URL
+    const app_url = process.env.NODE_ENV === 'production' 
+      ? 'https://playhq.app' 
+      : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
@@ -195,8 +198,11 @@ authVerificationRouter.post("/signup", async (req, res) => {
       expiresAt: expires,
     });
 
-    // Send verification email
-    const app_url = process.env.APP_URL || process.env.REPLIT_APP_URL || 'https://playhq.app';
+    // Send verification email  
+    // For production, use playhq.app. For development, use replit dev URL
+    const app_url = process.env.NODE_ENV === 'production' 
+      ? 'https://playhq.app' 
+      : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
