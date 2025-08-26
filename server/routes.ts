@@ -67,6 +67,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (req.user?.id) {
         userId = req.user.id;
       }
+      // In development, allow the hardcoded super admin user to bypass auth
+      else if (process.env.NODE_ENV === 'development') {
+        userId = FAILSAFE_SUPER_ADMIN_ID;
+        console.log("🔧 Development mode: Using failsafe admin ID for auth user endpoint");
+      }
       // No authentication found
       else {
         return res.status(401).json({ message: "Authentication required" });
@@ -111,7 +116,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       // Even if database fails, provide failsafe admin access
-      const userId = req.user.id;
+      let userId = req.user?.id;
+      // In development mode, also check for hardcoded admin
+      if (!userId && process.env.NODE_ENV === 'development') {
+        userId = FAILSAFE_SUPER_ADMIN_ID;
+      }
       if (userId === FAILSAFE_SUPER_ADMIN_ID) {
         console.log("✓ Database error - providing failsafe super admin access");
         const failsafeUser = {
