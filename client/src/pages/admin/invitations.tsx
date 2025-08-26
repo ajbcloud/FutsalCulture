@@ -445,7 +445,7 @@ export default function InvitationsPage() {
                         
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-2">
-                            <code className="text-lg font-mono bg-gray-100 px-3 py-1 rounded border">
+                            <code className="text-lg font-mono bg-muted text-foreground px-3 py-1 rounded border">
                               {code.code}
                             </code>
                             <Button
