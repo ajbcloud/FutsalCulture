@@ -43,8 +43,12 @@ export default function HomePlayHQ() {
             </div>
           </div>
           <div className="rounded-2xl shadow p-6 bg-card border border-border">
-            <div className="aspect-video w-full bg-gray-100 dark:bg-gray-800 rounded-xl grid place-items-center text-gray-500 dark:text-gray-400 text-sm">
-              Product screenshot
+            <div className="aspect-video w-full bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
+              <img 
+                src="/attached_assets/image_1756179597735.png" 
+                alt="PlayHQ Admin Dashboard" 
+                className="w-full h-full object-cover rounded-xl"
+              />
             </div>
           </div>
         </section>
