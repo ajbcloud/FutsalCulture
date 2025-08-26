@@ -94,13 +94,18 @@ export default function InvitationsPage() {
   });
 
   // Fetch tenant invite code
-  const { data: tenantCode, isLoading: codeLoading } = useQuery<TenantCode>({
+  const { data: tenantCode, isLoading: codeLoading, error: codeError } = useQuery<TenantCode>({
     queryKey: ['/api/admin/tenant/invite-code'],
     queryFn: async () => {
       const response = await fetch('/api/admin/tenant/invite-code');
-      if (!response.ok) throw new Error('Failed to fetch invite code');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch invite code');
+      }
       return response.json();
     },
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Create invitation mutation
@@ -472,6 +477,30 @@ export default function InvitationsPage() {
                   <div className="flex justify-center py-4">
                     <RefreshCw className="w-6 h-6 animate-spin" />
                   </div>
+                ) : codeError ? (
+                  <div className="text-center py-8">
+                    <Shield className="w-12 h-12 mx-auto mb-4 text-red-500 opacity-50" />
+                    <p className="text-red-600 mb-4">Failed to load invite code</p>
+                    <p className="text-sm text-gray-500 mb-4">{(codeError as Error).message}</p>
+                    <Button
+                      onClick={handleRotateCode}
+                      disabled={rotateCodeMutation.isPending}
+                      className="flex items-center gap-2"
+                      data-testid="button-create-code"
+                    >
+                      {rotateCodeMutation.isPending ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <LinkIcon className="w-4 h-4" />
+                          Create Invite Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 ) : tenantCode ? (
                   <>
                     <div className="bg-gray-50 p-4 rounded-lg border">
@@ -569,8 +598,26 @@ export default function InvitationsPage() {
                   </>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    <Shield className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No invite code available</p>
+                    <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="mb-4">No invite code available</p>
+                    <Button
+                      onClick={handleRotateCode}
+                      disabled={rotateCodeMutation.isPending}
+                      className="flex items-center gap-2"
+                      data-testid="button-create-code"
+                    >
+                      {rotateCodeMutation.isPending ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <LinkIcon className="w-4 h-4" />
+                          Create Invite Code
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </CardContent>
