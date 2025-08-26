@@ -31,13 +31,13 @@ export async function getStats(req: Request, res: Response) {
 
   const topTenantsByPlatformRevenue = [
     { tenant: 'Elite Footwork Academy', revenue: 19900 },
-    { tenant: 'Futsal Culture', revenue: 9900 },
+    { tenant: 'PlayHQ', revenue: 9900 },
     { tenant: 'Metro Futsal', revenue: 16100 }
   ];
 
   const recentActivity = [
     { id: 'evt-1', when: new Date().toISOString(), text: 'New tenant Elite Footwork Academy activated' },
-    { id: 'evt-2', when: new Date(Date.now() - 3600000).toISOString(), text: 'Platform payment received from Futsal Culture' },
+    { id: 'evt-2', when: new Date(Date.now() - 3600000).toISOString(), text: 'Platform payment received from PlayHQ' },
     { id: 'evt-3', when: new Date(Date.now() - 7200000).toISOString(), text: 'Tenant Metro Futsal upgraded to Elite plan' }
   ];
 

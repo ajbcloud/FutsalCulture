@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send email notification to support team
       try {
         const { sendHelpRequestNotification } = await import('./emailService');
-        const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@futsalculture.com';
+        const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@playhq.app';
         await sendHelpRequestNotification(supportEmail, {
           name: `${helpRequest.firstName} ${helpRequest.lastName}`,
           email: helpRequest.email,

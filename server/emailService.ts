@@ -86,7 +86,7 @@ export async function sendBulkEmail(recipients: Array<{
   for (const recipient of recipients) {
     const result = await sendEmail({
       to: recipient.email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@futsalculture.com',
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
       subject: recipient.subject,
       text: recipient.text || '',
       html: recipient.html || ''

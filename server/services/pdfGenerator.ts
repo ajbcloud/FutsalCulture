@@ -84,10 +84,10 @@ export class PDFGeneratorService {
 
     // Default settings with fallbacks
     return {
-      businessName: settingsMap.businessName || "Futsal Culture",
+      businessName: settingsMap.businessName || "PlayHQ",
       businessLogo: settingsMap.businessLogo || "",
-      contactEmail: settingsMap.contactEmail || "admin@futsalculture.com",
-      supportEmail: settingsMap.supportEmail || "support@futsalculture.com",
+      contactEmail: settingsMap.contactEmail || "admin@playhq.app",
+      supportEmail: settingsMap.supportEmail || "support@playhq.app",
       supportPhone: settingsMap.supportPhone || "(555) 123-GOAL",
       supportHours: settingsMap.supportHours || "Monday - Friday",
       supportLocation: settingsMap.supportLocation || "South Florida",

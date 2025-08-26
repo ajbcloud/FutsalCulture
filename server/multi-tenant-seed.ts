@@ -39,8 +39,8 @@ function randomInt(min: number, max: number): number {
 // Data arrays
 const tenantDataArray: TenantInsert[] = [
   {
-    name: "Futsal Culture",
-    subdomain: "futsal-culture",
+    name: "PlayHQ",
+    subdomain: "playhq",
   },
   {
     name: "Elite Footwork Academy", 
@@ -412,8 +412,8 @@ async function seedSystemSettings() {
   
   const settings = [
     { key: "autoApproveRegistrations", value: "true" },
-    { key: "businessName", value: "Futsal Culture" },
-    { key: "supportEmail", value: "support@futsalculture.com" },
+    { key: "businessName", value: "PlayHQ" },
+    { key: "supportEmail", value: "support@playhq.app" },
     { key: "supportPhone", value: "+1 (555) 123-4567" },
     { key: "supportHours", value: "Mon-Fri 9AM-6PM EST" },
     { key: "businessLocation", value: "123 Sports Center Dr, Athletic City, AC 12345" },

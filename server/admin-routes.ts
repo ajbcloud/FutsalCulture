@@ -3553,7 +3553,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           },
           customer: {
             id: tenantData.stripeCustomerId || 'cus_database_active',
-            email: currentUser?.email || "admin@futsalculture.com"
+            email: currentUser?.email || "admin@playhq.app"
           }
         };
 
@@ -3601,7 +3601,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         if (!customerId) {
           // Create a new customer in Stripe
           const customer = await stripe.customers.create({
-            email: currentUser?.email || "admin@futsalculture.com",
+            email: currentUser?.email || "admin@playhq.app",
             name: `${currentUser?.firstName || "Admin"} ${currentUser?.lastName || "User"}`,
             metadata: {
               user_id: currentUser?.id || "unknown",
@@ -3660,7 +3660,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
             plan: null,
             customer: {
               id: customerId,
-              email: currentUser?.email || "admin@futsalculture.com"
+              email: currentUser?.email || "admin@playhq.app"
             }
           };
         }
@@ -3687,7 +3687,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           } : null,
           customer: {
             id: customerId,
-            email: currentUser?.email || "admin@futsalculture.com"
+            email: currentUser?.email || "admin@playhq.app"
           }
         } : {
           id: "no_subscription",
@@ -3701,7 +3701,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           plan: null,
           customer: {
             id: customerId,
-            email: currentUser?.email || "admin@futsalculture.com"
+            email: currentUser?.email || "admin@playhq.app"
           }
         };
 
@@ -3740,7 +3740,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       try {
         // Create a customer for portal session
         const customer = await stripe.customers.create({
-          email: currentUser?.email || "admin@futsalculture.com",
+          email: currentUser?.email || "admin@playhq.app",
           name: "Platform Administrator",
           metadata: {
             user_id: currentUser?.id || "unknown",

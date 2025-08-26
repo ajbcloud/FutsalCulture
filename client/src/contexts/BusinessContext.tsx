@@ -25,7 +25,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     refetchOnWindowFocus: false,
   });
 
-  const businessName = settings?.businessName || 'Futsal Culture';
+  const businessName = settings?.businessName || 'PlayHQ';
   const businessLogo = settings?.businessLogo;
 
   return (

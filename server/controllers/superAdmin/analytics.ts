@@ -93,7 +93,7 @@ export async function overview(req: Request, res: Response) {
         avgTicket: 2500,
         revenuePerPlayer: 2100,
         topTenantsByCommerceRevenue: [
-          { tenantId: '1', tenantName: 'Futsal Culture', revenue: 50000 },
+          { tenantId: '1', tenantName: 'PlayHQ', revenue: 50000 },
           { tenantId: '2', tenantName: 'Premier Futsal Club', revenue: 35000 },
           { tenantId: '3', tenantName: 'Champions Training Center', revenue: 25000 }
         ]

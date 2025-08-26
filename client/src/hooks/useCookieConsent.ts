@@ -6,7 +6,7 @@ interface CookieConsent {
   timestamp: number;
 }
 
-const STORAGE_KEY = "futsal-culture-cookie-consent";
+const STORAGE_KEY = "playhq-cookie-consent";
 
 export function useCookieConsent() {
   const [consent, setConsent] = useState<CookieConsent | null>(null);

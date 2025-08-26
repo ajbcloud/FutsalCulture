@@ -125,7 +125,7 @@ export default function PlatformBilling() {
               >
                 <option value="all">All Tenants</option>
                 <option value="elite-footwork">Elite Footwork Academy</option>
-                <option value="futsal-culture">Futsal Culture</option>
+                <option value="playhq">PlayHQ</option>
                 <option value="metro-futsal">Metro Futsal</option>
               </select>
             </div>

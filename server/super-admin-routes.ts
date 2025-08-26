@@ -305,7 +305,7 @@ export function setupSuperAdminRoutes(app: Express) {
         'CA': [
           {
             tenantId: '1',
-            tenantName: 'Futsal Culture',
+            tenantName: 'PlayHQ',
             planLevel: 'elite',
             state: 'CA',
             createdAt: '2024-01-15T00:00:00Z',
@@ -754,9 +754,9 @@ export function setupSuperAdminRoutes(app: Express) {
       const integrations = {
         email: {
           apiKey: process.env.SENDGRID_API_KEY ? '••••••••' : '',
-          senderEmail: 'notifications@futsalculture.app',
-          senderName: 'Futsal Culture',
-          replyTo: 'support@futsalculture.app',
+          senderEmail: 'notifications@playhq.app',
+          senderName: 'PlayHQ',
+          replyTo: 'support@playhq.app',
           templates: {
             welcome: true,
             booking: true,

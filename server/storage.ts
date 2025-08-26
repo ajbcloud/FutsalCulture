@@ -1563,9 +1563,9 @@ export class DatabaseStorage implements IStorage {
   async getSuperAdminDashboardMetrics(fromDate: Date, toDate: Date): Promise<any> {
     // Recent Activity
     const recentActivity = [
-      { type: 'user_signup', message: 'New user registered', timestamp: new Date(), tenantName: 'Futsal Culture' },
+      { type: 'user_signup', message: 'New user registered', timestamp: new Date(), tenantName: 'PlayHQ' },
       { type: 'payment', message: 'Payment received $20.00', timestamp: new Date(), tenantName: 'Elite Academy' },
-      { type: 'session', message: 'Session created', timestamp: new Date(), tenantName: 'Futsal Culture' }
+      { type: 'session', message: 'Session created', timestamp: new Date(), tenantName: 'PlayHQ' }
     ];
 
     // Growth Metrics (mock for now)
@@ -1833,7 +1833,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const tenantActivity = [
-      { name: 'Futsal Culture', users: 45, sessions: 67, revenue: 1340, growth: 12.5 },
+      { name: 'PlayHQ', users: 45, sessions: 67, revenue: 1340, growth: 12.5 },
       { name: 'Elite Academy', users: 38, sessions: 52, revenue: 1040, growth: 8.2 },
       { name: 'Pro Skills', users: 29, sessions: 41, revenue: 820, growth: 15.1 }
     ];

@@ -1,7 +1,7 @@
-# Futsal Culture Booking App
+# PlayHQ Booking App
 
 ## Overview
-This is a full-stack web application, "Futsal Culture," for booking limited spots in weekly futsal training sessions. It features day-of booking, payment integration, and real-time capacity monitoring. The project is currently undergoing a major architectural change to convert from a single-tenant to a multi-tenant Super-Admin platform, supporting multiple futsal clubs and organizations. This involves adding `tenant_id` to all tables, creating a Super-Admin role, tenant management capabilities, and scoped data access patterns. The app aims to streamline the booking process for parents and provide robust administrative tools for futsal organizations.
+This is a full-stack web application, "PlayHQ," for booking limited spots in weekly futsal training sessions. It features day-of booking, payment integration, and real-time capacity monitoring. The project is currently undergoing a major architectural change to convert from a single-tenant to a multi-tenant Super-Admin platform, supporting multiple futsal clubs and organizations. This involves adding `tenant_id` to all tables, creating a Super-Admin role, tenant management capabilities, and scoped data access patterns. The app aims to streamline the booking process for parents and provide robust administrative tools for futsal organizations.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
