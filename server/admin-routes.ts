@@ -7,9 +7,16 @@ import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import { loadTenantMiddleware } from "./feature-middleware";
 import { hasFeature } from "../shared/feature-flags";
 import Stripe from "stripe";
+import multer from 'multer';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Helper function to calculate time ago
 function getTimeAgo(date: Date): string {
@@ -3236,18 +3243,304 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     }
   });
 
-  app.post('/api/admin/imports/players', requireAdmin, async (req: Request, res: Response) => {
+  app.post('/api/admin/imports/players', requireAdmin, upload.single('file'), async (req: Request, res: Response) => {
     try {
-      // TODO: Implement CSV parsing and player bulk import
-      // For now, return success placeholder
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
+      }
+
+      const sendInviteEmails = req.body.sendInviteEmails === 'true';
+      const csvContent = req.file.buffer.toString('utf-8');
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain header row and at least one data row" });
+      }
+
+      const headerRow = lines[0];
+      const expectedHeaders = ['firstName', 'lastName', 'birthYear', 'gender', 'parentEmail', 'parentPhone', 'soccerClub', 'canAccessPortal', 'canBookAndPay'];
+      
+      // Parse header and validate
+      const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        return res.status(400).json({ message: `Missing required headers: ${missingHeaders.join(', ')}` });
+      }
+
+      const dataRows = lines.slice(1);
+      let imported = 0;
+      const errors: string[] = [];
+      const inviteEmails: string[] = [];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        if (!row.trim()) continue;
+        
+        const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 2}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
+          continue;
+        }
+
+        const rowData: any = {};
+        headers.forEach((header, idx) => {
+          rowData[header] = values[idx];
+        });
+
+        // Validate required fields
+        if (!rowData.firstName || !rowData.lastName || !rowData.birthYear || !rowData.gender || !rowData.parentEmail) {
+          errors.push(`Row ${i + 2}: Missing required fields`);
+          continue;
+        }
+
+        // Validate birth year
+        const birthYear = parseInt(rowData.birthYear);
+        if (isNaN(birthYear) || birthYear < 2005 || birthYear > 2018) {
+          errors.push(`Row ${i + 2}: Birth year must be between 2005 and 2018`);
+          continue;
+        }
+
+        // Validate gender
+        if (!['boys', 'girls'].includes(rowData.gender.toLowerCase())) {
+          errors.push(`Row ${i + 2}: Gender must be 'boys' or 'girls'`);
+          continue;
+        }
+
+        // Check portal access age requirement
+        const age = new Date().getFullYear() - birthYear;
+        const canAccessPortal = rowData.canAccessPortal?.toLowerCase() === 'true';
+        if (canAccessPortal && age < 13) {
+          errors.push(`Row ${i + 2}: Portal access requires player to be at least 13 years old`);
+          continue;
+        }
+
+        try {
+          // Find or create parent
+          let parent = await db.select().from(users)
+            .where(and(
+              eq(users.email, rowData.parentEmail),
+              eq(users.tenantId, tenantId)
+            )).limit(1);
+
+          let parentId: string;
+          if (parent.length === 0) {
+            // Create new parent
+            const newParent = await db.insert(users).values({
+              tenantId,
+              firstName: rowData.parentEmail.split('@')[0], // Default first name from email
+              lastName: 'Parent', // Default last name
+              email: rowData.parentEmail,
+              phone: rowData.parentPhone || null,
+              isAdmin: false,
+              isAssistant: false,
+              emailVerified: false,
+              passwordSet: false,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }).returning();
+            
+            parentId = newParent[0].id;
+            if (sendInviteEmails) {
+              inviteEmails.push(rowData.parentEmail);
+            }
+          } else {
+            parentId = parent[0].id;
+          }
+
+          // Create player
+          await db.insert(players).values({
+            tenantId,
+            firstName: rowData.firstName,
+            lastName: rowData.lastName,
+            birthYear: birthYear,
+            gender: rowData.gender.toLowerCase() as 'boys' | 'girls',
+            parentId: parentId,
+            soccerClub: rowData.soccerClub || null,
+            canAccessPortal: canAccessPortal,
+            canBookAndPay: rowData.canBookAndPay?.toLowerCase() === 'true',
+            email: canAccessPortal ? `${rowData.firstName.toLowerCase()}.${rowData.lastName.toLowerCase()}@player.playhq.com` : null,
+            phoneNumber: null,
+            createdAt: new Date()
+          });
+
+          imported++;
+        } catch (error) {
+          console.error(`Error importing player row ${i + 2}:`, error);
+          errors.push(`Row ${i + 2}: Database error - ${error}`);
+        }
+      }
+
+      // Send invite emails if requested
+      if (sendInviteEmails && inviteEmails.length > 0) {
+        try {
+          const { sendInvitationEmail } = await import('./utils/invite-helpers');
+          for (const email of inviteEmails) {
+            await sendInvitationEmail(email, tenantId);
+          }
+        } catch (emailError) {
+          console.error('Error sending invite emails:', emailError);
+          // Don't fail the import for email errors
+        }
+      }
+
       res.json({ 
-        imported: 0, 
-        errors: [], 
-        message: "Player import functionality will be implemented with CSV parser" 
+        imported,
+        errors,
+        emailsSent: sendInviteEmails ? inviteEmails.length : 0,
+        message: `Successfully imported ${imported} players${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
       });
     } catch (error) {
       console.error("Error importing players:", error);
       res.status(500).json({ message: "Failed to import players" });
+    }
+  });
+
+  // Parent CSV Template Download Endpoint
+  app.get('/api/admin/template/parents', requireAdmin, (req: Request, res: Response) => {
+    const csvContent = `firstName,lastName,email,phone
+Sarah,Johnson,sarah.johnson@email.com,555-123-4567
+Mike,Williams,mike.williams@email.com,555-234-5678
+Lisa,Chen,lisa.chen@email.com,555-345-6789
+David,Thompson,david.thompson@email.com,555-456-7890
+Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="parents_template.csv"');
+    res.send(csvContent);
+  });
+
+  // Parent CSV Import Endpoint
+  app.post('/api/admin/imports/parents', requireAdmin, upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
+      }
+
+      const sendInviteEmails = req.body.sendInviteEmails === 'true';
+      const csvContent = req.file.buffer.toString('utf-8');
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain header row and at least one data row" });
+      }
+
+      const headerRow = lines[0];
+      const expectedHeaders = ['firstName', 'lastName', 'email', 'phone'];
+      
+      // Parse header and validate
+      const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
+      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        return res.status(400).json({ message: `Missing required headers: ${missingHeaders.join(', ')}` });
+      }
+
+      const dataRows = lines.slice(1);
+      let imported = 0;
+      const errors: string[] = [];
+      const inviteEmails: string[] = [];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        if (!row.trim()) continue;
+        
+        const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+        if (values.length !== headers.length) {
+          errors.push(`Row ${i + 2}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
+          continue;
+        }
+
+        const rowData: any = {};
+        headers.forEach((header, idx) => {
+          rowData[header] = values[idx];
+        });
+
+        // Validate required fields
+        if (!rowData.firstName || !rowData.lastName || !rowData.email) {
+          errors.push(`Row ${i + 2}: Missing required fields (firstName, lastName, email)`);
+          continue;
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(rowData.email)) {
+          errors.push(`Row ${i + 2}: Invalid email format`);
+          continue;
+        }
+
+        try {
+          // Check if parent already exists
+          const existingParent = await db.select().from(users)
+            .where(and(
+              eq(users.email, rowData.email),
+              eq(users.tenantId, tenantId)
+            )).limit(1);
+
+          if (existingParent.length > 0) {
+            errors.push(`Row ${i + 2}: Parent with email ${rowData.email} already exists`);
+            continue;
+          }
+
+          // Create new parent
+          await db.insert(users).values({
+            tenantId,
+            firstName: rowData.firstName,
+            lastName: rowData.lastName,
+            email: rowData.email,
+            phone: rowData.phone || null,
+            isAdmin: false,
+            isAssistant: false,
+            emailVerified: false,
+            passwordSet: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          
+          if (sendInviteEmails) {
+            inviteEmails.push(rowData.email);
+          }
+
+          imported++;
+        } catch (error) {
+          console.error(`Error importing parent row ${i + 2}:`, error);
+          errors.push(`Row ${i + 2}: Database error - ${error}`);
+        }
+      }
+
+      // Send invite emails if requested
+      if (sendInviteEmails && inviteEmails.length > 0) {
+        try {
+          const { sendInvitationEmail } = await import('./utils/invite-helpers');
+          for (const email of inviteEmails) {
+            await sendInvitationEmail(email, tenantId);
+          }
+        } catch (emailError) {
+          console.error('Error sending invite emails:', emailError);
+          // Don't fail the import for email errors
+        }
+      }
+
+      res.json({ 
+        imported,
+        errors,
+        emailsSent: sendInviteEmails ? inviteEmails.length : 0,
+        message: `Successfully imported ${imported} parents${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
+      });
+    } catch (error) {
+      console.error("Error importing parents:", error);
+      res.status(500).json({ message: "Failed to import parents" });
     }
   });
 

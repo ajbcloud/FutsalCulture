@@ -283,6 +283,9 @@ export default function AdminPlayers() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // Add sendInviteEmails parameter if checkbox is checked
+      const sendInviteEmails = (document.getElementById('sendInviteEmailsPlayers') as HTMLInputElement)?.checked;
+      formData.append('sendInviteEmails', sendInviteEmails?.toString() || 'false');
       
       const response = await fetch('/api/admin/imports/players', {
         method: 'POST',
@@ -292,7 +295,11 @@ export default function AdminPlayers() {
       const result = await response.json();
       
       if (response.ok) {
-        toast({ title: `Successfully imported ${result.imported} players` });
+        toast({ 
+          title: `Successfully imported ${result.imported} players${result.emailsSent ? ` and sent ${result.emailsSent} invite emails` : ''}`,
+          description: result.errors && result.errors.length > 0 ? 
+            `${result.errors.length} errors occurred. Check the console for details.` : undefined 
+        });
         setShowImportModal(false);
         // Refresh players list
         adminPlayers.list().then(setPlayers);
@@ -746,6 +753,18 @@ export default function AdminPlayers() {
                 disabled={importing}
                 className="bg-input border-border text-foreground"
               />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="sendInviteEmailsPlayers" 
+                className="rounded border-border"
+                data-testid="checkbox-send-invite-emails-players"
+              />
+              <Label htmlFor="sendInviteEmailsPlayers" className="text-muted-foreground text-sm">
+                Send invitation emails to new parent accounts
+              </Label>
             </div>
             
             <div className="text-sm text-muted-foreground">

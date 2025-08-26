@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X, Activity, Phone, Mail, FileCheck, FileX, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Users, UserCheck, UserX, ChevronDown, ChevronRight, X, Activity, Phone, Mail, FileCheck, FileX, Loader2, FileDown, Upload } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { adminParents, adminPlayers } from '../../lib/adminApi';
 import { useLocation, Link } from 'wouter';
@@ -73,6 +73,8 @@ export default function AdminParents() {
   const [loadingPlayers, setLoadingPlayers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [selectedParent, setSelectedParent] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     firstName: '',
@@ -323,6 +325,54 @@ export default function AdminParents() {
 
   const parentStats = calculateParentStats();
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast({ title: "Please select a CSV file", variant: "destructive" });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // Add sendInviteEmails parameter if checkbox is checked
+      const sendInviteEmails = (document.getElementById('sendInviteEmails') as HTMLInputElement)?.checked;
+      formData.append('sendInviteEmails', sendInviteEmails?.toString() || 'false');
+      
+      const response = await fetch('/api/admin/imports/parents', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({ 
+          title: `Successfully imported ${result.imported} parents${result.emailsSent ? ` and sent ${result.emailsSent} invite emails` : ''}`,
+          description: result.errors && result.errors.length > 0 ? 
+            `${result.errors.length} errors occurred. Check the console for details.` : undefined 
+        });
+        setShowImportModal(false);
+        // Refresh parents list
+        loadParents();
+      } else {
+        toast({ title: result.message || "Import failed", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({ title: "Import failed", variant: "destructive" });
+    }
+    setImporting(false);
+    
+    // Reset file input
+    if (event.target) {
+      event.target.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -338,8 +388,27 @@ export default function AdminParents() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Parents Management</h1>
-          <div className="text-sm text-muted-foreground">
-            Total: {parents.length} accounts
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => window.open('/api/admin/template/parents', '_blank')}
+              className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
+              size="sm"
+            >
+              <FileDown className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Download Template</span>
+              <span className="sm:hidden">Template</span>
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setShowImportModal(true)}
+              className="border-border text-muted-foreground hover:bg-muted text-sm px-3 py-2 h-9"
+              size="sm"
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Import CSV</span>
+              <span className="sm:hidden">Import</span>
+            </Button>
           </div>
         </div>
 
@@ -815,6 +884,56 @@ export default function AdminParents() {
                 Save Changes
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Modal */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-white">Import Parents from CSV</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="csvFile" className="text-muted-foreground">
+                Select CSV File
+              </Label>
+              <Input
+                id="csvFile"
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                disabled={importing}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="sendInviteEmails" 
+                className="rounded border-border"
+                data-testid="checkbox-send-invite-emails"
+              />
+              <Label htmlFor="sendInviteEmails" className="text-muted-foreground text-sm">
+                Send invitation emails to new parents
+              </Label>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              <p className="mb-2">CSV Format: firstName,lastName,email,phone</p>
+              <p>Required fields: firstName, lastName, email</p>
+              <p>Optional fields: phone</p>
+            </div>
+            
+            {importing && (
+              <div className="flex items-center gap-2 text-blue-400">
+                <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full" />
+                <span>Importing parents...</span>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
