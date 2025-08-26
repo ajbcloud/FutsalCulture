@@ -1,5 +1,7 @@
 import { PlanComparisonCards } from "@/components/billing/PlanComparisonCards";
 import { FeatureGrid } from "@/components/billing/FeatureGrid";
+import { BusinessBranding } from "@/components/business-branding";
+import { BusinessProvider } from "@/contexts/BusinessContext";
 import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
 export default function HomePlayHQ() {
@@ -10,7 +12,14 @@ export default function HomePlayHQ() {
       {/* Navbar */}
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
         <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
-          PlayHQ
+          {/* In production, show business name/logo. In dev, show PlayHQ */}
+          {import.meta.env.PROD ? (
+            <BusinessProvider>
+              <BusinessBranding inline variant="default" />
+            </BusinessProvider>
+          ) : (
+            'PlayHQ'
+          )}
         </a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#features" className="hover:opacity-80">Features</a>
