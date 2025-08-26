@@ -119,6 +119,11 @@ export default function InvitationsPage() {
   const [editCodeName, setEditCodeName] = useState('');
   const [editCodeDescription, setEditCodeDescription] = useState('');
 
+  // Create new invite code state
+  const [createCodeDialogOpen, setCreateCodeDialogOpen] = useState(false);
+  const [newCodeName, setNewCodeName] = useState('');
+  const [newCodeDescription, setNewCodeDescription] = useState('');
+
   // Fetch invite codes
   const { data: inviteCodes = [], isLoading: codesLoading, error: codesError, refetch: refetchCodes } = useQuery<TenantInviteCode[]>({
     queryKey: ['/api/admin/tenant/current/invite-codes'],
@@ -195,6 +200,30 @@ export default function InvitationsPage() {
     }
   });
 
+  // Create new code mutation
+  const createCodeMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string; maxUsage?: number }) => {
+      const response = await fetch('/api/admin/tenant/current/invite-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create invite code');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Invite code created successfully!" });
+      setCreateCodeDialogOpen(false);
+      setNewCodeName('');
+      setNewCodeDescription('');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create invite code", variant: "destructive" });
+    }
+  });
+
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast({
@@ -222,6 +251,18 @@ export default function InvitationsPage() {
       code: editCodeValue.trim().toUpperCase(),
       name: editCodeName.trim(),
       description: editCodeDescription.trim() || undefined
+    });
+  };
+
+  const handleCreateCode = () => {
+    if (!newCodeName.trim()) {
+      toast({ title: "Error", description: "Please enter a name for the invite code", variant: "destructive" });
+      return;
+    }
+    
+    createCodeMutation.mutate({
+      name: newCodeName.trim(),
+      description: newCodeDescription.trim() || undefined
     });
   };
 
@@ -385,13 +426,25 @@ export default function InvitationsPage() {
         <TabsContent value="codes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LinkIcon className="w-5 h-5" />
-                Organization Invite Code
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Your static invite code that parents and players can use to join your organization
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5" />
+                    Organization Invite Codes
+                  </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Static invite codes that parents and players can use to join your organization
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setCreateCodeDialogOpen(true)}
+                  className="flex items-center gap-2"
+                  data-testid="button-create-code"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New Code
+                </Button>
+              </div>
             </CardHeader>
             
             <CardContent className="space-y-4">
@@ -413,8 +466,16 @@ export default function InvitationsPage() {
                   <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <p className="text-gray-600 mb-2">No invite codes created yet</p>
                   <p className="text-sm text-gray-500 mb-4">
-                    Create your first invite code using the button above
+                    Create your first invite code using the "Create New Code" button above
                   </p>
+                  <Button
+                    onClick={() => setCreateCodeDialogOpen(true)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create First Code
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -556,6 +617,53 @@ export default function InvitationsPage() {
                 <Save className="w-4 h-4 mr-2" />
               )}
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+        </Dialog>
+
+      {/* Create New Code Dialog */}
+      <Dialog open={createCodeDialogOpen} onOpenChange={setCreateCodeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Invite Code</DialogTitle>
+            <DialogDescription>
+              Create a new invite code for your organization. The code will be generated automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-code-name">Display Name *</Label>
+              <Input
+                id="new-code-name"
+                placeholder="e.g., Parent Registration Code"
+                value={newCodeName}
+                onChange={(e) => setNewCodeName(e.target.value)}
+                data-testid="input-new-code-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-code-description">Description (Optional)</Label>
+              <Textarea
+                id="new-code-description"
+                placeholder="Brief description of what this code is for"
+                value={newCodeDescription}
+                onChange={(e) => setNewCodeDescription(e.target.value)}
+                data-testid="textarea-new-code-description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateCodeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCode} disabled={createCodeMutation.isPending} data-testid="button-create-code-submit">
+              {createCodeMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Create Code
             </Button>
           </DialogFooter>
         </DialogContent>
