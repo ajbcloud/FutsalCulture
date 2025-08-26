@@ -54,7 +54,7 @@ const addMembershipSchema = z.object({
 router.post('/admin/invitations', requireAdmin, async (req, res) => {
   try {
     const adminUserId = (req as any).currentUser?.id;
-    const adminTenantId = (req as any).currentUser?.tenantId;
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
     
     const data = inviteUserSchema.parse(req.body);
     
@@ -173,9 +173,10 @@ router.post('/admin/invitations', requireAdmin, async (req, res) => {
  */
 router.get('/admin/tenant/invite-code', requireAdmin, async (req, res) => {
   try {
-    const adminTenantId = (req as any).currentUser?.tenantId;
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
     
     if (!adminTenantId) {
+      console.error('Missing tenant ID for user:', (req as any).currentUser);
       return res.status(403).json({ error: 'Admin tenant ID required' });
     }
     
@@ -249,7 +250,7 @@ router.get('/admin/tenant/invite-code', requireAdmin, async (req, res) => {
 router.post('/admin/tenants/current/rotate-invite-code', requireAdmin, async (req, res) => {
   try {
     const adminUserId = (req as any).currentUser?.id;
-    const adminTenantId = (req as any).currentUser?.tenantId;
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
     
     if (!adminTenantId) {
       return res.status(403).json({ error: 'Admin tenant ID required' });
@@ -286,7 +287,7 @@ router.post('/admin/tenants/:tenantId/rotate-invite-code', requireAdmin, async (
   try {
     const { tenantId } = req.params;
     const adminUserId = (req as any).currentUser?.id;
-    const adminTenantId = (req as any).currentUser?.tenantId;
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
     
     // Verify admin can manage this tenant
     if (tenantId !== adminTenantId) {
@@ -322,9 +323,10 @@ router.post('/admin/tenants/:tenantId/rotate-invite-code', requireAdmin, async (
  */
 router.get('/admin/invitations', requireAdmin, async (req, res) => {
   try {
-    const adminTenantId = (req as any).currentUser?.tenantId;
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
     
     if (!adminTenantId) {
+      console.error('Missing tenant ID for user:', (req as any).currentUser);
       return res.status(403).json({ error: 'Admin tenant ID required' });
     }
     
