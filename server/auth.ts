@@ -143,8 +143,22 @@ export async function setupAuth(app: Express) {
   });
 
   // Auth routes
-  app.post("/api/auth/login", passport.authenticate('local'), (req, res) => {
-    res.json({ success: true, user: req.user });
+  app.post("/api/auth/login", passport.authenticate('local'), (req: any, res) => {
+    const user = req.user as any;
+    
+    // Determine redirect based on user role
+    let redirect = "/dashboard"; // Default redirect
+    if (user?.isAdmin || user?.isSuperAdmin) {
+      redirect = "/admin";
+    } else if (user?.isAssistant) {
+      redirect = "/admin";
+    }
+    
+    res.json({ 
+      success: true, 
+      user: req.user,
+      redirect 
+    });
   });
 
   app.post("/api/auth/register", async (req, res) => {

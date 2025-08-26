@@ -24,7 +24,9 @@ export default function Login() {
       });
 
       if (response.ok) {
-        navigate("/");
+        const data = await response.json();
+        // Use server-provided redirect or default to home
+        navigate(data.redirect || "/");
       } else {
         const data = await response.json();
         setError(data.message || "Login failed");
