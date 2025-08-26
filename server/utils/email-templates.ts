@@ -6,7 +6,7 @@ export interface InvitationEmailData {
   tenantName: string;
   recipientName: string;
   senderName: string;
-  role: 'parent' | 'player';
+  role: 'parent' | 'player' | 'admin' | 'assistant';
   inviteUrl: string;
   expiresAt: string;
 }
@@ -59,11 +59,21 @@ export function getInvitationEmailTemplate(data: InvitationEmailData): string {
         <li>📊 View training history and progress</li>
         <li>💳 Manage payments and billing</li>
         <li>📱 Receive notifications and updates</li>
-        ` : `
+        ` : role === 'player' ? `
         <li>🏃 Book your own training sessions</li>
         <li>📈 Track your development progress</li>
         <li>🎯 Set and achieve training goals</li>
         <li>🤝 Connect with teammates and coaches</li>
+        ` : role === 'admin' ? `
+        <li>⚙️ Manage sessions and schedules</li>
+        <li>👥 Oversee player and parent accounts</li>
+        <li>💰 Handle payments and financial reports</li>
+        <li>📊 Access comprehensive analytics</li>
+        ` : `
+        <li>📅 Help manage sessions and bookings</li>
+        <li>👤 Support player and parent inquiries</li>
+        <li>📝 Assist with administrative tasks</li>
+        <li>🔔 Monitor notifications and communications</li>
         `}
       </ul>
       
@@ -108,11 +118,21 @@ ${role === 'parent' ? `
 • View training history and progress  
 • Manage payments and billing
 • Receive notifications and updates
-` : `
+` : role === 'player' ? `
 • Book your own training sessions
 • Track your development progress
 • Set and achieve training goals
 • Connect with teammates and coaches
+` : role === 'admin' ? `
+• Manage sessions and schedules
+• Oversee player and parent accounts
+• Handle payments and financial reports
+• Access comprehensive analytics
+` : `
+• Help manage sessions and bookings
+• Support player and parent inquiries
+• Assist with administrative tasks
+• Monitor notifications and communications
 `}
 
 To accept this invitation and join ${tenantName}, visit:

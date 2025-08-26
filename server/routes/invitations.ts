@@ -169,36 +169,24 @@ async function handleInvitationCreation(data: any, adminUserId: string, adminTen
  */
 router.post('/admin/invitations', requireAdmin, async (req, res) => {
   try {
-    const adminUserId = (req as any).user?.id || (req as any).session?.userId || 'ajosephfinch';
-    const adminTenantId = (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+    const adminUserId = (req as any).currentUser?.id || (req as any).user?.id || (req as any).session?.userId || 'ajosephfinch';
+    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
     
-    // Check if this is the simple invitation format (email + role only)
-    if (req.body.email && req.body.role && Object.keys(req.body).length === 2) {
-      const simpleData = simpleInviteSchema.parse(req.body);
-      
-      // For simple invitations, generate a placeholder name that can be updated later
-      const [emailName] = simpleData.email.split('@');
-      const firstName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-      const lastName = 'User';
-      
-      const data = {
-        tenantId: adminTenantId,
-        email: simpleData.email,
-        firstName,
-        lastName,
-        role: simpleData.role,
-      };
-      
-      return await handleInvitationCreation(data, adminUserId, adminTenantId, res);
-    }
+    // Validate the simple invitation format
+    const simpleData = simpleInviteSchema.parse(req.body);
     
-    // Original complex invitation format
-    const data = inviteUserSchema.parse(req.body);
+    // For simple invitations, generate a placeholder name that can be updated later
+    const [emailName] = simpleData.email.split('@');
+    const firstName = emailName.charAt(0).toUpperCase() + emailName.slice(1).toLowerCase();
+    const lastName = 'User';
     
-    // Verify admin can invite to this tenant
-    if (data.tenantId !== adminTenantId) {
-      return res.status(403).json({ error: 'Cannot invite to different tenant' });
-    }
+    const data = {
+      tenantId: adminTenantId,
+      email: simpleData.email,
+      firstName,
+      lastName,
+      role: simpleData.role,
+    };
     
     return await handleInvitationCreation(data, adminUserId, adminTenantId, res);
   } catch (error) {
@@ -376,9 +364,13 @@ router.post('/admin/tenants/:tenantId/rotate-invite-code', requireAdmin, async (
  */
 router.get('/admin/invitations', requireAdmin, async (req, res) => {
   try {
-    const adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
+    let adminTenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId;
     
-    if (!adminTenantId) {
+    if (!adminTenantId && process.env.NODE_ENV === 'development') {
+      // Use Liverpool tenant for development
+      adminTenantId = '8b976f98-3921-49f2-acf5-006f41d69095';
+      console.log('🔧 Development mode: Using hardcoded tenant ID for invitations list');
+    } else if (!adminTenantId) {
       console.error('Missing tenant ID for user:', (req as any).currentUser);
       return res.status(403).json({ error: 'Admin tenant ID required' });
     }

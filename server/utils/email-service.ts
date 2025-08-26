@@ -13,7 +13,7 @@ export interface SendInvitationEmailOptions {
   tenantName: string;
   recipientName: string;
   senderName: string;
-  role: 'parent' | 'player';
+  role: 'parent' | 'player' | 'admin' | 'assistant';
   inviteUrl: string;
   expiresAt: Date;
 }
@@ -77,7 +77,7 @@ export async function sendWelcomeEmail(options: {
   to: string;
   firstName: string;
   tenantName: string;
-  role: 'parent' | 'player';
+  role: 'parent' | 'player' | 'admin' | 'assistant';
 }): Promise<void> {
   if (!process.env.SENDGRID_API_KEY) {
     console.warn('SENDGRID_API_KEY not configured - welcome email not sent');
@@ -97,8 +97,12 @@ Hi ${options.firstName},
 Welcome to ${options.tenantName} on PlayHQ! Your account has been successfully created.
 
 ${options.role === 'parent' ? 
-  'You can now book training sessions for your players, manage payments, and stay connected with your futsal community.' :
-  'You can now book training sessions, track your progress, and connect with your teammates and coaches.'
+  'You can now book training sessions for your players, manage payments, and stay connected with your sports community.' :
+  options.role === 'player' ? 
+  'You can now book training sessions, track your progress, and connect with your teammates and coaches.' :
+  options.role === 'admin' ?
+  'You can now manage sessions, players, payments, and all administrative functions for your organization.' :
+  'You can now assist with managing sessions, players, and help support your organization.'
 }
 
 Get started by logging into your account at: ${process.env.APP_URL || 'https://playhq.app'}
@@ -136,8 +140,12 @@ The PlayHQ Team
       <p>Welcome to <strong>${options.tenantName}</strong> on PlayHQ! Your account has been successfully created and you're now part of our futsal community.</p>
       
       <p>${options.role === 'parent' ? 
-        'As a parent, you can now book training sessions for your players, manage payments, and stay connected with your futsal community.' :
-        'As a player, you can now book training sessions, track your progress, and connect with your teammates and coaches.'
+        'As a parent, you can now book training sessions for your players, manage payments, and stay connected with your sports community.' :
+        options.role === 'player' ? 
+        'As a player, you can now book training sessions, track your progress, and connect with your teammates and coaches.' :
+        options.role === 'admin' ?
+        'As an administrator, you can now manage sessions, players, payments, and all administrative functions for your organization.' :
+        'As an assistant, you can now help manage sessions, players, and support your organization.'
       }</p>
       
       <div style="text-align: center;">
