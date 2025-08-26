@@ -63,6 +63,15 @@ export const unsubscribeChannelEnum = pgEnum("unsubscribe_channel", ["email", "s
 // Impersonation event status enum
 export const impersonationStatusEnum = pgEnum("impersonation_status", ["issued", "active", "ended", "expired"]);
 
+// Tenant membership role enum
+export const tenantMembershipRoleEnum = pgEnum("tenant_membership_role", ["parent", "player", "coach", "admin"]);
+
+// Tenant membership status enum  
+export const tenantMembershipStatusEnum = pgEnum("tenant_membership_status", ["active", "pending"]);
+
+// Invite token purpose enum
+export const inviteTokenPurposeEnum = pgEnum("invite_token_purpose", ["signup_welcome", "add_membership", "player_link"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -124,6 +133,11 @@ export const tenants = pgTable("tenants", {
   gracePeriodEndsAt: timestamp("grace_period_ends_at"),
   gracePeriodReason: varchar("grace_period_reason"), // payment_failed, trial_expired, plan_change
   gracePeriodNotificationsSent: integer("grace_period_notifications_sent").default(0),
+
+  // Tenant Invitation System
+  inviteCode: varchar("invite_code").unique().notNull(),
+  inviteCodeUpdatedAt: timestamp("invite_code_updated_at").defaultNow().notNull(),
+  inviteCodeUpdatedBy: varchar("invite_code_updated_by").references(() => users.id),
 });
 
 
@@ -220,6 +234,8 @@ export const players = pgTable("players", {
   registrationStatus: registrationStatusEnum("registration_status").default("pending"),
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by"), // admin user id
+  // Link to user account for 13+ players with their own login
+  userId: varchar("user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   // Age validation constraint: Portal access only for players 13+
@@ -2265,6 +2281,40 @@ export const consentDocumentAccess = pgTable("consent_document_access", {
   index("consent_access_time_idx").on(table.accessedAt),
 ]);
 
+// Tenant Memberships - Users can belong to multiple tenants with different roles
+export const tenantMemberships = pgTable("tenant_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  role: tenantMembershipRoleEnum("role").notNull(),
+  status: tenantMembershipStatusEnum("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("tenant_memberships_unique").on(table.tenantId, table.userId, table.role),
+  index("tenant_memberships_tenant_idx").on(table.tenantId),
+  index("tenant_memberships_user_idx").on(table.userId),
+]);
+
+// Invite Tokens - For sending invitations and managing signup flows
+export const inviteTokens = pgTable("invite_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: text("token").unique().notNull(),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invitedEmail: text("invited_email").notNull(),
+  role: tenantMembershipRoleEnum("role").notNull(),
+  playerId: varchar("player_id").references(() => players.id), // For player-specific invites
+  purpose: inviteTokenPurposeEnum("purpose").notNull(),
+  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '7 days'`),
+  usedAt: timestamp("used_at"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("invite_tokens_tenant_idx").on(table.tenantId),
+  index("invite_tokens_email_idx").on(table.invitedEmail),
+  index("invite_tokens_token_idx").on(table.token),
+  index("invite_tokens_expires_idx").on(table.expiresAt),
+]);
+
 // Beta onboarding schema exports
 export const insertTenantUserSchema = createInsertSchema(tenantUsers).omit({
   id: true,
@@ -2331,3 +2381,20 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type AuditEvent = typeof auditEvents.$inferSelect;
 export type InsertAuditEvent = z.infer<typeof insertAuditEventSchema>;
+
+// New invitation system schemas
+export const insertTenantMembershipSchema = createInsertSchema(tenantMemberships).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInviteTokenSchema = createInsertSchema(inviteTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+// New invitation system types
+export type TenantMembership = typeof tenantMemberships.$inferSelect;
+export type InsertTenantMembership = z.infer<typeof insertTenantMembershipSchema>;
+export type InviteToken = typeof inviteTokens.$inferSelect;
+export type InsertInviteToken = z.infer<typeof insertInviteTokenSchema>;

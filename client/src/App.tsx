@@ -32,6 +32,7 @@ import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
 import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
 import AdminCommunications from "@/pages/admin/communications";
+import AdminInvitations from "@/pages/admin/invitations";
 
 import AdminPlayerDevelopment from "@/pages/admin/player-development";
 import SuperAdmin from "@/pages/super-admin";
@@ -53,6 +54,7 @@ import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import VerifyEmailSent from "@/pages/VerifyEmailSent";
 import SetPassword from "@/pages/SetPassword";
+import AcceptInvite from "@/pages/accept-invite";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Status from "./pages/Status";
@@ -83,6 +85,7 @@ function Router() {
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/verify-email-sent" component={VerifyEmailSent} />
         <Route path="/set-password" component={SetPassword} />
+        <Route path="/accept-invite" component={AcceptInvite} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />
@@ -112,6 +115,7 @@ function Router() {
             <Route path="/admin/access-codes" component={AdminAccessCodes} />
             <Route path="/admin/players" component={AdminPlayers} />
             <Route path="/admin/parents" component={AdminParents} />
+            <Route path="/admin/invitations" component={AdminInvitations} />
             <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />
             <Route path="/admin/communications" component={AdminCommunications} />
             <Route path="/admin/analytics" component={AdminAnalytics} />

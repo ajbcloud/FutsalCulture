@@ -28,7 +28,8 @@ import {
   Shirt,
   Sparkles,
   TrendingUp,
-  Mail
+  Mail,
+  UserPlus
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
@@ -41,6 +42,7 @@ const adminNavItems = [
   { href: "/admin/access-codes", label: "Access Codes", icon: Key },
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
+  { href: "/admin/invitations", label: "Invitations", icon: UserPlus },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
