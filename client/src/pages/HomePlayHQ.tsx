@@ -1,5 +1,6 @@
 import { PlanComparisonCards } from "@/components/billing/PlanComparisonCards";
 import { FeatureGrid } from "@/components/billing/FeatureGrid";
+import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
 export default function HomePlayHQ() {
   const currentYear = new Date().getFullYear();
@@ -45,7 +46,7 @@ export default function HomePlayHQ() {
           <div className="rounded-2xl shadow p-6 bg-card border border-border">
             <div className="aspect-video w-full bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden">
               <img 
-                src="/attached_assets/chrome_Xe6PgsfHlu_1756180663671.png" 
+                src={adminDashboardImg} 
                 alt="PlayHQ Admin Dashboard" 
                 className="w-full h-full object-cover rounded-xl"
               />
