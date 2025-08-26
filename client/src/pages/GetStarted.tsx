@@ -17,15 +17,108 @@ export default function GetStarted() {
     contact_email: "",
     country: "",
     state: "",
+    zip_code: "",
     city: "",
     sports: [] as string[],
     accept: false
   });
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
   const sportOptions = ["Soccer", "Futsal", "Basketball", "Volleyball", "Other"];
+  
+  const usStates = [
+    { code: "AL", name: "Alabama" },
+    { code: "AK", name: "Alaska" },
+    { code: "AZ", name: "Arizona" },
+    { code: "AR", name: "Arkansas" },
+    { code: "CA", name: "California" },
+    { code: "CO", name: "Colorado" },
+    { code: "CT", name: "Connecticut" },
+    { code: "DE", name: "Delaware" },
+    { code: "FL", name: "Florida" },
+    { code: "GA", name: "Georgia" },
+    { code: "HI", name: "Hawaii" },
+    { code: "ID", name: "Idaho" },
+    { code: "IL", name: "Illinois" },
+    { code: "IN", name: "Indiana" },
+    { code: "IA", name: "Iowa" },
+    { code: "KS", name: "Kansas" },
+    { code: "KY", name: "Kentucky" },
+    { code: "LA", name: "Louisiana" },
+    { code: "ME", name: "Maine" },
+    { code: "MD", name: "Maryland" },
+    { code: "MA", name: "Massachusetts" },
+    { code: "MI", name: "Michigan" },
+    { code: "MN", name: "Minnesota" },
+    { code: "MS", name: "Mississippi" },
+    { code: "MO", name: "Missouri" },
+    { code: "MT", name: "Montana" },
+    { code: "NE", name: "Nebraska" },
+    { code: "NV", name: "Nevada" },
+    { code: "NH", name: "New Hampshire" },
+    { code: "NJ", name: "New Jersey" },
+    { code: "NM", name: "New Mexico" },
+    { code: "NY", name: "New York" },
+    { code: "NC", name: "North Carolina" },
+    { code: "ND", name: "North Dakota" },
+    { code: "OH", name: "Ohio" },
+    { code: "OK", name: "Oklahoma" },
+    { code: "OR", name: "Oregon" },
+    { code: "PA", name: "Pennsylvania" },
+    { code: "RI", name: "Rhode Island" },
+    { code: "SC", name: "South Carolina" },
+    { code: "SD", name: "South Dakota" },
+    { code: "TN", name: "Tennessee" },
+    { code: "TX", name: "Texas" },
+    { code: "UT", name: "Utah" },
+    { code: "VT", name: "Vermont" },
+    { code: "VA", name: "Virginia" },
+    { code: "WA", name: "Washington" },
+    { code: "WV", name: "West Virginia" },
+    { code: "WI", name: "Wisconsin" },
+    { code: "WY", name: "Wyoming" }
+  ];
+
+  async function lookupCitiesByZip(zipCode: string) {
+    if (!zipCode || zipCode.length !== 5) {
+      setCityOptions([]);
+      return;
+    }
+    
+    setLoadingCities(true);
+    try {
+      const response = await fetch(`https://api.zippopotam.us/us/${zipCode}`);
+      if (response.ok) {
+        const data = await response.json();
+        const cities = data.places?.map((place: any) => place['place name']) || [];
+        setCityOptions(cities);
+        
+        // If only one city, auto-fill it
+        if (cities.length === 1) {
+          setFormData(prev => ({ ...prev, city: cities[0] }));
+        } else if (cities.length === 0) {
+          setFormData(prev => ({ ...prev, city: "" }));
+        }
+      } else {
+        setCityOptions([]);
+        setFormData(prev => ({ ...prev, city: "" }));
+      }
+    } catch (error) {
+      console.error("Error looking up cities:", error);
+      setCityOptions([]);
+    } finally {
+      setLoadingCities(false);
+    }
+  }
+
+  function handleZipChange(zipCode: string) {
+    setFormData(prev => ({ ...prev, zip_code: zipCode, city: "" }));
+    lookupCitiesByZip(zipCode);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,34 +221,69 @@ export default function GetStarted() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={formData.country}
-                  onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                  placeholder="USA"
-                  data-testid="input-country"
-                />
+                <Select value={formData.country} onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}>
+                  <SelectTrigger data-testid="select-country">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="US">United States</SelectItem>
+                    <SelectItem value="CA">Canada</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state">State/Province</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                  placeholder="CA"
-                  data-testid="input-state"
-                />
+                <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}>
+                  <SelectTrigger data-testid="select-state">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {usStates.map((state) => (
+                      <SelectItem key={state.code} value={state.code}>
+                        {state.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
+                <Label htmlFor="zip_code">Zip Code</Label>
+                <Input
+                  id="zip_code"
+                  value={formData.zip_code}
+                  onChange={(e) => handleZipChange(e.target.value)}
+                  placeholder="12345"
+                  maxLength={5}
+                  data-testid="input-zip-code"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              {cityOptions.length > 1 ? (
+                <Select value={formData.city} onValueChange={(value) => setFormData(prev => ({ ...prev, city: value }))}>
+                  <SelectTrigger data-testid="select-city">
+                    <SelectValue placeholder={loadingCities ? "Loading cities..." : "Select city"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityOptions.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  placeholder="San Francisco"
+                  placeholder={loadingCities ? "Loading..." : "Enter city name"}
+                  disabled={loadingCities}
                   data-testid="input-city"
                 />
-              </div>
+              )}
             </div>
 
             <div className="space-y-2">
