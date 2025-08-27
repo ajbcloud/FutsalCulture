@@ -38,7 +38,9 @@ import AdminLayout from "@/components/admin-layout";
 import { Pagination } from "@/components/pagination";
 import { format } from "date-fns";
 import { Plus, Trash2, Edit, Copy } from "lucide-react";
-import type { DiscountCode } from "@shared/schema";
+import type { discountCodes } from "@shared/schema";
+
+type DiscountCode = typeof discountCodes.$inferSelect;
 
 export default function DiscountCodes() {
   const { toast } = useToast();
@@ -329,7 +331,7 @@ export default function DiscountCodes() {
                     <Combobox
                       options={[
                         { value: "none", label: "Any player can use" },
-                        ...players.map((player: any) => ({
+                        ...(Array.isArray(players) ? players : []).map((player: any) => ({
                           value: player.id,
                           label: `${player.firstName} ${player.lastName}`
                         }))
@@ -351,7 +353,7 @@ export default function DiscountCodes() {
                     <Combobox
                       options={[
                         { value: "none", label: "Any parent can use" },
-                        ...parents.map((parent: any) => ({
+                        ...(Array.isArray(parents) ? parents : []).map((parent: any) => ({
                           value: parent.id,
                           label: `${parent.firstName} ${parent.lastName} (${parent.email})`
                         }))
@@ -815,8 +817,10 @@ export default function DiscountCodes() {
             <div className="mt-6">
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
+                totalItems={discountCodes.length}
+                itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
+                onItemsPerPageChange={() => {}}
               />
             </div>
           )}

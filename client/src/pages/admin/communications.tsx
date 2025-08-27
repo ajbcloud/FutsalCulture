@@ -187,7 +187,11 @@ export default function AdminCommunications() {
       recurringDays: campaign.recurringDays || [],
       recurringTime: campaign.recurringTime || '',
       recurringEndDate: campaign.recurringEndDate ? format(new Date(campaign.recurringEndDate), "yyyy-MM-dd") : '',
-      recipientFilters: campaign.recipientFilters || { ageGroups: [], locations: [], genders: [], playerIds: [], parentIds: [] }
+      recipientFilters: {
+        ageGroups: campaign.recipientFilters?.ageGroups || [],
+        locations: campaign.recipientFilters?.locations || [],
+        genders: campaign.recipientFilters?.genders || []
+      }
     });
     setCreateDialogOpen(true);
   };
