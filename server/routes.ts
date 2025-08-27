@@ -238,7 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get tenant ID from various sources
-      const targetTenantId = tenantId || req.user?.tenantId || req.session?.user?.tenantId;
+      // Get tenant ID from user lookup instead of direct access
+      const currentUser = await storage.getUser(req.user?.id || '');
+      const targetTenantId = tenantId || currentUser?.tenantId;
       if (!targetTenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
@@ -253,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create user with validated consent
       const userData = {
-        id: req.user?.id || email.split('@')[0] + '-' + Date.now(),
+        id: currentUser?.id || nanoid(),
         firstName,
         lastName,
         email,
@@ -262,12 +264,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationStatus: autoApprove ? 'approved' as const : 'pending' as const,
       };
 
-      const user = await storage.upsertUser(userData);
+      const newUser = await storage.upsertUser(userData);
 
       // If this is a player registration, create the player record
       if (role === 'player' && dateOfBirth) {
         const playerData = {
-          id: user.id,
+          id: newUser.id,
           firstName,
           lastName,
           birthYear: new Date(dateOfBirth).getFullYear(),
@@ -283,19 +285,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log successful registration with consent validation
       console.log(`✅ User registered with consent validation:`, { 
-        id: user.id, 
+        id: newUser.id, 
         role, 
         consentDocuments: consentDocuments.length,
         autoApprove 
       });
 
       res.status(201).json({
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        isApproved: user.isApproved,
-        registrationStatus: user.registrationStatus,
+        id: newUser.id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        isApproved: newUser.isApproved,
+        registrationStatus: newUser.registrationStatus,
         consentValidated: true
       });
     } catch (error) {
@@ -412,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let tenantId = null;
 
-      if (req.user) {
+      if (req.user?.id) {
         const user = await storage.getUser(req.user.id);
         tenantId = user?.tenantId;
       }
@@ -896,10 +898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessions: sessionHistory.map(session => ({
           ...session,
           date: session.date.toISOString().split('T')[0], // Format date
-          time: session.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          refunded: session.refunded || false,
-          refundReason: session.refundReason,
-          refundedAt: session.refundedAt
+          time: session.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         })),
         total,
         page: pageNum,

@@ -83,6 +83,7 @@ export interface IStorage {
   updateUser(id: string, user: UpdateUser): Promise<User>;
   updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
   updatePlayersParent2(parent1Id: string, parent2Id: string): Promise<void>;
+  getUsersByTenant(tenantId: string): Promise<User[]>;
 
   // Player operations - now tenant-aware
   getPlayersByParent(parentId: string, tenantId?: string): Promise<PlayerWithSessionCount[]>;
@@ -397,6 +398,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getParentsByTenant(tenantId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.tenantId, tenantId))
+      .orderBy(users.firstName, users.lastName);
+  }
+
+  async getUsersByTenant(tenantId: string): Promise<User[]> {
     return await db.select().from(users)
       .where(eq(users.tenantId, tenantId))
       .orderBy(users.firstName, users.lastName);

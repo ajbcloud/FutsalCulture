@@ -74,7 +74,7 @@ export default function InvitationsPage() {
   // Send invitation mutation
   const sendInvitationMutation = useMutation({
     mutationFn: async (inviteData: { email: string; role: string }) => {
-      const response = await fetch('/api/admin/invitations', {
+      const response = await fetch('/api/invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -91,7 +91,7 @@ export default function InvitationsPage() {
       setInviteEmail('');
       setSelectedRole('parent');
       setIsInviting(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invitations'] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -132,10 +132,12 @@ export default function InvitationsPage() {
 
 
   // Fetch invitations
-  const { data: invitations = [], isLoading: invitationsLoading, error: invitationsError, refetch: refetchInvitations } = useQuery<Invitation[]>({
-    queryKey: ['/api/admin/invitations'],
+  const { data: invitationsResponse, isLoading: invitationsLoading, error: invitationsError, refetch: refetchInvitations } = useQuery({
+    queryKey: ['/api/invitations'],
     enabled: activeTab === "invitations",
   });
+
+  const invitations = invitationsResponse?.invitations || [];
 
   // Update invite code mutation
   const updateCodeMutation = useMutation({
