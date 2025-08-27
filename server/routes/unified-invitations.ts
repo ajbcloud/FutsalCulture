@@ -70,7 +70,7 @@ const updateInvitationSchema = z.object({
 router.post('/', requireAdmin, async (req: any, res) => {
   try {
     const adminTenantId = req.adminTenantId;
-    const adminUserId = req.user?.id || req.adminTenantId; // Use tenant ID as fallback for virtual users
+    const adminUserId = req.user?.id; // Virtual users will have undefined here
 
     // Check if this is a batch request or single invitation
     const isBatchRequest = Array.isArray(req.body.recipients);
@@ -83,7 +83,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
       const [batch] = await db.insert(invitationBatches)
         .values({
           tenantId: adminTenantId,
-          createdBy: adminUserId,
+          createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
           totalInvitations: validatedData.recipients.length,
           status: 'processing',
           metadata: validatedData.metadata || {},
@@ -109,7 +109,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
               customMessage: validatedData.customMessage,
               metadata: { ...validatedData.metadata, ...recipient.metadata },
               expiresAt,
-              createdBy: req.user?.id || null, // Allow null for virtual users
+              createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
             })
             .returning();
 
@@ -189,7 +189,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
           customMessage: validatedData.customMessage,
           metadata: validatedData.metadata || {},
           expiresAt,
-          createdBy: adminUserId,
+          createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
         })
         .returning();
 
