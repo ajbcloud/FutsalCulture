@@ -123,8 +123,8 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
               </tr>
             </thead>
             <tbody>
-              {Object.entries(featureCategories).map(([categoryName, features]) => (
-                <React.Fragment key={categoryName}>
+              {Object.entries(featureCategories).map(([categoryName, features], categoryIndex) => (
+                <React.Fragment key={`category-${categoryIndex}-${categoryName}`}>
                   <tr>
                     <td colSpan={plans.length + 1} className="p-4 bg-muted/30">
                       <div className="font-bold text-lg uppercase tracking-wide">
