@@ -1,0 +1,353 @@
+INVITATION SYSTEM REBUILD PROJECT
+PROJECT OVERVIEW
+We are completely rebuilding the PlayHQ invitation system from the ground up to consolidate four separate, fragmented invitation flows into a single, unified, and scalable architecture. This is a comprehensive refactoring project that will modernize our invitation system while maintaining 100% backward compatibility with existing functionality.
+
+CURRENT STATE ANALYSIS
+Our existing invitation system suffers from significant architectural fragmentation:
+
+Current Problems:
+4 Separate Invitation Systems: Admin invitations, Parent 2 invitations, Player invitations, and Invite Codes all use different routes, validation patterns, and database structures
+
+Route Fragmentation: Parent 2 routes are embedded in the main routes file instead of being properly organized
+
+Inconsistent Token Handling: Different invitation types use different token validation and expiration patterns
+
+Email Template Dispersion: Templates scattered across multiple files with no central management
+
+No Batch Operations: Only supports single invitations, making bulk operations inefficient
+
+Missing Analytics: No tracking of invitation conversion rates, delivery success, or user engagement
+
+Maintenance Complexity: Changes require touching multiple files and systems
+
+Technical Debt Issues:
+Code duplication across invitation types
+
+Inconsistent error handling patterns
+
+No centralized validation schemas
+
+Limited scalability for high-volume invitations
+
+Poor separation of concerns
+
+REBUILD OBJECTIVES
+Primary Goals:
+Unify All Invitation Flows into a single, cohesive system
+
+Implement Batch Processing for bulk invitations with progress tracking
+
+Add Comprehensive Analytics for invitation conversion and email delivery
+
+Consolidate Email Templates into a centralized template engine
+
+Improve Developer Experience with consistent APIs and better documentation
+
+Enhance Scalability to handle high-volume invitation scenarios
+
+Maintain 100% Backward Compatibility during transition
+
+Success Criteria:
+Single API endpoint handles all invitation types
+
+Batch invitation processing with real-time progress tracking
+
+Comprehensive analytics dashboard for invitation performance
+
+Consolidated email template system with role-based customization
+
+Zero downtime migration from current system
+
+Improved performance and reduced maintenance overhead
+
+PROJECT SCOPE
+In Scope:
+Complete backend API restructure
+
+Frontend component consolidation
+
+Database schema enhancements with analytics support
+
+Email template unification and enhancement
+
+Batch processing implementation
+
+Analytics and reporting dashboard
+
+Migration scripts and backward compatibility
+
+Comprehensive testing suite
+
+Out of Scope:
+Changes to core authentication system
+
+Modifications to SendGrid webhook integration (preserve as-is)
+
+Changes to existing user roles or permissions
+
+Tenant management system modifications
+
+TECHNICAL APPROACH
+Architecture Principles:
+Single Responsibility: Each component has one clear purpose
+
+Consistency: Unified patterns across all invitation types
+
+Scalability: Support for high-volume batch operations
+
+Observability: Comprehensive logging and analytics
+
+Maintainability: Clean separation of concerns and documentation
+
+Migration Strategy:
+Phase 1: Build new unified system alongside existing system
+
+Phase 2: Implement backward compatibility layer
+
+Phase 3: Migrate existing data and tokens
+
+Phase 4: Switch traffic to new system
+
+Phase 5: Remove legacy code after validation period
+
+DELIVERABLES EXPECTED
+Backend Deliverables:
+Unified invitation API with OpenAPI 3.0 documentation
+
+Consolidated email template service
+
+Batch processing system with job queuing
+
+Enhanced database schema with analytics tables
+
+Migration scripts for existing data
+
+Comprehensive error handling and logging
+
+Frontend Deliverables:
+Consolidated invitation management interface
+
+Batch invitation upload component
+
+Real-time progress tracking for batch operations
+
+Analytics dashboard with conversion metrics
+
+Unified invitation acceptance flow
+
+Documentation & Testing:
+Complete API documentation
+
+Database migration guide
+
+Testing suite covering all invitation flows
+
+Deployment and rollback procedures
+
+TECHNICAL SPECIFICATION
+INSTRUCTION FOR IMPLEMENTATION
+You are tasked with implementing a complete rebuild of the PlayHQ invitation system based on the detailed specification below. Follow the specification exactly, ensuring:
+
+Maintain Backward Compatibility: All existing invitation tokens, invite codes, and email webhook integrations must continue to work during and after the migration
+
+Preserve Current SendGrid Integration: Do not modify the existing webhook endpoint (/public/sendgrid/webhook) or email service functionality
+
+Follow Existing Patterns: Use the same technology stack, coding patterns, and architectural decisions as the current codebase
+
+Implement Comprehensive Testing: Include unit tests, integration tests, and migration validation
+
+Document Everything: Provide clear documentation for APIs, database changes, and migration procedures
+
+Implementation Order:
+
+Start with database schema enhancements and migration scripts
+
+Build the unified backend API system
+
+Implement the consolidated email template service
+
+Create the batch processing system
+
+Build the frontend components
+
+Implement analytics and reporting
+
+Create comprehensive tests
+
+Write migration and deployment documentation
+
+Code Quality Requirements:
+
+TypeScript with strict typing
+
+Comprehensive error handling
+
+Proper input validation using Zod
+
+Clear logging and debugging information
+
+Performance optimization for batch operations
+
+Security best practices
+
+COMPLETE INVITATION SYSTEM REBUILD SPECIFICATION
+CURRENT SENDGRID INTEGRATION TO PRESERVE
+Email Templates System
+Your current system has these templates that need to be consolidated:
+
+Core Templates (server/utils/email-templates.ts):
+
+typescript
+// Invitation Email - Branded PlayHQ with role-specific content
+getInvitationEmailTemplate(data: InvitationEmailData): string
+getInvitationEmailText(data: InvitationEmailData): string
+
+// Welcome Email - Post-registration guidance
+getWelcomeEmailTemplate(data: WelcomeEmailData): string
+getWelcomeEmailText(data: WelcomeEmailData): string
+Super Admin Templates (server/routes/super-admin-email.ts):
+
+Welcome template
+
+Announcement template
+
+Maintenance template
+
+Current Email Service (server/utils/email-service.ts)
+typescript
+// Functions to preserve:
+sendInvitationEmail(options: SendInvitationEmailOptions): Promise<void>
+sendWelcomeEmail(options: WelcomeEmailOptions): Promise<void>
+verifySendGridConfig(): Promise<boolean>
+
+// Error handling pattern:
+try {
+  await sgMail.send(msg);
+  console.log(`✅ Invitation email sent to ${options.to}`);
+} catch (error) {
+  console.error('❌ Failed to send invitation email:', error);
+  throw new Error('Failed to send invitation email');
+}
+Webhook Integration (server/routes/publicIngestion.ts)
+typescript
+// Current webhook endpoint that processes:
+POST /public/sendgrid/webhook
+// Events: processed, delivered, open, click, bounce, dropped, spamreport, deferred
+ENHANCED REQUIREMENTS FOR REBUILD
+1. UNIFIED INVITATION API
+Create a single invitation endpoint that handles all invitation types:
+
+typescript
+POST /api/invitations
+{
+  type: 'email' | 'code' | 'parent2' | 'player',
+  recipients: string[], // batch support
+  role: 'parent' | 'player' | 'admin' | 'assistant',
+  customMessage?: string,
+  expirationDays?: number,
+  metadata?: object
+}
+2. CONSOLIDATED DATABASE SCHEMA
+Enhance the existing schema with:
+
+sql
+-- Add invitation analytics
+CREATE TABLE invitation_analytics (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  invitation_id VARCHAR NOT NULL,
+  event_type VARCHAR NOT NULL, -- 'sent', 'viewed', 'accepted', 'expired'
+  event_data JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add batch invitation support
+CREATE TABLE invitation_batches (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id VARCHAR NOT NULL,
+  created_by VARCHAR NOT NULL,
+  total_invitations INTEGER NOT NULL,
+  successful_invitations INTEGER DEFAULT 0,
+  failed_invitations INTEGER DEFAULT 0,
+  status VARCHAR DEFAULT 'processing', -- 'processing', 'completed', 'failed'
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enhance invite_tokens table
+ALTER TABLE invite_tokens 
+ADD COLUMN batch_id VARCHAR REFERENCES invitation_batches(id),
+ADD COLUMN metadata JSONB,
+ADD COLUMN custom_message TEXT,
+ADD COLUMN view_count INTEGER DEFAULT 0,
+ADD COLUMN last_viewed_at TIMESTAMPTZ;
+3. UNIFIED ROUTES STRUCTURE
+Replace the current fragmented routes with:
+
+text
+/api/invitations
+├── POST / - Create invitations (batch support)
+├── GET / - List invitations with filters
+├── GET /:id - Get invitation details
+├── PUT /:id - Update invitation
+├── DELETE /:id - Cancel invitation
+├── POST /:token/accept - Accept invitation
+├── GET /:token/validate - Validate token
+├── GET /:token/preview - Preview invitation (track views)
+└── GET /analytics - Invitation analytics
+
+/api/invite-codes
+├── GET / - List tenant invite codes
+├── POST / - Create new invite code
+├── PUT /:id - Update invite code
+├── DELETE /:id - Delete invite code
+└── POST /:code/join - Join via invite code
+4. CONSOLIDATED EMAIL TEMPLATE SYSTEM
+Create a unified template engine:
+
+typescript
+interface UnifiedEmailTemplate {
+  type: 'invitation' | 'welcome' | 'reminder' | 'parent2' | 'announcement' | 'maintenance';
+  variant: 'html' | 'text';
+  data: {
+    tenantName: string;
+    recipientName: string;
+    senderName: string;
+    role: string;
+    inviteUrl?: string;
+    customMessage?: string;
+    expiresAt?: Date;
+    tenantBranding?: {
+      logo: string;
+      primaryColor: string;
+      secondaryColor: string;
+    };
+  };
+}
+
+// Consolidated service
+class EmailTemplateService {
+  generateTemplate(template: UnifiedEmailTemplate): string;
+  sendEmail(template: UnifiedEmailTemplate, recipient: string): Promise<void>;
+  trackDelivery(messageId: string, eventData: object): Promise<void>;
+}
+5. BATCH INVITATION FEATURES
+Implement batch processing with:
+
+CSV upload support
+
+Progress tracking
+
+Failure handling and retry logic
+
+Bulk status updates
+
+Email delivery queuing
+
+6. ENHANCED WEBHOOK PROCESSING
+Extend the current webhook system:
+
+typescript
+// Enhanced webhook data structure
+interface EmailEventData {
+  messageId: string;
+  invitationId?: string;
+  eventType: 'processed' | 'delivered' | 'open' | 'click' | 'bounce' | 'dropped'

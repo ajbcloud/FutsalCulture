@@ -29,6 +29,7 @@ import * as impersonationController from './controllers/impersonation';
 import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
 import { setupBetaOnboardingRoutes } from './beta-onboarding-routes';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
+import unifiedInvitationRoutes from './routes/unified-invitations';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
@@ -1973,6 +1974,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup admin routes
   await setupAdminRoutes(app);
+  
+  // Setup unified invitation system routes (new system)
+  app.use('/api/invitations', unifiedInvitationRoutes);
 
   // Setup super admin routes
   setupSuperAdminRoutes(app);

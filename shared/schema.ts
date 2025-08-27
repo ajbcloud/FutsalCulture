@@ -72,6 +72,18 @@ export const tenantMembershipStatusEnum = pgEnum("tenant_membership_status", ["a
 // Invite token purpose enum
 export const inviteTokenPurposeEnum = pgEnum("invite_token_purpose", ["signup_welcome", "add_membership", "player_link"]);
 
+// Invitation analytics event type enum
+export const invitationAnalyticsEventEnum = pgEnum("invitation_analytics_event", ["sent", "viewed", "accepted", "expired", "bounced", "clicked"]);
+
+// Invitation batch status enum
+export const invitationBatchStatusEnum = pgEnum("invitation_batch_status", ["processing", "completed", "failed", "cancelled"]);
+
+// Unified invitation type enum
+export const invitationTypeEnum = pgEnum("invitation_type", ["email", "code", "parent2", "player"]);
+
+// Invitation status enum for unified system
+export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "sent", "viewed", "accepted", "expired", "cancelled"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -2311,6 +2323,25 @@ export const tenantMemberships = pgTable("tenant_memberships", {
   index("tenant_memberships_user_idx").on(table.userId),
 ]);
 
+// Invitation batch processing table (must come before inviteTokens due to foreign key reference)
+export const invitationBatches = pgTable("invitation_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  totalInvitations: integer("total_invitations").notNull(),
+  successfulInvitations: integer("successful_invitations").default(0),
+  failedInvitations: integer("failed_invitations").default(0),
+  status: invitationBatchStatusEnum("status").default("processing"),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  errorLog: jsonb("error_log").default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("invitation_batches_tenant_idx").on(table.tenantId),
+  index("invitation_batches_created_by_idx").on(table.createdBy),
+  index("invitation_batches_status_idx").on(table.status),
+]);
+
 // Invite Tokens - For sending invitations and managing signup flows
 export const inviteTokens = pgTable("invite_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2324,11 +2355,65 @@ export const inviteTokens = pgTable("invite_tokens", {
   usedAt: timestamp("used_at"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  // Enhanced fields for unified system
+  batchId: varchar("batch_id").references(() => invitationBatches.id),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  customMessage: text("custom_message"),
+  viewCount: integer("view_count").default(0),
+  lastViewedAt: timestamp("last_viewed_at"),
 }, (table) => [
   index("invite_tokens_tenant_idx").on(table.tenantId),
   index("invite_tokens_email_idx").on(table.invitedEmail),
   index("invite_tokens_token_idx").on(table.token),
   index("invite_tokens_expires_idx").on(table.expiresAt),
+  index("invite_tokens_batch_idx").on(table.batchId),
+]);
+
+// Invitation analytics tracking table
+export const invitationAnalytics = pgTable("invitation_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invitationId: varchar("invitation_id").notNull().references(() => inviteTokens.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  eventType: invitationAnalyticsEventEnum("event_type").notNull(),
+  eventData: jsonb("event_data").default(sql`'{}'::jsonb`),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("invitation_analytics_invitation_idx").on(table.invitationId),
+  index("invitation_analytics_tenant_idx").on(table.tenantId),
+  index("invitation_analytics_event_idx").on(table.eventType),
+  index("invitation_analytics_created_at_idx").on(table.createdAt),
+]);
+
+// Unified invitations table (new system)
+export const unifiedInvitations = pgTable("unified_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  batchId: varchar("batch_id").references(() => invitationBatches.id),
+  type: invitationTypeEnum("type").notNull(),
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  role: tenantMembershipRoleEnum("role").notNull(),
+  token: text("token").unique().notNull(),
+  status: invitationStatusEnum("status").default("pending"),
+  customMessage: text("custom_message"),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '7 days'`),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  acceptedAt: timestamp("accepted_at"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("unified_invitations_tenant_idx").on(table.tenantId),
+  index("unified_invitations_batch_idx").on(table.batchId),
+  index("unified_invitations_type_idx").on(table.type),
+  index("unified_invitations_email_idx").on(table.recipientEmail),
+  index("unified_invitations_token_idx").on(table.token),
+  index("unified_invitations_status_idx").on(table.status),
+  index("unified_invitations_expires_at_idx").on(table.expiresAt),
 ]);
 
 // Beta onboarding schema exports
@@ -2409,11 +2494,89 @@ export const insertInviteTokenSchema = createInsertSchema(inviteTokens).omit({
   createdAt: true,
 });
 
+// Unified invitation system schemas
+export const insertInvitationBatchSchema = createInsertSchema(invitationBatches).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertInvitationAnalyticsSchema = createInsertSchema(invitationAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUnifiedInvitationSchema = createInsertSchema(unifiedInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Enhanced invite token schema for unified system
+export const updateInviteTokenSchema = insertInviteTokenSchema.extend({
+  batchId: z.string().uuid().optional(),
+  metadata: z.record(z.any()).optional(),
+  customMessage: z.string().optional(),
+  viewCount: z.number().optional(),
+  lastViewedAt: z.date().optional(),
+});
+
+// Batch invitation request schema
+export const batchInvitationRequestSchema = z.object({
+  type: z.enum(['email', 'code', 'parent2', 'player']),
+  recipients: z.array(z.object({
+    email: z.string().email(),
+    name: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
+  })),
+  role: z.enum(['parent', 'player', 'coach', 'admin']),
+  customMessage: z.string().optional(),
+  expirationDays: z.number().min(1).max(365).default(7),
+  metadata: z.record(z.any()).optional(),
+});
+
+// Unified invitation API schemas
+export const createInvitationSchema = z.object({
+  type: z.enum(['email', 'code', 'parent2', 'player']),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().optional(),
+  role: z.enum(['parent', 'player', 'coach', 'admin']),
+  customMessage: z.string().optional(),
+  expirationDays: z.number().min(1).max(365).default(7),
+  metadata: z.record(z.any()).optional(),
+});
+
 // New invitation system types
 export type TenantMembership = typeof tenantMemberships.$inferSelect;
 export type InsertTenantMembership = z.infer<typeof insertTenantMembershipSchema>;
 export type InviteToken = typeof inviteTokens.$inferSelect;
 export type InsertInviteToken = z.infer<typeof insertInviteTokenSchema>;
+
+// Unified invitation system types
+export type InvitationBatch = typeof invitationBatches.$inferSelect;
+export type InsertInvitationBatch = z.infer<typeof insertInvitationBatchSchema>;
+export type InvitationAnalytics = typeof invitationAnalytics.$inferSelect;
+export type InsertInvitationAnalytics = z.infer<typeof insertInvitationAnalyticsSchema>;
+export type UnifiedInvitation = typeof unifiedInvitations.$inferSelect;
+export type InsertUnifiedInvitation = z.infer<typeof insertUnifiedInvitationSchema>;
+
+// API request types for unified invitation system
+export type BatchInvitationRequest = z.infer<typeof batchInvitationRequestSchema>;
+export type CreateInvitationRequest = z.infer<typeof createInvitationSchema>;
+export type UpdateInviteTokenRequest = z.infer<typeof updateInviteTokenSchema>;
+
+// Waitlist settings schema (fixing missing export)
+export const waitlistSettingsSchema = z.object({
+  waitlistNotificationEmail: z.boolean().default(true),
+  waitlistNotificationSMS: z.boolean().default(false),
+  waitlistJoinMessage: z.string().optional(),
+  waitlistPromotionMessage: z.string().optional(),
+  maxWaitlistSize: z.number().min(1).default(50),
+  autoPromoteEnabled: z.boolean().default(true),
+  promotionTimeoutMinutes: z.number().min(5).max(120).default(30),
+});
+
+export type WaitlistSettings = z.infer<typeof waitlistSettingsSchema>;
 
 // Tenant invite codes schemas and types
 export const insertTenantInviteCodeSchema = createInsertSchema(tenantInviteCodes).omit({
