@@ -12,7 +12,8 @@ import {
   systemSettings,
   joinWaitlistSchema,
   leaveWaitlistSchema,
-  promoteWaitlistSchema
+  promoteWaitlistSchema,
+  waitlistSettingsSchema
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -28,6 +29,9 @@ import * as impersonationController from './controllers/impersonation';
 import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
 import { setupBetaOnboardingRoutes } from './beta-onboarding-routes';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
+import { superAdminEmailRouter } from './routes/super-admin-email';
+import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
+import { communicationTestRouter } from './routes/communication-test';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -39,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth middleware
   await setupAuth(app);
-  
+
   // Local email/password authentication
   await setupLocalAuth(app);
 
@@ -62,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       let userId;
-      
+
       // Check for local session first (password-based users)
       if (req.session?.userId) {
         userId = req.session.userId;
@@ -83,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       let user = await storage.getUser(userId);
 
       // Apply failsafe super admin permissions if this is the hardcoded admin
@@ -1204,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session is full" });
       }
 
-      // Check access code if session requires it
+      // Check for access code if session requires it
       if (session.hasAccessCode) {
         if (!accessCode || accessCode.trim().length === 0) {
           return res.status(400).json({ message: "Access code is required for this session" });
@@ -2039,6 +2043,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe webhook routes moved to top of function
+  app.use('/api/webhooks', sendgridWebhookRouter);
+  app.use('/api/communications', communicationTestRouter);
 
   const httpServer = createServer(app);
   return httpServer;

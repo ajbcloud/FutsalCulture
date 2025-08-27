@@ -90,6 +90,53 @@ export async function sendBulkSMS(recipients: Array<{ phone: string; body: strin
   return { sent, failed, results };
 }
 
+// SMS Template Library
+export const SMS_TEMPLATES = {
+  invitation: {
+    parent: "Hi {{name}}! {{senderName}} invited you to join {{tenantName}} on PlayHQ. Book training sessions & manage payments easily. Accept: {{inviteUrl}} Expires: {{expiresAt}}",
+    player: "Hey {{name}}! You're invited to join {{tenantName}} on PlayHQ by {{senderName}}. Book sessions & track progress! Join: {{inviteUrl}} Expires: {{expiresAt}}",
+    admin: "Hi {{name}}, {{senderName}} invited you as admin for {{tenantName}} on PlayHQ. Manage your organization: {{inviteUrl}} Expires: {{expiresAt}}",
+    assistant: "Hi {{name}}, you're invited to assist {{tenantName}} on PlayHQ by {{senderName}}. Help manage operations: {{inviteUrl}} Expires: {{expiresAt}}"
+  },
+  reminder: {
+    sessionReminder: "🏃 Reminder: Your session at {{location}} starts in {{timeUntil}}. Need to cancel? Visit PlayHQ or call {{contactNumber}}",
+    paymentDue: "💳 Payment reminder: Your {{amount}} payment for {{sessionDate}} is due. Pay now: {{paymentUrl}} Questions? Reply HELP",
+    waitlistPromotion: "🎉 Great news! A spot opened in {{sessionDate}} at {{location}}. Claim it within 2 hours: {{claimUrl}}"
+  },
+  confirmation: {
+    bookingConfirmed: "✅ Booking confirmed! {{playerName}} is registered for {{sessionDate}} at {{location}}. Total: {{amount}}. See you there!",
+    paymentReceived: "💰 Payment received! {{amount}} for {{sessionDate}}. Receipt: {{receiptUrl}} Thank you for choosing PlayHQ!",
+    cancellation: "❌ Booking cancelled: {{sessionDate}} at {{location}}. {{refundInfo}} Questions? Contact {{supportContact}}"
+  }
+};
+
+export async function sendInvitationSMS(options: {
+  to: string;
+  tenantName: string;
+  recipientName: string;
+  senderName: string;
+  role: 'parent' | 'player' | 'admin' | 'assistant';
+  inviteUrl: string;
+  expiresAt: string;
+  tenantId?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const template = SMS_TEMPLATES.invitation[options.role];
+  
+  const personalizedMessage = template
+    .replace(/\{\{name\}\}/g, options.recipientName)
+    .replace(/\{\{senderName\}\}/g, options.senderName)
+    .replace(/\{\{tenantName\}\}/g, options.tenantName)
+    .replace(/\{\{inviteUrl\}\}/g, options.inviteUrl)
+    .replace(/\{\{expiresAt\}\}/g, options.expiresAt);
+
+  return sendSMS({
+    to: options.to,
+    body: personalizedMessage,
+    tenantId: options.tenantId,
+    campaignId: `invitation-${options.role}`
+  });
+}
+
 export async function sendCampaignSMS(
   campaignId: string,
   recipients: Array<{ phone: string; name?: string; tenantId?: string }>,
@@ -119,4 +166,29 @@ export async function sendCampaignSMS(
 
   const result = await sendBulkSMS(smsRecipients);
   return { sent: result.sent, failed: result.failed };
+}
+
+// Analytics tracking for SMS
+export async function trackSMSEvent(eventData: {
+  messageId: string;
+  phone: string;
+  event: 'sent' | 'delivered' | 'failed' | 'clicked';
+  tenantId?: string;
+  campaignId?: string;
+  errorMessage?: string;
+}): Promise<void> {
+  try {
+    // Log to console for now - could be expanded to database tracking
+    console.log(`📱 SMS Event: ${eventData.event} for ${eventData.phone}`, {
+      messageId: eventData.messageId,
+      tenantId: eventData.tenantId,
+      campaignId: eventData.campaignId,
+      error: eventData.errorMessage
+    });
+    
+    // Future: Store in database for analytics
+    // await db.insert(smsEvents).values(eventData);
+  } catch (error) {
+    console.error('Failed to track SMS event:', error);
+  }
 }
