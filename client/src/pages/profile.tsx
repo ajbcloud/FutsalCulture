@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3 } from "lucide-react";
-import { NotificationPreferences } from "@shared/schema";
+import { type NotificationPreferences } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function Profile() {

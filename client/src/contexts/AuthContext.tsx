@@ -6,6 +6,10 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
+  profileImageUrl?: string;
+  avatarColor?: string;
+  avatarTextColor?: string;
   isAdmin?: boolean;
   isAssistant?: boolean;
   isSuperAdmin?: boolean;

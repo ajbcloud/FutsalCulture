@@ -2588,3 +2588,6 @@ export const insertTenantInviteCodeSchema = createInsertSchema(tenantInviteCodes
 
 export type TenantInviteCode = typeof tenantInviteCodes.$inferSelect;
 export type InsertTenantInviteCode = z.infer<typeof insertTenantInviteCodeSchema>;
+
+// NotificationPreferences type export (was missing)
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
