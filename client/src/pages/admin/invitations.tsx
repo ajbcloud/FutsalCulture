@@ -405,7 +405,9 @@ export default function InvitationsPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Invited by: {invitation.invitedBy.firstName} {invitation.invitedBy.lastName}
+                            {invitation.invitedBy ? 
+                              `Invited by: ${invitation.invitedBy.firstName} ${invitation.invitedBy.lastName}` : 
+                              `Sent to: ${invitation.email}`}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
