@@ -15,6 +15,7 @@ import guardianRouter from './routes/guardian';
 import companySignupRouter from './routes/company-signup';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import authVerificationRouter from './routes/auth-verification';
+import userRouter from './routes/user';
 
 const app = express();
 
@@ -96,6 +97,9 @@ app.use((req, res, next) => {
   app.use('/api', companySignupRouter);
   
   const server = await registerRoutes(app);
+  
+  // Mount user routes
+  app.use('/api/user', userRouter);
 
   // Mount superAdmin routes
   app.use('/api/super-admin', superAdminRoutes);

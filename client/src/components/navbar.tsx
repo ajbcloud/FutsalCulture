@@ -99,11 +99,6 @@ export default function Navbar() {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                      {(user?.isSuperAdmin || user?.role === 'tenant_admin') && (
-                        <p className="text-xs text-muted-foreground">
-                          {user?.isSuperAdmin ? 'Super Admin' : 'Owner'}
-                        </p>
-                      )}
                     </div>
                   </div>
                   <DropdownMenuSeparator />
@@ -115,12 +110,23 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      Parent Profile
-                    </Link>
-                  </DropdownMenuItem>
+                  {!(user?.isAdmin || user?.isAssistant) && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Parent Profile
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  {(user?.isAdmin || user?.isAssistant || user?.isSuperAdmin) && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/personal-settings" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Personal Settings
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   
                   {(user?.isAdmin || user?.isAssistant) && (
                     <DropdownMenuItem asChild>
@@ -148,11 +154,14 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </a>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      window.location.href = "/api/logout";
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
