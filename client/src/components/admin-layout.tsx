@@ -159,9 +159,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <p className="text-sm font-medium text-foreground truncate">
                       {user?.firstName} {user?.lastName}
                     </p>
-                    {(user?.isSuperAdmin || user?.role === 'tenant_admin') && (
+                    {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground truncate">
-                        {user?.isSuperAdmin ? 'Super Admin' : 'Owner'}
+                        Super Admin
+                      </p>
+                    )}
+                    {user?.role === 'tenant_admin' && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        Owner
                       </p>
                     )}
                   </div>
@@ -171,9 +176,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
                     <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                    {(user?.isSuperAdmin || user?.role === 'tenant_admin') && (
+                    {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground">
-                        {user?.isSuperAdmin ? 'Super Admin' : 'Owner'}
+                        Super Admin
+                      </p>
+                    )}
+                    {user?.role === 'tenant_admin' && (
+                      <p className="text-xs text-muted-foreground">
+                        Owner
                       </p>
                     )}
                   </div>
