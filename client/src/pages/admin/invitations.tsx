@@ -165,7 +165,7 @@ export default function InvitationsPage() {
     enabled: activeTab === "invitations",
   });
 
-  const invitations = invitationsResponse?.invitations || [];
+  const invitations: Invitation[] = invitationsResponse?.invitations || [];
 
   // Update invite code mutation
   const updateCodeMutation = useMutation({
@@ -403,7 +403,7 @@ export default function InvitationsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {invitations.map((invitation) => (
+                  {invitations.map((invitation: Invitation) => (
                     <div
                       key={invitation.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
