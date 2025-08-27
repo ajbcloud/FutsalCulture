@@ -52,6 +52,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Local email/password authentication - This is the primary auth method
   await setupLocalAuth(app);
 
+  // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)
+  app.post('/api/users/self-signup', async (req, res) => {
+    try {
+      const { firstName, lastName, email, password, role, dob, guardian_email } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName || !email) {
+        return res.status(400).json({ error: "First name, last name, and email are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "User already exists with this email" });
+      }
+
+      // For players under 13, we don't require a password initially
+      const isUnder13Player = role === 'player' && dob && 
+        new Date().getFullYear() - new Date(dob).getFullYear() < 13;
+
+      if (!password && !isUnder13Player) {
+        return res.status(400).json({ error: "Password is required" });
+      }
+
+      // Create user data
+      const userData: any = {
+        id: nanoid(),
+        firstName,
+        lastName,
+        email,
+        isApproved: false,
+        registrationStatus: 'pending' as const,
+      };
+
+      // Add password hash if provided
+      if (password) {
+        const bcrypt = await import('bcryptjs');
+        userData.passwordHash = await bcrypt.hash(password, 12);
+      }
+
+      // Create the user
+      const newUser = await storage.upsertUser(userData);
+
+      // If this is a player registration, create player record
+      if (role === 'player' && dob) {
+        const playerData = {
+          id: newUser.id,
+          firstName,
+          lastName,
+          birthYear: new Date(dob).getFullYear(),
+          gender: 'boys' as 'boys' | 'girls', // Default, can be updated later
+          parentId: '', // Will be linked when they join a club
+          isApproved: false,
+          registrationStatus: 'pending' as const,
+        };
+
+        await storage.createPlayer(playerData);
+      }
+
+      // Log successful registration
+      console.log(`✅ Self-signup completed:`, { 
+        id: newUser.id,
+        role,
+        email: newUser.email,
+        name: `${firstName} ${lastName}`
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Account created successfully",
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role
+      });
+    } catch (error) {
+      console.error("Error during self-signup:", error);
+      res.status(500).json({ 
+        error: "Registration failed. Please try again." 
+      });
+    }
+  });
+
   // Platform policy middleware (must be after auth) - DISABLED IN DEVELOPMENT
   if (process.env.NODE_ENV !== 'development') {
     app.use(maintenanceMode); // Check maintenance mode for all routes
@@ -66,6 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Hardcoded super admin failsafe - must match the one in super-admin-routes.ts
   const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch";
+
+  // Duplicate endpoint removed - now using public version above
 
   // Auth routes
   app.get('/api/auth/user', async (req: any, res) => {

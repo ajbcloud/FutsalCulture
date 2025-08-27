@@ -11,6 +11,8 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function PersonalSignup() {
   const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     role: "parent" as "parent" | "player",
@@ -29,7 +31,7 @@ export default function PersonalSignup() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!formData.email || (!formData.password && !isUnder13) || 
+    if (!formData.firstName || !formData.lastName || !formData.email || (!formData.password && !isUnder13) || 
         (formData.role === "player" && !formData.dob) ||
         (isUnder13 && !formData.guardian_email)) {
       toast({
@@ -43,6 +45,8 @@ export default function PersonalSignup() {
     setLoading(true);
     try {
       const response = await apiRequest("POST", "/api/users/self-signup", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
         password: isUnder13 ? undefined : formData.password,
         role: formData.role,
@@ -134,6 +138,32 @@ export default function PersonalSignup() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input
+                id="firstName"
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="Your first name"
+                required
+                data-testid="input-firstname"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input
+                id="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Your last name"
+                required
+                data-testid="input-lastname"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
               <Input
