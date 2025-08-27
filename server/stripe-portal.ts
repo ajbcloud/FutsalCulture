@@ -47,7 +47,7 @@ export async function createOrGetCustomer(email: string, name?: string) {
 }
 
 export const PLAN_URLS = {
-  core: 'https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00',
-  growth: 'https://buy.stripe.com/test_dRmaEY8WS9F2bJwfs62Fa01',
-  elite: 'https://buy.stripe.com/test_7sY7sMb50bNacNAeo22Fa02'
+  core: 'https://buy.stripe.com/REPLACE_WITH_PROD_CORE_URL',
+  growth: 'https://buy.stripe.com/REPLACE_WITH_PROD_GROWTH_URL',
+  elite: 'https://buy.stripe.com/REPLACE_WITH_PROD_ELITE_URL'
 };

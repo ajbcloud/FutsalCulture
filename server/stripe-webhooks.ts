@@ -167,14 +167,14 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
 function getPlanLevelFromPrice(priceId?: string): string | null {
   // Map Stripe price IDs to plan levels - Update these with your actual Stripe price IDs
   const priceMap: Record<string, string> = {
-    // Test mode price IDs
+    // Test mode price IDs (keeping for development)
     'price_1QHMGtKA9oSeqOY8hkI2lPGj': 'core',    // Core $99/mo test
     'price_1QHMHoKA9oSeqOY8O8rZJz0X': 'growth',  // Growth $199/mo test
     'price_1QHMIbKA9oSeqOY8qWnMpJeQ': 'elite',   // Elite $499/mo test
-    // Production price IDs (replace with your actual IDs)
-    'price_1RudiFKA9oSeqOY8BYw8Bjdk': 'elite',   // $499/mo prod
-    'price_1RudiEKA9oSeqOY8Xu6NGBB7': 'growth',  // $199/mo prod
-    'price_1RudiDKA9oSeqOY8R4R4R4R4': 'core',    // $99/mo prod
+    // Production price IDs - REPLACE WITH YOUR ACTUAL PRODUCTION PRICE IDs
+    'price_PROD_CORE_REPLACE_ME': 'core',        // Your Core $99/mo prod price ID
+    'price_PROD_GROWTH_REPLACE_ME': 'growth',    // Your Growth $199/mo prod price ID
+    'price_PROD_ELITE_REPLACE_ME': 'elite',      // Your Elite $499/mo prod price ID
   };
 
   return priceMap[priceId || ''] || null;
