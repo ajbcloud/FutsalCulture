@@ -54,3 +54,11 @@ export function isTokenExpired(token: string, maxAgeMs: number = 7 * 24 * 60 * 6
   
   return Date.now() - decoded.timestamp > maxAgeMs;
 }
+
+/**
+ * Generate a simple invite code for tenants
+ * @returns An 8-character uppercase invite code
+ */
+export function generateInviteCode(): string {
+  return randomBytes(4).toString('hex').toUpperCase();
+}

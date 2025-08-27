@@ -112,11 +112,13 @@ If you did not request this, please ignore this email.
 Best regards,
 The PlayHQ Team`;
 
-    // Use SendGrid email service instead of old email service
-    const { sendEmail: sendGridEmail } = await import('../utils/email-service');
-    
-    // For now, just log instead of sending email to test the org creation
-    console.log(`Would send verification email to ${user.email} with link: ${link}`);
+    await sendEmail({
+      to: user.email!,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      subject: "Verify your PlayHQ account",
+      html,
+      text,
+    });
 
     console.log(`Created tenant ${tenant.name} and sent verification email to ${user.email}`);
 
@@ -424,8 +426,13 @@ authVerificationRouter.post("/resend_verification", async (req, res) => {
     </div>
   `;
 
-  // Use SendGrid email service instead of old email service
-  console.log(`Would resend verification email to ${user.email} with link: ${link}`);
+  await sendEmail({
+    to: user.email!,
+    from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+    subject: "Verify your PlayHQ account",
+    html,
+    text: `Continue your setup: ${link}`,
+  });
 
   console.log(`Resent verification email to ${user.email}`);
 
