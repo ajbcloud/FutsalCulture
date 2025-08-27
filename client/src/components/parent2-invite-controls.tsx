@@ -171,8 +171,8 @@ export default function Parent2InviteControls({ userId, currentParent2 }: Parent
           />
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
             <strong>Note:</strong> The invited parent/guardian will be able to view and manage 
             all players associated with your account, including booking sessions and making payments.
           </p>

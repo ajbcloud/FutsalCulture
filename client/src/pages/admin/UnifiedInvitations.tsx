@@ -258,6 +258,7 @@ export default function UnifiedInvitations() {
                       name="customMessage"
                       placeholder="Add a personal message (optional)"
                       rows={3}
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                       data-testid="textarea-custom-message"
                     />
                   </div>
@@ -351,6 +352,7 @@ export default function UnifiedInvitations() {
                       placeholder="user1@example.com,John Doe&#10;user2@example.com,Jane Smith&#10;user3@example.com"
                       rows={8}
                       required
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                       data-testid="textarea-email-list"
                     />
                   </div>
@@ -360,6 +362,7 @@ export default function UnifiedInvitations() {
                       name="customMessage"
                       placeholder="Add a personal message (optional)"
                       rows={3}
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                       data-testid="textarea-batch-message"
                     />
                   </div>

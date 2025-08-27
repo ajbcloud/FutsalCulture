@@ -163,7 +163,7 @@ export function AskAnalyticsDrawer({ isOpen, onClose, filters }: AskAnalyticsDra
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               rows={3}
-              className="resize-none"
+              className="resize-none bg-background border-border text-foreground placeholder:text-muted-foreground"
             />
             <Button
               type="submit"

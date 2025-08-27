@@ -271,6 +271,7 @@ export default function DiscountCodes() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Summer camp discount for early registration"
+                  className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 

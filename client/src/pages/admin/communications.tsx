@@ -463,6 +463,7 @@ export default function AdminCommunications() {
                   placeholder={campaignForm.type === 'sms' ? 'Enter your SMS message (160 characters max for best delivery)' : 'Enter your email message content...'}
                   rows={campaignForm.type === 'sms' ? 3 : 8}
                   required
+                  className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                 />
                 {campaignForm.type === 'sms' && (
                   <p className="text-sm text-muted-foreground mt-1">

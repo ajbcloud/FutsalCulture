@@ -199,7 +199,7 @@ export default function Parent2Invite() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -212,12 +212,12 @@ export default function Parent2Invite() {
         </CardHeader>
         <CardContent>
           {inviteData.parent1 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-blue-900">Invitation from</h3>
-              <p className="text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <h3 className="font-medium text-blue-900 dark:text-blue-100">Invitation from</h3>
+              <p className="text-blue-700 dark:text-blue-200">
                 {inviteData.parent1.firstName} {inviteData.parent1.lastName}
               </p>
-              <p className="text-sm text-blue-600">
+              <p className="text-sm text-blue-600 dark:text-blue-300">
                 {inviteData.parent1.email}
               </p>
             </div>
@@ -276,8 +276,8 @@ export default function Parent2Invite() {
               />
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm text-amber-800">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
                 <strong>Note:</strong> By accepting this invitation, you'll be added as a second 
                 parent/guardian and will have access to manage all players associated with{" "}
                 {inviteData.parent1?.firstName}'s account.

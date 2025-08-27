@@ -1256,6 +1256,7 @@ export default function AdminHelpRequests() {
                             <Textarea 
                               placeholder="Please provide detailed information about your request..."
                               rows={6}
+                              className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                               {...field} 
                             />
                           </FormControl>
@@ -1345,6 +1346,7 @@ export default function AdminHelpRequests() {
                               <Textarea 
                                 placeholder="Describe the feature, why it would be useful, and how it should work..."
                                 rows={6}
+                                className="bg-background border-border text-foreground placeholder:text-muted-foreground"
                                 {...field} 
                               />
                             </FormControl>
