@@ -13,6 +13,7 @@ interface User {
   isAdmin?: boolean;
   isAssistant?: boolean;
   isSuperAdmin?: boolean;
+  role?: string;
   tenantId?: string;
   planId?: string;
   billingStatus?: string;

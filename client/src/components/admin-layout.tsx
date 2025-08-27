@@ -159,9 +159,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <p className="text-sm font-medium text-foreground truncate">
                       {user?.firstName} {user?.lastName}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user?.isSuperAdmin ? 'Super Admin' : user?.isAdmin ? 'Owner' : 'Assistant'}
-                    </p>
+                    {(user?.isSuperAdmin || user?.role === 'tenant_admin') && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user?.isSuperAdmin ? 'Super Admin' : 'Owner'}
+                      </p>
+                    )}
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -169,9 +171,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
                     <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.isSuperAdmin ? 'Super Admin' : user?.isAdmin ? 'Owner' : 'Assistant'}
-                    </p>
+                    {(user?.isSuperAdmin || user?.role === 'tenant_admin') && (
+                      <p className="text-xs text-muted-foreground">
+                        {user?.isSuperAdmin ? 'Super Admin' : 'Owner'}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DropdownMenuSeparator />
