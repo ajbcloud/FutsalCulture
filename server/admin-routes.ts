@@ -285,6 +285,8 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     // Attach user to request for convenience
     console.log('✅ Admin access granted, attaching user to request');
     (req as any).currentUser = user;
+    (req as any).adminTenantId = user?.tenantId;
+    (req as any).user = { ...((req as any).user || {}), id: userId };
     console.log('🎯 requireAdmin calling next() - middleware complete');
     next();
   } catch (error) {
