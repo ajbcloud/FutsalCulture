@@ -299,4 +299,57 @@ router.post('/admin/send-invitation', isAuthenticated, async (req, res) => {
   }
 });
 
+// Public validation endpoint for invite codes (no authentication required)
+router.get('/validate', async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({ message: 'Code is required', valid: false });
+    }
+    
+    const inviteCode = await db
+      .select()
+      .from(tenantInviteCodes)
+      .where(eq(tenantInviteCodes.code, code as string))
+      .limit(1);
+
+    if (inviteCode.length === 0) {
+      return res.status(404).json({ message: 'Invalid invite code', valid: false });
+    }
+
+    const code_data = inviteCode[0];
+    
+    if (!code_data.isActive) {
+      return res.status(400).json({ message: 'Invite code is inactive', valid: false });
+    }
+
+    // Get tenant info for the code
+    const { tenants } = await import('../../shared/schema');
+    const tenant = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, code_data.tenantId))
+      .limit(1);
+
+    if (tenant.length === 0) {
+      return res.status(400).json({ message: 'Associated organization not found', valid: false });
+    }
+
+    res.json({
+      valid: true,
+      message: 'Valid invite code',
+      code: code_data.code,
+      tenant: {
+        id: tenant[0].id,
+        name: tenant[0].name
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error validating invite code:', error);
+    res.status(500).json({ message: 'Internal server error', valid: false });
+  }
+});
+
 export default router;
