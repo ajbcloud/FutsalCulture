@@ -773,17 +773,17 @@ router.post('/:token/accept', async (req, res) => {
       // Update existing user with password and role
       [user] = await db.update(users)
         .set({
-          first_name: firstName,
-          last_name: lastName,
-          password_hash: passwordHash,
+          firstName: firstName,
+          lastName: lastName,
+          passwordHash: passwordHash,
           role: userRole,
-          tenant_id: inv.tenantId,
-          is_admin: ['admin', 'tenant_admin'].includes(inv.role),
-          is_assistant: inv.role === 'assistant',
-          is_approved: true,
-          registration_status: 'approved',
-          email_verified_at: new Date(),
-          updated_at: new Date(),
+          tenantId: inv.tenantId,
+          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
+          isAssistant: inv.role === 'assistant',
+          isApproved: true,
+          registrationStatus: 'approved',
+          emailVerifiedAt: new Date(),
+          updatedAt: new Date(),
         })
         .where(eq(users.id, existingUser[0].id))
         .returning();
@@ -792,17 +792,16 @@ router.post('/:token/accept', async (req, res) => {
       const insertedUsers = await db.insert(users)
         .values({
           email: email.toLowerCase(),
-          first_name: firstName,
-          last_name: lastName,
-          password_hash: passwordHash,
+          firstName: firstName,
+          lastName: lastName,
+          passwordHash: passwordHash,
           role: userRole,
-          tenant_id: inv.tenantId,
-          is_admin: ['admin', 'tenant_admin'].includes(inv.role),
-          is_assistant: inv.role === 'assistant',
-          is_approved: true,
-          registration_status: 'approved',
-          email_verified_at: new Date(),
-          created_by: null, // Allow null for virtual users
+          tenantId: inv.tenantId,
+          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
+          isAssistant: inv.role === 'assistant',
+          isApproved: true,
+          registrationStatus: 'approved',
+          emailVerifiedAt: new Date(),
         })
         .returning();
       user = insertedUsers[0];
@@ -819,8 +818,8 @@ router.post('/:token/accept', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
       }
     });
 
