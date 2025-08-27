@@ -759,6 +759,15 @@ router.post('/:token/accept', async (req, res) => {
       .where(eq(users.email, email.toLowerCase()))
       .limit(1);
 
+    // Map invitation role to user role (handle mismatch between tables)
+    const mapInvitationRoleToUserRole = (invRole: string): any => {
+      if (invRole === 'admin') return 'tenant_admin';
+      if (invRole === 'assistant') return 'player'; // Assistant doesn't exist in users table
+      return invRole as any; // parent, player pass through
+    };
+
+    const userRole = mapInvitationRoleToUserRole(inv.role);
+
     let user;
     if (existingUser[0]) {
       // Update existing user with password and role
@@ -767,10 +776,10 @@ router.post('/:token/accept', async (req, res) => {
           first_name: firstName,
           last_name: lastName,
           password_hash: passwordHash,
-          role: inv.role,
+          role: userRole,
           tenant_id: inv.tenantId,
           is_admin: ['admin', 'tenant_admin'].includes(inv.role),
-          is_assistant: false,
+          is_assistant: inv.role === 'assistant',
           is_approved: true,
           registration_status: 'approved',
           email_verified_at: new Date(),
@@ -786,10 +795,10 @@ router.post('/:token/accept', async (req, res) => {
           first_name: firstName,
           last_name: lastName,
           password_hash: passwordHash,
-          role: inv.role,
+          role: userRole,
           tenant_id: inv.tenantId,
           is_admin: ['admin', 'tenant_admin'].includes(inv.role),
-          is_assistant: false,
+          is_assistant: inv.role === 'assistant',
           is_approved: true,
           registration_status: 'approved',
           email_verified_at: new Date(),
