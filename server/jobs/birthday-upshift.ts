@@ -19,7 +19,7 @@ import { evaluatePolicy } from "../services/agePolicy";
  */
 
 export async function runBirthdayUpshift() {
-  console.log("Starting birthday upshift job...");
+  // Starting birthday upshift job
   
   try {
     // Get all tenants with their policies
@@ -31,7 +31,7 @@ export async function runBirthdayUpshift() {
       await processTenantsPlayers(policy);
     }
     
-    console.log("Birthday upshift job completed successfully");
+    // Birthday upshift job completed
   } catch (error) {
     console.error("Error in birthday upshift job:", error);
   }

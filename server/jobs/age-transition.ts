@@ -10,7 +10,7 @@ import { storage } from '../storage';
 export function scheduleAgeTransitionProcessor() {
   // Process age transitions daily at 1 AM
   cron.schedule('0 1 * * *', async () => {
-    console.log('🎂 Starting age transition processing...');
+    // Starting age transition processing
     
     try {
       // Get all active tenants

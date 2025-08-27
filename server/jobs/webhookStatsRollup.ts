@@ -3,7 +3,7 @@ import { db } from '../db';
 import cron from 'node-cron';
 
 async function rollupWebhookStats() {
-  console.log('📊 Starting hourly webhook stats rollup...');
+  // Starting hourly webhook stats rollup
   
   try {
     // Calculate stats for the previous hour
@@ -42,7 +42,7 @@ async function rollupWebhookStats() {
         created_at = now()
     `);
     
-    console.log(`✅ Webhook stats rollup completed for ${hourTrunc.toISOString()}`);
+    // Webhook stats rollup completed
   } catch (error) {
     console.error('❌ Webhook stats rollup failed:', error);
   }

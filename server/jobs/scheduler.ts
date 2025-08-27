@@ -14,6 +14,6 @@ cron.schedule('12 3 * * *', async () => {
   }
 });
 
-console.log('📅 Usage rollup scheduler initialized - runs daily at 03:12 UTC');
+// Usage rollup scheduler initialized
 
 export {}; // imported at server bootstrap

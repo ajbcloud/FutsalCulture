@@ -178,19 +178,7 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
   try {
     let userId;
     
-    // Debug session information (only for failed auth)
-    const hasAnyAuth = (req as any).session?.userId || (req as any).user?.id || (req as any).user?.claims?.sub;
-    if (!hasAnyAuth) {
-      console.log('🔍 Session Debug:', {
-        hasSession: !!(req as any).session,
-        sessionId: (req as any).session?.id,
-        sessionUserId: (req as any).session?.userId,
-        hasUser: !!(req as any).user,
-        userAgent: req.headers['user-agent']?.substring(0, 50),
-        cookies: Object.keys(req.cookies || {}),
-        sessionCookie: req.headers.cookie?.includes('connect.sid')
-      });
-    }
+    // Session validation for authentication
     
     // Check for local session first (password-based users)  
     if ((req as any).session?.userId) {
@@ -216,32 +204,17 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
         (req as any).session.userId = userId;
         await new Promise((resolve) => (req as any).session.save(resolve));
       }
-      console.log("🔧 Development mode: Using failsafe admin ID and creating session");
+      // Development failsafe admin access
     }
     
-    // Debug authentication sources
-    if (process.env.NODE_ENV === 'development' || !userId) {
-      console.log('🔍 Authentication Debug:', {
-        sessionUserId: (req as any).session?.userId,
-        userClaimsSub: (req as any).user?.claims?.sub,
-        userId: (req as any).user?.id,
-        userEmail: (req as any).user?.email,
-        isAuthenticated: typeof (req as any).isAuthenticated === 'function' ? (req as any).isAuthenticated() : 'method not available',
-        userObject: (req as any).user ? Object.keys((req as any).user) : 'user object missing',
-        sessionKeys: (req as any).session ? Object.keys((req as any).session) : 'session missing',
-        finalUserId: userId
-      });
-    }
+    // Authentication validation complete
     
     if (!userId) {
-      console.log('❌ No userId found - failing authentication');
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     // Check user's admin status directly from database
-    console.log('🔍 Looking up user in database:', userId);
     let user = await storage.getUser(userId);
-    console.log('🔍 Database user lookup result:', user ? 'User found' : 'User not found');
     
     // Apply failsafe super admin permissions if this is the hardcoded admin
     if (userId === 'ajosephfinch') {
@@ -252,10 +225,10 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
           isSuperAdmin: true,
           isAdmin: true,
         };
-        console.log('🔍 Enhanced failsafe admin permissions');
+        // Enhanced failsafe admin permissions
       } else {
         // If failsafe admin doesn't exist in database, create a minimal user object
-        console.log("⚠️ Failsafe super admin not found in database, creating virtual user");
+        // Failsafe super admin virtual user
         user = {
           id: userId,
           email: "ajosephfinch@gmail.com",
@@ -270,24 +243,16 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
       }
     }
     
-    console.log('🔍 Final user permissions check:', {
-      userId: user?.id,
-      isAdmin: user?.isAdmin,
-      isAssistant: user?.isAssistant,
-      hasAccess: !!(user?.isAdmin || user?.isAssistant)
-    });
+    // Final user permissions validation
     
     if (!user?.isAdmin && !user?.isAssistant) {
-      console.log('❌ Access denied - user lacks admin/assistant permissions');
       return res.status(403).json({ message: "Admin access required" });
     }
     
     // Attach user to request for convenience
-    console.log('✅ Admin access granted, attaching user to request');
     (req as any).currentUser = user;
     (req as any).adminTenantId = user?.tenantId;
     (req as any).user = { ...((req as any).user || {}), id: userId };
-    console.log('🎯 requireAdmin calling next() - middleware complete');
     next();
   } catch (error) {
     console.error("Error checking admin access:", error);

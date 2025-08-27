@@ -140,7 +140,11 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`PlayHQ server running on port ${port}`);
+    } else {
+      log(`serving on port ${port}`);
+    }
     // Start background processors
     startWaitlistProcessor();
     scheduleBirthdayUpshift();
