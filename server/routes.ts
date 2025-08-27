@@ -18,8 +18,9 @@ import {
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import "./jobs/capacity-monitor";
-import "./jobs/session-status";
+// Lazy load background jobs - they're initialized after server starts
+// import "./jobs/capacity-monitor";
+// import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { nanoid } from 'nanoid';

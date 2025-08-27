@@ -4,9 +4,21 @@ import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
-import './jobs/scheduler'; // Initialize usage rollup scheduler
-import { scheduleBirthdayUpshift } from './jobs/birthday-upshift';
-import { scheduleAgeTransitionProcessor } from './jobs/age-transition';
+// Lazy load background jobs to reduce startup time
+let jobsInitialized = false;
+const initializeBackgroundJobs = async () => {
+  if (jobsInitialized) return;
+  jobsInitialized = true;
+  
+  // Initialize all background jobs
+  await import('./jobs/capacity-monitor');
+  await import('./jobs/session-status');
+  await import('./jobs/scheduler'); // Initialize usage rollup scheduler  
+  const { scheduleBirthdayUpshift } = await import('./jobs/birthday-upshift');
+  const { scheduleAgeTransitionProcessor } = await import('./jobs/age-transition');
+  scheduleBirthdayUpshift();
+  scheduleAgeTransitionProcessor();
+};
 import { rateLimitMiddleware, ipRestrictionMiddleware, sessionMonitoringMiddleware } from './middleware/security';
 import policyRouter from './routes/policy';
 import signupRouter from './routes/signup';
@@ -88,7 +100,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Clean API request logging (removed verbose debug logs)
+  try {
+    // Clean API request logging (removed verbose debug logs)
 
   // Mount auth redirect to handle legacy /api/login URLs
   app.use('/api', authRedirectRouter);
@@ -143,24 +156,25 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const host = '0.0.0.0'; // Explicitly bind to all interfaces for Replit deployment
+  
+  server.listen(port, host, () => {
     if (process.env.NODE_ENV === 'production') {
-      console.log(`PlayHQ server running on port ${port}`);
+      console.log(`PlayHQ server running on http://${host}:${port}`);
     } else {
-      log(`serving on port ${port}`);
+      log(`serving on http://${host}:${port}`);
     }
-    // Start background processors
-    startWaitlistProcessor();
-    scheduleBirthdayUpshift();
-    scheduleAgeTransitionProcessor();
+    
+    // Start background processors after server is up
+    setTimeout(() => {
+      startWaitlistProcessor();
+      initializeBackgroundJobs();
+    }, 1000); // Delay background jobs to ensure server is fully initialized
   });
 
-  // Background job to clean up expired reservations (pending payment > 1 hour)
-  setInterval(async () => {
+  // Background job to clean up expired reservations - delayed start
+  setTimeout(() => {
+    setInterval(async () => {
     try {
       const { storage } = await import("./storage");
       const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
@@ -183,5 +197,10 @@ app.use((req, res, next) => {
     } catch (error) {
       console.error("Error cleaning up expired reservations:", error);
     }
-  }, 15 * 60 * 1000); // Run every 15 minutes
+    }, 15 * 60 * 1000); // Run every 15 minutes
+  }, 10000); // Start cleanup job after 10 seconds
+  } catch (error) {
+    console.error('Server startup error:', error);
+    process.exit(1);
+  }
 })();
