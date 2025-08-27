@@ -51,13 +51,14 @@ interface TenantInviteCode {
 
 interface Invitation {
   id: string;
-  email: string;
+  recipientEmail: string;
   role: string;
   status: "pending" | "accepted" | "expired";
   createdAt: string;
   expiresAt: string;
-  usedAt?: string;
-  invitedBy: {
+  acceptedAt?: string;
+  createdByName?: string;
+  invitedBy?: {
     firstName: string;
     lastName: string;
   };
@@ -388,7 +389,7 @@ export default function InvitationsPage() {
                       <div className="flex items-center gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{invitation.email}</span>
+                            <span className="font-medium">{invitation.recipientEmail}</span>
                             <Badge
                               variant={
                                 invitation.status === "accepted"
@@ -407,7 +408,7 @@ export default function InvitationsPage() {
                           <p className="text-sm text-muted-foreground">
                             {invitation.invitedBy ? 
                               `Invited by: ${invitation.invitedBy.firstName} ${invitation.invitedBy.lastName}` : 
-                              `Sent to: ${invitation.email}`}
+                              `Sent to: ${invitation.recipientEmail}`}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
@@ -418,10 +419,10 @@ export default function InvitationsPage() {
                               <Clock className="w-3 h-3" />
                               Expires: {formatDate(invitation.expiresAt)}
                             </span>
-                            {invitation.usedAt && (
+                            {invitation.acceptedAt && (
                               <span className="flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" />
-                                Accepted: {formatDate(invitation.usedAt)}
+                                Accepted: {formatDate(invitation.acceptedAt)}
                               </span>
                             )}
                           </div>
