@@ -166,7 +166,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
       counter++;
     }
 
-    // Generate tenant invite code
+    // Generate tenant invite code  
     const { generateInviteCode } = await import('../utils/invite-helpers');
     const inviteCode = generateInviteCode();
 
