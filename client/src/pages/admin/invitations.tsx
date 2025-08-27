@@ -53,7 +53,7 @@ interface Invitation {
   id: string;
   recipientEmail: string;
   role: string;
-  status: "pending" | "accepted" | "expired";
+  status: "pending" | "accepted" | "expired" | "cancelled";
   createdAt: string;
   expiresAt: string;
   acceptedAt?: string;
@@ -102,6 +102,28 @@ export default function InvitationsPage() {
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setIsInviting(false);
+    }
+  });
+
+  // Cancel invitation mutation
+  const cancelInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const response = await fetch(`/api/invitations/${invitationId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to cancel invitation');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Invitation cancelled successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/invitations'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   });
 
@@ -386,7 +408,7 @@ export default function InvitationsPage() {
                       key={invitation.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between w-full">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{invitation.recipientEmail}</span>
@@ -394,7 +416,7 @@ export default function InvitationsPage() {
                               variant={
                                 invitation.status === "accepted"
                                   ? "default"
-                                  : invitation.status === "expired"
+                                  : invitation.status === "expired" || invitation.status === "cancelled"
                                   ? "destructive"
                                   : "secondary"
                               }
@@ -427,6 +449,27 @@ export default function InvitationsPage() {
                             )}
                           </div>
                         </div>
+                        
+                        {/* Cancel button - only show for pending invitations */}
+                        {invitation.status === "pending" && (
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to cancel the invitation for ${invitation.recipientEmail}? This action cannot be undone.`)) {
+                                  cancelInvitationMutation.mutate(invitation.id);
+                                }
+                              }}
+                              disabled={cancelInvitationMutation.isPending}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                              data-testid={`button-cancel-invitation-${invitation.id}`}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
