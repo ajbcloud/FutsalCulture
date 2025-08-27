@@ -199,7 +199,9 @@ router.post('/', requireAdmin, async (req: any, res) => {
           eventData: { method: 'single', type: validatedData.type },
         });
 
-      const baseUrl = process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev';
+      const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://playhq.app' 
+      : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
       
       res.status(201).json({
         message: 'Invitation created successfully',
@@ -353,7 +355,9 @@ router.get('/:id', requireAdmin, async (req: any, res) => {
       .where(eq(invitationAnalytics.invitationId, id))
       .orderBy(desc(invitationAnalytics.createdAt));
 
-    const baseUrl = process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev';
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://playhq.app' 
+      : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
 
     res.json({
       ...invitation[0],

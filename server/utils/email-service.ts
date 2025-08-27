@@ -105,7 +105,7 @@ ${options.role === 'parent' ?
   'You can now assist with managing sessions, players, and help support your organization.'
 }
 
-Get started by logging into your account at: ${process.env.APP_URL || 'https://playhq.app'}
+Get started by logging into your account at: ${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app')}
 
 If you have any questions, our support team is here to help.
 
@@ -149,7 +149,7 @@ The PlayHQ Team
       }</p>
       
       <div style="text-align: center;">
-        <a href="${process.env.APP_URL || 'https://playhq.app'}" class="button">Go to PlayHQ</a>
+        <a href="${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app')}" class="button">Go to PlayHQ</a>
       </div>
       
       <p>If you have any questions, our support team is here to help.</p>
