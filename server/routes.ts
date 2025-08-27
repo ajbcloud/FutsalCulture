@@ -43,10 +43,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
 
-  // Auth middleware
-  await setupAuth(app);
+  // Auth middleware - Only use Replit Auth in development
+  if (process.env.NODE_ENV === 'development' && process.env.USE_REPLIT_AUTH === 'true') {
+    await setupAuth(app);
+  }
 
-  // Local email/password authentication
+  // Local email/password authentication - This is the primary auth method
   await setupLocalAuth(app);
 
   // Platform policy middleware (must be after auth) - DISABLED IN DEVELOPMENT

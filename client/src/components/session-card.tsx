@@ -298,7 +298,7 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
             disabled={isFull || !isBookingOpen()}
             className={`${showAddToCart ? 'flex-1' : 'w-full'} bg-blue-600 hover:bg-blue-700 text-white`}
             variant={isFull ? "secondary" : "default"}
-            onClick={!isAuthenticated && isBookingOpen() && !isFull ? () => window.location.href = '/api/login' : undefined}
+            onClick={!isAuthenticated && isBookingOpen() && !isFull ? () => window.location.href = '/login' : undefined}
           >
             {isFull ? (
               session.waitlistEnabled ? (

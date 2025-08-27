@@ -79,7 +79,7 @@ export default function Navbar() {
             
             {!isAuthenticated ? (
               <Button asChild className="h-11 px-4 sm:h-auto sm:px-3">
-                <a href="/api/login">Parent Login</a>
+                <Link href="/login">Parent Login</Link>
               </Button>
             ) : (
               <DropdownMenu>
@@ -262,7 +262,7 @@ export default function Navbar() {
                     Help
                   </Link>
                   <a 
-                    href="/api/login" 
+                    href="/login" 
                     className="block px-4 py-4 text-primary hover:text-primary/80 hover:bg-accent rounded-md transition-colors"
                   >
                     Parent Login

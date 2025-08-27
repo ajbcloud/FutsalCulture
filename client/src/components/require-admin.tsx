@@ -37,7 +37,7 @@ export default function RequireAdmin({ children }: RequireAdminProps) {
           <h1 className="text-2xl font-bold text-white mb-4">Admin Access Required</h1>
           <p className="text-muted-foreground mb-6">Please log in with an admin account to continue.</p>
           <a 
-            href="/api/login" 
+            href="/login" 
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Login

@@ -16,6 +16,7 @@ import companySignupRouter from './routes/company-signup';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import authVerificationRouter from './routes/auth-verification';
 import userRouter from './routes/user';
+import authRedirectRouter from './routes/auth-redirect';
 
 const app = express();
 
@@ -89,6 +90,9 @@ app.use((req, res, next) => {
 (async () => {
   // Clean API request logging (removed verbose debug logs)
 
+  // Mount auth redirect to handle legacy /api/login URLs
+  app.use('/api', authRedirectRouter);
+  
   // Mount auth verification routes FIRST to avoid any conflicts
   app.use('/api/auth', authVerificationRouter);
 

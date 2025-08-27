@@ -253,7 +253,7 @@ export default function SessionDetail() {
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-4">Please log in to make a reservation.</p>
                   <Button asChild>
-                    <a href="/api/login">Login</a>
+                    <a href="/login">Login</a>
                   </Button>
                 </div>
               ) : !isBookingOpen() ? (

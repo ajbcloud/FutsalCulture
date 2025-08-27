@@ -117,7 +117,7 @@ export default function SessionPayment() {
         description: "Please log in to complete your payment.",
         variant: "destructive",
       });
-      setLocation("/api/login");
+      setLocation("/login");
     }
   }, [isAuthenticated, setLocation, toast]);
 

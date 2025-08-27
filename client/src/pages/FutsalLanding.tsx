@@ -19,7 +19,7 @@ export default function FutsalLanding() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100">
-                <a href="/api/login">Start Reserving</a>
+                <a href="/login">Start Reserving</a>
               </Button>
               <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-green-600">
                 <a href="/sessions#calendar">View Full Schedule</a>
@@ -68,7 +68,7 @@ export default function FutsalLanding() {
             Join hundreds of families who trust <BusinessBranding variant="default" textClassName="inline text-gray-600" inline={true} /> for their children's development.
           </p>
           <Button asChild size="lg" className="bg-futsal-600 hover:bg-futsal-700">
-            <a href="/api/login">Create Parent Account</a>
+            <a href="/login">Create Parent Account</a>
           </Button>
         </div>
       </section>
@@ -89,7 +89,7 @@ export default function FutsalLanding() {
               <ul className="space-y-2">
                 <li><Link href="/sessions" className="text-gray-300 hover:text-white">Browse Sessions</Link></li>
                 <li><Link href="/help" className="text-gray-300 hover:text-white">Help Center</Link></li>
-                <li><a href="/api/login" className="text-gray-300 hover:text-white">Parent Login</a></li>
+                <li><a href="/login" className="text-gray-300 hover:text-white">Parent Login</a></li>
               </ul>
             </div>
             <div>
