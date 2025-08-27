@@ -753,16 +753,79 @@ router.post('/:token/accept', async (req, res) => {
         },
       });
 
-    // TODO: Here you would integrate with the user creation/membership logic
-    // This depends on your specific user registration flow
+    // Create or update user account with password
+    const { firstName, lastName, email, password } = req.body;
+    
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'Missing required fields: firstName, lastName, email, password' });
+    }
+
+    // Validate email matches invitation
+    if (email.toLowerCase() !== inv.recipientEmail.toLowerCase()) {
+      return res.status(400).json({ message: 'Email does not match invitation' });
+    }
+
+    // Hash password
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Check if user already exists
+    let existingUser = await db.select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1);
+
+    let user;
+    if (existingUser[0]) {
+      // Update existing user with password and role
+      [user] = await db.update(users)
+        .set({
+          firstName,
+          lastName,
+          passwordHash,
+          role: inv.role,
+          tenantId: inv.tenantId,
+          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
+          isAssistant: inv.role === 'assistant',
+          isApproved: true,
+          registrationStatus: 'approved',
+          emailVerifiedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser[0].id))
+        .returning();
+    } else {
+      // Create new user
+      [user] = await db.insert(users)
+        .values({
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          passwordHash,
+          role: inv.role,
+          tenantId: inv.tenantId,
+          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
+          isAssistant: inv.role === 'assistant',
+          isApproved: true,
+          registrationStatus: 'approved',
+          emailVerifiedAt: new Date(),
+        })
+        .returning();
+    }
 
     res.json({
-      message: 'Invitation accepted successfully',
+      message: 'Account created successfully! You can now sign in.',
       invitation: {
         id: inv.id,
         tenantId: inv.tenantId,
         recipientEmail: inv.recipientEmail,
         role: inv.role,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
       }
     });
 
