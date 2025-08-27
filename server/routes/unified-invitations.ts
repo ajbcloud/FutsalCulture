@@ -764,17 +764,17 @@ router.post('/:token/accept', async (req, res) => {
       // Update existing user with password and role
       [user] = await db.update(users)
         .set({
-          firstName,
-          lastName,
-          passwordHash,
+          first_name: firstName,
+          last_name: lastName,
+          password_hash: passwordHash,
           role: inv.role,
-          tenantId: inv.tenantId,
-          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
-          isAssistant: false,
-          isApproved: true,
-          registrationStatus: 'approved',
-          emailVerifiedAt: new Date(),
-          updatedAt: new Date(),
+          tenant_id: inv.tenantId,
+          is_admin: ['admin', 'tenant_admin'].includes(inv.role),
+          is_assistant: false,
+          is_approved: true,
+          registration_status: 'approved',
+          email_verified_at: new Date(),
+          updated_at: new Date(),
         })
         .where(eq(users.id, existingUser[0].id))
         .returning();
@@ -783,16 +783,16 @@ router.post('/:token/accept', async (req, res) => {
       const insertedUsers = await db.insert(users)
         .values({
           email: email.toLowerCase(),
-          firstName,
-          lastName,
-          passwordHash,
+          first_name: firstName,
+          last_name: lastName,
+          password_hash: passwordHash,
           role: inv.role,
-          tenantId: inv.tenantId,
-          isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
-          isAssistant: false,
-          isApproved: true,
-          registrationStatus: 'approved',
-          emailVerifiedAt: new Date(),
+          tenant_id: inv.tenantId,
+          is_admin: ['admin', 'tenant_admin'].includes(inv.role),
+          is_assistant: false,
+          is_approved: true,
+          registration_status: 'approved',
+          email_verified_at: new Date(),
           created_by: null, // Allow null for virtual users
         })
         .returning();
@@ -810,8 +810,8 @@ router.post('/:token/accept', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
       }
     });
 
