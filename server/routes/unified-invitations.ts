@@ -20,9 +20,11 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { requireAdmin } from '../admin-routes';
+import crypto from 'crypto';
+
 // Generate a secure random token for invitations
 function generateInviteToken(): string {
-  return require('crypto').randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex');
 }
 import { sendInvitationEmail } from '../utils/email-service';
 
@@ -68,7 +70,7 @@ const updateInvitationSchema = z.object({
 router.post('/', requireAdmin, async (req: any, res) => {
   try {
     const adminTenantId = req.adminTenantId;
-    const adminUserId = req.user.id;
+    const adminUserId = req.user?.id || req.adminTenantId; // Use tenant ID as fallback for virtual users
 
     // Check if this is a batch request or single invitation
     const isBatchRequest = Array.isArray(req.body.recipients);
@@ -107,13 +109,21 @@ router.post('/', requireAdmin, async (req: any, res) => {
               customMessage: validatedData.customMessage,
               metadata: { ...validatedData.metadata, ...recipient.metadata },
               expiresAt,
-              createdBy: adminUserId,
+              createdBy: req.user?.id || null, // Allow null for virtual users
             })
             .returning();
 
           // Send email if type is email
           if (validatedData.type === 'email') {
-            await sendInvitationEmailUnified(invitation, adminTenantId, adminUserId);
+            await sendInvitationEmail({
+              to: invitation.recipientEmail,
+              tenantName: 'PlayHQ',
+              recipientName: invitation.recipientName || 'User',
+              senderName: 'Admin',
+              role: invitation.role as any,
+              inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
+              expiresAt: new Date(invitation.expiresAt)
+            });
             
             // Update status to sent
             await db.update(unifiedInvitations)
@@ -185,7 +195,15 @@ router.post('/', requireAdmin, async (req: any, res) => {
 
       // Send email if type is email
       if (validatedData.type === 'email') {
-        await sendInvitationEmailUnified(invitation, adminTenantId, adminUserId);
+        await sendInvitationEmail({
+          to: invitation.recipientEmail,
+          tenantName: 'PlayHQ',
+          recipientName: invitation.recipientName || 'User',
+          senderName: 'Admin',
+          role: invitation.role as any,
+          inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
+          expiresAt: new Date(invitation.expiresAt)
+        });
         
         // Update status to sent
         await db.update(unifiedInvitations)
@@ -377,44 +395,7 @@ router.get('/:id', requireAdmin, async (req: any, res) => {
 /**
  * Helper function to send invitation email using unified system
  */
-async function sendInvitationEmailUnified(invitation: UnifiedInvitation, tenantId: string, createdById: string): Promise<void> {
-  try {
-    // Get tenant and creator info
-    const tenantInfo = await db.select({ name: tenants.name })
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
-      .limit(1);
-
-    const creatorInfo = await db.select({ 
-      firstName: users.firstName, 
-      lastName: users.lastName 
-    })
-    .from(users)
-    .where(eq(users.id, createdById))
-    .limit(1);
-
-    if (tenantInfo[0] && creatorInfo[0]) {
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://playhq.app' 
-        : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
-
-      await sendInvitationEmail({
-        to: invitation.recipientEmail,
-        tenantName: tenantInfo[0].name,
-        recipientName: invitation.recipientName || invitation.recipientEmail,
-        senderName: `${creatorInfo[0].firstName} ${creatorInfo[0].lastName}`,
-        role: invitation.role as any,
-        inviteUrl: `${baseUrl}/accept-invite?token=${invitation.token}`,
-        expiresAt: invitation.expiresAt,
-      });
-
-      console.log(`✅ Unified invitation email sent to ${invitation.recipientEmail}`);
-    }
-  } catch (error) {
-    console.error('Failed to send unified invitation email:', error);
-    throw error;
-  }
-}
+// Removed unused function that was causing import issues
 
 /**
  * PUT /api/invitations/:id
@@ -814,7 +795,7 @@ router.post('/:token/accept', async (req, res) => {
           emailVerifiedAt: new Date(),
         })
         .returning();
-      user = insertedUsers[0];
+      user = insertedUsers[0] as any;
     }
 
     res.json({

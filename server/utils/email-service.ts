@@ -1,5 +1,56 @@
 import sgMail from '@sendgrid/mail';
-import { getInvitationEmailTemplate, getInvitationEmailText, type InvitationEmailData } from './email-templates';
+// Simple email templates inline to avoid missing file issues
+interface InvitationEmailData {
+  to: string;
+  tenantName: string;
+  recipientName: string;
+  senderName: string;
+  role: string;
+  inviteUrl: string;
+  expiresAt: string;
+}
+
+function getInvitationEmailTemplate(data: InvitationEmailData): string {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">
+      <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 24px;">🎯 You're Invited!</h1>
+        <p style="margin: 10px 0 0 0; font-size: 16px;">Join ${data.tenantName} on PlayHQ</p>
+      </div>
+      <div style="padding: 30px;">
+        <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Hi ${data.recipientName},</p>
+        <p style="font-size: 16px; color: #333; line-height: 1.5; margin-bottom: 20px;">
+          You've been invited to join <strong>${data.tenantName}</strong> as a <strong>${data.role}</strong> on PlayHQ!
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.inviteUrl}" style="background-color: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Accept Invitation</a>
+        </div>
+        <p style="font-size: 14px; color: #666; margin-top: 30px;">
+          This invitation expires on ${data.expiresAt}. If you have any questions, please contact your administrator.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function getInvitationEmailText(data: InvitationEmailData): string {
+  return `
+You're invited to join ${data.tenantName} on PlayHQ!
+
+Hi ${data.recipientName},
+
+You've been invited to join ${data.tenantName} as a ${data.role} on PlayHQ.
+
+To accept your invitation, please visit: ${data.inviteUrl}
+
+This invitation expires on ${data.expiresAt}.
+
+If you have any questions, please contact your administrator.
+
+Best regards,
+The PlayHQ Team
+  `.trim();
+}
 
 // Initialize SendGrid
 if (process.env.SENDGRID_API_KEY) {
