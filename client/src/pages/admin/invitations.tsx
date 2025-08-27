@@ -78,7 +78,12 @@ export default function InvitationsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(inviteData),
+        body: JSON.stringify({
+          type: 'email',
+          recipientEmail: inviteData.email,
+          role: inviteData.role,
+          expirationDays: 14
+        }),
       });
       if (!response.ok) {
         const error = await response.json();
