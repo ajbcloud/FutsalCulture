@@ -51,6 +51,6 @@ async function rollupWebhookStats() {
 // Run every hour at minute 5 (e.g., 1:05, 2:05, etc.)
 cron.schedule('5 * * * *', rollupWebhookStats);
 
-console.log('📊 Webhook stats rollup scheduler initialized - runs hourly at :05');
+// Webhook stats rollup scheduler initialized
 
 export { rollupWebhookStats };

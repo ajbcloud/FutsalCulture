@@ -170,11 +170,25 @@ export default function AcceptInvite() {
       } else {
         throw new Error(result.message || "Failed to create account");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accepting invite:", error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = "Unable to create account. Please try again.";
+      
+      if (error?.message?.includes('503') || error?.message?.includes('Service Unavailable')) {
+        errorMessage = "Service temporarily unavailable. Please try again in a moment.";
+      } else if (error?.message?.includes('duplicate') || error?.message?.includes('already exists')) {
+        errorMessage = "An account with this email already exists. Please try signing in instead.";
+      } else if (error?.message?.includes('connection') || error?.message?.includes('database')) {
+        errorMessage = "Service temporarily unavailable. Please try again in a moment.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Account creation failed",
-        description: error instanceof Error ? error.message : "Unable to create account. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

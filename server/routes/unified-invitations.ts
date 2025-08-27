@@ -793,9 +793,10 @@ router.post('/:token/accept', async (req, res) => {
           isApproved: true,
           registrationStatus: 'approved',
           emailVerifiedAt: new Date(),
+          created_by: null, // Allow null for virtual users
         })
         .returning();
-      user = insertedUsers[0] as any;
+      user = insertedUsers[0];
     }
 
     res.json({
@@ -814,9 +815,29 @@ router.post('/:token/accept', async (req, res) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error accepting invitation:', error);
-    res.status(500).json({ message: 'Failed to accept invitation' });
+    const errorMessage = error?.message || 'Failed to accept invitation';
+    
+    // Check for common database errors
+    if (errorMessage.includes('terminating connection') || errorMessage.includes('connection')) {
+      return res.status(503).json({ 
+        message: 'Database connection issue. Please try again in a moment.',
+        error: 'DATABASE_CONNECTION_ERROR'
+      });
+    }
+    
+    if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
+      return res.status(400).json({ 
+        message: 'An account with this email already exists.',
+        error: 'DUPLICATE_EMAIL'
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Failed to accept invitation. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 });
 

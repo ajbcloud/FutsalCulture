@@ -28,7 +28,7 @@ export function scheduleAgeTransitionProcessor() {
           totalConsentFormsInvalidated += result.consentFormsInvalidated;
 
           if (result.newAdults > 0) {
-            console.log(`✅ Tenant ${tenant.name}: ${result.newAdults} players became adults, ${result.consentFormsInvalidated} consent forms invalidated`);
+            // Tenant age transitions processed successfully
           }
         } catch (error) {
           console.error(`❌ Error processing age transitions for tenant ${tenant.name}:`, error);
@@ -36,16 +36,16 @@ export function scheduleAgeTransitionProcessor() {
       }
 
       if (totalNewAdults > 0) {
-        console.log(`🎂 Age transition processing completed: ${totalNewAdults} new adults across ${tenants.length} tenants, ${totalConsentFormsInvalidated} consent forms invalidated`);
+        // Age transition processing completed
       } else {
-        console.log(`🎂 Age transition processing completed: No new adults found across ${tenants.length} tenants`);
+        // No new adults found during age transition processing
       }
     } catch (error) {
       console.error('❌ Age transition processing failed:', error);
     }
   });
 
-  console.log('🎂 Age transition processor scheduled - runs daily at 1 AM');
+  // Age transition processor scheduled
 }
 
 /**

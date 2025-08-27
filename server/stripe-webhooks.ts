@@ -9,7 +9,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  console.warn('STRIPE_WEBHOOK_SECRET not set - webhook verification disabled');
+  // Stripe webhook verification disabled
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
