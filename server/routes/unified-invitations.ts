@@ -251,7 +251,9 @@ router.get('/', requireAdmin, async (req: any, res) => {
     }
 
     // Apply sorting
-    const sortColumn = unifiedInvitations[filters.sortBy === 'created_at' ? 'createdAt' : filters.sortBy];
+    const sortColumn = unifiedInvitations[filters.sortBy === 'created_at' ? 'createdAt' : 
+                                        filters.sortBy === 'updated_at' ? 'updatedAt' :
+                                        filters.sortBy === 'expires_at' ? 'expiresAt' : 'createdAt'];
     const orderByClause = filters.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn);
 
     const invitations = await db.select({
