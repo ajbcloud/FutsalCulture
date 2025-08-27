@@ -51,7 +51,7 @@ export async function sendInvitationEmail(options: SendInvitationEmailOptions): 
     // Track email engagement
     trackingSettings: {
       clickTracking: {
-        enable: true,
+        enable: false,  // Disable click tracking to prevent URL wrapping
       },
       openTracking: {
         enable: true,
