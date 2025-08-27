@@ -20,7 +20,10 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { requireAdmin } from '../admin-routes';
-import { generateInviteToken } from '../utils/invite-helpers';
+// Generate a secure random token for invitations
+function generateInviteToken(): string {
+  return require('crypto').randomBytes(32).toString('hex');
+}
 import { sendInvitationEmail } from '../utils/email-service';
 
 const router = Router();
@@ -786,7 +789,7 @@ router.post('/:token/accept', async (req, res) => {
           role: inv.role,
           tenantId: inv.tenantId,
           isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
-          isAssistant: inv.role === 'assistant',
+          isAssistant: false,
           isApproved: true,
           registrationStatus: 'approved',
           emailVerifiedAt: new Date(),
@@ -796,7 +799,7 @@ router.post('/:token/accept', async (req, res) => {
         .returning();
     } else {
       // Create new user
-      [user] = await db.insert(users)
+      const insertedUsers = await db.insert(users)
         .values({
           email: email.toLowerCase(),
           firstName,
@@ -805,12 +808,13 @@ router.post('/:token/accept', async (req, res) => {
           role: inv.role,
           tenantId: inv.tenantId,
           isAdmin: ['admin', 'tenant_admin'].includes(inv.role),
-          isAssistant: inv.role === 'assistant',
+          isAssistant: false,
           isApproved: true,
           registrationStatus: 'approved',
           emailVerifiedAt: new Date(),
         })
         .returning();
+      user = insertedUsers[0];
     }
 
     res.json({

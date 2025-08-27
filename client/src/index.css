@@ -666,12 +666,29 @@ body.dark {
 
 /* Generic error message styling for dark mode */
 .error-message,
+/* Alert and notification base styles */
 [role="alert"],
 .alert,
 .notification {
-  color: white !important;
-  background-color: #1f2937 !important;
-  border: 1px solid #374151 !important;
+  background-color: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
+  border: 1px solid hsl(var(--destructive)) !important;
+}
+
+/* Ensure destructive alerts have proper contrast in both light and dark modes */
+.dark [role="alert"],
+.dark .alert,
+.dark .notification {
+  background-color: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
+  border: 1px solid hsl(var(--destructive)) !important;
+}
+
+/* Force text to be readable on destructive background */
+[data-sonner-toast][data-type="error"],
+[data-sonner-toast][data-type="error"] * {
+  background-color: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
 }
 
 /* Browser error styling improvements */
