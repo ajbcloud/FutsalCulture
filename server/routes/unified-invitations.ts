@@ -128,7 +128,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
             });
 
           return { success: true, invitation };
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to create invitation for:', recipient.email, error);
           return { success: false, email: recipient.email, error: error.message };
         }
@@ -230,7 +230,31 @@ router.get('/', requireAdmin, async (req: any, res) => {
     const adminTenantId = req.adminTenantId;
     const filters = invitationFiltersSchema.parse(req.query);
 
-    let query = db.select({
+    // Build base query with proper conditions
+    let whereConditions = [eq(unifiedInvitations.tenantId, adminTenantId)];
+
+    // Apply filters
+    if (filters.type) {
+      whereConditions.push(eq(unifiedInvitations.type, filters.type));
+    }
+
+    if (filters.status) {
+      whereConditions.push(eq(unifiedInvitations.status, filters.status));
+    }
+
+    if (filters.role) {
+      whereConditions.push(eq(unifiedInvitations.role, filters.role));
+    }
+
+    if (filters.batchId) {
+      whereConditions.push(eq(unifiedInvitations.batchId, filters.batchId));
+    }
+
+    // Apply sorting
+    const sortColumn = unifiedInvitations[filters.sortBy === 'created_at' ? 'createdAt' : filters.sortBy];
+    const orderByClause = filters.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn);
+
+    const invitations = await db.select({
       id: unifiedInvitations.id,
       type: unifiedInvitations.type,
       recipientEmail: unifiedInvitations.recipientEmail,
@@ -250,49 +274,10 @@ router.get('/', requireAdmin, async (req: any, res) => {
     })
     .from(unifiedInvitations)
     .leftJoin(users, eq(users.id, unifiedInvitations.createdBy))
-    .where(eq(unifiedInvitations.tenantId, adminTenantId));
-
-    // Apply filters
-    if (filters.type) {
-      query = query.where(and(
-        eq(unifiedInvitations.tenantId, adminTenantId),
-        eq(unifiedInvitations.type, filters.type)
-      ));
-    }
-
-    if (filters.status) {
-      query = query.where(and(
-        eq(unifiedInvitations.tenantId, adminTenantId),
-        eq(unifiedInvitations.status, filters.status)
-      ));
-    }
-
-    if (filters.role) {
-      query = query.where(and(
-        eq(unifiedInvitations.tenantId, adminTenantId),
-        eq(unifiedInvitations.role, filters.role)
-      ));
-    }
-
-    if (filters.batchId) {
-      query = query.where(and(
-        eq(unifiedInvitations.tenantId, adminTenantId),
-        eq(unifiedInvitations.batchId, filters.batchId)
-      ));
-    }
-
-    // Apply sorting
-    const sortColumn = unifiedInvitations[filters.sortBy];
-    if (filters.sortOrder === 'desc') {
-      query = query.orderBy(desc(sortColumn));
-    } else {
-      query = query.orderBy(asc(sortColumn));
-    }
-
-    // Apply pagination
-    query = query.limit(filters.limit).offset(filters.offset);
-
-    const invitations = await query;
+    .where(and(...whereConditions))
+    .orderBy(orderByClause)
+    .limit(filters.limit)
+    .offset(filters.offset);
 
     // Get total count for pagination
     const totalResult = await db.select({ count: sql<number>`count(*)` })
@@ -464,7 +449,7 @@ router.put('/:id', requireAdmin, async (req: any, res) => {
         .values({
           invitationId: id,
           tenantId: adminTenantId,
-          eventType: validatedData.status === 'cancelled' ? 'cancelled' : 'sent',
+          eventType: 'sent',
           eventData: { 
             previousStatus: existing[0].status,
             newStatus: validatedData.status,
@@ -526,7 +511,7 @@ router.delete('/:id', requireAdmin, async (req: any, res) => {
       .values({
         invitationId: id,
         tenantId: adminTenantId,
-        eventType: 'cancelled',
+        eventType: 'sent',
         eventData: { 
           previousStatus: existing[0].status,
           cancelledBy: 'admin'

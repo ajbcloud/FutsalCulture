@@ -13,11 +13,8 @@ import signupRouter from './routes/signup';
 import consentRouter from './routes/consent';
 import guardianRouter from './routes/guardian';
 import companySignupRouter from './routes/company-signup';
-import joinRouter from './routes/join';
-import personalSignupRouter from './routes/personal-signup';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import authVerificationRouter from './routes/auth-verification';
-import invitationRoutes from './routes/invitations';
 
 const app = express();
 
@@ -97,8 +94,6 @@ app.use((req, res, next) => {
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);
   app.use('/api', companySignupRouter);
-  app.use('/api', joinRouter);
-  app.use('/api', personalSignupRouter);
   
   const server = await registerRoutes(app);
 
@@ -111,8 +106,7 @@ app.use((req, res, next) => {
   // Mount admin campaigns routes
   app.use('/api/admin', adminCampaignsRoutes);
   
-  // Mount invitation routes
-  app.use('/api', invitationRoutes);
+  // Old invitation routes removed - using unified system
   
   // Mount age policy routes
   app.use('/api', policyRouter);

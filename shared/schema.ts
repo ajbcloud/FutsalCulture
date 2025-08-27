@@ -2372,7 +2372,7 @@ export const inviteTokens = pgTable("invite_tokens", {
 // Invitation analytics tracking table
 export const invitationAnalytics = pgTable("invitation_analytics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  invitationId: varchar("invitation_id").notNull().references(() => inviteTokens.id),
+  invitationId: varchar("invitation_id").notNull(), // Flexible - can reference either system
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   eventType: invitationAnalyticsEventEnum("event_type").notNull(),
   eventData: jsonb("event_data").default(sql`'{}'::jsonb`),
