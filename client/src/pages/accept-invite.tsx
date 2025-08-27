@@ -184,11 +184,11 @@ export default function AcceptInvite() {
 
   if (validating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center p-8">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-            <p className="text-gray-600">Validating invitation...</p>
+            <p className="text-gray-600 dark:text-gray-300">Validating invitation...</p>
           </CardContent>
         </Card>
       </div>
@@ -197,13 +197,13 @@ export default function AcceptInvite() {
 
   if (!inviteData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md">
           <CardContent className="p-8">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Invalid Invitation</h2>
-              <p className="text-gray-600">
+              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Invalid Invitation</h2>
+              <p className="text-gray-600 dark:text-gray-300">
                 Please check your invitation link and try again.
               </p>
             </div>
@@ -215,13 +215,13 @@ export default function AcceptInvite() {
 
   if (!inviteData.valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md">
           <CardContent className="p-8">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Invitation Expired</h2>
-              <p className="text-gray-600">
+              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Invitation Expired</h2>
+              <p className="text-gray-600 dark:text-gray-300">
                 {inviteData.message || "This invitation is no longer valid."}
               </p>
             </div>
@@ -234,33 +234,33 @@ export default function AcceptInvite() {
   const invitation = inviteData.invitation;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Mail className="w-6 h-6 text-blue-600" />
-            <CardTitle>Accept Your Invitation</CardTitle>
+            <CardTitle className="text-gray-900 dark:text-gray-100">Accept Your Invitation</CardTitle>
           </div>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-300">
             Complete your account setup to join {invitation?.tenantName}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {invitation && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-blue-900">Invitation Details</h3>
-              <p className="text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <h3 className="font-medium text-blue-900 dark:text-blue-100">Invitation Details</h3>
+              <p className="text-blue-700 dark:text-blue-200">
                 <strong>Organization:</strong> {invitation.tenantName}
               </p>
-              <p className="text-blue-700">
+              <p className="text-blue-700 dark:text-blue-200">
                 <strong>Role:</strong> {invitation.role}
               </p>
               {invitation.customMessage && (
-                <p className="text-sm text-blue-600 mt-2">
+                <p className="text-sm text-blue-600 dark:text-blue-300 mt-2">
                   <strong>Message:</strong> {invitation.customMessage}
                 </p>
               )}
-              <p className="text-xs text-blue-500 mt-2">
+              <p className="text-xs text-blue-500 dark:text-blue-400 mt-2">
                 Expires: {new Date(invitation.expiresAt).toLocaleDateString()}
               </p>
             </div>
@@ -347,12 +347,12 @@ export default function AcceptInvite() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Already have an account?{" "}
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               >
                 Sign in here
               </button>
