@@ -383,7 +383,7 @@ export default function InvitationsPage() {
                   {invitations.map((invitation) => (
                     <div
                       key={invitation.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                     >
                       <div className="flex items-center gap-4">
                         <div className="flex-1">
@@ -404,7 +404,9 @@ export default function InvitationsPage() {
                               {invitation.role}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600">{invitation.email}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Invited by: {invitation.invitedBy.firstName} {invitation.invitedBy.lastName}
+                          </p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
