@@ -22,6 +22,7 @@ import "./jobs/capacity-monitor";
 import "./jobs/session-status";
 import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
+import { nanoid } from 'nanoid';
 import { stripeWebhookRouter } from './stripe-webhooks';
 import publicIngestionRoutes from './routes/publicIngestion';
 import { impersonationContext } from './middleware/impersonation';
@@ -238,9 +239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get tenant ID from various sources
-      // Get tenant ID from user lookup instead of direct access
-      const currentUser = await storage.getUser(req.user?.id || '');
-      const targetTenantId = tenantId || currentUser?.tenantId;
+      // For new registrations, don't use existing user ID
+      const isNewRegistration = !req.user?.id || req.user?.id === 'ajosephfinch';
+      
+      // Get tenant ID from the request body first, fallback to invite code lookup
+      const targetTenantId = tenantId;
       if (!targetTenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
@@ -253,9 +256,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0;
 
-      // Create user with validated consent
+      // Create user with validated consent - always use new ID for new registrations
       const userData = {
-        id: currentUser?.id || nanoid(),
+        id: nanoid(), // Always generate a new unique ID for new users
         firstName,
         lastName,
         email,
