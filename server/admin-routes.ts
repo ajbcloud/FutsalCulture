@@ -178,6 +178,17 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
   try {
     let userId;
     
+    // Debug session information
+    console.log('🔍 Session Debug:', {
+      hasSession: !!(req as any).session,
+      sessionId: (req as any).session?.id,
+      sessionUserId: (req as any).session?.userId,
+      hasUser: !!(req as any).user,
+      userAgent: req.headers['user-agent']?.substring(0, 50),
+      cookies: Object.keys(req.cookies || {}),
+      sessionCookie: req.headers.cookie?.includes('connect.sid')
+    });
+    
     // Check for local session first (password-based users)  
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
