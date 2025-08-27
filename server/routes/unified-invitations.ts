@@ -817,26 +817,52 @@ router.post('/:token/accept', async (req, res) => {
 
   } catch (error: any) {
     console.error('Error accepting invitation:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      severity: error?.severity,
+      stack: error?.stack
+    });
+    
     const errorMessage = error?.message || 'Failed to accept invitation';
     
-    // Check for common database errors
-    if (errorMessage.includes('terminating connection') || errorMessage.includes('connection')) {
+    // Handle database connection errors
+    if (error?.code === '57P01' || error?.code === '08006' || 
+        errorMessage.includes('terminating connection') || 
+        errorMessage.includes('connection') ||
+        errorMessage.includes('pool ended')) {
       return res.status(503).json({ 
         message: 'Database connection issue. Please try again in a moment.',
         error: 'DATABASE_CONNECTION_ERROR'
       });
     }
     
-    if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
+    // Handle duplicate key errors
+    if (error?.code === '23505' || 
+        errorMessage.includes('duplicate key') || 
+        errorMessage.includes('unique constraint')) {
       return res.status(400).json({ 
         message: 'An account with this email already exists.',
         error: 'DUPLICATE_EMAIL'
       });
     }
     
+    // Handle column not found errors (schema mismatch)
+    if (error?.code === '42703' || errorMessage.includes('column') || errorMessage.includes('does not exist')) {
+      console.error('Schema mismatch error - checking column names');
+      return res.status(500).json({ 
+        message: 'Database schema error. Please contact support.',
+        error: 'SCHEMA_ERROR'
+      });
+    }
+    
     res.status(500).json({ 
       message: 'Failed to accept invitation. Please try again.',
-      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      error: process.env.NODE_ENV === 'development' ? errorMessage : 'INTERNAL_ERROR',
+      details: process.env.NODE_ENV === 'development' ? {
+        code: error?.code,
+        severity: error?.severity
+      } : undefined
     });
   }
 });
