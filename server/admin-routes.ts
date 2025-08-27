@@ -228,12 +228,12 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
         // Enhanced failsafe admin permissions
       } else {
         // If failsafe admin doesn't exist in database, create a minimal user object
-        // Failsafe super admin virtual user
+        // Failsafe super admin virtual user - no tenant assignment
         user = {
           id: userId,
           email: "ajosephfinch@gmail.com",
-          tenantId: "8b976f98-3921-49f2-acf5-006f41d69095", // Liverpool tenant
-          tenant_id: "8b976f98-3921-49f2-acf5-006f41d69095", // Also add with underscore
+          tenantId: null,
+          tenant_id: null,
           isAdmin: true,
           isSuperAdmin: true,
           isAssistant: false,

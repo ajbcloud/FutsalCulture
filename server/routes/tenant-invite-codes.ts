@@ -29,7 +29,14 @@ router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) =
     // Handle "current" tenant
     if (tenantId === 'current') {
       const currentUser = (req as any).currentUser;
-      tenantId = currentUser?.tenantId || currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      tenantId = currentUser?.tenantId || currentUser?.tenant_id || (req as any).user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ 
+          message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+        });
+      }
+      
       console.log('🔍 Tenant ID resolution:', { 
         currentUser: currentUser ? { id: currentUser.id, tenantId: currentUser.tenantId, tenant_id: currentUser.tenant_id } : 'none',
         resolvedTenantId: tenantId 
@@ -83,7 +90,13 @@ router.post('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) 
     
     // Handle "current" tenant
     if (tenantId === 'current') {
-      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ 
+          message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+        });
+      }
     }
     
     // Validate input
@@ -138,7 +151,13 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId/toggle', isAuthenticated, a
     
     // Handle "current" tenant
     if (tenantId === 'current') {
-      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ 
+          message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+        });
+      }
     }
     
     const existingCode = await db
@@ -181,7 +200,13 @@ router.delete('/tenant/:tenantId/invite-codes/:codeId', isAuthenticated, async (
     
     // Handle "current" tenant
     if (tenantId === 'current') {
-      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ 
+          message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+        });
+      }
     }
     
     const deletedCode = await db
@@ -212,7 +237,13 @@ router.patch('/tenant/:tenantId/invite-codes/:codeId', isAuthenticated, async (r
     
     // Handle "current" tenant
     if (tenantId === 'current') {
-      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095'; // Liverpool tenant for development
+      tenantId = (req as any).userTenantId || (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id || (req as any).user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ 
+          message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+        });
+      }
     }
 
     // Validate input
@@ -265,7 +296,13 @@ router.post('/admin/send-invitation', isAuthenticated, async (req, res) => {
     
     // Generate invitation token and create invitation
     const adminUserId = (req as any).currentUser?.id || 'ajosephfinch';
-    const adminTenantId = (req as any).currentUser?.tenantId || '8b976f98-3921-49f2-acf5-006f41d69095';
+    const adminTenantId = (req as any).currentUser?.tenantId;
+    
+    if (!adminTenantId) {
+      return res.status(400).json({ 
+        message: 'Unable to determine tenant context. Please ensure you are properly authenticated with a valid tenant assignment.' 
+      });
+    }
     
     // Send the invitation email
     const emailResult = await sendInvitationEmail({
