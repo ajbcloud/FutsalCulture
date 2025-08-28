@@ -7,6 +7,7 @@ import { plans } from "@/config/plans.config";
 import { getPlan } from "@/lib/planUtils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PlanComparisonCardsProps {
   currentPlan: string;
@@ -70,6 +71,7 @@ const getDisplayFeatures = (planId: string) => {
 export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanComparisonCardsProps) {
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const createPaymentLink = (plan: 'core' | 'growth' | 'elite') => {
     // Test mode Stripe payment links - replace with your actual links
@@ -82,7 +84,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
     const baseLink = paymentLinks[plan];
     const currentDomain = window.location.origin;
     const params = new URLSearchParams({
-      client_reference_id: 'unknown', // You might want to get the actual tenant ID here
+      client_reference_id: user?.tenantId || '', // Pass the actual tenant ID from auth context
       success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${plan}`,
       cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
     });
