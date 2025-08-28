@@ -27,7 +27,7 @@ export function ManageSubscriptionButton({
         const tenantId = (window as any).currentUser?.tenantId || 'test-tenant';
         const currentDomain = window.location.origin;
         
-        const paymentLink = 'https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00'; // Core plan link
+        const paymentLink = 'https://buy.stripe.com/test_4gM14ob50dVidREeo22Fa04'; // Core plan link
         const params = new URLSearchParams({
           client_reference_id: tenantId,
           success_url: `${currentDomain}/admin/settings?upgrade=success&plan=core`,

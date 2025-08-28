@@ -74,9 +74,9 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
   const createPaymentLink = (plan: 'core' | 'growth' | 'elite') => {
     // Test mode Stripe payment links - replace with your actual links
     const paymentLinks = {
-      core: 'https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00',
-      growth: 'https://buy.stripe.com/test_8wM8z6bjs9Z82cw4gi', 
-      elite: 'https://buy.stripe.com/test_7sI5mo7371816OkbIP'
+      core: 'https://buy.stripe.com/test_4gM14ob50dVidREeo22Fa04',
+      growth: 'https://buy.stripe.com/test_fZu8wQa0W5oM3d00xc2Fa05', 
+      elite: 'https://buy.stripe.com/test_14A6oI6OK4kI8xkfs62Fa06'
     };
     
     const baseLink = paymentLinks[plan];
