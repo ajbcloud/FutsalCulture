@@ -68,7 +68,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               
               // If no client_reference_id, try metadata as backup
               if (!tenantId || tenantId === 'unknown') {
-                tenantId = session.metadata?.tenantId;
+                tenantId = session.metadata?.tenantId || null;
                 console.log(`Using metadata tenantId: ${tenantId}`);
               }
               
