@@ -297,21 +297,28 @@ export default function AdminSettings() {
   const businessName = useBusinessName();
   const { upgradeStatus, clearUpgradeStatus } = useUpgradeStatus();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const checkoutStatus = urlParams.get('checkout');
+    const upgradeStatus = urlParams.get('upgrade');
     
-    if (checkoutStatus === 'success') {
+    if (checkoutStatus === 'success' || upgradeStatus === 'success') {
+      // Invalidate plan cache to show updated plan immediately
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan-features'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/subscription-info'] });
+      
       toast({
         title: "🎉 Payment Successful!",
         description: "Your plan has been upgraded successfully. Enjoy your new features!",
         duration: 5000,
       });
       // Clean up URL
-      const newUrl = window.location.pathname + window.location.search.replace(/[?&]checkout=success/, '');
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&](checkout|upgrade)=success/, '');
       window.history.replaceState({}, '', newUrl);
-    } else if (checkoutStatus === 'cancelled') {
+    } else if (checkoutStatus === 'cancelled' || upgradeStatus === 'cancelled') {
       toast({
         title: "Payment Cancelled",
         description: "Your payment was cancelled. No charges were made.",
@@ -319,10 +326,10 @@ export default function AdminSettings() {
         duration: 5000,
       });
       // Clean up URL
-      const newUrl = window.location.pathname + window.location.search.replace(/[?&]checkout=cancelled/, '');
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&](checkout|upgrade)=cancelled/, '');
       window.history.replaceState({}, '', newUrl);
     }
-  }, [toast]);
+  }, [toast, queryClient]);
   const [settings, setSettings] = useState<SystemSettings>({
     autoApproveRegistrations: true,
     businessName: '',
@@ -392,8 +399,6 @@ export default function AdminSettings() {
     postalCode: '',
     country: 'US',
   });
-
-  const queryClient = useQueryClient();
 
   // Feature flag hooks
   const { data: planFeatures } = usePlanFeatures();
