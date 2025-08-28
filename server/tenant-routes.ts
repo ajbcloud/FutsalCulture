@@ -14,9 +14,9 @@ router.get('/tenant/plan', async (req: any, res) => {
     }
 
     const tenant = await db.select({
-      planLevel: tenants.planLevel,
-      stripeSubscriptionId: tenants.stripeSubscriptionId,
-      stripeCustomerId: tenants.stripeCustomerId
+      planLevel: tenants.plan_level,
+      stripeSubscriptionId: tenants.stripe_subscription_id,
+      stripeCustomerId: tenants.stripe_customer_id
     })
     .from(tenants)
     .where(eq(tenants.id, currentUser.tenantId))
@@ -27,7 +27,7 @@ router.get('/tenant/plan', async (req: any, res) => {
     }
 
     const tenantData = tenant[0];
-    const planId = tenantData.planLevel || 'free';
+    const planId = tenantData.planLevel || 'core';
     const hasActiveSubscription = !!(tenantData.stripeSubscriptionId && planId !== 'free');
 
     res.json({

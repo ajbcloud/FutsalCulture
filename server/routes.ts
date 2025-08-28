@@ -35,6 +35,7 @@ import unifiedInvitationRoutes from './routes/unified-invitations';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
+import tenantRouter from './tenant-routes';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
