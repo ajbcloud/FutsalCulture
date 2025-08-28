@@ -29,6 +29,7 @@ import { superAdminEmailRouter } from './routes/super-admin-email';
 import authVerificationRouter from './routes/auth-verification';
 import userRouter from './routes/user';
 import authRedirectRouter from './routes/auth-redirect';
+import { stripeWebhookRouter } from './stripe-webhooks';
 
 const app = express();
 
@@ -105,6 +106,9 @@ app.use((req, res, next) => {
 
   // Mount auth redirect to handle legacy /api/login URLs
   app.use('/api', authRedirectRouter);
+  
+  // Mount Stripe webhook routes BEFORE JSON middleware (already has raw body parsing)
+  app.use('/api/stripe', stripeWebhookRouter);
   
   // Mount auth verification routes FIRST to avoid any conflicts
   app.use('/api/auth', authVerificationRouter);

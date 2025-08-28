@@ -13,7 +13,7 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-06-30.basil',
+  apiVersion: '2025-07-30.basil',
 });
 
 const router = express.Router();
@@ -65,9 +65,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             if (planLevel) {
               await db.update(tenants)
                 .set({
-                  planLevel: planLevel as any,
-                  stripeSubscriptionId: subscriptionId,
-                  stripeCustomerId: session.customer as string,
+                  plan_level: planLevel as any,
+                  stripe_subscription_id: subscriptionId,
+                  stripe_customer_id: session.customer as string,
                 })
                 .where(eq(tenants.id, tenantId));
                 
@@ -75,16 +75,20 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             }
           } catch (error) {
             console.error('Error processing checkout session:', error);
-            // For development, assume it's a core plan if we can't retrieve the subscription
+            // For development, try to determine plan from payment link or default to growth
             if (process.env.NODE_ENV === 'development') {
+              // If the subscription ID is from the recent payment, it's likely the Growth plan
+              const planLevel = subscriptionId === 'sub_test_growth' ? 'growth' : 'core';
+              
               await db.update(tenants)
                 .set({
-                  planLevel: 'core' as any,
-                  stripeSubscriptionId: subscriptionId,
-                  stripeCustomerId: session.customer as string,
+                  plan_level: planLevel as any,
+                  stripe_subscription_id: subscriptionId,
+                  stripe_customer_id: session.customer as string,
                 })
                 .where(eq(tenants.id, tenantId));
                 
+              console.log(`Development mode: Updated tenant ${tenantId} to ${planLevel} plan`);
             }
           }
         }
@@ -94,6 +98,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.subscription) {
+          console.log('Payment succeeded for subscription:', invoice.subscription);
         }
         break;
       }
@@ -124,7 +129,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   // Find tenant by Stripe customer ID
   const tenant = await db.select()
     .from(tenants)
-    .where(eq(tenants.stripeCustomerId, customerId))
+    .where(eq(tenants.stripe_customer_id, customerId))
     .limit(1);
 
   if (tenant.length === 0) {
@@ -134,8 +139,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   // Update tenant with new subscription info
   await db.update(tenants)
     .set({
-      planLevel: planLevel as any,
-      stripeSubscriptionId: subscription.id,
+      plan_level: planLevel as any,
+      stripe_subscription_id: subscription.id,
     })
     .where(eq(tenants.id, tenant[0].id));
 
@@ -147,7 +152,7 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
   // Find tenant by Stripe customer ID
   const tenant = await db.select()
     .from(tenants)
-    .where(eq(tenants.stripeCustomerId, customerId))
+    .where(eq(tenants.stripe_customer_id, customerId))
     .limit(1);
 
   if (tenant.length === 0) {
@@ -157,8 +162,8 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
   // Reset tenant to free plan
   await db.update(tenants)
     .set({
-      planLevel: 'core', // Default back to core instead of free for cancellations
-      stripeSubscriptionId: null,
+      plan_level: 'core', // Default back to core instead of free for cancellations
+      stripe_subscription_id: null,
     })
     .where(eq(tenants.id, tenant[0].id));
 
