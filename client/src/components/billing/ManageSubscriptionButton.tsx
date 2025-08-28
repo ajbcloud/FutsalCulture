@@ -36,14 +36,8 @@ export function ManageSubscriptionButton({
         
         window.location.href = `${paymentLink}?${params.toString()}`;
       } else {
-        // Open Stripe billing portal
-        const response = await apiRequest('POST', '/api/billing/portal');
-
-        if (response.url) {
-          window.location.href = response.url;
-        } else {
-          throw new Error('No billing portal URL returned');
-        }
+        // Fallback to direct Stripe billing portal since API isn't working
+        window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank');
       }
     } catch (error: any) {
       console.error('Error managing subscription:', error);
