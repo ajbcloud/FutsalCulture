@@ -71,20 +71,35 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const createPaymentLink = (plan: 'core' | 'growth' | 'elite') => {
+    // Test mode Stripe payment links - replace with your actual links
+    const paymentLinks = {
+      core: 'https://buy.stripe.com/test_14AeVe4GC2cAeVI4Ns2Fa00',
+      growth: 'https://buy.stripe.com/test_8wM8z6bjs9Z82cw4gi', 
+      elite: 'https://buy.stripe.com/test_7sI5mo7371816OkbIP'
+    };
+    
+    const baseLink = paymentLinks[plan];
+    const currentDomain = window.location.origin;
+    const params = new URLSearchParams({
+      client_reference_id: 'unknown', // You might want to get the actual tenant ID here
+      success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${plan}`,
+      cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
+    });
+    
+    return `${baseLink}?${params.toString()}`;
+  };
+
   const handleUpgrade = async (targetPlan: string) => {
     if (targetPlan === currentPlan || targetPlan === 'free') return;
 
     try {
       setUpgradeLoading(targetPlan);
       
-      const response = await apiRequest('POST', `/api/billing/checkout?planId=${targetPlan}`);
-      const responseData = await response.json();
-
-      if (responseData.url) {
-        window.location.href = responseData.url;
-      } else {
-        throw new Error('No checkout URL returned');
-      }
+      // Use direct Stripe payment links like PlanUpgradeButtons
+      const link = createPaymentLink(targetPlan as 'core' | 'growth' | 'elite');
+      // Use _self to navigate in same tab so user returns to our app
+      window.open(link, '_self');
     } catch (error: any) {
       console.error('Error starting upgrade:', error);
       toast({
