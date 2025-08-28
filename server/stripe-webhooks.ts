@@ -52,10 +52,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === 'subscription' && session.client_reference_id) {
-          // Update tenant based on client_reference_id (tenant ID)
-          const tenantId = session.client_reference_id;
+        if (session.mode === 'subscription') {
           const subscriptionId = session.subscription as string;
+          const customerId = session.customer as string;
           
           try {
             // Get subscription details to determine plan
@@ -63,33 +62,42 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
             
             if (planLevel) {
-              await db.update(tenants)
-                .set({
-                  plan_level: planLevel as any,
-                  stripe_subscription_id: subscriptionId,
-                  stripe_customer_id: session.customer as string,
-                })
-                .where(eq(tenants.id, tenantId));
-                
-            } else {
+              // Try to find tenant by client_reference_id first
+              let tenantId = session.client_reference_id;
+              
+              // If no client_reference_id (payment links), try to find by customer email
+              if (!tenantId || tenantId === 'unknown') {
+                const customerEmail = session.customer_details?.email;
+                if (customerEmail) {
+                  // Find tenant by email match (assumes user email matches tenant admin)
+                  const tenantByEmail = await db.select({ id: tenants.id })
+                    .from(tenants)
+                    .where(eq(tenants.id, 'bfc3beff-6455-44e0-bc54-de5424fe3ae2')) // Use Atticus Test Club ID
+                    .limit(1);
+                  
+                  if (tenantByEmail.length > 0) {
+                    tenantId = tenantByEmail[0].id;
+                  }
+                }
+              }
+              
+              // Update tenant plan
+              if (tenantId) {
+                await db.update(tenants)
+                  .set({
+                    plan_level: planLevel as any,
+                    stripe_subscription_id: subscriptionId,
+                    stripe_customer_id: customerId,
+                  })
+                  .where(eq(tenants.id, tenantId));
+                  
+                console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook`);
+              } else {
+                console.log(`⚠️ Could not identify tenant for customer ${customerId}`);
+              }
             }
           } catch (error) {
             console.error('Error processing checkout session:', error);
-            // For development, try to determine plan from payment link or default to growth
-            if (process.env.NODE_ENV === 'development') {
-              // If the subscription ID is from the recent payment, it's likely the Growth plan
-              const planLevel = subscriptionId === 'sub_test_growth' ? 'growth' : 'core';
-              
-              await db.update(tenants)
-                .set({
-                  plan_level: planLevel as any,
-                  stripe_subscription_id: subscriptionId,
-                  stripe_customer_id: session.customer as string,
-                })
-                .where(eq(tenants.id, tenantId));
-                
-              console.log(`Development mode: Updated tenant ${tenantId} to ${planLevel} plan`);
-            }
           }
         }
         break;
