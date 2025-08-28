@@ -97,9 +97,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.subscription) {
-          console.log('Payment succeeded for subscription:', invoice.subscription);
-        }
+        // Log payment success for monitoring
+        console.log('Payment succeeded for invoice:', invoice.id);
         break;
       }
 
