@@ -11,7 +11,8 @@ interface TenantPlanData {
 export function useTenantPlan() {
   return useQuery<TenantPlanData>({
     queryKey: ['/api/tenant/plan'],
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds for faster updates
+    refetchOnWindowFocus: true, // Refetch when tab becomes active
   });
 }
 
