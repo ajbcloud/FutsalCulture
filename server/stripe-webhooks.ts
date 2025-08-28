@@ -65,18 +65,27 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               // Try to find tenant by client_reference_id first
               let tenantId = session.client_reference_id;
               
-              // If no client_reference_id (payment links), try to find by customer email
+              // If no client_reference_id (payment links), try to find by customer
               if (!tenantId || tenantId === 'unknown') {
-                const customerEmail = session.customer_details?.email;
-                if (customerEmail) {
-                  // Find tenant by email match (assumes user email matches tenant admin)
-                  const tenantByEmail = await db.select({ id: tenants.id })
+                // First try to find by existing customer ID (if customer already exists)
+                const existingTenant = await db.select({ id: tenants.id })
+                  .from(tenants)
+                  .where(eq(tenants.stripe_customer_id, customerId))
+                  .limit(1);
+                
+                if (existingTenant.length > 0) {
+                  tenantId = existingTenant[0].id;
+                  console.log(`Found tenant by customer ID: ${tenantId}`);
+                } else {
+                  // If no existing customer, find the first tenant (for single-tenant setups)
+                  // or you could implement email matching logic here
+                  const firstTenant = await db.select({ id: tenants.id })
                     .from(tenants)
-                    .where(eq(tenants.id, 'bfc3beff-6455-44e0-bc54-de5424fe3ae2')) // Use Atticus Test Club ID
                     .limit(1);
                   
-                  if (tenantByEmail.length > 0) {
-                    tenantId = tenantByEmail[0].id;
+                  if (firstTenant.length > 0) {
+                    tenantId = firstTenant[0].id;
+                    console.log(`Using first available tenant: ${tenantId}`);
                   }
                 }
               }
@@ -91,7 +100,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                   })
                   .where(eq(tenants.id, tenantId));
                   
-                console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook`);
+                console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook - Customer: ${customerId}`);
               } else {
                 console.log(`⚠️ Could not identify tenant for customer ${customerId}`);
               }

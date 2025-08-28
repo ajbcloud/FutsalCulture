@@ -77,7 +77,7 @@ router.post('/billing/portal', async (req: any, res) => {
       
       const session = await stripe.billingPortal.sessions.create({
         customer: tenant[0].stripeCustomerId,
-        return_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev'}/admin/settings?tab=plans-features`,
+        return_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features`,
       });
 
       res.json({ url: session.url });
@@ -163,8 +163,8 @@ router.post('/billing/checkout', async (req: any, res) => {
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev'}/admin/settings?tab=plans-features&checkout=success`,
-        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev'}/admin/settings?tab=plans-features&checkout=cancelled`,
+        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features&checkout=success`,
+        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features&checkout=cancelled`,
         metadata: {
           tenantId: currentUser.tenantId,
           planId: planId,
