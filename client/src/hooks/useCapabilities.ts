@@ -169,10 +169,10 @@ export function FeatureGate({
   }, [isEnabled, showUpgrade, feature, showUpgradePrompt]);
 
   if (isEnabled) {
-    return <>{children}</>;
+    return children as React.ReactElement;
   }
 
-  return <>{fallback}</>;
+  return (fallback as React.ReactElement) || null;
 }
 
 // Hook for checking multiple features at once
@@ -189,7 +189,10 @@ export function useFeatures(features: string[]): Record<string, boolean> {
 
 // Hook for plan comparison
 export function usePlanComparison() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<{
+    plans: any[];
+    comparison: Record<string, any>;
+  }>({
     queryKey: ['/api/super-admin/plans/comparison'],
     staleTime: 10 * 60 * 1000, // Consider data fresh for 10 minutes
   });

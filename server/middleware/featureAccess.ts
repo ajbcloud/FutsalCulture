@@ -69,7 +69,7 @@ async function getTenantCapabilities(tenantId: string) {
     ));
 
   // Merge base features with overrides
-  const capabilities = {};
+  const capabilities: Record<string, any> = {};
   for (const feature of baseFeatures) {
     const override = overrides.find(o => o.featureKey === feature.key);
     

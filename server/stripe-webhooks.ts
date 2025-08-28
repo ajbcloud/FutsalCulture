@@ -1,8 +1,9 @@
 import express from 'express';
 import Stripe from 'stripe';
 import { db } from './db';
-import { tenants } from '../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { tenants, subscriptions, tenantPlanAssignments } from '../shared/schema';
+import { eq } from 'drizzle-orm';
+import { clearCapabilitiesCache } from './middleware/featureAccess';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
@@ -103,6 +104,7 @@ router.post('/webhook', async (req, res) => {
             }
 
             // Try to get subscription details for additional validation (but don't fail if it doesn't exist)
+            let subscriptionStatus = 'active';
             try {
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
               const stripePlanLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
@@ -110,20 +112,63 @@ router.post('/webhook', async (req, res) => {
                 planLevel = stripePlanLevel; // Use Stripe plan level if available
                 console.log(`Plan level from Stripe subscription: ${planLevel}`);
               }
+              subscriptionStatus = subscription.status === 'active' ? 'active' : 'inactive';
             } catch (subscriptionError) {
               console.log(`Note: Could not retrieve subscription ${subscriptionId} from Stripe, using URL/amount fallback`);
             }
 
             // Update tenant plan if we have both tenant ID and plan level
             if (tenantId && planLevel) {
-              await db.update(tenants)
-                .set({
-                  planLevel: planLevel as any,
-                  stripeSubscriptionId: subscriptionId,
-                  stripeCustomerId: customerId,
-                })
-                .where(eq(tenants.id, tenantId));
+              await db.transaction(async (tx) => {
+                // Update tenant
+                await tx.update(tenants)
+                  .set({
+                    planLevel: planLevel as any,
+                    stripeSubscriptionId: subscriptionId,
+                    stripeCustomerId: customerId,
+                  })
+                  .where(eq(tenants.id, tenantId));
 
+                // Update subscriptions table
+                await tx.insert(subscriptions)
+                  .values({
+                    tenantId,
+                    stripeCustomerId: customerId,
+                    stripeSubscriptionId: subscriptionId,
+                    planKey: planLevel,
+                    status: subscriptionStatus,
+                  })
+                  .onConflictDoUpdate({
+                    target: subscriptions.tenantId,
+                    set: {
+                      stripeCustomerId: customerId,
+                      stripeSubscriptionId: subscriptionId,
+                      planKey: planLevel,
+                      status: subscriptionStatus,
+                      updatedAt: new Date(),
+                    },
+                  });
+
+                // Update tenant_plan_assignments
+                // End current assignment
+                await tx.update(tenantPlanAssignments)
+                  .set({ until: new Date() })
+                  .where(
+                    eq(tenantPlanAssignments.tenantId, tenantId)
+                  );
+
+                // Create new assignment
+                await tx.insert(tenantPlanAssignments)
+                  .values({
+                    tenantId,
+                    planCode: planLevel,
+                    since: new Date(),
+                  });
+              });
+
+              // Clear capabilities cache for this tenant
+              clearCapabilitiesCache(tenantId);
+              
               console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook - Customer: ${customerId}, Subscription: ${subscriptionId}`);
             } else {
               console.log(`⚠️ Could not update tenant: tenantId=${tenantId}, planLevel=${planLevel}, customer=${customerId}`);
@@ -175,13 +220,53 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     return;
   }
 
-  // Update tenant with new subscription info
-  await db.update(tenants)
-    .set({
-      planLevel: planLevel as any,
-      stripeSubscriptionId: subscription.id,
-    })
-    .where(eq(tenants.id, tenant[0].id));
+  const status = subscription.status === 'active' ? 'active' : 'inactive';
+
+  // Update tenant and subscription record
+  await db.transaction(async (tx) => {
+    await tx.update(tenants)
+      .set({
+        planLevel: planLevel as any,
+        stripeSubscriptionId: subscription.id,
+      })
+      .where(eq(tenants.id, tenant[0].id));
+
+    await tx.insert(subscriptions)
+      .values({
+        tenantId: tenant[0].id,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
+        planKey: planLevel,
+        status,
+      })
+      .onConflictDoUpdate({
+        target: subscriptions.tenantId,
+        set: {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscription.id,
+          planKey: planLevel,
+          status,
+          updatedAt: new Date(),
+        },
+      });
+
+    // Update tenant_plan_assignments
+    await tx.update(tenantPlanAssignments)
+      .set({ until: new Date() })
+      .where(
+        eq(tenantPlanAssignments.tenantId, tenant[0].id)
+      );
+
+    await tx.insert(tenantPlanAssignments)
+      .values({
+        tenantId: tenant[0].id,
+        planCode: planLevel,
+        since: new Date(),
+      });
+  });
+
+  // Clear capabilities cache
+  clearCapabilitiesCache(tenant[0].id);
 
 }
 
@@ -198,13 +283,40 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     return;
   }
 
-  // Reset tenant to free plan
-  await db.update(tenants)
-    .set({
-      planLevel: 'core', // Default back to core instead of free for cancellations
-      stripeSubscriptionId: null,
-    })
-    .where(eq(tenants.id, tenant[0].id));
+  // Reset tenant to core plan and mark subscription canceled
+  await db.transaction(async (tx) => {
+    await tx.update(tenants)
+      .set({
+        planLevel: 'core', // Default back to core instead of free for cancellations
+        stripeSubscriptionId: null,
+      })
+      .where(eq(tenants.id, tenant[0].id));
+
+    await tx.update(subscriptions)
+      .set({
+        status: 'canceled',
+        planKey: 'core',
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptions.tenantId, tenant[0].id));
+
+    // Update tenant_plan_assignments
+    await tx.update(tenantPlanAssignments)
+      .set({ until: new Date() })
+      .where(
+        eq(tenantPlanAssignments.tenantId, tenant[0].id)
+      );
+
+    await tx.insert(tenantPlanAssignments)
+      .values({
+        tenantId: tenant[0].id,
+        planCode: 'core',
+        since: new Date(),
+      });
+  });
+
+  // Clear capabilities cache
+  clearCapabilitiesCache(tenant[0].id);
 
 }
 
