@@ -1,0 +1,39 @@
+You are super close. The payment fired, Stripe webhooks are landing, a plan field changed, but the app is still gating access. That almost always means your runtime entitlements are being read from somewhere other than the field you updated, or the session or cache never refreshed.
+
+Here is a fast path to isolate and fix it.
+
+First, locate the single source of truth your app uses at runtime
+
+Find the function or middleware that answers the question “what features does this tenant have” at request time. For example, something like getEntitlements(tenantId), getFeaturesForTenant, requirePlan, or a feature flag helper. Confirm whether it reads from tenants.planLevel or from subscriptions.planKey or from a join against planFeatures.
+
+Grep for any direct reads of plan_features in src that bypass the new shared tables. If any routes, loaders, or hooks still read the legacy src/db/schema/planFeatures.ts table, update them to the new shared schema or remove the legacy path.
+
+Check if the current user session or a cache holds the plan. If a plan or feature list is embedded into the session cookie at login, you must refresh the session after the webhook updates the DB, or force the frontend to refetch.
+
+Quick database checks
+
+Run these three queries on the tenant that just paid, and compare the results.
+
+-- A. What does the app think the plan is at the tenant level
+SELECT id, name, plan_level
+FROM tenants
+WHERE id = '<tenant_id>';
+
+-- B. What does Stripe mapping say for that tenant
+SELECT plan_key, status, stripe_customer_id, stripe_subscription_id, current_period_end
+FROM subscriptions
+WHERE tenant_id = '<tenant_id>'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- C. What features resolve for that plan through the new catalog
+SELECT f.key AS feature_key, pf.enabled, pf.limit_value
+FROM plan_features pf
+JOIN features f ON f.id = pf.feature_id
+JOIN plan_catalog pc ON pc.id = pf.plan_id
+WHERE pc.plan_key = (
+  SELECT plan_level FROM tenants WHERE id = '<tenant_id>'
+);
+
+
+If C does not show the right features for the plan that was purchased, your resolver is probably not aligned with the field you updated. If C looks correct but the UI still hides features, then the session or frontend cache is stale.
