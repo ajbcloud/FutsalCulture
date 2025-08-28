@@ -107,8 +107,7 @@ app.use((req, res, next) => {
   // Mount auth redirect to handle legacy /api/login URLs
   app.use('/api', authRedirectRouter);
   
-  // Mount Stripe webhook routes BEFORE JSON middleware (already has raw body parsing)
-  app.use('/api/stripe', stripeWebhookRouter);
+  // Stripe webhook routes are already mounted in registerRoutes - removing duplicate
   
   // Mount auth verification routes FIRST to avoid any conflicts
   app.use('/api/auth', authVerificationRouter);

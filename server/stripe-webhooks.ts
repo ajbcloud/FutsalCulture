@@ -18,8 +18,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 const router = express.Router();
 
-// Webhook endpoint for Stripe events
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+// Test endpoint to verify route mounting
+router.get('/test', (req, res) => {
+  res.json({ message: 'Stripe routes are working' });
+});
+
+// Webhook endpoint for Stripe events (raw body middleware is already applied in index.ts)
+router.post('/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
   let event: Stripe.Event;
 
