@@ -62,12 +62,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
             
             if (planLevel) {
-              // Try to find tenant by client_reference_id first
+              // Try to find tenant by client_reference_id first (most reliable)
               let tenantId = session.client_reference_id;
+              console.log(`Checkout session tenant identification - client_reference_id: ${tenantId}, metadata: ${JSON.stringify(session.metadata)}`);
               
-              // If no client_reference_id (payment links), try to find by customer
+              // If no client_reference_id, try metadata as backup
               if (!tenantId || tenantId === 'unknown') {
-                // First try to find by existing customer ID (if customer already exists)
+                tenantId = session.metadata?.tenantId;
+                console.log(`Using metadata tenantId: ${tenantId}`);
+              }
+              
+              // If still no tenant ID, try to find by existing customer ID
+              if (!tenantId) {
                 const existingTenant = await db.select({ id: tenants.id })
                   .from(tenants)
                   .where(eq(tenants.stripe_customer_id, customerId))
@@ -77,16 +83,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                   tenantId = existingTenant[0].id;
                   console.log(`Found tenant by customer ID: ${tenantId}`);
                 } else {
-                  // If no existing customer, find the first tenant (for single-tenant setups)
-                  // or you could implement email matching logic here
-                  const firstTenant = await db.select({ id: tenants.id })
-                    .from(tenants)
-                    .limit(1);
-                  
-                  if (firstTenant.length > 0) {
-                    tenantId = firstTenant[0].id;
-                    console.log(`Using first available tenant: ${tenantId}`);
-                  }
+                  console.log(`⚠️ Could not identify tenant for customer ${customerId} - no client_reference_id, metadata, or existing customer match`);
                 }
               }
               

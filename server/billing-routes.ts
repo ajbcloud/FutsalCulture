@@ -163,11 +163,13 @@ router.post('/billing/checkout', async (req: any, res) => {
           },
         ],
         mode: 'subscription',
+        client_reference_id: currentUser.tenantId, // Primary tenant identifier
         success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features&checkout=success`,
         cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features&checkout=cancelled`,
         metadata: {
-          tenantId: currentUser.tenantId,
+          tenantId: currentUser.tenantId, // Backup identifier
           planId: planId,
+          userEmail: currentUser.email,
         },
       });
 
