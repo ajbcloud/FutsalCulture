@@ -296,6 +296,33 @@ function PlanAndFeaturesContent() {
 export default function AdminSettings() {
   const businessName = useBusinessName();
   const { upgradeStatus, clearUpgradeStatus } = useUpgradeStatus();
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutStatus = urlParams.get('checkout');
+    
+    if (checkoutStatus === 'success') {
+      toast({
+        title: "🎉 Payment Successful!",
+        description: "Your plan has been upgraded successfully. Enjoy your new features!",
+        duration: 5000,
+      });
+      // Clean up URL
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&]checkout=success/, '');
+      window.history.replaceState({}, '', newUrl);
+    } else if (checkoutStatus === 'cancelled') {
+      toast({
+        title: "Payment Cancelled",
+        description: "Your payment was cancelled. No charges were made.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      // Clean up URL
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&]checkout=cancelled/, '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [toast]);
   const [settings, setSettings] = useState<SystemSettings>({
     autoApproveRegistrations: true,
     businessName: '',
@@ -366,7 +393,6 @@ export default function AdminSettings() {
     country: 'US',
   });
 
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Feature flag hooks
