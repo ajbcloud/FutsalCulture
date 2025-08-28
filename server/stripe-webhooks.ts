@@ -2,7 +2,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import { db } from './db';
 import { tenants } from '../shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
@@ -48,7 +48,7 @@ router.post('/webhook', async (req, res) => {
         await handleSubscriptionUpdate(subscription);
         break;
       }
-      
+
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         await handleSubscriptionCancellation(subscription);
@@ -60,25 +60,25 @@ router.post('/webhook', async (req, res) => {
         if (session.mode === 'subscription') {
           const subscriptionId = session.subscription as string;
           const customerId = session.customer as string;
-          
+
           try {
             // Try to find tenant by client_reference_id first (most reliable)
             let tenantId = session.client_reference_id;
             console.log(`Checkout session tenant identification - client_reference_id: ${tenantId}, metadata: ${JSON.stringify(session.metadata)}`);
-            
+
             // If no client_reference_id, try metadata as backup
             if (!tenantId || tenantId === 'unknown') {
               tenantId = session.metadata?.tenantId || null;
               console.log(`Using metadata tenantId: ${tenantId}`);
             }
-            
+
             // If still no tenant ID, try to find by existing customer ID
             if (!tenantId) {
               const existingTenant = await db.select({ id: tenants.id })
                 .from(tenants)
                 .where(eq(tenants.stripeCustomerId, customerId))
                 .limit(1);
-              
+
               if (existingTenant.length > 0) {
                 tenantId = existingTenant[0].id;
                 console.log(`Found tenant by customer ID: ${tenantId}`);
@@ -86,7 +86,7 @@ router.post('/webhook', async (req, res) => {
                 console.log(`⚠️ Could not identify tenant for customer ${customerId} - no client_reference_id, metadata, or existing customer match`);
               }
             }
-            
+
             // Determine plan from success URL or amount
             let planLevel: string | null = null;
             if (session.success_url && session.success_url.includes('plan=')) {
@@ -97,11 +97,11 @@ router.post('/webhook', async (req, res) => {
               // Fallback: determine plan from amount
               const amountInCents = session.amount_total;
               if (amountInCents === 9900) planLevel = 'core';      // $99
-              else if (amountInCents === 19900) planLevel = 'growth';   // $199  
+              else if (amountInCents === 19900) planLevel = 'growth';   // $199
               else if (amountInCents === 49900) planLevel = 'elite';    // $499
               console.log(`Plan level from amount ${amountInCents}: ${planLevel}`);
             }
-            
+
             // Try to get subscription details for additional validation (but don't fail if it doesn't exist)
             try {
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -113,7 +113,7 @@ router.post('/webhook', async (req, res) => {
             } catch (subscriptionError) {
               console.log(`Note: Could not retrieve subscription ${subscriptionId} from Stripe, using URL/amount fallback`);
             }
-            
+
             // Update tenant plan if we have both tenant ID and plan level
             if (tenantId && planLevel) {
               await db.update(tenants)
@@ -123,7 +123,7 @@ router.post('/webhook', async (req, res) => {
                   stripeCustomerId: customerId,
                 })
                 .where(eq(tenants.id, tenantId));
-                
+
               console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook - Customer: ${customerId}, Subscription: ${subscriptionId}`);
             } else {
               console.log(`⚠️ Could not update tenant: tenantId=${tenantId}, planLevel=${planLevel}, customer=${customerId}`);

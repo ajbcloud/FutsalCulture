@@ -6,7 +6,8 @@ import {
   planFeatures, 
   tenantFeatureOverrides,
   tenantPlanAssignments,
-  tenants
+  tenants,
+  subscriptions // Assuming subscriptions table is imported
 } from '../../../shared/schema';
 
 // Cache for tenant capabilities
@@ -17,7 +18,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 export async function getTenantCapabilities(req: Request, res: Response) {
   try {
     const tenantId = (req as any).tenantId || (req as any).user?.tenantId;
-    
+
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
@@ -84,7 +85,7 @@ export async function getTenantCapabilities(req: Request, res: Response) {
     const capabilities = {};
     for (const feature of baseFeatures) {
       const override = overrides.find(o => o.featureKey === feature.key);
-      
+
       let value;
       if (override) {
         // Use override value
@@ -141,7 +142,7 @@ export async function checkCapability(req: Request, res: Response) {
   try {
     const tenantId = (req as any).tenantId || (req as any).user?.tenantId;
     const { featureKey, minValue } = req.params;
-    
+
     if (!tenantId || !featureKey) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
@@ -153,9 +154,9 @@ export async function checkCapability(req: Request, res: Response) {
       status: () => ({ json: () => null }),
       setHeader: () => null
     } as any;
-    
+
     const capabilities = await getTenantCapabilities(capabilitiesReq, capabilitiesRes);
-    
+
     if (!capabilities?.capabilities) {
       return res.json({ hasCapability: false });
     }

@@ -1,19 +1,19 @@
 import { Router } from 'express';
 import { db } from './db';
 import { tenants, featureFlags } from '../shared/schema';
-import { eq, and } from 'drizzle-orm';
-import { 
-  hasFeature, 
-  getEnabledFeatures, 
-  checkPlanLimits, 
-  PLAN_LIMITS, 
-  PLAN_FEATURES 
+import { eq, and, sql } from 'drizzle-orm';
+import {
+  hasFeature,
+  getEnabledFeatures,
+  checkPlanLimits,
+  PLAN_LIMITS,
+  PLAN_FEATURES
 } from '../shared/feature-flags';
-import { 
-  loadTenantMiddleware, 
-  requireFeature, 
-  getTenantPlanLevel, 
-  getTenantFeatures 
+import {
+  loadTenantMiddleware,
+  requireFeature,
+  getTenantPlanLevel,
+  getTenantFeatures
 } from './feature-middleware';
 
 const router = Router();
@@ -33,13 +33,13 @@ router.get('/tenant/plan-features', async (req, res) => {
   try {
     const user = (req as any).currentUser;
     const tenantId = user?.tenantId;
-    
+
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 
     // Get tenant plan level and subscription info
-    const tenant = await db.select({ 
+    const tenant = await db.select({
       planLevel: tenants.planLevel,
       stripeSubscriptionId: tenants.stripeSubscriptionId,
       stripeCustomerId: tenants.stripeCustomerId
@@ -52,23 +52,37 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    // Determine if subscription is active based on plan level and stripe data
-    const actualPlanLevel = tenant[0].planLevel || 'free';
-    const hasStripeSubscription = !!(tenant[0].stripeSubscriptionId && tenant[0].stripeCustomerId);
-    const hasActiveSubscription = actualPlanLevel !== 'free' && hasStripeSubscription;
-    
+    // Also check subscriptions table for the most current status
+    const { subscriptions } = await import('../shared/schema');
+    const subscription = await db.select()
+      .from(subscriptions)
+      .where(eq(subscriptions.tenantId, tenantId))
+      .orderBy(sql`${subscriptions.createdAt} DESC`)
+      .limit(1);
+
+    // Use subscription plan if active, otherwise fall back to tenant plan level
+    let effectivePlanLevel = tenant[0].planLevel || 'free';
+
+    if (subscription.length > 0 && subscription[0].status === 'active') {
+      effectivePlanLevel = subscription[0].planKey || effectivePlanLevel;
+    }
+
+    // Final fallback to tenant planLevel if subscription exists but is not elite/growth/core
+    const actualPlanLevel = effectivePlanLevel;
+
+
     // Use actual plan level for paid plans, free for non-subscribed users
-    const effectivePlanLevel = actualPlanLevel;
-    
+    const effectivePlanLevelForFeatures = actualPlanLevel;
+
     // Import PLAN_FEATURES from shared
     const { PLAN_FEATURES } = await import('../shared/feature-flags');
-    const features = PLAN_FEATURES[effectivePlanLevel as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
-    
-    const limits = PLAN_LIMITS[effectivePlanLevel as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
-    
+    const features = PLAN_FEATURES[effectivePlanLevelForFeatures as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
+
+    const limits = PLAN_LIMITS[effectivePlanLevelForFeatures as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
+
     // Get current player count for this tenant (only players, not parents)
     const { players } = await import('../shared/schema');
-    
+
     const playerCountResult = await db.select({ count: players.id })
       .from(players)
       .where(eq(players.tenantId, tenantId));
@@ -78,7 +92,7 @@ router.get('/tenant/plan-features', async (req, res) => {
     const displayCount = playerCount;
 
     res.json({
-      planLevel: effectivePlanLevel,
+      planLevel: effectivePlanLevelForFeatures,
       features,
       limits,
       playerCount: displayCount,
@@ -94,7 +108,7 @@ router.get('/tenant/feature/:featureKey', async (req, res) => {
   try {
     const tenantId = (req.session as any)?.user?.tenantId;
     const { featureKey } = req.params;
-    
+
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
@@ -105,7 +119,7 @@ router.get('/tenant/feature/:featureKey', async (req, res) => {
     }
 
     const hasAccess = hasFeature(planLevel, featureKey as any);
-    
+
     res.json({
       featureKey,
       hasAccess,
@@ -130,7 +144,7 @@ router.post('/admin/populate-feature-flags', async (req, res) => {
 
     // Insert feature flags for each plan level
     const flagsToInsert = [];
-    
+
     for (const [planLevel, features] of Object.entries(PLAN_FEATURES)) {
       for (const [featureKey, enabled] of Object.entries(features)) {
         flagsToInsert.push({
@@ -143,10 +157,10 @@ router.post('/admin/populate-feature-flags', async (req, res) => {
 
     await db.insert(featureFlags).values(flagsToInsert);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       inserted: flagsToInsert.length,
-      message: 'Feature flags populated successfully' 
+      message: 'Feature flags populated successfully'
     });
   } catch (error) {
     console.error('Error populating feature flags:', error);
@@ -188,7 +202,7 @@ router.post('/admin/tenant/:tenantId/plan', async (req, res) => {
 router.get('/tenant/upgrade-recommendations', async (req, res) => {
   try {
     const tenantId = (req.session as any)?.user?.tenantId;
-    
+
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
@@ -199,7 +213,7 @@ router.get('/tenant/upgrade-recommendations', async (req, res) => {
     }
 
     const currentFeatures = getEnabledFeatures(planLevel);
-    
+
     const recommendations = {
       currentPlan: planLevel,
       nextPlan: planLevel === 'core' ? 'growth' as const : planLevel === 'growth' ? 'elite' as const : null,
@@ -210,7 +224,7 @@ router.get('/tenant/upgrade-recommendations', async (req, res) => {
     if (recommendations.nextPlan) {
       const nextFeatures = getEnabledFeatures(recommendations.nextPlan);
       const newFeatures = nextFeatures.filter(f => !currentFeatures.includes(f));
-      
+
       recommendations.upgradeBenefits = newFeatures.slice(0, 5); // Top 5 benefits
     }
 
