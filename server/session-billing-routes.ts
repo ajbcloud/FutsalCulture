@@ -376,8 +376,8 @@ router.post('/session-billing/session-checkout', async (req: any, res) => {
           },
         ],
         mode: 'payment',
-        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/parent/dashboard?payment=success&session=${sessionId}&player=${playerId}`,
-        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/parent/dashboard?payment=cancelled`,
+        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/admin/dashboard?payment=success&session=${sessionId}&player=${playerId}`,
+        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/admin/dashboard?payment=cancelled`,
         metadata: {
           sessionId: sessionData.id,
           playerId: playerData.id,

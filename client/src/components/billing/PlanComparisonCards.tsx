@@ -85,7 +85,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
     const currentDomain = window.location.origin;
     const params = new URLSearchParams({
       client_reference_id: user?.tenantId || '', // Pass the actual tenant ID from auth context
-      success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${plan}`,
+      success_url: `${currentDomain}/admin/dashboard?upgrade=success&plan=${plan}`,
       cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
     });
     

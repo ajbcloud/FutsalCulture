@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { usePageRefresh } from "@/hooks/use-page-refresh";
 import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import AdminLayout from "@/components/admin-layout";
 import RequireAdmin from "@/components/require-admin";
@@ -88,6 +89,7 @@ interface AdminStats {
 export default function AdminDashboard() {
   const businessName = useBusinessName();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
   // Check feature access
   const hasBasicAnalytics = useHasFeature('analytics_basic');
@@ -104,7 +106,31 @@ export default function AdminDashboard() {
   // Force cache invalidation on mount to ensure fresh data
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard-metrics"] });
-  }, []);
+    
+    // Check for payment success/upgrade success in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const upgradeStatus = urlParams.get('upgrade');
+    const planName = urlParams.get('plan');
+    
+    if (paymentStatus === 'success') {
+      toast({
+        title: "Payment Successful!",
+        description: "Your payment has been processed successfully.",
+      });
+      // Clean up URL parameters
+      window.history.replaceState({}, '', '/admin/dashboard');
+    }
+    
+    if (upgradeStatus === 'success' && planName) {
+      toast({
+        title: "Plan Upgraded!",
+        description: `Successfully upgraded to ${planName} plan.`,
+      });
+      // Clean up URL parameters
+      window.history.replaceState({}, '', '/admin/dashboard');
+    }
+  }, [toast]);
   
   // Fetch comprehensive dashboard metrics
   const { data: metrics, isLoading: metricsLoading } = useQuery<DashboardMetrics>({
