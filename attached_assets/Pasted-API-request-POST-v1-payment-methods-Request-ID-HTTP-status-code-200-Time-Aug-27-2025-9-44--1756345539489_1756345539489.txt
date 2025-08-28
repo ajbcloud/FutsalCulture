@@ -1,0 +1,115 @@
+API request
+POST
+/v1/payment_methods
+Request ID
+HTTP status code
+200
+Time
+Aug 27, 2025, 9:44:40 PM
+IP address
+99.135.12.218
+API version
+2020-08-27
+Origin
+https://buy.stripe.com/
+Idempotency key
+Key — b7d2c932-1764-4df4-8215-aa19ad877a12
+User agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
+API key
+Response body
+{
+"id": 
+"pm_1S0utIKA9oSeqOY8xFgmsKzZ"
+,
+"object": 
+"payment_method",
+"allow_redisplay": 
+"unspecified",
+"billing_details": {
+"address": {
+"city": 
+"Boynton Beach",
+"country": 
+"US",
+"line1": 
+"59 Lancaster Road",
+"line2": 
+null,
+"postal_code": 
+"33426",
+"state": 
+"FL",
+},
+"email": 
+"atticus.brind@gmail.com",
+"name": 
+"Atti",
+"phone": 
+null,
+"tax_id": 
+null,
+},
+"created": 
+1756345480
+,
+"customer": 
+null,
+"link": {
+"email": 
+"atticus.brind@gmail.com",
+},
+"livemode": 
+false,
+"type": 
+"link",
+}
+Request POST body
+{
+"_stripe_version": 
+"2020-08-27",
+"billing_details": {
+"address": {
+"city": 
+"Boynton Beach",
+"country": 
+"US",
+"line1": 
+"59 Lancaster Road",
+"postal_code": 
+"33426",
+"state": 
+"FL",
+},
+"email": 
+"atticus.brind@gmail.com",
+"name": 
+"Atti",
+},
+"client_attribution_metadata": {
+"checkout_config_id": 
+"bf5bd309-2528-4d03-8ea2-f2ed4bb58a5e",
+"client_session_id": 
+"cs_test_b1gGzW7aRm3JOnEHf4mLirg3vaXCtdHzUsrTy7h3d6N1050jIU1FL9DiBV"
+,
+"merchant_integration_source": 
+"checkout",
+"merchant_integration_version": 
+"payment_link",
+"payment_method_selection_flow": 
+"automatic",
+},
+"key": 
+"pk_test_*********************************************************************************************XchYl2",
+"link": {
+"credentials": {
+"consumer_session_client_secret": 
+"*******************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************",
+},
+"payment_details_id": 
+"********************************************",
+},
+"payment_user_agent": 
+"stripe.js/13f5e7dcb8; stripe-js-v3/13f5e7dcb8; payment-link; checkout",
+"type": 
+"link",
