@@ -1,0 +1,52 @@
+1. How Stripe Webhook Updates Plans
+Your Stripe webhook handler (see server/stripe-webhooks.ts) updates all three of these tables when a payment or subscription event is received:
+
+tenants: The planLevel field is updated based on the Stripe subscription or price ID.
+subscriptions: An upsert (insert or update) is made for the subscription, updating planKey, status, and Stripe IDs.
+tenantPlanAssignments: This records historical and current plan assignments per tenant, and is used as the source of truth for feature access.
+It also calls clearCapabilitiesCache(tenantId) to invalidate any in-memory cache for feature entitlements.
+
+2. How Feature Entitlements Are Checked
+Your app does not just use the tenants.planLevel field. Instead, the real feature gating/entitlement logic is in:
+
+server/middleware/featureAccess.ts and server/controllers/tenant/capabilities.ts
+These call a function to get the current plan assignment from the tenantPlanAssignments table, not just tenants.planLevel.
+Features are joined from planFeatures and features tables using the current plan code.
+The endpoint /api/tenant/capabilities and related middleware use this logic.
+
+3. Common Pitfalls & Checklist
+If an upgrade is not showing up:
+
+The Stripe webhook may not be updating the tenantPlanAssignments table correctly, even if tenants.planLevel is set.
+If any legacy code or middleware is still reading directly from tenants.planLevel (or a legacy planFeatures table), it may not see the new plan.
+Client-side: The React Query cache could be serving stale data if the cache isn’t invalidated or refetched after upgrade.
+4. What to Check in Your Database
+After an attempted upgrade, run these queries for your test tenant (as suggested in your codebase comments):
+
+SQL
+-- A. What does the app think the plan is at the tenant level
+SELECT id, name, plan_level FROM tenants WHERE id = '<tenant_id>';
+
+-- B. What does Stripe mapping say for that tenant
+SELECT plan_key, status, stripe_customer_id, stripe_subscription_id, current_period_end
+FROM subscriptions WHERE tenant_id = '<tenant_id>' ORDER BY created_at DESC LIMIT 1;
+
+-- C. What features resolve for that plan through the new catalog
+SELECT f.key AS feature_key, pf.enabled, pf.limit_value
+FROM plan_features pf
+JOIN features f ON f.id = pf.feature_id
+WHERE pf.plan_code = '<current_plan_code>';
+Also check:
+
+SQL
+SELECT * FROM tenant_plan_assignments WHERE tenant_id = '<tenant_id>' ORDER BY since DESC LIMIT 1;
+The plan used for feature access comes from the latest row in tenant_plan_assignments where until is NULL or in the future.
+
+5. Backend/Frontend Enforcement
+All backend feature checks use the current plan from tenant_plan_assignments (see getTenantCapabilities).
+If your UI is not updating, make sure the /api/tenant/capabilities endpoint is returning the new plan and features after upgrade.
+6. What To Do Next
+Verify Webhook Success: Make sure the webhook is updating all of tenants.planLevel, subscriptions.planKey, and tenant_plan_assignments for your test tenant after upgrade.
+Check /api/tenant/capabilities: Call this endpoint after upgrade and log in. Does it show the correct plan and features?
+Refetch on Frontend: Make sure to refetch or invalidate the React Query for capabilities after an upgrade/payment.
+Legacy Reads: Grep your codebase for any direct reads from tenants.planLevel or old planFeatures table, and migrate those to use the new capability logic.

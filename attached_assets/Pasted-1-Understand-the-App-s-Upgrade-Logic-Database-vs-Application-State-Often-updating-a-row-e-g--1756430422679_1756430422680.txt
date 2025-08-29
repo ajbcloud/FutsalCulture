@@ -1,0 +1,36 @@
+1. Understand the App's Upgrade Logic
+Database vs. Application State: Often, updating a row (e.g., the tenant’s plan in the database) is necessary but not sufficient. Many SaaS apps also have:
+A user session or cached permissions/features list that needs to be refreshed or invalidated.
+A background job or signal that propagates the upgrade to other parts of the system (e.g., feature flags, roles, entitlements).
+Ask:
+"Is there a service, cache, or in-memory store that also determines which features a user/tenant can access? If so, does it need to be refreshed or invalidated when a plan changes?"
+
+2. Find the Source of Truth for Entitlements
+Where does the app check for feature access?
+Is it only in the tenant table/collection, or does it reference another object (e.g., a ‘Subscription’ or ‘Plan’ model)?
+Ask:
+"When checking if a feature is unlocked, what database tables/fields or external services does the app query?"
+
+3. Webhook Processing Flow
+Is the webhook handler responsible for everything?
+Sometimes, the webhook will update the plan, but a separate process (e.g., a nightly job or an explicit API call after payment) actually unlocks features.
+Ask:
+"After the webhook updates the tenant plan, is there another process, job, or event that must run to activate upgraded features?"
+
+4. User Experience / Session Handling
+Does the user need to log out and back in, or refresh the page, for the upgrade to take effect?
+Sometimes, session or JWT tokens are generated at login and only reflect the plan at that time.
+Ask:
+"Are user sessions or JWT tokens updated immediately when a plan changes, or does the user need to re-authenticate?"
+
+5. Configuration/Code Review
+Check for Feature Flags or Permissions Middleware:
+Look for code in your repo that determines feature access and see what it’s referencing.
+Ask:
+"Where in the codebase can I see how upgraded features are unlocked for a tenant? Is there a permissions middleware or feature flag system involved?"
+
+6. Logging and Debugging
+Add logs to every stage of the upgrade process to confirm each step is working as intended.
+Ask:
+"What logs or debugging tools can I use to trace the upgrade flow from webhook to feature unlock?"
+
