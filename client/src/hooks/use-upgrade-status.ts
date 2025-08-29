@@ -81,6 +81,7 @@ export function useUpgradeStatus() {
         // Invalidate and refetch subscription info
         await queryClient.invalidateQueries({ queryKey: ['/api/admin/subscription-info'] });
         await queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan-features'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/tenant/capabilities'] });
         
         const subscriptionData = await queryClient.fetchQuery({
           queryKey: ['/api/admin/subscription-info'],
