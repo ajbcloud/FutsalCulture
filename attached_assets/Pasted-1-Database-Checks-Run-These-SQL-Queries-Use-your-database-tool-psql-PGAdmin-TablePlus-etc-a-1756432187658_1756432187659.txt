@@ -1,0 +1,51 @@
+1. Database Checks: Run These SQL Queries
+Use your database tool (psql, PGAdmin, TablePlus, etc.) and replace <tenant_id> with the actual tenant you just tested.
+
+A. What does the app think the plan is at the tenant level?
+SQL
+SELECT id, name, plan_level FROM tenants WHERE id = '<tenant_id>';
+B. What does the Stripe mapping say for that tenant?
+SQL
+SELECT plan_key, status, stripe_customer_id, stripe_subscription_id, current_period_end
+FROM subscriptions
+WHERE tenant_id = '<tenant_id>'
+ORDER BY created_at DESC
+LIMIT 1;
+C. What features resolve for that plan through the new catalog?
+SQL
+SELECT f.key AS feature_key, pf.enabled, pf.limit_value
+FROM plan_features pf
+JOIN features f ON f.id = pf.feature_id
+WHERE pf.plan_code = '<expected_plan_code>';
+D. Check tenant plan assignment (the real source of truth!):
+SQL
+SELECT * FROM tenant_plan_assignments WHERE tenant_id = '<tenant_id>' ORDER BY since DESC LIMIT 1;
+2. Why the Plan Might Not Update
+Based on your code and previous fixes, here are the most likely reasons the plan didn’t change:
+
+Webhook Didn’t Fire or Complete
+
+Check your webhook logs for errors.
+Make sure the webhook event is received and processed for your tenant/payment.
+Database Transaction Fails
+
+If any part of the transaction fails (tenants, subscriptions, or tenant_plan_assignments), the whole thing is rolled back.
+Check for errors in your webhook handler logs.
+tenant_plan_assignments Not Updated
+
+Even if tenants.planLevel is set, if tenant_plan_assignments isn’t updated, the feature system won’t see the new plan.
+Wrong Stripe Price ID Mapping
+
+If getPlanLevelFromPrice() doesn’t map the Stripe price ID to the correct plan code, the wrong or no plan is set.
+Cache Not Cleared
+
+If clearCapabilitiesCache isn’t called (or isn’t working), a stale cache could hide the new plan, but this is less likely if you refreshed and saw no change.
+3. What To Do Next
+Run the database queries above and paste the output here (you can redact sensitive data).
+Check your server logs for any errors in the webhook handler after the payment.
+Optionally, post the relevant section of your webhook handler logs or code if you want a review.
+4. Quick Final Checklist
+ Did the Stripe webhook fire and process the correct event for your tenant?
+ Did all three tables—tenants, subscriptions, and tenant_plan_assignments—update as expected?
+ Does /api/tenant/capabilities show the new plan after upgrade?
+ Any errors in server logs around the time of payment?

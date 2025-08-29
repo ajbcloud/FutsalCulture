@@ -211,10 +211,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuItem asChild>
-                  <Link href="/logout" className="cursor-pointer">
+                  <a href="/api/logout" className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
-                  </Link>
+                  </a>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
