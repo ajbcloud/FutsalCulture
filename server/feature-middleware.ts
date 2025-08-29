@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { hasFeature } from '../shared/feature-flags';
-import { PlanLevel, FeatureKey } from '../shared/schema';
 import { FEATURE_KEYS } from '../shared/feature-flags';
 import { db } from './db';
-import { tenants } from '../shared/schema';
-import { eq } from 'drizzle-orm';
+import { tenants, tenantPlanAssignments } from '../shared/schema';
+import { eq, and, sql } from 'drizzle-orm';
+
+// Type definitions for plan levels and feature keys
+type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
+type FeatureKey = keyof typeof FEATURE_KEYS | string;
 
 // Extend Express Request to include tenant info
 declare global {
@@ -114,15 +117,46 @@ export function requireAllFeatures(featureKeys: FeatureKey[]) {
   };
 }
 
-// Utility function to get plan level for a tenant
+// Utility function to get plan level for a tenant (using new tenant_plan_assignments table)
 export async function getTenantPlanLevel(tenantId: string): Promise<PlanLevel | null> {
   try {
+    // Get current plan assignment from tenant_plan_assignments table
+    const assignment = await db
+      .select({
+        planCode: tenantPlanAssignments.planCode
+      })
+      .from(tenantPlanAssignments)
+      .where(and(
+        eq(tenantPlanAssignments.tenantId, tenantId),
+        sql`${tenantPlanAssignments.until} IS NULL OR ${tenantPlanAssignments.until} > NOW()`
+      ))
+      .orderBy(sql`${tenantPlanAssignments.since} DESC`)
+      .limit(1);
+    
+    if (assignment.length > 0) {
+      return assignment[0].planCode as PlanLevel;
+    }
+    
+    // Fallback: if no assignment found, check tenants table and create assignment
     const tenant = await db.select({ planLevel: tenants.planLevel })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
       .limit(1);
     
-    return tenant.length > 0 ? tenant[0].planLevel : null;
+    if (tenant.length > 0 && tenant[0].planLevel) {
+      // Create missing assignment
+      await db.insert(tenantPlanAssignments)
+        .values({
+          tenantId,
+          planCode: tenant[0].planLevel,
+          since: new Date(),
+        })
+        .onConflictDoNothing();
+      
+      return tenant[0].planLevel;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting tenant plan level:', error);
     return null;
