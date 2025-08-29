@@ -205,8 +205,11 @@ router.post('/webhook', async (req, res) => {
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
   const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
+  
+  console.log(`🔄 Processing subscription update - Customer: ${customerId}, Price: ${subscription.items.data[0]?.price?.id}, Plan: ${planLevel}`);
 
   if (!planLevel) {
+    console.log(`⚠️ No plan level found for price ID: ${subscription.items.data[0]?.price?.id}`);
     return;
   }
 
@@ -217,8 +220,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .limit(1);
 
   if (tenant.length === 0) {
+    console.log(`⚠️ No tenant found for customer ID: ${customerId}`);
     return;
   }
+  
+  console.log(`✅ Found tenant: ${tenant[0].id} for customer: ${customerId}`);
 
   const status = subscription.status === 'active' ? 'active' : 'inactive';
 

@@ -65,6 +65,22 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
       authProvider: "local",
     }).returning();
 
+    // Create subscription record (free plan) - CRITICAL for webhook upgrades
+    const { subscriptions, tenantPlanAssignments } = await import('@shared/schema');
+    await db.insert(subscriptions).values({
+      tenantId: tenant.id,
+      planKey: "free",
+      status: "inactive"
+    });
+
+    // Create tenant plan assignment (free plan) - CRITICAL for feature access
+    await db.insert(tenantPlanAssignments).values({
+      tenantId: tenant.id,
+      planCode: "free",
+      since: new Date(),
+      until: null
+    });
+
     // Create verification token
     const { raw, hash } = newToken();
     const expires = new Date(Date.now() + 1000 * 60 * 60 * 48); // 48 hours
@@ -195,7 +211,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
     }).returning();
 
     // Create default invite code for new tenant
-    const { tenantInviteCodes } = await import('@shared/schema');
+    const { tenantInviteCodes, subscriptions, tenantPlanAssignments } = await import('@shared/schema');
     await db.insert(tenantInviteCodes).values({
       tenantId: tenant.id,
       code: generateInviteCode(),
@@ -203,6 +219,21 @@ authVerificationRouter.post("/signup", async (req, res) => {
       description: 'Primary code for parent and player registration',
       isActive: true,
       createdBy: user.id,
+    });
+
+    // Create subscription record (free plan) - CRITICAL for webhook upgrades
+    await db.insert(subscriptions).values({
+      tenantId: tenant.id,
+      planKey: "free",
+      status: "inactive"
+    });
+
+    // Create tenant plan assignment (free plan) - CRITICAL for feature access
+    await db.insert(tenantPlanAssignments).values({
+      tenantId: tenant.id,
+      planCode: "free",
+      since: new Date(),
+      until: null
     });
 
     // Create verification token
