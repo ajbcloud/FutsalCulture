@@ -1,0 +1,114 @@
+Next Steps: Digging Deeper into the Plan Upgrade Issue
+
+To pinpoint why the app isn't reflecting the upgraded plan, consider asking targeted questions in a few key areas. Here are the next questions and checks to help identify what’s broken:
+
+1. Verify Database Plan Updates
+
+Has the tenantPlanAssignments table been updated correctly?
+Check if a new active plan assignment entry was inserted for the tenant when the Stripe payment succeeded. The tenantPlanAssignments table is the primary source for plan data in the app
+GitHub
+GitHub
+. Confirm that the latest entry has the expected planCode (e.g. "growth") and that its until field is NULL (meaning it’s the current active plan). If this entry is missing or marked as ended, the app will still think the plan is “free” due to the fallback logic
+GitHub
+GitHub
+.
+
+Does the tenants table reflect the new plan?
+You mentioned the tenant row shows planLevel = 'growth'. That’s good – but confirm both places are updated: the tenants.planLevel field and an active tenantPlanAssignments record. If the webhook only updated one of these (or updated the wrong field), the app might not register the change. Ask specifically if both were updated by the webhook handler (they should have been, according to the code
+GitHub
+GitHub
+).
+
+2. Check the Capabilities Endpoint & Cache
+
+What does the /api/tenant/capabilities response show after the upgrade?
+This endpoint is the “source of truth” for feature access
+GitHub
+GitHub
+. Ask to see the output of GET /api/tenant/capabilities (or use the browser network inspector) after the payment. Verify that it returns planCode: "growth" (or the upgraded plan) and that the capabilities listed match the new plan’s features. If it’s still showing planCode: "free" or old limits, that means the backend isn’t recognizing the new plan assignment.
+
+Was the capabilities cache properly cleared?
+The Stripe webhook should call clearCapabilitiesCache(tenantId) to invalidate any cached plan data
+GitHub
+GitHub
+. Ask if the server logs show “Capabilities cache cleared” or similar after the webhook event. If the cache wasn’t cleared (or if you’re running multiple server instances with their own caches), the frontend might be getting a stale capabilities response. You can also ask if the X-Cache-Hit header is "true" on the /api/tenant/capabilities response after upgrade – a "true" would indicate cached data
+GitHub
+GitHub
+. Ideally it should be a cache miss (X-Cache-Hit: false) right after the upgrade.
+
+3. Client-Side Cache & Refresh Behavior
+
+Did the frontend fetch new plan data after the Stripe checkout?
+React Query might be serving cached data. Ask if the user saw a “🎉 Payment Successful!” toast or any indication of refresh when returning from Stripe. In the Admin Settings page, there’s logic to detect ?upgrade=success in the URL and invalidate the cache for /api/tenant/plan, /api/tenant/plan-features, and /api/admin/subscription-info
+GitHub
+. Confirm that the Stripe success URL includes the proper query param (either checkout=success or upgrade=success) and that this code ran. If not, the frontend may still be showing cached plan info (e.g. showing Free plan until a manual refresh).
+
+What happens on a full page refresh or after ~5 minutes?
+Since the capabilities hook uses a 5-minute stale cache
+GitHub
+, ask if the features unlock after waiting a bit or doing a hard refresh. If a manual refresh of the page (or re-navigating to the admin settings) suddenly shows the correct plan and features, that points to a caching issue. In that case, you’d want to investigate why the automatic invalidation didn’t trigger on return from Stripe.
+
+4. User Session & Role Considerations
+
+Are the restricted features tied to admin privileges or just plan level?
+Identify which features “remain restricted.” If they are admin-level features (for example, certain /api/admin/* routes or UI elements that only admins can see), remember that the user’s session might cache isAdmin or similar flags from login
+GitHub
+GitHub
+. However, since this user is the tenant admin from the start (and isAdmin would already be true on their account
+GitHub
+), plan upgrade shouldn’t affect their admin flag. It’s more likely the features in question are gated by plan capabilities. Get clarity on which features didn’t unlock – e.g., was it something like “Payment Processing (Stripe) integration still disabled”? That particular example is gated by a feature flag PAYMENTS_ENABLED for Growth/Elite plans
+GitHub
+. If that’s the case, it’s definitely the plan not updating in the capabilities.
+
+Did re-login or session refresh make a difference?
+It’s worth asking if logging out and back in causes the app to recognize the upgrade. While not a permanent solution, it helps diagnose the issue. If after re-login all features appear, it suggests that something in the session or initial data load was stale. (For instance, the /api/auth/user response on login might include some plan context that wasn’t updated until a fresh login.)
+
+5. Stripe Webhook Execution & Logs
+
+Did the Stripe webhook log any warnings or errors?
+Ask to see the server logs around the time of the checkout. The webhook handler logs helpful info like tenant identification and plan update results
+GitHub
+GitHub
+. For example:
+
+Did it log ✅ Updated tenant ... to growth plan via webhook
+GitHub
+?
+
+Or were there any ⚠️ warnings like Could not identify tenant for customer
+GitHub
+ or Could not update tenant
+GitHub
+?
+These can clue you in if the webhook maybe didn’t find the tenant or skipped the update.
+
+Was the Stripe customer correctly linked to the tenant?
+Since the code tries multiple ways to get tenantId (client_reference_id, metadata, then lookup by customer ID)
+GitHub
+GitHub
+, inquire if those values were set during checkout:
+
+Did you pass a client_reference_id or metadata.tenantId when redirecting to Stripe checkout?
+If not, the webhook might have relied on the Stripe customer email to find the tenant, which could fail if not unique or set. However, given your DB did update, it sounds like it found the tenant somehow. It’s still a good question to double-check that the integration is set up as expected (e.g., the client_reference_id was likely the tenant ID).
+
+Were multiple webhook events received, possibly overwriting each other?
+Stripe sends a checkout.session.completed and a customer.subscription.created/updated. Your handler processes both: first updating on session completion, then again on subscription creation
+GitHub
+GitHub
+. Ask if both events were handled. Ideally, both try to do the same thing (set plan to growth). If the price ID mapping in getPlanLevelFromPrice wasn’t configured with your live Stripe price IDs
+GitHub
+, the customer.subscription.updated event might not have set the plan (since it wouldn’t find a planLevel and would return early
+GitHub
+GitHub
+). The session.completed handler, on the other hand, uses amount totals or URL params to set the plan
+GitHub
+GitHub
+. If the subscription event didn’t run correctly, it’s usually fine (the session already did the job), but confirm that nothing in the second event could have reverted or conflicted. For example, did the subscription event perhaps set a different plan or fail halfway? Checking logs for both events can clarify this.
+
+By asking these questions, you’ll gather information on whether the issue is due to data not being written correctly or data not being read/updated by the frontend. Each answer will narrow down the suspect area:
+
+If the database entries and capabilities API are correct (showing the new plan and features), then the problem is likely on the frontend caching/refresh side.
+
+If the database or API still shows the old plan despite payment, then the issue lies in the webhook processing or database update logic.
+
+Use the answers to focus your debugging. For instance, if the capabilities endpoint still reports the old plan, you’ll dive back into why the transaction didn’t update tenantPlanAssignments or if the wrong tenant ID was used. If the backend is correct but UI is stale, you’ll investigate the React Query invalidation or session refresh. Each of the questions above should bring you one step closer to the root cause of the upgrade not reflecting in the app. Good luck!
