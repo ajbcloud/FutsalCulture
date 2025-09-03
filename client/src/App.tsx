@@ -52,6 +52,7 @@ import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import VerifyEmailSent from "@/pages/VerifyEmailSent";
 import SetPassword from "@/pages/SetPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvite from "@/pages/accept-invite";
 import PlayerInvite from "@/pages/player-invite";
 import Parent2Invite from "@/pages/parent2-invite";
@@ -85,6 +86,7 @@ function Router() {
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/verify-email-sent" component={VerifyEmailSent} />
         <Route path="/set-password" component={SetPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/accept-invite" component={AcceptInvite} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />

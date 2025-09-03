@@ -470,4 +470,72 @@ authVerificationRouter.post("/resend_verification", async (req, res) => {
   return res.json({ ok: true });
 });
 
+// Password reset - for existing users who forgot their password
+authVerificationRouter.post("/forgot-password", async (req, res) => {
+  const { email } = req.body as { email?: string };
+  
+  if (!email) {
+    return res.json({ ok: true, message: "If an account exists, a reset link has been sent." }); // Don't reveal if email exists
+  }
+
+  try {
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.email, String(email).toLowerCase()));
+    
+    if (!user || !user.emailVerifiedAt) {
+      return res.json({ ok: true, message: "If an account exists, a reset link has been sent." }); // Don't reveal if email exists or is unverified
+    }
+
+    // Create password reset token (reusing email verification token structure)
+    const { raw, hash } = newToken();
+    const expires = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24 hours for password reset
+    
+    await db.insert(emailVerificationTokens).values({
+      userId: user.id,
+      tokenHash: hash,
+      expiresAt: expires,
+    });
+
+    const app_url = process.env.NODE_ENV === 'production' 
+      ? 'https://playhq.app' 
+      : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
+    const link = `${app_url}/reset-password?token=${encodeURIComponent(raw)}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #2563eb;">Reset Your Password</h1>
+        <p>Hi ${user.firstName || 'there'},</p>
+        <p>We received a request to reset your password. Click the link below to create a new password:</p>
+        <p style="margin: 30px 0;">
+          <a href="${link}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Reset Password
+          </a>
+        </p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="background: #f3f4f6; padding: 10px; word-break: break-all;">${link}</p>
+        <p>This link will expire in 24 hours.</p>
+        <p>If you didn't request this password reset, you can safely ignore this email.</p>
+        <p>Best regards,<br>The PlayHQ Team</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email!,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      subject: "Reset your PlayHQ password",
+      html,
+      text: `Reset your password: ${link}`,
+    });
+
+    console.log(`Password reset email sent to ${user.email}`);
+
+    return res.json({ ok: true, message: "If an account exists, a reset link has been sent." });
+
+  } catch (error) {
+    console.error("Password reset error:", error);
+    return res.json({ ok: true, message: "If an account exists, a reset link has been sent." }); // Don't reveal errors
+  }
+});
+
 export default authVerificationRouter;
