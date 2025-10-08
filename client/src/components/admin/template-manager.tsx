@@ -72,18 +72,18 @@ const TEMPLATE_METHODS = [
 ];
 
 const AVAILABLE_VARIABLES = [
-  { var: "{{parentName}}", desc: "Adult's full name" },
+  { var: "{{parentName}}", desc: "Parent/Adult's full name" },
   { var: "{{playerName}}", desc: "Player's full name" },
   { var: "{{sessionDate}}", desc: "Session date" },
   { var: "{{sessionTime}}", desc: "Session time" },
   { var: "{{sessionLocation}}", desc: "Session location" },
   { var: "{{sessionAgeGroup}}", desc: "Session age group" },
   { var: "{{creditAmount}}", desc: "Credit amount" },
-  { var: "{{organizationName}}", desc: "Organization name" },
-  { var: "{{organizationPhone}}", desc: "Organization phone" },
+  { var: "{{organizationName}}", desc: "Organization/tenant name" },
+  { var: "{{organizationPhone}}", desc: "Organization phone number" },
   { var: "{{waitlistPosition}}", desc: "Position on waitlist" },
   { var: "{{paymentWindowHours}}", desc: "Payment window in hours" },
-  { var: "{{paymentDeadline}}", desc: "Payment deadline" },
+  { var: "{{paymentDeadline}}", desc: "Payment deadline date/time" },
   { var: "{{verificationLink}}", desc: "Email verification link" },
   { var: "{{resetLink}}", desc: "Password reset link" },
   { var: "{{ticketNumber}}", desc: "Help request ticket number" },
