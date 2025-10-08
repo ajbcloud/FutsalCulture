@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserCheck, Users, Shield, CreditCard } from "lucide-react";
+import { UserCheck, Users, Shield, CreditCard, Ticket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
+import { Badge } from "@/components/ui/badge";
 
 export default function SignupParentFlow() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -18,6 +19,10 @@ export default function SignupParentFlow() {
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  
+  // Invite code data
+  const [inviteCodeData, setInviteCodeData] = useState<any>(null);
+  const [preFilledFields, setPreFilledFields] = useState<string[]>([]);
   
   // Parent info
   const [parentData, setParentData] = useState({
@@ -39,6 +44,37 @@ export default function SignupParentFlow() {
   // Consent document modal
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [signedConsents, setSignedConsents] = useState<any[]>([]);
+
+  // Load invite code data from sessionStorage on mount
+  useEffect(() => {
+    const storedCodeData = sessionStorage.getItem('inviteCodeData');
+    if (storedCodeData) {
+      try {
+        const codeData = JSON.parse(storedCodeData);
+        setInviteCodeData(codeData);
+        
+        const preFilled: string[] = [];
+        
+        // Auto-populate gender if available
+        if (codeData.preFillData?.gender) {
+          setChildData(prev => ({ ...prev, gender: codeData.preFillData.gender }));
+          preFilled.push('gender');
+        }
+        
+        setPreFilledFields(preFilled);
+        
+        // Show toast about pre-filled data
+        if (preFilled.length > 0) {
+          toast({
+            title: "Invite code applied",
+            description: `${preFilled.join(', ')} has been pre-filled from your invite code`,
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing invite code data:', error);
+      }
+    }
+  }, []);
 
   const handleParentSubmit = () => {
     if (parentData.password !== parentData.confirmPassword) {
@@ -83,20 +119,23 @@ export default function SignupParentFlow() {
         throw new Error("Consent documents are required to complete registration");
       }
 
-      // Create parent account
-      const parentResult = await apiRequest("POST", "/api/auth/register", {
+      // Create parent account with invite code ID
+      const parentResponse = await apiRequest("POST", "/api/auth/register", {
         ...parentData,
         role: "parent",
-        consentDocuments: consentDocuments.map(doc => doc.id), // Include consent document IDs
+        consentDocuments: consentDocuments.map(doc => doc.id),
+        inviteCodeId: inviteCodeData?.codeId, // Include invite code ID
       });
+      const parentResult = await parentResponse.json();
       
       // Create child player
-      const playerResult = await apiRequest("POST", "/api/players", {
+      const playerResponse = await apiRequest("POST", "/api/players", {
         ...childData,
         dateOfBirth: dob,
         parentId: parentResult.id,
-        consentDocuments: consentDocuments.map(doc => doc.id), // Include consent document IDs
+        consentDocuments: consentDocuments.map(doc => doc.id),
       });
+      const playerResult = await playerResponse.json();
       
       // Create guardian link
       await apiRequest("POST", "/api/guardians", {
@@ -140,6 +179,14 @@ export default function SignupParentFlow() {
               <CardDescription>
                 Let's start with your information as the adult or guardian
               </CardDescription>
+              {inviteCodeData && (
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <Ticket className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    Using invite code: <span className="font-medium text-foreground">{inviteCodeData.code}</span>
+                  </span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -252,7 +299,15 @@ export default function SignupParentFlow() {
               </div>
               
               <div className="space-y-2">
-                <Label>Gender</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Gender</Label>
+                  {preFilledFields.includes('gender') && (
+                    <Badge variant="secondary" className="text-xs" data-testid="badge-prefilled-gender">
+                      <Ticket className="h-3 w-3 mr-1" />
+                      Pre-filled from invite code
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2">
                     <input
@@ -261,6 +316,7 @@ export default function SignupParentFlow() {
                       value="boys"
                       checked={childData.gender === "boys"}
                       onChange={(e) => setChildData({...childData, gender: "boys"})}
+                      data-testid="radio-gender-boys"
                     />
                     Boys
                   </label>
@@ -271,6 +327,7 @@ export default function SignupParentFlow() {
                       value="girls"
                       checked={childData.gender === "girls"}
                       onChange={(e) => setChildData({...childData, gender: "girls"})}
+                      data-testid="radio-gender-girls"
                     />
                     Girls
                   </label>
@@ -325,63 +382,44 @@ export default function SignupParentFlow() {
                 </div>
               </div>
               
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
-                  <Shield className="h-4 w-4" />
-                  <span className="font-medium">Next: Consent Documents</span>
-                </div>
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  You'll be asked to review and digitally sign consent documents including medical authorization, 
-                  liability waivers, and photo releases for your child.
-                </p>
-              </div>
-              
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   onClick={() => setStep(2)}
                   className="flex-1"
-                  disabled={loading}
                 >
                   Back
                 </Button>
                 <Button 
                   onClick={handleChildSubmit} 
                   className="flex-1"
-                  disabled={loading}
-                  data-testid="button-review-consent"
+                  data-testid="button-continue-to-consent"
                 >
-                  {loading ? "Processing..." : "Review & Sign Consent Documents"}
+                  Continue to Consent
                 </Button>
               </div>
             </CardContent>
           </>
         )}
-
-        {/* Consent Document Modal */}
+      </Card>
+      
+      {showConsentModal && (
         <ConsentDocumentModal
           isOpen={showConsentModal}
-          onClose={() => {
-            // Prevent closing without completion - show warning
-            toast({
-              title: "Consent Required",
-              description: "You must complete all consent documents to proceed with registration.",
-              variant: "destructive",
-            });
-          }}
+          onClose={() => setShowConsentModal(false)}
           onComplete={handleConsentComplete}
+          isParentSigning={true}
           playerData={{
             firstName: childData.firstName,
             lastName: childData.lastName,
-            birthDate: dob || ''
+            birthDate: dob || '',
           }}
           parentData={{
             firstName: parentData.firstName,
-            lastName: parentData.lastName
+            lastName: parentData.lastName,
           }}
-          isParentSigning={true}
         />
-      </Card>
+      )}
     </div>
   );
 }

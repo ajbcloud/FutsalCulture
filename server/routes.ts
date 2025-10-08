@@ -293,7 +293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role, 
         parentContact, 
         consentDocuments,
-        tenantId
+        tenantId,
+        inviteCodeId // New parameter for invite code
       } = req.body;
 
       // Validate required fields
@@ -340,6 +341,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Tenant ID required" });
       }
 
+      // Process invite code if provided
+      if (inviteCodeId) {
+        try {
+          // Increment the invite code usage count
+          await storage.incrementInviteCodeUsage(inviteCodeId);
+          console.log(`✅ Invite code usage incremented:`, { inviteCodeId });
+        } catch (error) {
+          console.error("Error incrementing invite code usage:", error);
+          // Continue with registration even if this fails - don't block user
+        }
+      }
+
       // Check auto-approve setting
       const autoApproveSetting = await db.select()
         .from(systemSettings)
@@ -383,6 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: newUser.id, 
         role, 
         consentDocuments: consentDocuments.length,
+        inviteCodeId: inviteCodeId || 'none',
         autoApprove 
       });
 
