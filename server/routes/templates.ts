@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertNotificationTemplateSchema } from "@shared/schema";
 import { z } from "zod";
+import { createDefaultTemplatesForTenant } from "../helpers/default-templates";
 
 const router = Router();
 
@@ -132,6 +133,41 @@ router.delete('/templates/:id', async (req: any, res) => {
   } catch (error) {
     console.error('Error deleting template:', error);
     res.status(500).json({ message: 'Failed to delete template' });
+  }
+});
+
+router.post('/templates/setup-defaults', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!user.isAdmin && !user.isSuperAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const createdCount = await createDefaultTemplatesForTenant(user.tenantId);
+
+    if (createdCount === 0) {
+      return res.json({ 
+        message: 'Default templates already exist for this tenant',
+        created: 0 
+      });
+    }
+
+    res.json({ 
+      message: `Successfully created ${createdCount} default templates`,
+      created: createdCount 
+    });
+  } catch (error) {
+    console.error('Error creating default templates:', error);
+    res.status(500).json({ message: 'Failed to create default templates' });
   }
 });
 

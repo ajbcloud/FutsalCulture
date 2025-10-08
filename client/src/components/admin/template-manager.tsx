@@ -151,6 +151,31 @@ export default function TemplateManager() {
     },
   });
 
+  const setupDefaultsMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/templates/setup-defaults"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
+      if (data.created > 0) {
+        toast({ 
+          title: "Default templates created",
+          description: `Successfully created ${data.created} default templates`
+        });
+      } else {
+        toast({ 
+          title: "Default templates already exist",
+          description: "Your tenant already has default templates set up"
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create default templates",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -232,20 +257,32 @@ export default function TemplateManager() {
               <TabsTrigger value="email" data-testid="filter-email">Email</TabsTrigger>
               <TabsTrigger value="sms" data-testid="filter-sms">SMS</TabsTrigger>
             </TabsList>
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
+            <div className="flex gap-2">
+              {templates.length === 0 && (
                 <Button
-                  onClick={() => {
-                    resetForm();
-                    setIsCreateOpen(true);
-                  }}
-                  data-testid="button-create-template"
+                  onClick={() => setupDefaultsMutation.mutate()}
+                  disabled={setupDefaultsMutation.isPending}
+                  variant="outline"
+                  data-testid="button-setup-defaults"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Template
+                  {setupDefaultsMutation.isPending ? "Creating..." : "Setup Default Templates"}
                 </Button>
-              </DialogTrigger>
-            </Dialog>
+              )}
+              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      resetForm();
+                      setIsCreateOpen(true);
+                    }}
+                    data-testid="button-create-template"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Template
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </div>
           </div>
         </Tabs>
       </div>
