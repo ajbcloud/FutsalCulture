@@ -13,7 +13,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
-import { Plus, Edit, Trash2, Upload, Download, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Download, Settings, Users } from 'lucide-react';
 import { SessionsImportModal } from '@/components/import/SessionsImportModal';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -35,6 +35,9 @@ export default function AdminSessions() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMassUpdateModal, setShowMassUpdateModal] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupFormData, setGroupFormData] = useState({ name: '', description: '' });
+  const [creatingGroup, setCreatingGroup] = useState(false);
   
   // Feature flags for premium features
   const { hasFeature: hasBulkOperations } = useHasFeature('bulk_operations');
@@ -272,6 +275,68 @@ export default function AdminSessions() {
     setShowImportModal(false);
   };
 
+  const handleCreateGroupFromSessions = async () => {
+    if (!groupFormData.name.trim()) {
+      toast({ title: "Please enter a group name", variant: "destructive" });
+      return;
+    }
+
+    if (selectedSessions.size === 0) {
+      toast({ title: "No sessions selected", variant: "destructive" });
+      return;
+    }
+
+    setCreatingGroup(true);
+    try {
+      const groupResponse = await fetch('/api/contact-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: groupFormData.name,
+          description: groupFormData.description,
+        }),
+      });
+
+      if (!groupResponse.ok) throw new Error('Failed to create group');
+      const { group } = await groupResponse.json();
+
+      const allParticipants = [];
+      const sessionIds = Array.from(selectedSessions);
+      for (const sessionId of sessionIds) {
+        const response = await fetch(`/api/admin/sessions/${sessionId}/participants`);
+        if (response.ok) {
+          const { participants } = await response.json();
+          allParticipants.push(...participants);
+        }
+      }
+
+      const uniqueUserIds = Array.from(new Set(allParticipants.map((p: any) => p.id)));
+
+      if (uniqueUserIds.length > 0) {
+        const bulkResponse = await fetch(`/api/contact-groups/${group.id}/members/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: uniqueUserIds }),
+        });
+
+        if (!bulkResponse.ok) throw new Error('Failed to add members to group');
+      }
+
+      toast({ 
+        title: "Group created successfully", 
+        description: `Added ${uniqueUserIds.length} participants from ${selectedSessions.size} session(s)` 
+      });
+
+      setShowCreateGroupModal(false);
+      setGroupFormData({ name: '', description: '' });
+      setSelectedSessions(new Set());
+    } catch (error: any) {
+      console.error('Error creating group:', error);
+      toast({ title: "Failed to create group", description: error.message, variant: "destructive" });
+    }
+    setCreatingGroup(false);
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -288,16 +353,28 @@ export default function AdminSessions() {
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Sessions Management</h1>
         <div className="flex flex-wrap gap-2 sm:gap-3">
           {selectedSessions.size > 0 && (
-            <Button 
-              variant="outline"
-              onClick={() => setShowMassUpdateModal(true)}
-              className="border-orange-600 text-orange-300 hover:bg-orange-900 text-sm px-3 py-2 h-9"
-              size="sm"
-            >
-              <Settings className="w-4 h-4 mr-1" />
-              <span className="hidden sm:inline">Mass Update ({selectedSessions.size})</span>
-              <span className="sm:hidden">Update ({selectedSessions.size})</span>
-            </Button>
+            <>
+              <Button 
+                variant="outline"
+                onClick={() => setShowMassUpdateModal(true)}
+                className="border-orange-600 text-orange-300 hover:bg-orange-900 text-sm px-3 py-2 h-9"
+                size="sm"
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Mass Update ({selectedSessions.size})</span>
+                <span className="sm:hidden">Update ({selectedSessions.size})</span>
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowCreateGroupModal(true)}
+                className="border-blue-600 text-blue-300 hover:bg-blue-900 text-sm px-3 py-2 h-9"
+                size="sm"
+              >
+                <Users className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Create Group ({selectedSessions.size})</span>
+                <span className="sm:hidden">Group ({selectedSessions.size})</span>
+              </Button>
+            </>
           )}
           {hasBulkOperations && (
             <Button 
@@ -1210,6 +1287,69 @@ export default function AdminSessions() {
                   </>
                 ) : (
                   `Update ${selectedSessions.size} Sessions`
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Group from Sessions Dialog */}
+      <Dialog open={showCreateGroupModal} onOpenChange={setShowCreateGroupModal}>
+        <DialogContent className="bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">Create Contact Group from Sessions</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-400">
+              Create a new contact group with all parents who have players in the {selectedSessions.size} selected session(s).
+            </p>
+
+            <div>
+              <Label className="text-zinc-300">Group Name *</Label>
+              <Input
+                value={groupFormData.name}
+                onChange={(e) => setGroupFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., U12 Boys Weekly Players"
+                className="bg-zinc-800 border-zinc-700 text-white"
+              />
+            </div>
+
+            <div>
+              <Label className="text-zinc-300">Description (Optional)</Label>
+              <Textarea
+                value={groupFormData.description}
+                onChange={(e) => setGroupFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Add a description for this group..."
+                className="bg-zinc-800 border-zinc-700 text-white"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-700">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowCreateGroupModal(false);
+                  setGroupFormData({ name: '', description: '' });
+                }}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateGroupFromSessions}
+                disabled={creatingGroup || !groupFormData.name.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {creatingGroup ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Group'
                 )}
               </Button>
             </div>
