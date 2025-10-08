@@ -4,6 +4,7 @@ import { db } from './db';
 import { tenants, subscriptions, tenantPlanAssignments } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { clearCapabilitiesCache } from './middleware/featureAccess';
+import { logPlanChange, determinePlanChangeType, calculateMRR, calculateAnnualValue } from './services/planHistoryService';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
@@ -119,6 +120,16 @@ router.post('/webhook', async (req, res) => {
 
             // Update tenant plan if we have both tenant ID and plan level
             if (tenantId && planLevel) {
+              // Get current plan before update
+              const [currentTenant] = await db
+                .select({ planLevel: tenants.planLevel })
+                .from(tenants)
+                .where(eq(tenants.id, tenantId))
+                .limit(1);
+              
+              const oldPlan = currentTenant?.planLevel as any;
+              const newPlan = planLevel as 'free' | 'core' | 'growth' | 'elite';
+              
               await db.transaction(async (tx) => {
                 // Update tenant
                 await tx.update(tenants)
@@ -164,6 +175,22 @@ router.post('/webhook', async (req, res) => {
                     planCode: planLevel,
                     since: new Date(),
                   });
+              });
+
+              // Log plan change to history
+              const changeType = determinePlanChangeType(oldPlan, newPlan);
+              await logPlanChange({
+                tenantId,
+                toPlan: newPlan,
+                changeType: changeType === 'initial' ? 'trial_conversion' : changeType,
+                automatedTrigger: 'stripe_checkout_completed',
+                mrr: calculateMRR(newPlan),
+                annualValue: calculateAnnualValue(newPlan),
+                metadata: {
+                  stripeSubscriptionId: subscriptionId,
+                  stripeCustomerId: customerId,
+                  checkoutSessionId: session.id,
+                },
               });
 
               // Clear capabilities cache for this tenant
@@ -227,6 +254,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   console.log(`✅ Found tenant: ${tenant[0].id} for customer: ${customerId}`);
 
   const status = subscription.status === 'active' ? 'active' : 'inactive';
+  const oldPlan = tenant[0].planLevel as any;
+  const newPlan = planLevel as 'free' | 'core' | 'growth' | 'elite';
 
   // Update tenant and subscription record
   await db.transaction(async (tx) => {
@@ -271,6 +300,24 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       });
   });
 
+  // Log plan change to history (if plan actually changed)
+  if (oldPlan !== newPlan) {
+    const changeType = determinePlanChangeType(oldPlan, newPlan);
+    await logPlanChange({
+      tenantId: tenant[0].id,
+      toPlan: newPlan,
+      changeType,
+      automatedTrigger: 'stripe_subscription_updated',
+      mrr: calculateMRR(newPlan),
+      annualValue: calculateAnnualValue(newPlan),
+      metadata: {
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customerId,
+        subscriptionStatus: status,
+      },
+    });
+  }
+
   // Clear capabilities cache
   clearCapabilitiesCache(tenant[0].id);
 
@@ -288,6 +335,9 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
   if (tenant.length === 0) {
     return;
   }
+
+  const oldPlan = tenant[0].planLevel as any;
+  const newPlan = 'core' as const;
 
   // Reset tenant to core plan and mark subscription canceled
   await db.transaction(async (tx) => {
@@ -320,6 +370,24 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
         since: new Date(),
       });
   });
+
+  // Log plan change to history
+  if (oldPlan !== newPlan) {
+    await logPlanChange({
+      tenantId: tenant[0].id,
+      toPlan: newPlan,
+      changeType: 'downgrade',
+      reason: 'Subscription cancelled',
+      automatedTrigger: 'stripe_subscription_cancelled',
+      mrr: calculateMRR(newPlan),
+      annualValue: calculateAnnualValue(newPlan),
+      metadata: {
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customerId,
+        cancelledAt: new Date().toISOString(),
+      },
+    });
+  }
 
   // Clear capabilities cache
   clearCapabilitiesCache(tenant[0].id);

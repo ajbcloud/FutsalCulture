@@ -19,6 +19,7 @@ import * as integ from '../controllers/superAdmin/integrationsHealth';
 import * as comms from '../controllers/superAdmin/comms';
 import * as sec from '../controllers/superAdmin/security';
 import * as invitations from '../controllers/superAdmin/invitations';
+import * as planHistory from '../controllers/superAdmin/planHistory';
 
 const r = Router();
 r.use(requireAuth, requireSuperAdmin);
@@ -110,5 +111,11 @@ r.delete('/invitations/:id', invitations.remove);
 r.post('/invitations/bulk-create', invitations.bulkCreate);
 r.post('/invitations/:id/clone', invitations.cloneCode);
 r.post('/invitations/:id/transfer', invitations.transferCode);
+
+// Plan History & Tracking routes
+r.get('/plan-history', planHistory.getAllPlanHistory);
+r.get('/plan-history/stats', planHistory.getPlanChangeStats);
+r.get('/plan-history/downgrades', planHistory.getRecentDowngrades);
+r.get('/plan-history/tenant/:tenantId', planHistory.getTenantPlanHistory);
 
 export default r;
