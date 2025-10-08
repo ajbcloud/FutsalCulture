@@ -51,6 +51,7 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
       country: country || null,
       contactName: contact_name,
       contactEmail: email.toLowerCase(),
+      planLevel: "free", // Always start new tenants on free plan
     }).returning();
 
     // Create user with pending verification status
@@ -196,6 +197,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
       contactName: contact_name,
       contactEmail: contact_email.toLowerCase(),
       inviteCode,
+      planLevel: "free", // Always start new tenants on free plan
     }).returning();
 
     // Create user with pending verification status

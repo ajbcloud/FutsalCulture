@@ -51,6 +51,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
         tenantCode,
         contactName: contact_name,
         contactEmail: contact_email,
+        planLevel: "free", // Always start new tenants on free plan
       }).returning();
 
       // Create subscription record (free plan)
@@ -58,6 +59,15 @@ export function setupBetaOnboardingRoutes(app: Express) {
         tenantId: tenant.id,
         planKey: "free",
         status: "inactive"
+      });
+
+      // Create tenant plan assignment (free plan) - CRITICAL for feature access
+      const { tenantPlanAssignments } = await import('@shared/schema');
+      await db.insert(tenantPlanAssignments).values({
+        tenantId: tenant.id,
+        planCode: "free",
+        since: new Date(),
+        until: null
       });
 
       // Record audit event
