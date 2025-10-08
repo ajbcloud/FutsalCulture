@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 export default function PersonalSignup() {
+  const { term } = useUserTerminology();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -186,8 +188,8 @@ export default function PersonalSignup() {
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="parent">Adult</SelectItem>
-                  <SelectItem value="player">Player</SelectItem>
+                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="player">{term}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

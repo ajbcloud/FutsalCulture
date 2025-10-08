@@ -10,8 +10,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 export default function SignupPlayerFlow() {
+  const { term } = useUserTerminology();
   const searchParams = new URLSearchParams(window.location.search);
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -362,7 +364,7 @@ export default function SignupPlayerFlow() {
             <CardContent className="space-y-6">
               <div className="grid gap-4">
                 <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2">Player Information</h3>
+                  <h3 className="font-medium mb-2">{term} Information</h3>
                   <p className="text-sm text-muted-foreground">
                     {playerData.firstName} {playerData.lastName} • {playerData.email}
                   </p>

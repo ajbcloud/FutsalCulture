@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 export default function GetStarted() {
+  const { term } = useUserTerminology();
   const [formData, setFormData] = useState({
     org_name: "",
     contact_name: "",
@@ -342,7 +344,7 @@ export default function GetStarted() {
 
           <div className="mt-6 pt-4 border-t text-center">
             <p className="text-sm text-muted-foreground">
-              Players & parents:{" "}
+              {term}s & {term === "Player" ? "parents" : "players"}:{" "}
               <a href="/join" className="text-primary hover:underline">
                 join with a code
               </a>

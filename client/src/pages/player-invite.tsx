@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 interface PlayerInviteData {
   valid: boolean;
@@ -19,6 +20,7 @@ interface PlayerInviteData {
 }
 
 export default function PlayerInvite() {
+  const { term } = useUserTerminology();
   const [token, setToken] = useState<string>("");
   const [inviteData, setInviteData] = useState<PlayerInviteData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -195,16 +197,16 @@ export default function PlayerInvite() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <CheckCircle className="w-6 h-6 text-green-600" />
-            <CardTitle>Create Your Player Account</CardTitle>
+            <CardTitle>Create Your {term} Account</CardTitle>
           </div>
           <CardDescription>
-            Complete your account setup to access the player portal
+            Complete your account setup to access the {term.toLowerCase()} portal
           </CardDescription>
         </CardHeader>
         <CardContent>
           {inviteData.player && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-blue-900">Player Information</h3>
+              <h3 className="font-medium text-blue-900">{term} Information</h3>
               <p className="text-blue-700">
                 {inviteData.player.firstName} {inviteData.player.lastName}
               </p>
