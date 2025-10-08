@@ -184,10 +184,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
     }
   });
 
-  // Join by tenant code
+  // Join by tenant code (with age-aware approval logic)
   app.post('/api/beta/join-by-code', async (req, res) => {
     try {
-      const { tenant_code, email, role, user_id } = req.body;
+      const { tenant_code, email, role, user_id, date_of_birth, guardian_email } = req.body;
       
       if (!tenant_code || !email || !role || !user_id) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -214,22 +214,117 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Already a member of this organization" });
       }
 
-      // Create tenant user relationship
-      await db.insert(tenantUsers).values({
-        tenantId: tenant.id,
-        userId: user_id,
-        role
+      // Get user record
+      const { users } = await import('@shared/schema');
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, user_id)
       });
 
-      // Record audit event
-      await db.insert(auditEvents).values({
-        tenantId: tenant.id,
-        actorUserId: user_id,
-        eventType: "joined_by_code",
-        metadataJson: { email, role }
-      });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
-      res.json({ success: true, tenantId: tenant.id });
+      // Calculate age if dateOfBirth is provided
+      let isMinor = false;
+      let age = null;
+      
+      if (date_of_birth) {
+        const birthDate = new Date(date_of_birth);
+        const today = new Date();
+        age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        isMinor = age < 18;
+        
+        // Update user's dateOfBirth
+        await db.update(users)
+          .set({ dateOfBirth: date_of_birth })
+          .where(eq(users.id, user_id));
+      }
+
+      // If minor, require approval
+      if (isMinor) {
+        // Update user to pending status
+        await db.update(users)
+          .set({ 
+            registrationStatus: 'pending',
+            isApproved: false
+          })
+          .where(eq(users.id, user_id));
+
+        // Create notification for admins
+        const { notifications } = await import('@shared/schema');
+        await db.insert(notifications).values({
+          tenantId: tenant.id,
+          type: 'email',
+          recipientType: 'admins',
+          subject: 'Minor Access Request Requires Approval',
+          body: `A minor (age ${age}) has requested to join your organization:\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${email}\nRole: ${role}\n\nPlease review and approve this request in the admin panel.`,
+          status: 'pending'
+        });
+
+        // Notify guardian if email provided
+        if (guardian_email) {
+          await db.insert(notifications).values({
+            tenantId: tenant.id,
+            type: 'email',
+            recipientEmail: guardian_email,
+            recipientType: 'custom',
+            subject: 'Minor Access Request Pending Approval',
+            body: `${user.firstName} ${user.lastName} (age ${age}) has requested to join ${tenant.name}.\n\nThis request is pending approval from the organization administrators. You will be notified when the request is approved or denied.`,
+            status: 'pending'
+          });
+        }
+
+        // Record audit event
+        await db.insert(auditEvents).values({
+          tenantId: tenant.id,
+          actorUserId: user_id,
+          eventType: "join_request_pending",
+          metadataJson: { email, role, age, isMinor: true, guardianEmail: guardian_email || null }
+        });
+
+        res.json({ 
+          success: true, 
+          tenantId: tenant.id,
+          requiresApproval: true,
+          message: "Your request has been submitted for approval. An administrator will review it shortly."
+        });
+
+      } else {
+        // Adult or no age provided - proceed with normal flow
+        // Create tenant user relationship
+        await db.insert(tenantUsers).values({
+          tenantId: tenant.id,
+          userId: user_id,
+          role
+        });
+
+        // Update user to approved if they weren't already
+        if (!user.isApproved) {
+          await db.update(users)
+            .set({ 
+              registrationStatus: 'approved',
+              isApproved: true,
+              approvedAt: new Date()
+            })
+            .where(eq(users.id, user_id));
+        }
+
+        // Record audit event
+        await db.insert(auditEvents).values({
+          tenantId: tenant.id,
+          actorUserId: user_id,
+          eventType: "joined_by_code",
+          metadataJson: { email, role, age }
+        });
+
+        res.json({ success: true, tenantId: tenant.id });
+      }
 
     } catch (error) {
       console.error("Beta join-by-code error:", error);
