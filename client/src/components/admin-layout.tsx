@@ -5,6 +5,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
+import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
@@ -134,8 +135,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </Link>
                 );
               })}
-              
+            </div>
 
+            {/* Trial Status Indicator - embedded in sidebar */}
+            <div className="px-3 mt-4">
+              <TrialStatusIndicator variant="embedded" />
             </div>
           </nav>
         </div>

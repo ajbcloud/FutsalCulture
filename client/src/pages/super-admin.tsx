@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import SuperAdminOverview from "@/components/super-admin/overview";
 import SuperAdminTenants from "@/components/super-admin/tenants";
 import SuperAdminAnalytics from "@/components/super-admin/analytics";
@@ -242,6 +243,11 @@ export default function SuperAdminPage() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Trial Status Indicator - embedded in sidebar */}
+              <div className="px-3 mt-4">
+                <TrialStatusIndicator variant="embedded" />
               </div>
             </nav>
           </div>

@@ -150,9 +150,6 @@ function Router() {
 
       {/* Cookie Consent Banner - shows globally */}
       <CookieConsentBanner />
-      
-      {/* Trial Status Indicator - shows for trial tenants */}
-      {isAuthenticated && user?.tenantId && <TrialStatusIndicator />}
     </div>
   );
 }

@@ -23,7 +23,11 @@ interface TrialStatus {
   billingStatus: string;
 }
 
-export function TrialStatusIndicator() {
+interface TrialStatusIndicatorProps {
+  variant?: 'floating' | 'embedded';
+}
+
+export function TrialStatusIndicator({ variant = 'floating' }: TrialStatusIndicatorProps = {}) {
   const { user } = useAuth();
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [countdownKey, setCountdownKey] = useState(0);
@@ -119,6 +123,70 @@ export function TrialStatusIndicator() {
     }
   };
 
+  // Embedded version for sidebar
+  if (variant === 'embedded') {
+    return (
+      <>
+        <div className="space-y-2" data-testid="trial-status-indicator">
+          <div className={`rounded-lg border p-3 ${getColorClasses()}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1 mb-1">
+                  <Badge variant={getBadgeVariant()} className="text-xs">
+                    Trial
+                  </Badge>
+                  {trialStatus.status === 'grace' && (
+                    <Badge variant="destructive" className="text-xs">
+                      Grace
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs font-semibold truncate" data-testid="trial-countdown">
+                  {formatCountdown()}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Button
+                onClick={handleUpgradeClick}
+                size="sm"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                data-testid="button-upgrade-trial"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Upgrade
+              </Button>
+
+              {trialStatus.canExtend && trialStatus.extensionsUsed < trialStatus.maxExtensions && (
+                <Button
+                  onClick={() => setShowExtensionModal(true)}
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs h-8"
+                  data-testid="button-extend-trial"
+                >
+                  Extend ({trialStatus.maxExtensions - trialStatus.extensionsUsed})
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {showExtensionModal && (
+          <TrialExtensionModal
+            isOpen={showExtensionModal}
+            onClose={() => setShowExtensionModal(false)}
+            currentExtensions={trialStatus.extensionsUsed}
+            maxExtensions={trialStatus.maxExtensions}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Floating version (original)
   return (
     <>
       <AnimatePresence>
