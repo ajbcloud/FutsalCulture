@@ -213,4 +213,53 @@ router.get('/contact-groups/:id/members', async (req: any, res) => {
   }
 });
 
+router.post('/contact-groups/:id/members/bulk', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!user.isAdmin && !user.isSuperAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { userIds } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'userIds array is required' });
+    }
+
+    const group = await storage.getContactGroupById(req.params.id, user.tenantId);
+    if (!group) {
+      return res.status(404).json({ message: 'Contact group not found' });
+    }
+
+    const addedMembers = [];
+    const errors = [];
+
+    for (const memberUserId of userIds) {
+      try {
+        const member = await storage.addGroupMember(req.params.id, memberUserId, userId);
+        addedMembers.push(member);
+      } catch (error: any) {
+        errors.push({ userId: memberUserId, error: error.message });
+      }
+    }
+
+    res.json({ 
+      added: addedMembers.length,
+      members: addedMembers,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Error bulk adding group members:', error);
+    res.status(500).json({ message: 'Failed to bulk add group members' });
+  }
+});
+
 export default router;

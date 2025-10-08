@@ -1870,6 +1870,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/sessions/:sessionId/participants', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user.id;
+
+      const user = await storage.getUser(userId);
+      if (!user || (!user.isAdmin && !user.isAssistant)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { signups, players, users } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const participants = await db
+        .select({
+          userId: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+          playerFirstName: players.firstName,
+          playerLastName: players.lastName,
+        })
+        .from(signups)
+        .innerJoin(players, eq(signups.playerId, players.id))
+        .innerJoin(users, eq(players.parentId, users.id))
+        .where(eq(signups.sessionId, sessionId));
+
+      const uniqueParents = new Map();
+      participants.forEach(p => {
+        if (!uniqueParents.has(p.userId)) {
+          uniqueParents.set(p.userId, {
+            id: p.userId,
+            firstName: p.firstName,
+            lastName: p.lastName,
+            email: p.email,
+            phone: p.phone,
+          });
+        }
+      });
+
+      res.json({ participants: Array.from(uniqueParents.values()) });
+    } catch (error) {
+      console.error("Error fetching session participants:", error);
+      res.status(500).json({ message: "Failed to fetch participants" });
+    }
+  });
+
   // Player Offer routes (for waitlist promotion)
   app.get('/api/player/offers', isAuthenticated, async (req: any, res) => {
     try {
