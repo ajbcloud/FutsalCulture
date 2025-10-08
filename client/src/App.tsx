@@ -60,6 +60,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Status from "./pages/Status";
 import PersonalSettings from "./pages/personal-settings";
+import HouseholdManagement from "./pages/household-management";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -105,6 +106,7 @@ function Router() {
         <Route path="/parent2-invite/:token" component={Parent2Invite} />
         <Route path="/help" component={Help} />
         <Route path="/my-help-requests" component={MyHelpRequests} />
+        <Route path="/household" component={HouseholdManagement} />
         {(user?.isAdmin || user?.isAssistant) && (
           <>
             <Route path="/admin" component={AdminDashboard} />
