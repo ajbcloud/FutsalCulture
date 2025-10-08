@@ -1862,7 +1862,7 @@ export default function AdminSettings() {
             <CardContent className="space-y-6">
               {/* Payment Processors */}
               <div>
-                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-4 flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
                   Payment Processing
                 </h3>
@@ -1979,7 +1979,7 @@ export default function AdminSettings() {
 
               {/* Communication */}
               <div>
-                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-4 flex items-center">
                   <MessageSquare className="w-5 h-5 mr-2" />
                   Communications
                 </h3>
@@ -2129,7 +2129,7 @@ export default function AdminSettings() {
 
               {/* Calendar & Productivity */}
               <div>
-                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-4 flex items-center">
                   <Calendar className="w-5 h-5 mr-2" />
                   Calendar & Productivity
                 </h3>
@@ -2280,7 +2280,7 @@ export default function AdminSettings() {
               {/* Accounting */}
               <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS}>
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center">
+                  <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-4 flex items-center">
                     <DollarSign className="w-5 h-5 mr-2" />
                     Accounting & Finance
                   </h3>
