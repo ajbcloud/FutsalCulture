@@ -162,6 +162,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <p className="text-sm font-medium text-foreground truncate">
                       {user?.firstName} {user?.lastName}
                     </p>
+                    {user?.email && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    )}
                     {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground truncate">
                         Super Admin
@@ -179,6 +184,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
                     <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                    {user?.email && (
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    )}
                     {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground">
                         Super Admin

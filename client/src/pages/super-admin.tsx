@@ -268,6 +268,11 @@ export default function SuperAdminPage() {
                       <p className="text-sm font-medium text-foreground truncate">
                         {user?.firstName} {user?.lastName}
                       </p>
+                      {user?.email && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground truncate">
                         Super Admin
                       </p>
@@ -278,6 +283,9 @@ export default function SuperAdminPage() {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                      {user?.email && (
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">Super Admin</p>
                     </div>
                   </div>
