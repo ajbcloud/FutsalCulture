@@ -91,6 +91,9 @@ export const messageDirectionEnum = pgEnum("message_direction", ["outbound", "in
 export const consentTypeEnum = pgEnum("consent_type", ["opt_in", "opt_out"]);
 export const consentChannelEnum = pgEnum("consent_channel", ["sms", "email"]);
 
+// Code type enum for unified invite/access/discount codes
+export const codeTypeEnum = pgEnum("code_type", ["invite", "access", "discount"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -549,6 +552,42 @@ export const discountCodes = pgTable("discount_codes", {
   index("discount_codes_tenant_id_idx").on(table.tenantId),
   index("discount_codes_locked_to_player_idx").on(table.lockedToPlayerId),
   index("discount_codes_locked_to_parent_idx").on(table.lockedToParentId),
+]);
+
+// Unified Invite/Access Codes table - supports invite, access, and discount codes
+export const inviteCodes = pgTable("invite_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  code: varchar("code").notNull(),
+  codeType: codeTypeEnum("code_type").notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  // Pre-fill metadata fields for auto-populating signup forms
+  ageGroup: text("age_group"),
+  gender: text("gender"),
+  location: text("location"),
+  club: text("club"),
+  // Discount functionality
+  discountType: varchar("discount_type"), // 'percentage', 'fixed', 'full'
+  discountValue: integer("discount_value"), // percentage (0-100) or cents amount
+  // Usage and time limits
+  maxUses: integer("max_uses"), // null = unlimited
+  currentUses: integer("current_uses").default(0),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  // JSONB metadata for custom communication variables
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  // Audit fields
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("invite_codes_tenant_id_idx").on(table.tenantId),
+  index("invite_codes_code_idx").on(table.code),
+  index("invite_codes_is_default_idx").on(table.isDefault),
+  index("invite_codes_is_active_idx").on(table.isActive),
+  uniqueIndex("invite_codes_tenant_code_unique_idx").on(table.tenantId, table.code),
 ]);
 
 // Service billing table for platform service payment configuration
@@ -1883,6 +1922,25 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   lockedToPlayerId: z.string().optional(),
   lockedToParentId: z.string().optional(),
 });
+
+export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
+  id: true,
+  currentUses: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  code: z.string()
+    .min(3, "Code must be at least 3 characters")
+    .max(50, "Code must be less than 50 characters"),
+  codeType: z.enum(['invite', 'access', 'discount']),
+  discountType: z.enum(['percentage', 'fixed', 'full']).optional(),
+  discountValue: z.number().int().optional(),
+  maxUses: z.number().int().positive().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export type InviteCodeInsert = z.infer<typeof insertInviteCodeSchema>;
+export type InviteCodeSelect = typeof inviteCodes.$inferSelect;
 
 export const insertWaitlistSchema = createInsertSchema(waitlists).omit({
   id: true,
