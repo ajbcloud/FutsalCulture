@@ -563,7 +563,8 @@ export function setupSuperAdminRoutes(app: Express) {
         }
         
         // Try to get state abbreviation, fallback to the state value if it's already an abbreviation
-        const stateAbbrev = stateToAbbrev[tenant.state] || tenant.state;
+        // Always normalize to uppercase to avoid case-sensitivity issues (FL vs Fl)
+        const stateAbbrev = (stateToAbbrev[tenant.state] || tenant.state).toUpperCase();
         
         if (!acc[stateAbbrev]) {
           acc[stateAbbrev] = { 
