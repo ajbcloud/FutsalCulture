@@ -13,7 +13,10 @@ export default function Join() {
   const [formData, setFormData] = useState({
     code: "",
     email: "",
-    name: ""
+    name: "",
+    dateOfBirth: "",
+    role: "player",
+    guardianEmail: ""
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -74,25 +77,59 @@ export default function Join() {
       return;
     }
 
+    // Get current user from session (if logged in)
+    const userResponse = await apiRequest("GET", "/api/user");
+    let userId = null;
+    
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      userId = userData?.id;
+    }
+
+    if (!userId) {
+      toast({
+        title: "Not authenticated",
+        description: "Please log in or sign up first before joining with a code",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/join/by-code", {
-        code: formData.code,
+      const requestBody: any = {
+        tenant_code: formData.code,
         email: formData.email,
-        name: formData.name || undefined
-      });
+        role: formData.role,
+        user_id: userId
+      };
+
+      // Add optional fields
+      if (formData.dateOfBirth) {
+        requestBody.date_of_birth = formData.dateOfBirth;
+      }
+      if (formData.guardianEmail) {
+        requestBody.guardian_email = formData.guardianEmail;
+      }
+
+      const response = await apiRequest("POST", "/api/beta/join-by-code", requestBody);
 
       if (response.ok) {
         const result = await response.json();
         
-        if (result.status === "joined") {
+        if (result.requiresApproval) {
+          setSuccess(true);
+          toast({
+            title: "Approval required",
+            description: result.message || "Your request is pending approval",
+          });
+        } else {
           toast({
             title: "Successfully joined!",
-            description: "Welcome to your club. Redirecting...",
+            description: "Welcome to your organization. Redirecting...",
           });
           setTimeout(() => navigate("/app"), 1500);
-        } else if (result.status === "pending") {
-          setSuccess(true);
         }
       } else {
         const errorData = await response.json();
@@ -216,14 +253,48 @@ export default function Join() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name (optional)</Label>
+                <Label htmlFor="role">Joining as *</Label>
+                <select
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                  required
+                  data-testid="select-role"
+                >
+                  <option value="player">Player</option>
+                  <option value="parent">Parent</option>
+                  <option value="coach">Coach</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth (optional)</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Your full name"
-                  data-testid="input-name"
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  data-testid="input-date-of-birth"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Required for players under 18. Minors will need approval.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guardianEmail">Guardian Email (optional)</Label>
+                <Input
+                  id="guardianEmail"
+                  type="email"
+                  value={formData.guardianEmail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, guardianEmail: e.target.value }))}
+                  placeholder="parent@email.com"
+                  data-testid="input-guardian-email"
+                />
+                <p className="text-xs text-muted-foreground">
+                  For minors: parent/guardian will be notified of approval status
+                </p>
               </div>
 
               <Button 
