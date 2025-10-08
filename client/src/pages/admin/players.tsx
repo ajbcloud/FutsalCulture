@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { PlayerSessionHistoryDropdown } from '@/components/player-session-history-dropdown';
 import { useQuery } from '@tanstack/react-query';
 import { FileCheck, FileX, Loader2 } from 'lucide-react';
+import { useTerminology } from "@/contexts/TerminologyContext";
 
 // Consent Status Cell Component
 function ConsentStatusCell({ playerId, playerName }: { playerId: string; playerName: string }) {
@@ -109,6 +110,7 @@ export default function AdminPlayers() {
   
   const { toast } = useToast();
   const [location] = useLocation();
+  const { getAdult1Label, getAdult2Label, showGuardianColumns } = useTerminology();
 
   // Check for URL parameters on load and when location changes
   useEffect(() => {
@@ -541,8 +543,12 @@ export default function AdminPlayers() {
               <SortableHeader field="age">Age</SortableHeader>
               <SortableHeader field="gender">Gender</SortableHeader>
               <TableHead className="text-muted-foreground">Soccer Club</TableHead>
-              <SortableHeader field="parentName">Adult 1</SortableHeader>
-              <TableHead className="text-muted-foreground">Adult 2</TableHead>
+              {showGuardianColumns() && (
+                <>
+                  <SortableHeader field="parentName">{getAdult1Label() || "Guardian 1"}</SortableHeader>
+                  <TableHead className="text-muted-foreground">{getAdult2Label() || "Guardian 2"}</TableHead>
+                </>
+              )}
               <TableHead className="text-muted-foreground">Portal Access</TableHead>
               <TableHead className="text-muted-foreground">Consent Forms</TableHead>
               <SortableHeader field="signupCount">Sessions</SortableHeader>
@@ -567,28 +573,32 @@ export default function AdminPlayers() {
                 <TableCell className="text-muted-foreground">
                   {player.soccerClub || <span className="text-muted-foreground/60 italic">No club</span>}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {player.parentName ? (
-                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
-                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
-                        {player.parentName}
-                      </span>
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground/60">—</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {player.parent2Name ? (
-                    <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
-                      <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
-                        {player.parent2Name}
-                      </span>
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground/60">—</span>
-                  )}
-                </TableCell>
+                {showGuardianColumns() && (
+                  <>
+                    <TableCell className="text-muted-foreground">
+                      {player.parentName ? (
+                        <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
+                          <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
+                            {player.parentName}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {player.parent2Name ? (
+                        <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
+                          <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline">
+                            {player.parent2Name}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
+                  </>
+                )}
                 <TableCell>
                   <Badge 
                     variant={player.canAccessPortal ? "success" : "disabled"}
@@ -613,7 +623,7 @@ export default function AdminPlayers() {
             ))}
             {paginatedPlayers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={showGuardianColumns() ? 10 : 8} className="text-center text-muted-foreground py-8">
                   {filteredPlayers.length === 0 ? 'No players found' : 'No players on this page'}
                 </TableCell>
               </TableRow>
@@ -675,9 +685,9 @@ export default function AdminPlayers() {
                   />
                 </div>
 
-                {player.parentName && (
+                {showGuardianColumns() && player.parentName && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Adult:</span>
+                    <span className="text-muted-foreground">{getAdult1Label() || "Guardian 1"}:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parentName}
@@ -686,9 +696,9 @@ export default function AdminPlayers() {
                   </div>
                 )}
 
-                {player.parent2Name && (
+                {showGuardianColumns() && player.parent2Name && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Adult 2:</span>
+                    <span className="text-muted-foreground">{getAdult2Label() || "Guardian 2"}:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parent2Name}

@@ -8,6 +8,8 @@ type TerminologyPolicy = {
   teenSelfAccessAt: number;
   labels: {
     adultColumnLabel: "Parent" | "Guardian" | null;
+    adult1: string | null;
+    adult2: string | null;
     userTerm: "Parent" | "Player";
     guardianTerm: "Parent" | "Guardian" | null;
   };
@@ -41,11 +43,11 @@ export function TerminologyProvider({ children }: { children: React.ReactNode })
   });
 
   const getAdult1Label = (): string | null => {
-    return policy?.labels?.adultColumnLabel || "Guardian";
+    return policy?.labels?.adult1 ?? "Guardian 1";
   };
 
   const getAdult2Label = (): string | null => {
-    return policy?.labels?.adultColumnLabel || "Guardian";
+    return policy?.labels?.adult2 ?? "Guardian 2";
   };
 
   const showGuardianColumns = (): boolean => {

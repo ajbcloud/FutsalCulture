@@ -333,6 +333,8 @@ terminologyRouter.get("/terminology/policy", async (req: any, res) => {
       teenSelfAccessAt: policy.teenSelfAccessAt,
       labels: {
         adultColumnLabel: terminologyLabels.adultColumnLabel,
+        adult1: terminologyLabels.adult1,
+        adult2: terminologyLabels.adult2,
         userTerm: userTerm,
         guardianTerm: terminologyLabels.guardianTerm
       },
