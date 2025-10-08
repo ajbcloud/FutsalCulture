@@ -9,10 +9,11 @@ import {
   tenants,
   subscriptions // Assuming subscriptions table is imported
 } from '../../../shared/schema';
-
-// Cache for tenant capabilities
-const capabilitiesCache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { 
+  getCachedCapabilities, 
+  setCachedCapabilities, 
+  clearCapabilitiesCache as clearCache 
+} from '../../lib/capabilitiesCache';
 
 // Get capabilities for a tenant
 export async function getTenantCapabilities(req: Request, res: Response) {
@@ -24,10 +25,10 @@ export async function getTenantCapabilities(req: Request, res: Response) {
     }
 
     // Check cache
-    const cached = capabilitiesCache.get(tenantId);
-    if (cached && cached.expires > Date.now()) {
+    const cached = getCachedCapabilities(tenantId);
+    if (cached) {
       res.setHeader('X-Cache-Hit', 'true');
-      return res.json(cached.data);
+      return res.json(cached);
     }
 
     // Get current plan for tenant
@@ -124,10 +125,7 @@ export async function getTenantCapabilities(req: Request, res: Response) {
     };
 
     // Cache the result
-    capabilitiesCache.set(tenantId, {
-      data: result,
-      expires: Date.now() + CACHE_TTL
-    });
+    setCachedCapabilities(tenantId, result);
 
     res.setHeader('X-Cache-Hit', 'false');
     res.json(result);
@@ -188,13 +186,8 @@ export async function checkCapability(req: Request, res: Response) {
 }
 
 // Clear cache for a tenant (used after plan changes or overrides)
-export function clearCapabilitiesCache(tenantId?: string) {
-  if (tenantId) {
-    capabilitiesCache.delete(tenantId);
-  } else {
-    capabilitiesCache.clear();
-  }
-}
+// Re-export the shared cache clear function
+export const clearCapabilitiesCache = clearCache;
 
 // Clear cache for all tenants on a plan (used after plan feature changes)
 export async function clearPlanCapabilitiesCache(planCode: string) {
@@ -209,8 +202,8 @@ export async function clearPlanCapabilitiesCache(planCode: string) {
       sql`${tenantPlanAssignments.until} IS NULL OR ${tenantPlanAssignments.until} > NOW()`
     ));
 
-  // Clear cache for each tenant
+  // Clear cache for each tenant using the shared cache clear function
   for (const { tenantId } of affectedTenants) {
-    capabilitiesCache.delete(tenantId);
+    clearCache(tenantId);
   }
 }

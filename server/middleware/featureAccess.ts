@@ -7,17 +7,18 @@ import {
   tenantFeatureOverrides,
   tenantPlanAssignments
 } from '../../shared/schema';
-
-// Cache for tenant capabilities (shared with capabilities controller)
-const capabilitiesCache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { 
+  getCachedCapabilities, 
+  setCachedCapabilities, 
+  clearCapabilitiesCache as clearCache 
+} from '../lib/capabilitiesCache';
 
 // Helper to get tenant capabilities
 async function getTenantCapabilities(tenantId: string) {
   // Check cache
-  const cached = capabilitiesCache.get(tenantId);
-  if (cached && cached.expires > Date.now()) {
-    return cached.data;
+  const cached = getCachedCapabilities(tenantId);
+  if (cached) {
+    return cached;
   }
 
   // Get current plan for tenant
@@ -101,10 +102,7 @@ async function getTenantCapabilities(tenantId: string) {
   };
 
   // Cache the result
-  capabilitiesCache.set(tenantId, {
-    data: result,
-    expires: Date.now() + CACHE_TTL
-  });
+  setCachedCapabilities(tenantId, result);
 
   return result;
 }
@@ -264,10 +262,5 @@ export async function attachCapabilities(req: Request, res: Response, next: Next
 }
 
 // Clear cache (exported for use in other modules)
-export function clearCapabilitiesCache(tenantId?: string) {
-  if (tenantId) {
-    capabilitiesCache.delete(tenantId);
-  } else {
-    capabilitiesCache.clear();
-  }
-}
+// Re-export the shared cache clear function
+export const clearCapabilitiesCache = clearCache;
