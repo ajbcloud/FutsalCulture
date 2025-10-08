@@ -10,7 +10,7 @@ import {
   signups,
   auditLogs
 } from '../../../shared/schema';
-import { eq, and, gte, lte, count, sql, desc, sum, isNotNull, or } from 'drizzle-orm';
+import { eq, and, gte, lte, count, sql, desc, sum, isNotNull, or, countDistinct } from 'drizzle-orm';
 
 // Validation schemas
 const analyticsQuerySchema = z.object({
@@ -38,7 +38,7 @@ export async function overview(req: Request, res: Response) {
     const endDate = to ? new Date(to) : new Date();
     
     if (lane === 'platform') {
-      // Get tenant counts by plan
+      // Get tenant counts by plan with real data
       const planMix = await db
         .select({
           plan: tenants.planLevel,
@@ -49,66 +49,242 @@ export async function overview(req: Request, res: Response) {
       
       const totalTenants = planMix.reduce((sum, p) => sum + p.count, 0);
       const planMixWithPercentage = planMix.map(p => ({
-        plan: p.plan.charAt(0).toUpperCase() + p.plan.slice(1),
+        plan: p.plan ? p.plan.charAt(0).toUpperCase() + p.plan.slice(1) : 'Free',
         count: p.count,
         percentage: totalTenants > 0 ? (p.count / totalTenants) * 100 : 0
       }));
       
-      // Get basic tenant data for top tenants
-      const topTenants = await db
+      // Get real platform revenue based on date range
+      const platformRevenue = await db
         .select({
-          tenantId: tenants.tenantId,
-          tenantName: tenants.tenantName,
-          planLevel: tenants.planLevel
+          total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.status, 'paid'),
+            from ? gte(payments.paidAt, startDate) : sql`true`,
+            to ? lte(payments.paidAt, endDate) : sql`true`
+          )
+        );
+      
+      // Calculate MRR (Monthly Recurring Revenue) - last 30 days of revenue
+      const lastMonthStart = new Date();
+      lastMonthStart.setDate(lastMonthStart.getDate() - 30);
+      const mrrResult = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.status, 'paid'),
+            gte(payments.paidAt, lastMonthStart)
+          )
+        );
+      const mrr = Number(mrrResult[0]?.total || 0) / 100;
+      const arr = mrr * 12; // Annual Recurring Revenue
+      
+      // Get top tenants by revenue with real data
+      const topTenantsRevenue = await db
+        .select({
+          tenantId: tenants.id,
+          tenantName: tenants.name,
+          planLevel: tenants.planLevel,
+          revenue: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
         })
         .from(tenants)
+        .leftJoin(payments, and(
+          eq(tenants.id, payments.tenantId),
+          eq(payments.status, 'paid'),
+          from ? gte(payments.paidAt, startDate) : sql`true`,
+          to ? lte(payments.paidAt, endDate) : sql`true`
+        ))
+        .groupBy(tenants.id, tenants.name, tenants.planLevel)
+        .orderBy(desc(sql`COALESCE(SUM(${payments.amountCents}), 0)`))
         .limit(5);
+      
+      // Get failed payment count
+      const failedPayments = await db
+        .select({ count: count() })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.status, 'failed'),
+            from ? gte(payments.createdAt, startDate) : sql`true`,
+            to ? lte(payments.createdAt, endDate) : sql`true`
+          )
+        );
+      
+      // Get tenants at risk of churning (no payments in last 60 days)
+      const churnRiskDate = new Date();
+      churnRiskDate.setDate(churnRiskDate.getDate() - 60);
+      const churnCandidates = await db
+        .select({
+          tenantId: tenants.id,
+          tenantName: tenants.name,
+          lastPayment: sql<Date>`MAX(${payments.paidAt})`
+        })
+        .from(tenants)
+        .leftJoin(payments, and(
+          eq(tenants.id, payments.tenantId),
+          eq(payments.status, 'paid')
+        ))
+        .groupBy(tenants.id, tenants.name)
+        .having(or(
+          sql`MAX(${payments.paidAt}) < ${churnRiskDate}`,
+          sql`MAX(${payments.paidAt}) IS NULL`
+        ))
+        .limit(10);
 
       const platformData = {
-        platformRevenue: 219200, // Sample revenue in cents
-        mrr: 2192,
-        arr: 26304,
+        platformRevenue: Number(platformRevenue[0]?.total || 0),
+        mrr,
+        arr,
         activeTenants: totalTenants,
         planMix: planMixWithPercentage,
-        failedCount: 0,
-        outstandingReceivables: 0,
-        topTenantsByPlatformRevenue: topTenants.map(t => ({
+        failedCount: failedPayments[0]?.count || 0,
+        outstandingReceivables: 0, // Would need invoice table to calculate properly
+        topTenantsByPlatformRevenue: topTenantsRevenue.map(t => ({
           tenantId: t.tenantId,
           tenantName: t.tenantName,
-          revenue: 50000 // Mock revenue per tenant
+          revenue: Number(t.revenue) / 100
         })),
-        churnCandidates: []
+        churnCandidates: churnCandidates.map(c => ({
+          tenantId: c.tenantId,
+          tenantName: c.tenantName,
+          lastPayment: c.lastPayment?.toISOString()
+        }))
       };
 
       return res.json(platformData);
     } else if (lane === 'commerce') {
-      // Commerce Revenue - simplified version to avoid database issues
+      // Get real commerce revenue data
+      const commerceRevenue = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`,
+          count: count()
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.status, 'paid'),
+            from ? gte(payments.paidAt, startDate) : sql`true`,
+            to ? lte(payments.paidAt, endDate) : sql`true`
+          )
+        );
+      
+      // Get failed and refunded payments
+      const failedStats = await db
+        .select({
+          failed: sql<number>`COUNT(CASE WHEN ${payments.status} = 'failed' THEN 1 END)`,
+          refunded: sql<number>`COUNT(CASE WHEN ${payments.status} = 'refunded' THEN 1 END)`
+        })
+        .from(payments)
+        .where(
+          and(
+            from ? gte(payments.createdAt, startDate) : sql`true`,
+            to ? lte(payments.createdAt, endDate) : sql`true`
+          )
+        );
+      
+      // Get registration count (signups)
+      const registrations = await db
+        .select({ count: count() })
+        .from(signups)
+        .where(
+          and(
+            from ? gte(signups.signedUpAt, startDate) : sql`true`,
+            to ? lte(signups.signedUpAt, endDate) : sql`true`
+          )
+        );
+      
+      // Get active player count
+      const activePlayers = await db
+        .select({ count: countDistinct(signups.playerId) })
+        .from(signups)
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .where(
+          and(
+            from ? gte(futsalSessions.startTime, startDate) : sql`true`,
+            to ? lte(futsalSessions.startTime, endDate) : sql`true`
+          )
+        );
+      
+      const totalRevenue = Number(commerceRevenue[0]?.total || 0);
+      const paymentCount = commerceRevenue[0]?.count || 0;
+      const avgTicket = paymentCount > 0 ? totalRevenue / paymentCount : 0;
+      const playerCount = activePlayers[0]?.count || 0;
+      const revenuePerPlayer = playerCount > 0 ? totalRevenue / playerCount : 0;
+      
+      // Get top tenants by commerce revenue
+      const topTenantsByCommerce = await db
+        .select({
+          tenantId: tenants.id,
+          tenantName: tenants.name,
+          revenue: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`
+        })
+        .from(tenants)
+        .leftJoin(payments, and(
+          eq(tenants.id, payments.tenantId),
+          eq(payments.status, 'paid'),
+          from ? gte(payments.paidAt, startDate) : sql`true`,
+          to ? lte(payments.paidAt, endDate) : sql`true`
+        ))
+        .groupBy(tenants.id, tenants.name)
+        .orderBy(desc(sql`COALESCE(SUM(${payments.amountCents}), 0)`))
+        .limit(5);
+
       const commerceData = {
-        commerceRevenue: 150000, // Mock data in cents
-        netRevenue: 145000,
-        failedCount: 2,
-        refundCount: 1,
-        totalRegistrations: 85,
-        activePlayers: 70,
-        avgTicket: 2500,
-        revenuePerPlayer: 2100,
-        topTenantsByCommerceRevenue: [
-          { tenantId: '1', tenantName: 'PlayHQ', revenue: 50000 },
-          { tenantId: '2', tenantName: 'Premier Futsal Club', revenue: 35000 },
-          { tenantId: '3', tenantName: 'Champions Training Center', revenue: 25000 }
-        ]
+        commerceRevenue: totalRevenue,
+        netRevenue: totalRevenue * 0.97, // Assuming 3% processing fee
+        failedCount: Number(failedStats[0]?.failed || 0),
+        refundCount: Number(failedStats[0]?.refunded || 0),
+        totalRegistrations: registrations[0]?.count || 0,
+        activePlayers: playerCount,
+        avgTicket: avgTicket / 100, // Convert cents to dollars
+        revenuePerPlayer: revenuePerPlayer / 100,
+        topTenantsByCommerceRevenue: topTenantsByCommerce.map(t => ({
+          tenantId: t.tenantId,
+          tenantName: t.tenantName,
+          revenue: Number(t.revenue) / 100
+        }))
       };
 
       return res.json(commerceData);
     } else {
-      // KPIs lane - basic combined data
-      return res.json({
-        totalRevenue: 150000,
-        totalPayments: 60,
-        activePlayers: 70,
-        avgTicket: 2500,
-        revenuePerPlayer: 2100
+      // KPIs lane - real combined data
+      const kpiData = await db.transaction(async (tx) => {
+        const revenue = await tx
+          .select({ total: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+          .from(payments)
+          .where(eq(payments.status, 'paid'));
+        
+        const paymentCount = await tx
+          .select({ count: count() })
+          .from(payments)
+          .where(eq(payments.status, 'paid'));
+        
+        const playerCount = await tx
+          .select({ count: count() })
+          .from(players);
+        
+        const totalRevenue = Number(revenue[0]?.total || 0);
+        const totalPayments = paymentCount[0]?.count || 0;
+        const activePlayers = playerCount[0]?.count || 0;
+        const avgTicket = totalPayments > 0 ? totalRevenue / totalPayments : 0;
+        const revenuePerPlayer = activePlayers > 0 ? totalRevenue / activePlayers : 0;
+        
+        return {
+          totalRevenue: totalRevenue / 100,
+          totalPayments,
+          activePlayers,
+          avgTicket: avgTicket / 100,
+          revenuePerPlayer: revenuePerPlayer / 100
+        };
       });
+      
+      return res.json(kpiData);
     }
   } catch (error) {
     console.error('Analytics overview error:', error);
