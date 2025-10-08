@@ -10,6 +10,7 @@ import {
   systemSettings,
   serviceBilling,
   discountCodes,
+  inviteCodes,
   waitlists,
   devSkillCategories,
   devSkills,
@@ -57,6 +58,8 @@ import {
   type ServiceBillingSelect,
   type DiscountCode,
   type InsertDiscountCode,
+  type InviteCodeSelect as InviteCode,
+  type InviteCodeInsert,
   type Waitlist,
   type InsertWaitlist,
   type JoinWaitlist,
@@ -196,6 +199,17 @@ export interface IStorage {
   updateDiscountCode(id: string, discountCode: Partial<InsertDiscountCode>): Promise<DiscountCode>;
   deleteDiscountCode(id: string): Promise<void>;
   incrementDiscountCodeUsage(id: string): Promise<void>;
+
+  // Invite code operations
+  getInviteCodes(tenantId: string): Promise<InviteCode[]>;
+  getInviteCode(id: string): Promise<InviteCode | undefined>;
+  getInviteCodeByCode(code: string, tenantId: string): Promise<InviteCode | undefined>;
+  getTenantDefaultCode(tenantId: string): Promise<InviteCode | undefined>;
+  createInviteCode(inviteCode: InviteCodeInsert): Promise<InviteCode>;
+  updateInviteCode(id: string, inviteCode: Partial<InviteCodeInsert>): Promise<InviteCode>;
+  setDefaultInviteCode(id: string, tenantId: string): Promise<InviteCode>;
+  deleteInviteCode(id: string): Promise<void>;
+  incrementInviteCodeUsage(id: string): Promise<void>;
 
   // Access code validation
   validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
@@ -1343,6 +1357,110 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(discountCodes.id, id));
+  }
+
+  // Invite code operations
+  async getInviteCodes(tenantId: string): Promise<InviteCode[]> {
+    return await db
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.tenantId, tenantId))
+      .orderBy(desc(inviteCodes.createdAt));
+  }
+
+  async getInviteCode(id: string): Promise<InviteCode | undefined> {
+    const [code] = await db
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.id, id));
+    return code;
+  }
+
+  async getInviteCodeByCode(code: string, tenantId: string): Promise<InviteCode | undefined> {
+    const [inviteCode] = await db
+      .select()
+      .from(inviteCodes)
+      .where(
+        and(
+          eq(inviteCodes.code, code),
+          eq(inviteCodes.tenantId, tenantId)
+        )
+      );
+    return inviteCode;
+  }
+
+  async getTenantDefaultCode(tenantId: string): Promise<InviteCode | undefined> {
+    const [defaultCode] = await db
+      .select()
+      .from(inviteCodes)
+      .where(
+        and(
+          eq(inviteCodes.tenantId, tenantId),
+          eq(inviteCodes.isDefault, true)
+        )
+      );
+    return defaultCode;
+  }
+
+  async createInviteCode(inviteCode: InviteCodeInsert): Promise<InviteCode> {
+    const [created] = await db
+      .insert(inviteCodes)
+      .values(inviteCode)
+      .returning();
+    return created;
+  }
+
+  async updateInviteCode(id: string, inviteCode: Partial<InviteCodeInsert>): Promise<InviteCode> {
+    const [updated] = await db
+      .update(inviteCodes)
+      .set({
+        ...inviteCode,
+        updatedAt: new Date(),
+      })
+      .where(eq(inviteCodes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async setDefaultInviteCode(id: string, tenantId: string): Promise<InviteCode> {
+    // First, set all other codes for this tenant to isDefault=false
+    await db
+      .update(inviteCodes)
+      .set({ isDefault: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(inviteCodes.tenantId, tenantId),
+          eq(inviteCodes.isDefault, true)
+        )
+      );
+
+    // Then set the target code to isDefault=true
+    const [updated] = await db
+      .update(inviteCodes)
+      .set({ isDefault: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(inviteCodes.id, id),
+          eq(inviteCodes.tenantId, tenantId)
+        )
+      )
+      .returning();
+    
+    return updated;
+  }
+
+  async deleteInviteCode(id: string): Promise<void> {
+    await db.delete(inviteCodes).where(eq(inviteCodes.id, id));
+  }
+
+  async incrementInviteCodeUsage(id: string): Promise<void> {
+    await db
+      .update(inviteCodes)
+      .set({
+        currentUses: sql`${inviteCodes.currentUses} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(inviteCodes.id, id));
   }
 
   // Access code validation

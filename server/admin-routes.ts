@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots, tenants, consentTemplates, insertConsentTemplateSchema, insertConsentDocumentSchema, insertConsentSignatureSchema } from "@shared/schema";
+import { users, players, signups, futsalSessions, payments, helpRequests, notificationPreferences, systemSettings, integrations, serviceBilling, insertServiceBillingSchema, discountCodes, inviteCodes, insertInviteCodeSchema, playerAssessments, playerGoals, playerGoalUpdates, trainingPlans, attendanceSnapshots, devAchievements, progressionSnapshots, tenants, consentTemplates, insertConsentTemplateSchema, insertConsentDocumentSchema, insertConsentSignatureSchema } from "@shared/schema";
 import { eq, sql, and, or, gte, lte, inArray, desc } from "drizzle-orm";
 import { calculateAge, MINIMUM_PORTAL_AGE } from "@shared/constants";
 import { loadTenantMiddleware } from "./feature-middleware";
@@ -2838,6 +2838,120 @@ export async function setupAdminRoutes(app: any) {
     } catch (error) {
       console.error("Error deleting discount code:", error);
       res.status(500).json({ message: "Failed to delete discount code" });
+    }
+  });
+
+  // Invite code endpoints
+  app.get('/api/admin/invite-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+      const codes = await storage.getInviteCodes(tenantId);
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching invite codes:", error);
+      res.status(500).json({ message: "Failed to fetch invite codes" });
+    }
+  });
+
+  app.post('/api/admin/invite-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const userId = (req as any).currentUser?.id;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Validate request body
+      const validatedData = insertInviteCodeSchema.parse(req.body);
+      
+      // Add tenantId and createdBy
+      const inviteCodeData = {
+        ...validatedData,
+        tenantId,
+        createdBy: userId,
+      };
+
+      const code = await storage.createInviteCode(inviteCodeData);
+      res.json(code);
+    } catch (error) {
+      console.error("Error creating invite code:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid invite code data", errors: error });
+      }
+      res.status(500).json({ message: "Failed to create invite code" });
+    }
+  });
+
+  app.put('/api/admin/invite-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Verify the code belongs to the tenant before updating
+      const existingCode = await storage.getInviteCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Invite code not found" });
+      }
+
+      const code = await storage.updateInviteCode(id, req.body);
+      res.json(code);
+    } catch (error) {
+      console.error("Error updating invite code:", error);
+      res.status(500).json({ message: "Failed to update invite code" });
+    }
+  });
+
+  app.delete('/api/admin/invite-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Verify the code belongs to the tenant before deleting
+      const existingCode = await storage.getInviteCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Invite code not found" });
+      }
+
+      await storage.deleteInviteCode(id);
+      res.json({ message: "Invite code deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting invite code:", error);
+      res.status(500).json({ message: "Failed to delete invite code" });
+    }
+  });
+
+  app.post('/api/admin/invite-codes/set-default/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Verify the code belongs to the tenant before setting as default
+      const existingCode = await storage.getInviteCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Invite code not found" });
+      }
+
+      const code = await storage.setDefaultInviteCode(id, tenantId);
+      res.json(code);
+    } catch (error) {
+      console.error("Error setting default invite code:", error);
+      res.status(500).json({ message: "Failed to set default invite code" });
     }
   });
 

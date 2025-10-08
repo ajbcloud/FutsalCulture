@@ -892,6 +892,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public validation endpoint for invite codes (no authentication required)
+  app.get('/api/invite-codes/validate/:code', async (req, res) => {
+    try {
+      const { code } = req.params;
+      
+      if (!code) {
+        return res.status(400).json({ message: 'Code is required', valid: false });
+      }
+
+      // Get tenantId from session or subdomain
+      let tenantId = (req as any).session?.tenantId;
+      
+      // If no tenantId in session, try to get from subdomain
+      if (!tenantId) {
+        const subdomain = req.hostname.split('.')[0];
+        if (subdomain && subdomain !== 'localhost') {
+          const tenant = await storage.getTenantBySubdomain(subdomain);
+          if (tenant) {
+            tenantId = tenant.id;
+          }
+        }
+      }
+
+      if (!tenantId) {
+        return res.status(400).json({ message: 'Tenant context required', valid: false });
+      }
+
+      // Get the invite code
+      const inviteCode = await storage.getInviteCodeByCode(code, tenantId);
+
+      if (!inviteCode) {
+        return res.status(404).json({ message: 'Invalid invite code', valid: false });
+      }
+
+      // Check if code is active
+      if (!inviteCode.isActive) {
+        return res.status(400).json({ message: 'Invite code is inactive', valid: false });
+      }
+
+      // Check valid date range
+      const now = new Date();
+      if (inviteCode.validFrom && new Date(inviteCode.validFrom) > now) {
+        return res.status(400).json({ 
+          message: 'Invite code is not yet valid', 
+          valid: false 
+        });
+      }
+
+      if (inviteCode.validUntil && new Date(inviteCode.validUntil) < now) {
+        return res.status(400).json({ 
+          message: 'Invite code has expired', 
+          valid: false 
+        });
+      }
+
+      // Check max uses
+      if (inviteCode.maxUses !== null && (inviteCode.currentUses ?? 0) >= inviteCode.maxUses) {
+        return res.status(400).json({ 
+          message: 'Invite code usage limit exceeded', 
+          valid: false 
+        });
+      }
+
+      // Return validation response with pre-fill data
+      res.json({
+        valid: true,
+        message: 'Valid invite code',
+        preFillData: {
+          ageGroup: inviteCode.ageGroup || null,
+          gender: inviteCode.gender || null,
+          location: inviteCode.location || null,
+          club: inviteCode.club || null,
+          discountType: inviteCode.discountType || null,
+          discountValue: inviteCode.discountValue || null,
+        },
+        code: {
+          id: inviteCode.id,
+          code: inviteCode.code,
+          description: inviteCode.description,
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error validating invite code:', error);
+      res.status(500).json({ message: 'Internal server error', valid: false });
+    }
+  });
+
   app.post('/api/parent2-invite/accept/:token', async (req, res) => {
     try {
       const { token } = req.params;
