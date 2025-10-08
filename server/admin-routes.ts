@@ -2451,6 +2451,8 @@ export async function setupAdminRoutes(app: any) {
         fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
         // New tenants start with empty locations (no sample data)
         availableLocations: [],
+        // Help Request Settings
+        enableHelpRequests: true, // Default to enabled for existing tenants
         ...settingsMap
       };
       
