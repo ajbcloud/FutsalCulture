@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TimezoneProvider } from "@/contexts/TimezoneContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { TerminologyProvider } from "@/contexts/TerminologyContext";
 
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import ErrorBoundary from "@/components/error-boundary";
@@ -158,14 +159,16 @@ function App() {
       <ThemeProvider>
         <BusinessProvider>
           <AuthProvider>
-            <TimezoneProvider>
-              <TooltipProvider>
-                <ErrorBoundary>
-                  <Toaster />
-                  <Router />
-                </ErrorBoundary>
-              </TooltipProvider>
-            </TimezoneProvider>
+            <TerminologyProvider>
+              <TimezoneProvider>
+                <TooltipProvider>
+                  <ErrorBoundary>
+                    <Toaster />
+                    <Router />
+                  </ErrorBoundary>
+                </TooltipProvider>
+              </TimezoneProvider>
+            </TerminologyProvider>
           </AuthProvider>
         </BusinessProvider>
       </ThemeProvider>
