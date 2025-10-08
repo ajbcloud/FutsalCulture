@@ -1176,35 +1176,35 @@ export default function SuperAdminCommunications() {
                   </Card>
                 </div>
 
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                disabled={sendMessageMutation.isPending || scheduleMessageMutation.isPending}
-                data-testid="button-send-message"
-              >
-                {sendMessageMutation.isPending || scheduleMessageMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    {scheduleType === "immediate" ? "Send Now" : "Schedule"}
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => sendForm.reset()}
-                data-testid="button-reset-form"
-              >
-                Reset
-              </Button>
-            </div>
-          </form>
-        </Form>
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    disabled={sendMessageMutation.isPending || scheduleMessageMutation.isPending}
+                    data-testid="button-send-message"
+                  >
+                    {sendMessageMutation.isPending || scheduleMessageMutation.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        {scheduleType === "immediate" ? "Send Now" : "Schedule"}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => sendForm.reset()}
+                    data-testid="button-reset-form"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </form>
+            </Form>
       </TabsContent>
 
           {/* History Tab */}
