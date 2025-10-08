@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Badge } from "@/components/ui/badge";
 import GeographicDistribution from "@/components/super-admin/geographic-distribution";
+import { DowngradeAlertsWidget } from "@/components/super-admin/DowngradeAlertsWidget";
 import { 
   DollarSign, 
   Users, 
@@ -352,6 +353,9 @@ export default function SuperAdminOverview() {
 
       {/* Pending Registrations Widget */}
       <PendingRegistrationsWidget />
+
+      {/* Downgrade Alerts Widget */}
+      <DowngradeAlertsWidget />
 
       {/* Geographic Distribution - Full Width */}
       <div className="w-full">
