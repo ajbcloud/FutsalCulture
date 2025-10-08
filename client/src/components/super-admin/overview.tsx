@@ -20,7 +20,8 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -358,6 +359,57 @@ export default function SuperAdminOverview() {
       </div>
 
       {/* Charts and additional content */}
+      {/* Invitations Widget */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Platform Invitations</CardTitle>
+          <Link href="/super-admin/invitations" className="text-sm text-primary hover:underline">
+            View All →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">
+                {metricsData?.invitations?.totalActive || 0}
+              </p>
+              <p className="text-xs text-muted-foreground">Active Codes</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">
+                {metricsData?.invitations?.platformCodes || 0}
+              </p>
+              <p className="text-xs text-muted-foreground">Platform Codes</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">
+                {metricsData?.invitations?.expiringThisWeek || 0}
+              </p>
+              <p className="text-xs text-muted-foreground">Expiring Soon</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">
+                {metricsData?.invitations?.totalUsageToday || 0}
+              </p>
+              <p className="text-xs text-muted-foreground">Used Today</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                Top Code: {metricsData?.invitations?.topCode || 'N/A'}
+              </Badge>
+            </div>
+            <Link href="/super-admin/invitations?tab=platform-codes">
+              <Button variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Code
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

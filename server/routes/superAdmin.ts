@@ -18,6 +18,7 @@ import * as impersonate from '../controllers/superAdmin/impersonate';
 import * as integ from '../controllers/superAdmin/integrationsHealth';
 import * as comms from '../controllers/superAdmin/comms';
 import * as sec from '../controllers/superAdmin/security';
+import * as invitations from '../controllers/superAdmin/invitations';
 
 const r = Router();
 r.use(requireAuth, requireSuperAdmin);
@@ -97,5 +98,17 @@ r.get('/security/overview', sec.overview);
 r.get('/security/impersonations', sec.impersonations);
 r.post('/security/impersonations/:id/revoke', sec.revokeImpersonation);
 r.get('/security/audit-logs', sec.auditLogs);
+
+// Invitations Management routes
+r.get('/invitations', invitations.list);
+r.post('/invitations', invitations.create);
+r.get('/invitations/analytics', invitations.analytics);
+r.get('/invitations/export', invitations.exportToCsv);
+r.get('/invitations/:id', invitations.getById);
+r.patch('/invitations/:id', invitations.update);
+r.delete('/invitations/:id', invitations.remove);
+r.post('/invitations/bulk-create', invitations.bulkCreate);
+r.post('/invitations/:id/clone', invitations.cloneCode);
+r.post('/invitations/:id/transfer', invitations.transferCode);
 
 export default r;

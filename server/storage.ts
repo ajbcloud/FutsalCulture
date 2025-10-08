@@ -210,6 +210,29 @@ export interface IStorage {
   setDefaultInviteCode(id: string, tenantId: string): Promise<InviteCode>;
   deleteInviteCode(id: string): Promise<void>;
   incrementInviteCodeUsage(id: string): Promise<void>;
+  
+  // Super Admin invite code operations
+  getSuperAdminInviteCodes(filters: { 
+    tenantId?: string; 
+    codeType?: string; 
+    status?: 'active' | 'expired' | 'fully_used';
+    isPlatform?: boolean;
+    search?: string;
+  }, page: number, pageSize: number): Promise<{ rows: any[]; total: number }>;
+  getAllSuperAdminInviteCodes(filters: {
+    tenantId?: string;
+    codeType?: string;
+    status?: 'active' | 'expired' | 'fully_used';
+    isPlatform?: boolean;
+  }): Promise<any[]>;
+  bulkCreateInviteCodes(codes: InviteCodeInsert[]): Promise<InviteCode[]>;
+  getInviteCodeUsageHistory(codeId: string): Promise<any[]>;
+  getInviteCodeAnalytics(params: {
+    startDate?: Date;
+    endDate?: Date;
+    tenantId?: string;
+    groupBy: 'tenant' | 'code_type' | 'date';
+  }): Promise<any>;
 
   // Access code validation
   validateSessionAccessCode(sessionId: string, accessCode: string): Promise<boolean>;
@@ -1461,6 +1484,276 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(inviteCodes.id, id));
+  }
+
+  // Super Admin invite code operations
+  async getSuperAdminInviteCodes(filters: { 
+    tenantId?: string; 
+    codeType?: string; 
+    status?: 'active' | 'expired' | 'fully_used';
+    isPlatform?: boolean;
+    search?: string;
+  }, page: number, pageSize: number): Promise<{ rows: any[]; total: number }> {
+    let conditions = [];
+    
+    if (filters.tenantId) {
+      conditions.push(eq(inviteCodes.tenantId, filters.tenantId));
+    }
+    
+    if (filters.codeType) {
+      conditions.push(eq(inviteCodes.codeType, filters.codeType as any));
+    }
+    
+    if (filters.isPlatform !== undefined) {
+      conditions.push(eq(inviteCodes.isPlatform, filters.isPlatform));
+    }
+    
+    if (filters.search) {
+      conditions.push(
+        or(
+          ilike(inviteCodes.code, `%${filters.search}%`),
+          ilike(inviteCodes.description, `%${filters.search}%`)
+        )
+      );
+    }
+    
+    if (filters.status === 'active') {
+      conditions.push(
+        and(
+          eq(inviteCodes.isActive, true),
+          or(
+            sql`${inviteCodes.validUntil} IS NULL`,
+            gte(inviteCodes.validUntil, new Date())
+          ),
+          or(
+            sql`${inviteCodes.maxUses} IS NULL`,
+            sql`${inviteCodes.currentUses} < ${inviteCodes.maxUses}`
+          )
+        )
+      );
+    } else if (filters.status === 'expired') {
+      conditions.push(
+        and(
+          lte(inviteCodes.validUntil, new Date()),
+          sql`${inviteCodes.validUntil} IS NOT NULL`
+        )
+      );
+    } else if (filters.status === 'fully_used') {
+      conditions.push(
+        and(
+          sql`${inviteCodes.maxUses} IS NOT NULL`,
+          sql`${inviteCodes.currentUses} >= ${inviteCodes.maxUses}`
+        )
+      );
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    // Get total count
+    const [{ totalCount }] = await db
+      .select({ totalCount: count() })
+      .from(inviteCodes)
+      .leftJoin(tenants, eq(inviteCodes.tenantId, tenants.id))
+      .where(whereClause);
+    
+    // Get paginated rows with tenant info
+    const rows = await db
+      .select({
+        id: inviteCodes.id,
+        code: inviteCodes.code,
+        codeType: inviteCodes.codeType,
+        description: inviteCodes.description,
+        isActive: inviteCodes.isActive,
+        isPlatform: inviteCodes.isPlatform,
+        tenantId: inviteCodes.tenantId,
+        tenantName: tenants.name,
+        ageGroup: inviteCodes.ageGroup,
+        gender: inviteCodes.gender,
+        location: inviteCodes.location,
+        club: inviteCodes.club,
+        discountType: inviteCodes.discountType,
+        discountValue: inviteCodes.discountValue,
+        maxUses: inviteCodes.maxUses,
+        currentUses: inviteCodes.currentUses,
+        validFrom: inviteCodes.validFrom,
+        validUntil: inviteCodes.validUntil,
+        metadata: inviteCodes.metadata,
+        createdAt: inviteCodes.createdAt,
+        updatedAt: inviteCodes.updatedAt,
+      })
+      .from(inviteCodes)
+      .leftJoin(tenants, eq(inviteCodes.tenantId, tenants.id))
+      .where(whereClause)
+      .orderBy(desc(inviteCodes.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    
+    return {
+      rows,
+      total: totalCount
+    };
+  }
+  
+  async getAllSuperAdminInviteCodes(filters: {
+    tenantId?: string;
+    codeType?: string;
+    status?: 'active' | 'expired' | 'fully_used';
+    isPlatform?: boolean;
+  }): Promise<any[]> {
+    let conditions = [];
+    
+    if (filters.tenantId) {
+      conditions.push(eq(inviteCodes.tenantId, filters.tenantId));
+    }
+    
+    if (filters.codeType) {
+      conditions.push(eq(inviteCodes.codeType, filters.codeType as any));
+    }
+    
+    if (filters.isPlatform !== undefined) {
+      conditions.push(eq(inviteCodes.isPlatform, filters.isPlatform));
+    }
+    
+    if (filters.status === 'active') {
+      conditions.push(
+        and(
+          eq(inviteCodes.isActive, true),
+          or(
+            sql`${inviteCodes.validUntil} IS NULL`,
+            gte(inviteCodes.validUntil, new Date())
+          ),
+          or(
+            sql`${inviteCodes.maxUses} IS NULL`,
+            sql`${inviteCodes.currentUses} < ${inviteCodes.maxUses}`
+          )
+        )
+      );
+    } else if (filters.status === 'expired') {
+      conditions.push(
+        and(
+          lte(inviteCodes.validUntil, new Date()),
+          sql`${inviteCodes.validUntil} IS NOT NULL`
+        )
+      );
+    } else if (filters.status === 'fully_used') {
+      conditions.push(
+        and(
+          sql`${inviteCodes.maxUses} IS NOT NULL`,
+          sql`${inviteCodes.currentUses} >= ${inviteCodes.maxUses}`
+        )
+      );
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    return await db
+      .select({
+        id: inviteCodes.id,
+        code: inviteCodes.code,
+        codeType: inviteCodes.codeType,
+        description: inviteCodes.description,
+        isActive: inviteCodes.isActive,
+        isPlatform: inviteCodes.isPlatform,
+        tenantId: inviteCodes.tenantId,
+        tenantName: tenants.name,
+        ageGroup: inviteCodes.ageGroup,
+        gender: inviteCodes.gender,
+        location: inviteCodes.location,
+        club: inviteCodes.club,
+        discountType: inviteCodes.discountType,
+        discountValue: inviteCodes.discountValue,
+        maxUses: inviteCodes.maxUses,
+        currentUses: inviteCodes.currentUses,
+        validFrom: inviteCodes.validFrom,
+        validUntil: inviteCodes.validUntil,
+        metadata: inviteCodes.metadata,
+        createdAt: inviteCodes.createdAt,
+      })
+      .from(inviteCodes)
+      .leftJoin(tenants, eq(inviteCodes.tenantId, tenants.id))
+      .where(whereClause)
+      .orderBy(desc(inviteCodes.createdAt));
+  }
+  
+  async bulkCreateInviteCodes(codes: InviteCodeInsert[]): Promise<InviteCode[]> {
+    return await db
+      .insert(inviteCodes)
+      .values(codes)
+      .returning();
+  }
+  
+  async getInviteCodeUsageHistory(codeId: string): Promise<any[]> {
+    // For now, return empty array as we don't have usage tracking table yet
+    // In the future, this would query a usage history table
+    return [];
+  }
+  
+  async getInviteCodeAnalytics(params: {
+    startDate?: Date;
+    endDate?: Date;
+    tenantId?: string;
+    groupBy: 'tenant' | 'code_type' | 'date';
+  }): Promise<any> {
+    let conditions = [];
+    
+    if (params.startDate) {
+      conditions.push(gte(inviteCodes.createdAt, params.startDate));
+    }
+    
+    if (params.endDate) {
+      conditions.push(lte(inviteCodes.createdAt, params.endDate));
+    }
+    
+    if (params.tenantId) {
+      conditions.push(eq(inviteCodes.tenantId, params.tenantId));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    if (params.groupBy === 'tenant') {
+      const results = await db
+        .select({
+          tenantId: inviteCodes.tenantId,
+          tenantName: tenants.name,
+          totalCodes: count(),
+          totalUsage: sql<number>`COALESCE(SUM(${inviteCodes.currentUses}), 0)`,
+          activeCodes: sql<number>`COUNT(CASE WHEN ${inviteCodes.isActive} = true THEN 1 END)`,
+          platformCodes: sql<number>`COUNT(CASE WHEN ${inviteCodes.isPlatform} = true THEN 1 END)`,
+        })
+        .from(inviteCodes)
+        .leftJoin(tenants, eq(inviteCodes.tenantId, tenants.id))
+        .where(whereClause)
+        .groupBy(inviteCodes.tenantId, tenants.name);
+      
+      return results;
+    } else if (params.groupBy === 'code_type') {
+      const results = await db
+        .select({
+          codeType: inviteCodes.codeType,
+          totalCodes: count(),
+          totalUsage: sql<number>`COALESCE(SUM(${inviteCodes.currentUses}), 0)`,
+          activeCodes: sql<number>`COUNT(CASE WHEN ${inviteCodes.isActive} = true THEN 1 END)`,
+        })
+        .from(inviteCodes)
+        .where(whereClause)
+        .groupBy(inviteCodes.codeType);
+      
+      return results;
+    } else {
+      // Group by date
+      const results = await db
+        .select({
+          date: sql<string>`DATE(${inviteCodes.createdAt})`,
+          totalCodes: count(),
+          totalUsage: sql<number>`COALESCE(SUM(${inviteCodes.currentUses}), 0)`,
+        })
+        .from(inviteCodes)
+        .where(whereClause)
+        .groupBy(sql`DATE(${inviteCodes.createdAt})`)
+        .orderBy(sql`DATE(${inviteCodes.createdAt})`);
+      
+      return results;
+    }
   }
 
   // Access code validation

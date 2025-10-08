@@ -563,6 +563,7 @@ export const inviteCodes = pgTable("invite_codes", {
   description: text("description"),
   isDefault: boolean("is_default").default(false),
   isActive: boolean("is_active").default(true),
+  isPlatform: boolean("is_platform").default(false), // Platform-wide code that works across all tenants
   // Pre-fill metadata fields for auto-populating signup forms
   ageGroup: text("age_group"),
   gender: text("gender"),
@@ -587,6 +588,7 @@ export const inviteCodes = pgTable("invite_codes", {
   index("invite_codes_code_idx").on(table.code),
   index("invite_codes_is_default_idx").on(table.isDefault),
   index("invite_codes_is_active_idx").on(table.isActive),
+  index("invite_codes_is_platform_idx").on(table.isPlatform),
   uniqueIndex("invite_codes_tenant_code_unique_idx").on(table.tenantId, table.code),
 ]);
 
