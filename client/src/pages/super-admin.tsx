@@ -247,7 +247,7 @@ export default function SuperAdminPage() {
 
               {/* Trial Status Indicator - embedded in sidebar */}
               <div className="px-3 mt-4">
-                <TrialStatusIndicator variant="embedded" />
+                <TrialStatusIndicator />
               </div>
             </nav>
           </div>

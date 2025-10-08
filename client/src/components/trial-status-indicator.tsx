@@ -23,11 +23,7 @@ interface TrialStatus {
   billingStatus: string;
 }
 
-interface TrialStatusIndicatorProps {
-  variant?: 'floating' | 'embedded';
-}
-
-export function TrialStatusIndicator({ variant = 'floating' }: TrialStatusIndicatorProps = {}) {
+export function TrialStatusIndicator() {
   const { user } = useAuth();
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [countdownKey, setCountdownKey] = useState(0);
@@ -123,149 +119,56 @@ export function TrialStatusIndicator({ variant = 'floating' }: TrialStatusIndica
     }
   };
 
-  // Embedded version for sidebar
-  if (variant === 'embedded') {
-    return (
-      <>
-        <div className="space-y-2" data-testid="trial-status-indicator">
-          <div className={`rounded-lg border p-3 ${getColorClasses()}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1 mb-1">
-                  <Badge variant={getBadgeVariant()} className="text-xs">
-                    Trial
-                  </Badge>
-                  {trialStatus.status === 'grace' && (
-                    <Badge variant="destructive" className="text-xs">
-                      Grace
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs font-semibold truncate" data-testid="trial-countdown">
-                  {formatCountdown()}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Button
-                onClick={handleUpgradeClick}
-                size="sm"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
-                data-testid="button-upgrade-trial"
-              >
-                <Zap className="w-3 h-3 mr-1" />
-                Upgrade
-              </Button>
-
-              {trialStatus.canExtend && trialStatus.extensionsUsed < trialStatus.maxExtensions && (
-                <Button
-                  onClick={() => setShowExtensionModal(true)}
-                  size="sm"
-                  variant="outline"
-                  className="w-full text-xs h-8"
-                  data-testid="button-extend-trial"
-                >
-                  Extend ({trialStatus.maxExtensions - trialStatus.extensionsUsed})
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {showExtensionModal && (
-          <TrialExtensionModal
-            isOpen={showExtensionModal}
-            onClose={() => setShowExtensionModal(false)}
-            currentExtensions={trialStatus.extensionsUsed}
-            maxExtensions={trialStatus.maxExtensions}
-          />
-        )}
-      </>
-    );
-  }
-
-  // Floating version (original)
+  // Embedded version only
   return (
     <>
-      <AnimatePresence>
-        <motion.div
-          key={countdownKey}
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-          transition={{ duration: 0.3 }}
-          className="fixed bottom-4 left-4 z-50 max-w-sm"
-          data-testid="trial-status-indicator"
-        >
-          <div className={`rounded-lg border-2 p-4 shadow-lg backdrop-blur-sm ${getColorClasses()}`}>
-            <div className="flex items-center gap-3 mb-3">
-              <Clock className="w-5 h-5" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant={getBadgeVariant()} className="text-xs">
-                    {getPlanDisplayName()} Trial
+      <div className="space-y-2" data-testid="trial-status-indicator">
+        <div className={`rounded-lg border p-3 ${getColorClasses()}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-4 h-4" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1 mb-1">
+                <Badge variant={getBadgeVariant()} className="text-xs">
+                  Trial
+                </Badge>
+                {trialStatus.status === 'grace' && (
+                  <Badge variant="destructive" className="text-xs">
+                    Grace
                   </Badge>
-                  {trialStatus.status === 'grace' && (
-                    <Badge variant="destructive" className="text-xs">
-                      Grace Period
-                    </Badge>
-                  )}
-                </div>
-                <motion.div
-                  key={`countdown-${countdownKey}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="font-semibold text-sm"
-                  data-testid="trial-countdown"
-                >
-                  {formatCountdown()}
-                </motion.div>
+                )}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              {/* Upgrade CTA */}
-              <Button
-                onClick={handleUpgradeClick}
-                size="sm"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-upgrade-trial"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Upgrade Now
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-
-              {/* Extend Trial button if available */}
-              {trialStatus.canExtend && trialStatus.extensionsUsed < trialStatus.maxExtensions && (
-                <Button
-                  onClick={() => setShowExtensionModal(true)}
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  data-testid="button-extend-trial"
-                >
-                  Extend Trial ({trialStatus.maxExtensions - trialStatus.extensionsUsed} left)
-                </Button>
-              )}
-            </div>
-
-            {/* Contextual message */}
-            {trialStatus.status === 'active' && trialStatus.trialEndsAt && (
-              <p className="text-xs mt-2 opacity-90">
-                {differenceInDays(new Date(trialStatus.trialEndsAt), new Date()) <= 3 
-                  ? 'Trial expires soon - Upgrade to continue' 
-                  : 'Enjoying PlayHQ? Upgrade for full access'}
+              <p className="text-xs font-semibold truncate" data-testid="trial-countdown">
+                {formatCountdown()}
               </p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Button
+              onClick={handleUpgradeClick}
+              size="sm"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+              data-testid="button-upgrade-trial"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              Upgrade
+            </Button>
+
+            {trialStatus.canExtend && trialStatus.extensionsUsed < trialStatus.maxExtensions && (
+              <Button
+                onClick={() => setShowExtensionModal(true)}
+                size="sm"
+                variant="outline"
+                className="w-full text-xs h-8"
+                data-testid="button-extend-trial"
+              >
+                Extend ({trialStatus.maxExtensions - trialStatus.extensionsUsed})
+              </Button>
             )}
           </div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </div>
 
-      {/* Extension Modal */}
       {showExtensionModal && (
         <TrialExtensionModal
           isOpen={showExtensionModal}
