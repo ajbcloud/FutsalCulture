@@ -1,0 +1,3276 @@
+1. Database Schema
+
+-- Notification Templates Table
+CREATE TABLE "notification_templates" (
+    "id" VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" VARCHAR(100) NOT NULL,
+    "type" VARCHAR NOT NULL CHECK (type IN ('email', 'sms', 'push')),
+    "method" VARCHAR(50) NOT NULL, -- 'booking_confirmation', 'reminder_24h', 'status_update', 'manual', 'google_review', 're_engagement', 'discount_offer'
+    "subject" TEXT, -- for email templates only
+    "template" TEXT NOT NULL, -- template content with variables like {{customerName}}, {{appointmentDate}}
+    "active" BOOLEAN DEFAULT true,
+    "created_at" TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Notifications Table (Campaign tracking)
+CREATE TABLE "notifications" (
+    "id" VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    "booking_id" VARCHAR NOT NULL,
+    "type" VARCHAR NOT NULL CHECK (type IN ('email', 'sms', 'push')),
+    "recipient" VARCHAR NOT NULL, -- email or phone
+    "subject" VARCHAR,
+    "message" TEXT NOT NULL,
+    "status" VARCHAR NOT NULL CHECK (status IN ('pending', 'sent', 'failed')) DEFAULT 'pending',
+    "scheduled_for" TIMESTAMP,
+    "sent_at" TIMESTAMP,
+    "created_at" TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Re-engagement Tracking Table
+CREATE TABLE "reengagement_tracking" (
+    "id" VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    "customer_id" VARCHAR NOT NULL, -- User ID or email
+    "notification_id" VARCHAR NOT NULL, -- Reference to notification sent
+    "campaign_type" VARCHAR NOT NULL, -- 're_engagement' or 'discount_offer'
+    "discount_code_id" VARCHAR, -- If discount was offered
+    "response_booking_id" VARCHAR, -- Booking made after notification
+    "days_between_notification_and_booking" INTEGER,
+    "is_successful" BOOLEAN DEFAULT false, -- Did they book after notification?
+    "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+    "responded_at" TIMESTAMP -- When they made a booking in response
+);
+
+-- Message Log for SMS tracking
+CREATE TABLE "message_log" (
+    "id" VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    "provider" TEXT NOT NULL DEFAULT 'telnyx',
+    "external_id" TEXT,
+    "to" TEXT NOT NULL,
+    "from" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "direction" TEXT NOT NULL CHECK (direction IN ('outbound', 'inbound')),
+    "status" TEXT NOT NULL DEFAULT 'queued',
+    "error_code" TEXT,
+    "meta" JSONB,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Consent Events for tracking opt-ins/opt-outs
+CREATE TABLE "consent_events" (
+    "id" VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    "user_id" VARCHAR NOT NULL,
+    "channel" TEXT NOT NULL CHECK (channel IN ('sms', 'email')),
+    "type" TEXT NOT NULL CHECK (type IN ('opt_in', 'opt_out')),
+    "source" TEXT NOT NULL, -- 'signup', 'booking', 'keyword', 'admin'
+    "ip" TEXT,
+    "user_agent" TEXT,
+    "occurred_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Indexes for performance
+CREATE INDEX "idx_notification_templates_type" ON "notification_templates"("type");
+CREATE INDEX "idx_notification_templates_method" ON "notification_templates"("method");
+CREATE INDEX "idx_notification_templates_active" ON "notification_templates"("active");
+CREATE INDEX "idx_notifications_type" ON "notifications"("type");
+CREATE INDEX "idx_notifications_status" ON "notifications"("status");
+CREATE INDEX "idx_notifications_sent_at" ON "notifications"("sent_at");
+CREATE INDEX "idx_reengagement_tracking_customer_id" ON "reengagement_tracking"("customer_id");
+CREATE INDEX "idx_reengagement_tracking_campaign_type" ON "reengagement_tracking"("campaign_type");
+CREATE INDEX "idx_message_log_to" ON "message_log"("to");
+CREATE INDEX "idx_message_log_direction" ON "message_log"("direction");
+CREATE INDEX "idx_consent_events_user_id" ON "consent_events"("user_id");
+CREATE INDEX "idx_consent_events_channel_type" ON "consent_events"("channel", "type");
+
+2. Template Management UI Components
+
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Switch } from './ui/switch';
+import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { Mail, MessageSquare, Plus, Edit2, Trash2, Eye, Copy, Send } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
+
+interface NotificationTemplate {
+  id: string;
+  name: string;
+  type: 'email' | 'sms';
+  method: string;
+  subject?: string;
+  template: string;
+  active: boolean;
+  createdAt: string;
+}
+
+interface TemplateManagerProps {
+  apiBaseUrl?: string;
+}
+
+export function TemplateManager({ apiBaseUrl = '/api' }: TemplateManagerProps) {
+  const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<NotificationTemplate | null>(null);
+  const [templateTypeFilter, setTemplateTypeFilter] = useState<'all' | 'email' | 'sms'>('all');
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    type: 'email' as 'email' | 'sms',
+    method: 'manual',
+    subject: '',
+    template: '',
+    active: true
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch templates
+  const { data: templates, isLoading } = useQuery<NotificationTemplate[]>({
+    queryKey: [`${apiBaseUrl}/notification-templates`],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates`);
+      return response.json();
+    }
+  });
+
+  // Create template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: async (template: typeof newTemplate) => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template)
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/notification-templates`] });
+      toast({ title: "Success", description: "Template created successfully" });
+      setIsAddTemplateOpen(false);
+      setNewTemplate({
+        name: '',
+        type: 'email',
+        method: 'manual',
+        subject: '',
+        template: '',
+        active: true
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create template", variant: "destructive" });
+    }
+  });
+
+  // Update template mutation
+  const updateTemplateMutation = useMutation({
+    mutationFn: async (template: NotificationTemplate) => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates/${template.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template)
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/notification-templates`] });
+      toast({ title: "Success", description: "Template updated successfully" });
+      setEditingTemplate(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update template", variant: "destructive" });
+    }
+  });
+
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates/${id}`, {
+        method: 'DELETE'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/notification-templates`] });
+      toast({ title: "Success", description: "Template deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete template", variant: "destructive" });
+    }
+  });
+
+  const filteredTemplates = templates?.filter(template => 
+    templateTypeFilter === 'all' || template.type === templateTypeFilter
+  ) || [];
+
+  const methodNames: Record<string, string> = {
+    'booking_confirmation': 'Booking Confirmation',
+    'reminder_24h': '24-Hour Reminder',
+    'status_update': 'Status Update',
+    'google_review': 'Google Review Request',
+    're_engagement': 'Re-engagement',
+    'discount_offer': 'Discount Offer',
+    'manual': 'Manual Send'
+  };
+
+  const renderTemplatePreview = (template: NotificationTemplate) => {
+    const sampleData = {
+      customerName: 'John Doe',
+      appointmentDate: 'Monday, January 15, 2024',
+      appointmentTime: '2:00 PM',
+      serviceName: 'Premium Haircut',
+      servicePrice: '$35.00',
+      barberName: 'Mike Johnson',
+      confirmationCode: 'ABC123',
+      totalAmount: '$35.00',
+      discountCode: 'SAVE20',
+      businessName: 'Legacy Barbershop',
+      businessPhone: '(555) 123-4567'
+    };
+
+    let preview = template.template;
+    Object.entries(sampleData).forEach(([key, value]) => {
+      preview = preview.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    });
+
+    return preview;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Template Management</h2>
+          <p className="text-muted-foreground">Create and manage email and SMS templates</p>
+        </div>
+        <Dialog open={isAddTemplateOpen} onOpenChange={setIsAddTemplateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              New Template
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Template</DialogTitle>
+            </DialogHeader>
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">Template Details</TabsTrigger>
+                <TabsTrigger value="content">Content & Preview</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Template Name</label>
+                    <Input
+                      value={newTemplate.name}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter template name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Type</label>
+                    <Select value={newTemplate.type} onValueChange={(value: 'email' | 'sms') => 
+                      setNewTemplate(prev => ({ ...prev, type: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Method</label>
+                  <Select value={newTemplate.method} onValueChange={(value) => 
+                    setNewTemplate(prev => ({ ...prev, method: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual Send</SelectItem>
+                      <SelectItem value="booking_confirmation">Booking Confirmation</SelectItem>
+                      <SelectItem value="reminder_24h">24-Hour Reminder</SelectItem>
+                      <SelectItem value="status_update">Status Update</SelectItem>
+                      <SelectItem value="google_review">Google Review Request</SelectItem>
+                      <SelectItem value="re_engagement">Re-engagement</SelectItem>
+                      <SelectItem value="discount_offer">Discount Offer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {newTemplate.type === 'email' && (
+                  <div>
+                    <label className="text-sm font-medium">Subject Line</label>
+                    <Input
+                      value={newTemplate.subject}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, subject: e.target.value }))}
+                      placeholder="Enter email subject"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newTemplate.active}
+                    onCheckedChange={(checked) => setNewTemplate(prev => ({ ...prev, active: checked }))}
+                  />
+                  <label className="text-sm font-medium">Active Template</label>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="content" className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Template Content</label>
+                  <Textarea
+                    value={newTemplate.template}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, template: e.target.value }))}
+                    className="min-h-[200px]"
+                    placeholder="Enter your template content with variables like {{customerName}}, {{appointmentDate}}, etc."
+                  />
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Available Variables:</h4>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div><code>{{`{{customerName}}`}}</code></div>
+                    <div><code>{{`{{appointmentDate}}`}}</code></div>
+                    <div><code>{{`{{appointmentTime}}`}}</code></div>
+                    <div><code>{{`{{serviceName}}`}}</code></div>
+                    <div><code>{{`{{servicePrice}}`}}</code></div>
+                    <div><code>{{`{{barberName}}`}}</code></div>
+                    <div><code>{{`{{confirmationCode}}`}}</code></div>
+                    <div><code>{{`{{totalAmount}}`}}</code></div>
+                    <div><code>{{`{{discountCode}}`}}</code></div>
+                  </div>
+                </div>
+
+                {newTemplate.template && (
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-medium mb-2">Preview:</h4>
+                    <div className="bg-background p-3 rounded border text-sm whitespace-pre-wrap">
+                      {renderTemplatePreview(newTemplate as any)}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddTemplateOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => createTemplateMutation.mutate(newTemplate)}
+                disabled={createTemplateMutation.isPending || !newTemplate.name || !newTemplate.template}
+              >
+                {createTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <Select value={templateTypeFilter} onValueChange={(value: 'all' | 'email' | 'sms') => setTemplateTypeFilter(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="email">Email Only</SelectItem>
+            <SelectItem value="sms">SMS Only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Templates Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Templates</CardTitle>
+          <CardDescription>Manage your notification templates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTemplates.map((template) => (
+                  <TableRow key={template.id}>
+                    <TableCell className="font-medium">{template.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {template.type === 'email' ? 
+                          <Mail className="w-4 h-4 text-blue-500" /> : 
+                          <MessageSquare className="w-4 h-4 text-green-500" />
+                        }
+                        {template.type}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {methodNames[template.method] || template.method}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={template.active ? "default" : "secondary"}>
+                        {template.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(template.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewTemplate(template)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingTemplate(template)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{template.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteTemplateMutation.mutate(template.id)}
+                                className="bg-destructive text-destructive-foreground"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Preview Dialog */}
+      {previewTemplate && (
+        <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{previewTemplate.name} - Preview</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {previewTemplate.subject && (
+                <div>
+                  <h4 className="font-medium">Subject:</h4>
+                  <div className="bg-muted p-3 rounded">{previewTemplate.subject}</div>
+                </div>
+              )}
+              <div>
+                <h4 className="font-medium">Content:</h4>
+                <div className="bg-muted p-3 rounded text-sm whitespace-pre-wrap">
+                  {renderTemplatePreview(previewTemplate)}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setPreviewTemplate(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Dialog - Similar structure to create dialog */}
+      {editingTemplate && (
+        <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Template</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Template Name</label>
+                  <Input
+                    value={editingTemplate.name}
+                    onChange={(e) => setEditingTemplate(prev => 
+                      prev ? { ...prev, name: e.target.value } : null
+                    )}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Type</label>
+                  <Select 
+                    value={editingTemplate.type} 
+                    onValueChange={(value: 'email' | 'sms') => 
+                      setEditingTemplate(prev => prev ? { ...prev, type: value } : null)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="sms">SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editingTemplate.type === 'email' && (
+                <div>
+                  <label className="text-sm font-medium">Subject Line</label>
+                  <Input
+                    value={editingTemplate.subject || ''}
+                    onChange={(e) => setEditingTemplate(prev => 
+                      prev ? { ...prev, subject: e.target.value } : null
+                    )}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium">Template Content</label>
+                <Textarea
+                  value={editingTemplate.template}
+                  onChange={(e) => setEditingTemplate(prev => 
+                    prev ? { ...prev, template: e.target.value } : null
+                  )}
+                  className="min-h-[200px]"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={editingTemplate.active}
+                  onCheckedChange={(checked) => setEditingTemplate(prev => 
+                    prev ? { ...prev, active: checked } : null
+                  )}
+                />
+                <label className="text-sm font-medium">Active Template</label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingTemplate(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => editingTemplate && updateTemplateMutation.mutate(editingTemplate)}
+                disabled={updateTemplateMutation.isPending}
+              >
+                {updateTemplateMutation.isPending ? 'Updating...' : 'Update Template'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+3. Campaign Management System
+
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
+import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Calendar } from './ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Mail, MessageSquare, Send, Clock, CheckCircle, XCircle, Users, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { format } from 'date-fns';
+import { useToast } from '../hooks/use-toast';
+
+interface Campaign {
+  id: string;
+  name: string;
+  type: 'email' | 'sms' | 'both';
+  templateId?: string;
+  customMessage?: string;
+  recipients: string[];
+  scheduledFor?: Date;
+  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  createdAt: Date;
+  sentAt?: Date;
+  deliveredCount: number;
+  failedCount: number;
+  totalRecipients: number;
+}
+
+interface Recipient {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  lastBooking?: Date;
+  totalBookings: number;
+  tags?: string[];
+}
+
+interface CampaignManagerProps {
+  apiBaseUrl?: string;
+}
+
+export function CampaignManager({ apiBaseUrl = '/api' }: CampaignManagerProps) {
+  const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [recipientFilters, setRecipientFilters] = useState({
+    dateRange: { from: undefined as Date | undefined, to: undefined as Date | undefined },
+    serviceFilter: 'all',
+    barberFilter: 'all',
+    minBookings: 0,
+    tags: [] as string[]
+  });
+  
+  const [newCampaign, setNewCampaign] = useState({
+    name: '',
+    type: 'email' as 'email' | 'sms' | 'both',
+    templateId: '',
+    customMessage: '',
+    scheduledFor: undefined as Date | undefined,
+    sendNow: true
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch campaigns
+  const { data: campaigns, isLoading: campaignsLoading } = useQuery<Campaign[]>({
+    queryKey: [`${apiBaseUrl}/campaigns`],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/campaigns`);
+      return response.json();
+    }
+  });
+
+  // Fetch templates
+  const { data: templates } = useQuery({
+    queryKey: [`${apiBaseUrl}/notification-templates`],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates`);
+      return response.json();
+    }
+  });
+
+  // Fetch recipients with filters
+  const { data: recipients, isLoading: recipientsLoading } = useQuery<Recipient[]>({
+    queryKey: [`${apiBaseUrl}/recipients`, recipientFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recipientFilters.dateRange.from) {
+        params.append('fromDate', recipientFilters.dateRange.from.toISOString());
+      }
+      if (recipientFilters.dateRange.to) {
+        params.append('toDate', recipientFilters.dateRange.to.toISOString());
+      }
+      if (recipientFilters.serviceFilter !== 'all') {
+        params.append('serviceId', recipientFilters.serviceFilter);
+      }
+      if (recipientFilters.barberFilter !== 'all') {
+        params.append('barberId', recipientFilters.barberFilter);
+      }
+      if (recipientFilters.minBookings > 0) {
+        params.append('minBookings', recipientFilters.minBookings.toString());
+      }
+
+      const response = await fetch(`${apiBaseUrl}/recipients?${params.toString()}`);
+      return response.json();
+    }
+  });
+
+  // Create campaign mutation
+  const createCampaignMutation = useMutation({
+    mutationFn: async (campaign: any) => {
+      const response = await fetch(`${apiBaseUrl}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...campaign,
+          recipients: selectedRecipients
+        })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/campaigns`] });
+      toast({ title: "Success", description: "Campaign created successfully" });
+      setIsCreateCampaignOpen(false);
+      resetCampaignForm();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create campaign", variant: "destructive" });
+    }
+  });
+
+  // Send campaign mutation
+  const sendCampaignMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const response = await fetch(`${apiBaseUrl}/campaigns/${campaignId}/send`, {
+        method: 'POST'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/campaigns`] });
+      toast({ title: "Success", description: "Campaign sent successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send campaign", variant: "destructive" });
+    }
+  });
+
+  const resetCampaignForm = () => {
+    setNewCampaign({
+      name: '',
+      type: 'email',
+      templateId: '',
+      customMessage: '',
+      scheduledFor: undefined,
+      sendNow: true
+    });
+    setSelectedRecipients([]);
+  };
+
+  const handleRecipientSelect = (recipientId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRecipients(prev => [...prev, recipientId]);
+    } else {
+      setSelectedRecipients(prev => prev.filter(id => id !== recipientId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRecipients.length === recipients?.length) {
+      setSelectedRecipients([]);
+    } else {
+      setSelectedRecipients(recipients?.map(r => r.id) || []);
+    }
+  };
+
+  const getStatusBadge = (status: Campaign['status']) => {
+    const statusConfig = {
+      draft: { variant: 'secondary' as const, icon: Clock, color: 'text-gray-600' },
+      scheduled: { variant: 'outline' as const, icon: Clock, color: 'text-blue-600' },
+      sending: { variant: 'outline' as const, icon: Send, color: 'text-yellow-600' },
+      completed: { variant: 'default' as const, icon: CheckCircle, color: 'text-green-600' },
+      failed: { variant: 'destructive' as const, icon: XCircle, color: 'text-red-600' }
+    };
+
+    const config = statusConfig[status];
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="w-3 h-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Campaign Management</h2>
+          <p className="text-muted-foreground">Create and manage email and SMS campaigns</p>
+        </div>
+        <Dialog open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Send className="w-4 h-4 mr-2" />
+              New Campaign
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Campaign</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-6">
+              {/* Campaign Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Campaign Settings</h3>
+                
+                <div>
+                  <label className="text-sm font-medium">Campaign Name</label>
+                  <Input
+                    value={newCampaign.name}
+                    onChange={(e) => setNewCampaign(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter campaign name"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Campaign Type</label>
+                  <Select 
+                    value={newCampaign.type} 
+                    onValueChange={(value: 'email' | 'sms' | 'both') => 
+                      setNewCampaign(prev => ({ ...prev, type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email Only</SelectItem>
+                      <SelectItem value="sms">SMS Only</SelectItem>
+                      <SelectItem value="both">Email & SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Template (Optional)</label>
+                  <Select 
+                    value={newCampaign.templateId} 
+                    onValueChange={(value) => setNewCampaign(prev => ({ ...prev, templateId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a template or write custom message" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Custom Message</SelectItem>
+                      {templates?.filter((t: any) => 
+                        newCampaign.type === 'both' || t.type === newCampaign.type
+                      ).map((template: any) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name} ({template.type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {!newCampaign.templateId && (
+                  <div>
+                    <label className="text-sm font-medium">Custom Message</label>
+                    <Textarea
+                      value={newCampaign.customMessage}
+                      onChange={(e) => setNewCampaign(prev => ({ ...prev, customMessage: e.target.value }))}
+                      className="min-h-[120px]"
+                      placeholder="Enter your custom message..."
+                    />
+                    {newCampaign.type === 'sms' && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Character count: {newCampaign.customMessage.length}/160
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={newCampaign.sendNow}
+                    onCheckedChange={(checked) => setNewCampaign(prev => ({ ...prev, sendNow: checked as boolean }))}
+                  />
+                  <label className="text-sm font-medium">Send immediately</label>
+                </div>
+
+                {!newCampaign.sendNow && (
+                  <div>
+                    <label className="text-sm font-medium">Schedule For</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newCampaign.scheduledFor ? 
+                            format(newCampaign.scheduledFor, "PPP") : 
+                            "Pick a date"
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newCampaign.scheduledFor}
+                          onSelect={(date) => setNewCampaign(prev => ({ ...prev, scheduledFor: date }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+
+              {/* Recipient Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Select Recipients</h3>
+                  <Badge variant="outline">
+                    {selectedRecipients.length} selected
+                  </Badge>
+                </div>
+
+                {/* Recipient Filters */}
+                <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+                  <h4 className="font-medium text-sm">Filters</h4>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium">Min Bookings</label>
+                      <Input
+                        type="number"
+                        value={recipientFilters.minBookings}
+                        onChange={(e) => setRecipientFilters(prev => ({ 
+                          ...prev, 
+                          minBookings: parseInt(e.target.value) || 0 
+                        }))}
+                        className="h-8"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-medium">Last Visit</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-8 text-xs">
+                            <CalendarIcon className="mr-1 h-3 w-3" />
+                            {recipientFilters.dateRange.from ? 
+                              format(recipientFilters.dateRange.from, "MMM dd") : 
+                              "Any date"
+                            }
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="range"
+                            selected={recipientFilters.dateRange}
+                            onSelect={(range) => setRecipientFilters(prev => ({ 
+                              ...prev, 
+                              dateRange: { from: range?.from, to: range?.to } 
+                            }))}
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recipients List */}
+                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                  <div className="p-3 border-b bg-muted/50 flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      className="h-8 px-2"
+                    >
+                      <Checkbox 
+                        checked={selectedRecipients.length === recipients?.length && recipients?.length > 0}
+                        className="mr-2"
+                      />
+                      Select All ({recipients?.length || 0})
+                    </Button>
+                  </div>
+                  
+                  {recipientsLoading ? (
+                    <div className="p-4 text-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {recipients?.map((recipient) => (
+                        <div key={recipient.id} className="flex items-center p-2 hover:bg-muted/50 rounded">
+                          <Checkbox
+                            checked={selectedRecipients.includes(recipient.id)}
+                            onCheckedChange={(checked) => handleRecipientSelect(recipient.id, checked as boolean)}
+                            className="mr-3"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{recipient.name}</div>
+                            <div className="text-xs text-muted-foreground">{recipient.email}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {recipient.totalBookings} bookings
+                              {recipient.lastBooking && 
+                                ` • Last: ${format(new Date(recipient.lastBooking), "MMM dd")}`
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateCampaignOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => createCampaignMutation.mutate(newCampaign)}
+                disabled={
+                  createCampaignMutation.isPending || 
+                  !newCampaign.name || 
+                  selectedRecipients.length === 0 ||
+                  (!newCampaign.templateId && !newCampaign.customMessage)
+                }
+              >
+                {createCampaignMutation.isPending ? 'Creating...' : 
+                 newCampaign.sendNow ? 'Create & Send' : 'Schedule Campaign'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Campaigns Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Campaigns</CardTitle>
+          <CardDescription>Manage your email and SMS campaigns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {campaignsLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Recipients</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Performance</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns?.map((campaign) => (
+                  <TableRow key={campaign.id}>
+                    <TableCell className="font-medium">{campaign.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {campaign.type === 'email' && <Mail className="w-4 h-4 text-blue-500" />}
+                        {campaign.type === 'sms' && <MessageSquare className="w-4 h-4 text-green-500" />}
+                        {campaign.type === 'both' && (
+                          <>
+                            <Mail className="w-4 h-4 text-blue-500" />
+                            <MessageSquare className="w-4 h-4 text-green-500" />
+                          </>
+                        )}
+                        {campaign.type}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        {campaign.totalRecipients}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                    <TableCell>
+                      {campaign.status === 'completed' && (
+                        <div className="text-sm">
+                          <div className="text-green-600">{campaign.deliveredCount} delivered</div>
+                          {campaign.failedCount > 0 && (
+                            <div className="text-red-600">{campaign.failedCount} failed</div>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(campaign.createdAt), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {campaign.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            onClick={() => sendCampaignMutation.mutate(campaign.id)}
+                            disabled={sendCampaignMutation.isPending}
+                          >
+                            <Send className="w-4 h-4 mr-1" />
+                            Send
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+3. Campaign Management System
+
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
+import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Calendar } from './ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Mail, MessageSquare, Send, Clock, CheckCircle, XCircle, Users, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { format } from 'date-fns';
+import { useToast } from '../hooks/use-toast';
+
+interface Campaign {
+  id: string;
+  name: string;
+  type: 'email' | 'sms' | 'both';
+  templateId?: string;
+  customMessage?: string;
+  recipients: string[];
+  scheduledFor?: Date;
+  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  createdAt: Date;
+  sentAt?: Date;
+  deliveredCount: number;
+  failedCount: number;
+  totalRecipients: number;
+}
+
+interface Recipient {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  lastBooking?: Date;
+  totalBookings: number;
+  tags?: string[];
+}
+
+interface CampaignManagerProps {
+  apiBaseUrl?: string;
+}
+
+export function CampaignManager({ apiBaseUrl = '/api' }: CampaignManagerProps) {
+  const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [recipientFilters, setRecipientFilters] = useState({
+    dateRange: { from: undefined as Date | undefined, to: undefined as Date | undefined },
+    serviceFilter: 'all',
+    barberFilter: 'all',
+    minBookings: 0,
+    tags: [] as string[]
+  });
+  
+  const [newCampaign, setNewCampaign] = useState({
+    name: '',
+    type: 'email' as 'email' | 'sms' | 'both',
+    templateId: '',
+    customMessage: '',
+    scheduledFor: undefined as Date | undefined,
+    sendNow: true
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch campaigns
+  const { data: campaigns, isLoading: campaignsLoading } = useQuery<Campaign[]>({
+    queryKey: [`${apiBaseUrl}/campaigns`],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/campaigns`);
+      return response.json();
+    }
+  });
+
+  // Fetch templates
+  const { data: templates } = useQuery({
+    queryKey: [`${apiBaseUrl}/notification-templates`],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/notification-templates`);
+      return response.json();
+    }
+  });
+
+  // Fetch recipients with filters
+  const { data: recipients, isLoading: recipientsLoading } = useQuery<Recipient[]>({
+    queryKey: [`${apiBaseUrl}/recipients`, recipientFilters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recipientFilters.dateRange.from) {
+        params.append('fromDate', recipientFilters.dateRange.from.toISOString());
+      }
+      if (recipientFilters.dateRange.to) {
+        params.append('toDate', recipientFilters.dateRange.to.toISOString());
+      }
+      if (recipientFilters.serviceFilter !== 'all') {
+        params.append('serviceId', recipientFilters.serviceFilter);
+      }
+      if (recipientFilters.barberFilter !== 'all') {
+        params.append('barberId', recipientFilters.barberFilter);
+      }
+      if (recipientFilters.minBookings > 0) {
+        params.append('minBookings', recipientFilters.minBookings.toString());
+      }
+
+      const response = await fetch(`${apiBaseUrl}/recipients?${params.toString()}`);
+      return response.json();
+    }
+  });
+
+  // Create campaign mutation
+  const createCampaignMutation = useMutation({
+    mutationFn: async (campaign: any) => {
+      const response = await fetch(`${apiBaseUrl}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...campaign,
+          recipients: selectedRecipients
+        })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/campaigns`] });
+      toast({ title: "Success", description: "Campaign created successfully" });
+      setIsCreateCampaignOpen(false);
+      resetCampaignForm();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create campaign", variant: "destructive" });
+    }
+  });
+
+  // Send campaign mutation
+  const sendCampaignMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const response = await fetch(`${apiBaseUrl}/campaigns/${campaignId}/send`, {
+        method: 'POST'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiBaseUrl}/campaigns`] });
+      toast({ title: "Success", description: "Campaign sent successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send campaign", variant: "destructive" });
+    }
+  });
+
+  const resetCampaignForm = () => {
+    setNewCampaign({
+      name: '',
+      type: 'email',
+      templateId: '',
+      customMessage: '',
+      scheduledFor: undefined,
+      sendNow: true
+    });
+    setSelectedRecipients([]);
+  };
+
+  const handleRecipientSelect = (recipientId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRecipients(prev => [...prev, recipientId]);
+    } else {
+      setSelectedRecipients(prev => prev.filter(id => id !== recipientId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRecipients.length === recipients?.length) {
+      setSelectedRecipients([]);
+    } else {
+      setSelectedRecipients(recipients?.map(r => r.id) || []);
+    }
+  };
+
+  const getStatusBadge = (status: Campaign['status']) => {
+    const statusConfig = {
+      draft: { variant: 'secondary' as const, icon: Clock, color: 'text-gray-600' },
+      scheduled: { variant: 'outline' as const, icon: Clock, color: 'text-blue-600' },
+      sending: { variant: 'outline' as const, icon: Send, color: 'text-yellow-600' },
+      completed: { variant: 'default' as const, icon: CheckCircle, color: 'text-green-600' },
+      failed: { variant: 'destructive' as const, icon: XCircle, color: 'text-red-600' }
+    };
+
+    const config = statusConfig[status];
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="w-3 h-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Campaign Management</h2>
+          <p className="text-muted-foreground">Create and manage email and SMS campaigns</p>
+        </div>
+        <Dialog open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Send className="w-4 h-4 mr-2" />
+              New Campaign
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Campaign</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-6">
+              {/* Campaign Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Campaign Settings</h3>
+                
+                <div>
+                  <label className="text-sm font-medium">Campaign Name</label>
+                  <Input
+                    value={newCampaign.name}
+                    onChange={(e) => setNewCampaign(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter campaign name"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Campaign Type</label>
+                  <Select 
+                    value={newCampaign.type} 
+                    onValueChange={(value: 'email' | 'sms' | 'both') => 
+                      setNewCampaign(prev => ({ ...prev, type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email Only</SelectItem>
+                      <SelectItem value="sms">SMS Only</SelectItem>
+                      <SelectItem value="both">Email & SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Template (Optional)</label>
+                  <Select 
+                    value={newCampaign.templateId} 
+                    onValueChange={(value) => setNewCampaign(prev => ({ ...prev, templateId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a template or write custom message" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Custom Message</SelectItem>
+                      {templates?.filter((t: any) => 
+                        newCampaign.type === 'both' || t.type === newCampaign.type
+                      ).map((template: any) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name} ({template.type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {!newCampaign.templateId && (
+                  <div>
+                    <label className="text-sm font-medium">Custom Message</label>
+                    <Textarea
+                      value={newCampaign.customMessage}
+                      onChange={(e) => setNewCampaign(prev => ({ ...prev, customMessage: e.target.value }))}
+                      className="min-h-[120px]"
+                      placeholder="Enter your custom message..."
+                    />
+                    {newCampaign.type === 'sms' && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Character count: {newCampaign.customMessage.length}/160
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={newCampaign.sendNow}
+                    onCheckedChange={(checked) => setNewCampaign(prev => ({ ...prev, sendNow: checked as boolean }))}
+                  />
+                  <label className="text-sm font-medium">Send immediately</label>
+                </div>
+
+                {!newCampaign.sendNow && (
+                  <div>
+                    <label className="text-sm font-medium">Schedule For</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newCampaign.scheduledFor ? 
+                            format(newCampaign.scheduledFor, "PPP") : 
+                            "Pick a date"
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newCampaign.scheduledFor}
+                          onSelect={(date) => setNewCampaign(prev => ({ ...prev, scheduledFor: date }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+
+              {/* Recipient Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Select Recipients</h3>
+                  <Badge variant="outline">
+                    {selectedRecipients.length} selected
+                  </Badge>
+                </div>
+
+                {/* Recipient Filters */}
+                <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+                  <h4 className="font-medium text-sm">Filters</h4>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium">Min Bookings</label>
+                      <Input
+                        type="number"
+                        value={recipientFilters.minBookings}
+                        onChange={(e) => setRecipientFilters(prev => ({ 
+                          ...prev, 
+                          minBookings: parseInt(e.target.value) || 0 
+                        }))}
+                        className="h-8"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-medium">Last Visit</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full h-8 text-xs">
+                            <CalendarIcon className="mr-1 h-3 w-3" />
+                            {recipientFilters.dateRange.from ? 
+                              format(recipientFilters.dateRange.from, "MMM dd") : 
+                              "Any date"
+                            }
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="range"
+                            selected={recipientFilters.dateRange}
+                            onSelect={(range) => setRecipientFilters(prev => ({ 
+                              ...prev, 
+                              dateRange: { from: range?.from, to: range?.to } 
+                            }))}
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recipients List */}
+                <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                  <div className="p-3 border-b bg-muted/50 flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAll}
+                      className="h-8 px-2"
+                    >
+                      <Checkbox 
+                        checked={selectedRecipients.length === recipients?.length && recipients?.length > 0}
+                        className="mr-2"
+                      />
+                      Select All ({recipients?.length || 0})
+                    </Button>
+                  </div>
+                  
+                  {recipientsLoading ? (
+                    <div className="p-4 text-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {recipients?.map((recipient) => (
+                        <div key={recipient.id} className="flex items-center p-2 hover:bg-muted/50 rounded">
+                          <Checkbox
+                            checked={selectedRecipients.includes(recipient.id)}
+                            onCheckedChange={(checked) => handleRecipientSelect(recipient.id, checked as boolean)}
+                            className="mr-3"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{recipient.name}</div>
+                            <div className="text-xs text-muted-foreground">{recipient.email}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {recipient.totalBookings} bookings
+                              {recipient.lastBooking && 
+                                ` • Last: ${format(new Date(recipient.lastBooking), "MMM dd")}`
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateCampaignOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => createCampaignMutation.mutate(newCampaign)}
+                disabled={
+                  createCampaignMutation.isPending || 
+                  !newCampaign.name || 
+                  selectedRecipients.length === 0 ||
+                  (!newCampaign.templateId && !newCampaign.customMessage)
+                }
+              >
+                {createCampaignMutation.isPending ? 'Creating...' : 
+                 newCampaign.sendNow ? 'Create & Send' : 'Schedule Campaign'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Campaigns Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Campaigns</CardTitle>
+          <CardDescription>Manage your email and SMS campaigns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {campaignsLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Recipients</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Performance</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns?.map((campaign) => (
+                  <TableRow key={campaign.id}>
+                    <TableCell className="font-medium">{campaign.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {campaign.type === 'email' && <Mail className="w-4 h-4 text-blue-500" />}
+                        {campaign.type === 'sms' && <MessageSquare className="w-4 h-4 text-green-500" />}
+                        {campaign.type === 'both' && (
+                          <>
+                            <Mail className="w-4 h-4 text-blue-500" />
+                            <MessageSquare className="w-4 h-4 text-green-500" />
+                          </>
+                        )}
+                        {campaign.type}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        {campaign.totalRecipients}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                    <TableCell>
+                      {campaign.status === 'completed' && (
+                        <div className="text-sm">
+                          <div className="text-green-600">{campaign.deliveredCount} delivered</div>
+                          {campaign.failedCount > 0 && (
+                            <div className="text-red-600">{campaign.failedCount} failed</div>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(campaign.createdAt), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {campaign.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            onClick={() => sendCampaignMutation.mutate(campaign.id)}
+                            disabled={sendCampaignMutation.isPending}
+                          >
+                            <Send className="w-4 h-4 mr-1" />
+                            Send
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+4. Template Processing Engine
+
+export interface TemplateVariables {
+  customerName: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  serviceName: string;
+  servicePrice?: string;
+  barberName?: string;
+  confirmationCode: string;
+  totalAmount?: string;
+  businessName?: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  discountCode?: string;
+  // Custom variables can be added
+  [key: string]: string | undefined;
+}
+
+export interface ProcessedTemplate {
+  subject?: string;
+  content: string;
+  variables: TemplateVariables;
+  missingVariables: string[];
+  isValid: boolean;
+}
+
+export class TemplateProcessor {
+  private static instance: TemplateProcessor;
+  
+  private constructor() {}
+
+  public static getInstance(): TemplateProcessor {
+    if (!TemplateProcessor.instance) {
+      TemplateProcessor.instance = new TemplateProcessor();
+    }
+    return TemplateProcessor.instance;
+  }
+
+  /**
+   * Process a template with given variables
+   */
+  public processTemplate(
+    template: string,
+    subject: string | undefined,
+    variables: Partial<TemplateVariables>
+  ): ProcessedTemplate {
+    const missingVariables: string[] = [];
+    const usedVariables: TemplateVariables = {} as TemplateVariables;
+
+    // Process content
+    let processedContent = this.replaceVariables(template, variables, missingVariables, usedVariables);
+    
+    // Process subject if provided
+    let processedSubject: string | undefined;
+    if (subject) {
+      processedSubject = this.replaceVariables(subject, variables, missingVariables, usedVariables);
+    }
+
+    return {
+      subject: processedSubject,
+      content: processedContent,
+      variables: usedVariables,
+      missingVariables,
+      isValid: missingVariables.length === 0
+    };
+  }
+
+  /**
+   * Replace variables in text with actual values
+   */
+  private replaceVariables(
+    text: string,
+    variables: Partial<TemplateVariables>,
+    missingVariables: string[],
+    usedVariables: TemplateVariables
+  ): string {
+    // Find all variable placeholders in the format {{variableName}}
+    const variablePattern = /\{\{([^}]+)\}\}/g;
+    
+    return text.replace(variablePattern, (match, variableName) => {
+      const trimmedName = variableName.trim();
+      
+      // Check if variable exists
+      if (variables[trimmedName] !== undefined) {
+        usedVariables[trimmedName] = variables[trimmedName]!;
+        return variables[trimmedName]!;
+      } else {
+        // Track missing variables
+        if (!missingVariables.includes(trimmedName)) {
+          missingVariables.push(trimmedName);
+        }
+        return match; // Return original placeholder if variable not found
+      }
+    });
+  }
+
+  /**
+   * Validate template syntax
+   */
+  public validateTemplate(template: string, subject?: string): {
+    isValid: boolean;
+    errors: string[];
+    variables: string[];
+  } {
+    const errors: string[] = [];
+    const variables: string[] = [];
+    
+    // Check for unclosed braces
+    const openBraces = (template.match(/\{\{/g) || []).length;
+    const closeBraces = (template.match(/\}\}/g) || []).length;
+    
+    if (openBraces !== closeBraces) {
+      errors.push('Mismatched template braces - ensure all {{variables}} are properly closed');
+    }
+
+    // Extract all variables
+    const variablePattern = /\{\{([^}]+)\}\}/g;
+    let match;
+    
+    while ((match = variablePattern.exec(template)) !== null) {
+      const variableName = match[1].trim();
+      if (!variables.includes(variableName)) {
+        variables.push(variableName);
+      }
+    }
+
+    // Check subject if provided
+    if (subject) {
+      const subjectOpenBraces = (subject.match(/\{\{/g) || []).length;
+      const subjectCloseBraces = (subject.match(/\}\}/g) || []).length;
+      
+      if (subjectOpenBraces !== subjectCloseBraces) {
+        errors.push('Mismatched template braces in subject line');
+      }
+
+      // Extract subject variables
+      while ((match = variablePattern.exec(subject)) !== null) {
+        const variableName = match[1].trim();
+        if (!variables.includes(variableName)) {
+          variables.push(variableName);
+        }
+      }
+    }
+
+    // Check for empty variable names
+    const emptyVariables = variables.filter(v => v === '');
+    if (emptyVariables.length > 0) {
+      errors.push('Empty variable names found - ensure all {{}} contain variable names');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      variables
+    };
+  }
+
+  /**
+   * Get available template variables with descriptions
+   */
+  public getAvailableVariables(): Array<{
+    name: string;
+    description: string;
+    example: string;
+    required: boolean;
+  }> {
+    return [
+      {
+        name: 'customerName',
+        description: 'Full name of the customer',
+        example: 'John Doe',
+        required: true
+      },
+      {
+        name: 'appointmentDate',
+        description: 'Formatted appointment date',
+        example: 'Monday, January 15, 2024',
+        required: false
+      },
+      {
+        name: 'appointmentTime',
+        description: 'Formatted appointment time',
+        example: '2:00 PM',
+        required: false
+      },
+      {
+        name: 'serviceName',
+        description: 'Name of the booked service',
+        example: 'Premium Haircut',
+        required: false
+      },
+      {
+        name: 'servicePrice',
+        description: 'Formatted service price',
+        example: '$35.00',
+        required: false
+      },
+      {
+        name: 'barberName',
+        description: 'Name of the assigned barber',
+        example: 'Mike Johnson',
+        required: false
+      },
+      {
+        name: 'confirmationCode',
+        description: 'Booking confirmation code',
+        example: 'ABC123',
+        required: false
+      },
+      {
+        name: 'totalAmount',
+        description: 'Total booking amount',
+        example: '$45.00',
+        required: false
+      },
+      {
+        name: 'businessName',
+        description: 'Name of the business',
+        example: 'Legacy Barbershop & Studio',
+        required: false
+      },
+      {
+        name: 'businessPhone',
+        description: 'Business phone number',
+        example: '(555) 123-4567',
+        required: false
+      },
+      {
+        name: 'businessAddress',
+        description: 'Business address',
+        example: '123 Main Street, Your City, State 12345',
+        required: false
+      },
+      {
+        name: 'discountCode',
+        description: 'Discount code applied to booking',
+        example: 'SAVE20',
+        required: false
+      }
+    ];
+  }
+
+  /**
+   * Generate preview data for template testing
+   */
+  public generatePreviewData(): TemplateVariables {
+    return {
+      customerName: 'John Doe',
+      appointmentDate: 'Monday, January 15, 2024',
+      appointmentTime: '2:00 PM',
+      serviceName: 'Premium Haircut',
+      servicePrice: '$35.00',
+      barberName: 'Mike Johnson',
+      confirmationCode: 'ABC123',
+      totalAmount: '$35.00',
+      businessName: 'Legacy Barbershop & Studio',
+      businessPhone: '(555) 123-4567',
+      businessAddress: '123 Main Street, Your City, State 12345',
+      discountCode: 'SAVE20'
+    };
+  }
+
+  /**
+   * Optimize template for SMS (shorten content, preserve key info)
+   */
+  public optimizeForSMS(content: string, maxLength: number = 160): string {
+    if (content.length <= maxLength) {
+      return content;
+    }
+
+    // Common SMS optimizations
+    let optimized = content
+      // Remove extra whitespace and line breaks
+      .replace(/\s+/g, ' ')
+      .trim()
+      // Common abbreviations
+      .replace(/appointment/gi, 'appt')
+      .replace(/confirmation/gi, 'conf')
+      .replace(/barbershop/gi, 'shop')
+      .replace(/tomorrow/gi, 'tmrw')
+      .replace(/reminder/gi, 'remind')
+      .replace(/please/gi, 'pls')
+      .replace(/your/gi, 'ur')
+      .replace(/thank you/gi, 'thx')
+      // Remove common filler words
+      .replace(/\b(the|a|an)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // If still too long, truncate with ellipsis
+    if (optimized.length > maxLength - 3) {
+      optimized = optimized.substring(0, maxLength - 3) + '...';
+    }
+
+    return optimized;
+  }
+
+  /**
+   * Convert plain text to HTML for email templates
+   */
+  public convertToHTML(plainText: string): string {
+    return plainText
+      // Convert line breaks to HTML
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      // Wrap in paragraphs
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>')
+      // Clean up empty paragraphs
+      .replace(/<p><\/p>/g, '')
+      // Convert URLs to links
+      .replace(
+        /(https?:\/\/[^\s]+)/g,
+        '<a href="$1" style="color: #1e40af; text-decoration: underline;">$1</a>'
+      )
+      // Convert email addresses to links
+      .replace(
+        /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+        '<a href="mailto:$1" style="color: #1e40af; text-decoration: underline;">$1</a>'
+      )
+      // Convert phone numbers to links
+      .replace(
+        /(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g,
+        '<a href="tel:$1" style="color: #1e40af; text-decoration: underline;">$1</a>'
+      );
+  }
+
+  /**
+   * Sanitize template content for security
+   */
+  public sanitizeTemplate(content: string): string {
+    return content
+      // Remove potentially dangerous HTML tags and attributes
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^>]*>/gi, '')
+      .replace(/<object\b[^>]*>/gi, '')
+      .replace(/<embed\b[^>]*>/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/vbscript:/gi, '')
+      .replace(/data:text\/html/gi, '');
+  }
+
+  /**
+   * Batch process multiple templates
+   */
+  public batchProcess(
+    templates: Array<{ content: string; subject?: string; variables: Partial<TemplateVariables> }>
+  ): ProcessedTemplate[] {
+    return templates.map(template => 
+      this.processTemplate(template.content, template.subject, template.variables)
+    );
+  }
+
+  /**
+   * Test template with multiple variable combinations
+   */
+  public testTemplate(
+    content: string,
+    subject: string | undefined,
+    testCases: Array<Partial<TemplateVariables>>
+  ): Array<ProcessedTemplate & { testCase: number }> {
+    return testCases.map((variables, index) => ({
+      ...this.processTemplate(content, subject, variables),
+      testCase: index + 1
+    }));
+  }
+}
+
+export const templateProcessor = TemplateProcessor.getInstance();
+
+5. Analytics Dashboard Components
+
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Mail, MessageSquare, TrendingUp, Users, Clock, CheckCircle, XCircle, Eye, MousePointer } from 'lucide-react';
+
+interface AnalyticsData {
+  overview: {
+    totalTemplates: number;
+    activeTemplates: number;
+    totalCampaigns: number;
+    totalSent: number;
+    deliveryRate: number;
+    openRate: number;
+    clickRate: number;
+    unsubscribeRate: number;
+  };
+  campaignPerformance: Array<{
+    id: string;
+    name: string;
+    type: 'email' | 'sms' | 'both';
+    sent: number;
+    delivered: number;
+    opened?: number;
+    clicked?: number;
+    unsubscribed?: number;
+    bounced?: number;
+    deliveryRate: number;
+    openRate?: number;
+    clickRate?: number;
+    sentDate: string;
+  }>;
+  templatePerformance: Array<{
+    id: string;
+    name: string;
+    type: 'email' | 'sms';
+    usageCount: number;
+    avgDeliveryRate: number;
+    avgOpenRate?: number;
+    avgClickRate?: number;
+    lastUsed: string;
+  }>;
+  timeSeriesData: Array<{
+    date: string;
+    emailsSent: number;
+    smsSent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+  }>;
+  engagementMetrics: {
+    byTimeOfDay: Array<{
+      hour: number;
+      opens: number;
+      clicks: number;
+    }>;
+    byDayOfWeek: Array<{
+      day: string;
+      opens: number;
+      clicks: number;
+      sends: number;
+    }>;
+  };
+  reengagementData: {
+    totalCampaignsSent: number;
+    successfulReengagements: number;
+    reengagementRate: number;
+    averageDaysToReturn: number;
+    campaignStats: {
+      re_engagement: { sent: number; successful: number; rate: number };
+      discount_offer: { sent: number; successful: number; rate: number };
+    };
+  };
+}
+
+interface TemplateAnalyticsProps {
+  apiBaseUrl?: string;
+}
+
+export function TemplateAnalytics({ apiBaseUrl = '/api' }: TemplateAnalyticsProps) {
+  const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [selectedTab, setSelectedTab] = useState('overview');
+
+  // Fetch analytics data
+  const { data: analytics, isLoading } = useQuery<AnalyticsData>({
+    queryKey: [`${apiBaseUrl}/analytics/templates`, timePeriod],
+    queryFn: async () => {
+      const response = await fetch(`${apiBaseUrl}/analytics/templates?period=${timePeriod}`);
+      return response.json();
+    },
+    refetchInterval: 5 * 60 * 1000 // Refetch every 5 minutes
+  });
+
+  const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
+  const formatNumber = (value: number) => value.toLocaleString();
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Loading skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-muted rounded-lg p-6 animate-pulse">
+              <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2" />
+              <div className="h-8 bg-muted-foreground/20 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-muted rounded-lg h-[400px] animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No analytics data available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Template & Campaign Analytics</h2>
+          <p className="text-muted-foreground">Track performance and engagement metrics</p>
+        </div>
+        <Select value={timePeriod} onValueChange={(value: '7d' | '30d' | '90d' | '1y') => setTimePeriod(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
+            <SelectItem value="90d">Last 90 days</SelectItem>
+            <SelectItem value="1y">Last year</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="engagement">Engagement</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Key Metrics Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+                <Mail className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNumber(analytics.overview.totalSent)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {analytics.overview.totalCampaigns} campaigns
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatPercentage(analytics.overview.deliveryRate)}</div>
+                <Progress value={analytics.overview.deliveryRate} className="mt-2" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
+                <Eye className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatPercentage(analytics.overview.openRate)}</div>
+                <Progress value={analytics.overview.openRate} className="mt-2" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
+                <MousePointer className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatPercentage(analytics.overview.clickRate)}</div>
+                <Progress value={analytics.overview.clickRate} className="mt-2" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Time Series Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Sending Volume Over Time</CardTitle>
+              <CardDescription>Daily email and SMS sending volume</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={analytics.timeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="emailsSent"
+                    stackId="1"
+                    stroke="#3B82F6"
+                    fill="#3B82F6"
+                    name="Emails"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="smsSent"
+                    stackId="1"
+                    stroke="#10B981"
+                    fill="#10B981"
+                    name="SMS"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Re-engagement Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Re-engagement Campaign Performance</CardTitle>
+              <CardDescription>Effectiveness of customer re-engagement efforts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold">{analytics.reengagementData.totalCampaignsSent}</div>
+                  <div className="text-sm text-muted-foreground">Campaigns Sent</div>
+                </div>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold">{analytics.reengagementData.successfulReengagements}</div>
+                  <div className="text-sm text-muted-foreground">Successful Returns</div>
+                </div>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold">{formatPercentage(analytics.reengagementData.reengagementRate)}</div>
+                  <div className="text-sm text-muted-foreground">Success Rate</div>
+                </div>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold">{analytics.reengagementData.averageDaysToReturn}</div>
+                  <div className="text-sm text-muted-foreground">Avg Days to Return</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Campaigns Tab */}
+        <TabsContent value="campaigns" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Performance</CardTitle>
+              <CardDescription>Individual campaign metrics and results</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.campaignPerformance.map((campaign) => (
+                  <div key={campaign.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold">{campaign.name}</h3>
+                        <div className="flex items-center gap-1">
+                          {campaign.type === 'email' && <Mail className="w-4 h-4 text-blue-500" />}
+                          {campaign.type === 'sms' && <MessageSquare className="w-4 h-4 text-green-500" />}
+                          {campaign.type === 'both' && (
+                            <>
+                              <Mail className="w-4 h-4 text-blue-500" />
+                              <MessageSquare className="w-4 h-4 text-green-500" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(campaign.sentDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Sent</div>
+                        <div className="font-semibold">{formatNumber(campaign.sent)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Delivered</div>
+                        <div className="font-semibold">{formatNumber(campaign.delivered)}</div>
+                        <div className="text-xs text-green-600">
+                          {formatPercentage(campaign.deliveryRate)}
+                        </div>
+                      </div>
+                      {campaign.opened !== undefined && (
+                        <div>
+                          <div className="text-muted-foreground">Opened</div>
+                          <div className="font-semibold">{formatNumber(campaign.opened)}</div>
+                          <div className="text-xs text-blue-600">
+                            {formatPercentage(campaign.openRate || 0)}
+                          </div>
+                        </div>
+                      )}
+                      {campaign.clicked !== undefined && (
+                        <div>
+                          <div className="text-muted-foreground">Clicked</div>
+                          <div className="font-semibold">{formatNumber(campaign.clicked)}</div>
+                          <div className="text-xs text-purple-600">
+                            {formatPercentage(campaign.clickRate || 0)}
+                          </div>
+                        </div>
+                      )}
+                      {campaign.bounced !== undefined && campaign.bounced > 0 && (
+                        <div>
+                          <div className="text-muted-foreground">Bounced</div>
+                          <div className="font-semibold text-red-600">{formatNumber(campaign.bounced)}</div>
+                        </div>
+                      )}
+                      {campaign.unsubscribed !== undefined && campaign.unsubscribed > 0 && (
+                        <div>
+                          <div className="text-muted-foreground">Unsubscribed</div>
+                          <div className="font-semibold text-red-600">{formatNumber(campaign.unsubscribed)}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Templates Tab */}
+        <TabsContent value="templates" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Template Performance</CardTitle>
+              <CardDescription>Usage and effectiveness of your templates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.templatePerformance.map((template) => (
+                  <div key={template.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold">{template.name}</h3>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          {template.type === 'email' ? 
+                            <Mail className="w-3 h-3" /> : 
+                            <MessageSquare className="w-3 h-3" />
+                          }
+                          {template.type}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Last used: {new Date(template.lastUsed).toLocaleDateString()}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Usage Count</div>
+                        <div className="font-semibold">{formatNumber(template.usageCount)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Avg Delivery Rate</div>
+                        <div className="font-semibold">{formatPercentage(template.avgDeliveryRate)}</div>
+                        <Progress value={template.avgDeliveryRate} className="mt-1 h-2" />
+                      </div>
+                      {template.avgOpenRate !== undefined && (
+                        <div>
+                          <div className="text-muted-foreground">Avg Open Rate</div>
+                          <div className="font-semibold">{formatPercentage(template.avgOpenRate)}</div>
+                          <Progress value={template.avgOpenRate} className="mt-1 h-2" />
+                        </div>
+                      )}
+                      {template.avgClickRate !== undefined && (
+                        <div>
+                          <div className="text-muted-foreground">Avg Click Rate</div>
+                          <div className="font-semibold">{formatPercentage(template.avgClickRate)}</div>
+                          <Progress value={template.avgClickRate} className="mt-1 h-2" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Engagement Tab */}
+        <TabsContent value="engagement" className="space-y-6">
+          {/* Time of Day Engagement */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Engagement by Time of Day</CardTitle>
+              <CardDescription>When your audience is most active</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.engagementMetrics.byTimeOfDay}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="hour" 
+                    tickFormatter={(hour) => `${hour}:00`}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(hour) => `${hour}:00`}
+                  />
+                  <Legend />
+                  <Bar dataKey="opens" fill="#3B82F6" name="Opens" />
+                  <Bar dataKey="clicks" fill="#10B981" name="Clicks" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Day of Week Engagement */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Engagement by Day of Week</CardTitle>
+              <CardDescription>Best days for sending campaigns</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.engagementMetrics.byDayOfWeek}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="sends" fill="#8B5CF6" name="Sent" />
+                  <Bar dataKey="opens" fill="#3B82F6" name="Opens" />
+                  <Bar dataKey="clicks" fill="#10B981" name="Clicks" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Engagement Funnel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Communication Funnel</CardTitle>
+              <CardDescription>Customer journey through your communications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-6 h-6 text-blue-600" />
+                    <span className="font-semibold">Messages Sent</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatNumber(analytics.overview.totalSent)}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <span className="font-semibold">Messages Delivered</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatNumber(Math.round(analytics.overview.totalSent * analytics.overview.deliveryRate / 100))}
+                    </div>
+                    <div className="text-sm text-green-600">
+                      {formatPercentage(analytics.overview.deliveryRate)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Eye className="w-6 h-6 text-purple-600" />
+                    <span className="font-semibold">Messages Opened</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {formatNumber(Math.round(analytics.overview.totalSent * analytics.overview.openRate / 100))}
+                    </div>
+                    <div className="text-sm text-purple-600">
+                      {formatPercentage(analytics.overview.openRate)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <MousePointer className="w-6 h-6 text-orange-600" />
+                    <span className="font-semibold">Links Clicked</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {formatNumber(Math.round(analytics.overview.totalSent * analytics.overview.clickRate / 100))}
+                    </div>
+                    <div className="text-sm text-orange-600">
+                      {formatPercentage(analytics.overview.clickRate)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+6. Backend API Endpoints
+
+import express from 'express';
+import { db } from '../db';
+import { 
+  notificationTemplates, 
+  notifications, 
+  reengagementTracking,
+  messageLog,
+  users,
+  bookings,
+  services
+} from '../../shared/schema';
+import { eq, desc, and, gte, lte, count, sql } from 'drizzle-orm';
+import { templateProcessor } from '../services/TemplateProcessor';
+import { notificationService } from '../services/notificationService';
+
+const router = express.Router();
+
+// Template CRUD Operations
+
+// Get all templates
+router.get('/notification-templates', async (req, res) => {
+  try {
+    const templates = await db.select().from(notificationTemplates).orderBy(desc(notificationTemplates.createdAt));
+    res.json(templates);
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ error: 'Failed to fetch templates' });
+  }
+});
+
+// Get single template
+router.get('/notification-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [template] = await db.select().from(notificationTemplates).where(eq(notificationTemplates.id, id)).limit(1);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    
+    res.json(template);
+  } catch (error) {
+    console.error('Error fetching template:', error);
+    res.status(500).json({ error: 'Failed to fetch template' });
+  }
+});
+
+// Create template
+router.post('/notification-templates', async (req, res) => {
+  try {
+    const { name, type, method, subject, template, active = true } = req.body;
+
+    // Validate template syntax
+    const validation = templateProcessor.validateTemplate(template, subject);
+    if (!validation.isValid) {
+      return res.status(400).json({ 
+        error: 'Template validation failed', 
+        details: validation.errors 
+      });
+    }
+
+    const [newTemplate] = await db.insert(notificationTemplates).values({
+      name,
+      type,
+      method: method || 'manual',
+      subject: type === 'email' ? subject : null,
+      template,
+      active
+    }).returning();
+
+    res.status(201).json(newTemplate);
+  } catch (error) {
+    console.error('Error creating template:', error);
+    res.status(500).json({ error: 'Failed to create template' });
+  }
+});
+
+// Update template
+router.patch('/notification-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Validate template if being updated
+    if (updates.template || updates.subject) {
+      const validation = templateProcessor.validateTemplate(
+        updates.template || '', 
+        updates.subject
+      );
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          error: 'Template validation failed', 
+          details: validation.errors 
+        });
+      }
+    }
+
+    const [updatedTemplate] = await db
+      .update(notificationTemplates)
+      .set(updates)
+      .where(eq(notificationTemplates.id, id))
+      .returning();
+
+    if (!updatedTemplate) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    res.json(updatedTemplate);
+  } catch (error) {
+    console.error('Error updating template:', error);
+    res.status(500).json({ error: 'Failed to update template' });
+  }
+});
+
+// Delete template
+router.delete('/notification-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [deletedTemplate] = await db
+      .delete(notificationTemplates)
+      .where(eq(notificationTemplates.id, id))
+      .returning();
+
+    if (!deletedTemplate) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    res.json({ message: 'Template deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting template:', error);
+    res.status(500).json({ error: 'Failed to delete template' });
+  }
+});
+
+// Template preview
+router.post('/notification-templates/preview', async (req, res) => {
+  try {
+    const { template, subject, type, variables } = req.body;
+    
+    // Use sample data if no variables provided
+    const templateVariables = variables || templateProcessor.generatePreviewData();
+    
+    const processed = templateProcessor.processTemplate(template, subject, templateVariables);
+    
+    res.json({
+      ...processed,
+      htmlContent: type === 'email' ? templateProcessor.convertToHTML(processed.content) : null,
+      smsOptimized: type === 'sms' ? templateProcessor.optimizeForSMS(processed.content) : null
+    });
+  } catch (error) {
+    console.error('Error previewing template:', error);
+    res.status(500).json({ error: 'Failed to generate preview' });
+  }
+});
+
+// Campaign Management
+
+// Get all campaigns
+router.get('/campaigns', async (req, res) => {
+  try {
+    // For now, we'll derive campaign data from notifications
+    const campaigns = await db
+      .select({
+        id: notifications.id,
+        name: sql`COALESCE(${notifications.subject}, 'Campaign')`.as('name'),
+        type: notifications.type,
+        recipient: notifications.recipient,
+        status: notifications.status,
+        createdAt: notifications.createdAt,
+        sentAt: notifications.sentAt,
+        message: notifications.message
+      })
+      .from(notifications)
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+
+    // Group by similar campaigns (same message content)
+    const campaignGroups = campaigns.reduce((acc: any[], notif) => {
+      const existingGroup = acc.find(g => g.message === notif.message);
+      if (existingGroup) {
+        existingGroup.recipients.push(notif.recipient);
+        existingGroup.totalRecipients++;
+        if (notif.status === 'sent') existingGroup.deliveredCount++;
+        if (notif.status === 'failed') existingGroup.failedCount++;
+      } else {
+        acc.push({
+          id: notif.id,
+          name: notif.name,
+          type: notif.type,
+          status: 'completed',
+          createdAt: notif.createdAt,
+          sentAt: notif.sentAt,
+          recipients: [notif.recipient],
+          totalRecipients: 1,
+          deliveredCount: notif.status === 'sent' ? 1 : 0,
+          failedCount: notif.status === 'failed' ? 1 : 0,
+          message: notif.message
+        });
+      }
+      return acc;
+    }, []);
+
+    res.json(campaignGroups);
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    res.status(500).json({ error: 'Failed to fetch campaigns' });
+  }
+});
+
+// Create and send campaign
+router.post('/campaigns', async (req, res) => {
+  try {
+    const { 
+      name, 
+      type, 
+      templateId, 
+      customMessage, 
+      recipients, 
+      scheduledFor, 
+      sendNow = true 
+    } = req.body;
+
+    let template = null;
+    if (templateId) {
+      [template] = await db.select().from(notificationTemplates)
+        .where(eq(notificationTemplates.id, templateId))
+        .limit(1);
+    }
+
+    // Get recipient details
+    const recipientDetails = await db.select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      phone: users.phone
+    }).from(users).where(sql`${users.id} = ANY(${recipients})`);
+
+    const notifications_to_send = [];
+
+    for (const recipient of recipientDetails) {
+      const variables = {
+        customerName: `${recipient.firstName} ${recipient.lastName}`,
+        businessName: 'Legacy Barbershop & Studio',
+        businessPhone: '(555) 123-4567',
+        // Add more variables as needed
+      };
+
+      let messageContent = customMessage;
+      let subjectLine = name;
+
+      if (template) {
+        const processed = templateProcessor.processTemplate(
+          template.template,
+          template.subject,
+          variables
+        );
+        messageContent = processed.content;
+        subjectLine = processed.subject || name;
+      }
+
+      if (type === 'email' || type === 'both') {
+        if (recipient.email) {
+          notifications_to_send.push({
+            bookingId: 'campaign', // Special identifier for campaigns
+            type: 'email' as const,
+            recipient: recipient.email,
+            subject: subjectLine,
+            message: messageContent,
+            scheduledFor: sendNow ? null : new Date(scheduledFor),
+            status: sendNow ? 'pending' : 'scheduled'
+          });
+        }
+      }
+
+      if (type === 'sms' || type === 'both') {
+        if (recipient.phone) {
+          notifications_to_send.push({
+            bookingId: 'campaign',
+            type: 'sms' as const,
+            recipient: recipient.phone,
+            subject: null,
+            message: templateProcessor.optimizeForSMS(messageContent),
+            scheduledFor: sendNow ? null : new Date(scheduledFor),
+            status: sendNow ? 'pending' : 'scheduled'
+          });
+        }
+      }
+    }
+
+    // Insert notifications
+    const createdNotifications = await db.insert(notifications)
+      .values(notifications_to_send)
+      .returning();
+
+    // Send immediately if requested
+    if (sendNow) {
+      const results = [];
+      for (const notification of createdNotifications) {
+        try {
+          let success = false;
+          if (notification.type === 'email') {
+            success = await notificationService.sendEmail(
+              notification.recipient,
+              notification.subject || 'Campaign Message',
+              templateProcessor.convertToHTML(notification.message),
+              notification.message
+            );
+          } else if (notification.type === 'sms') {
+            success = await notificationService.sendSMS(
+              notification.recipient,
+              notification.message
+            );
+          }
+
+          // Update notification status
+          await db.update(notifications)
+            .set({ 
+              status: success ? 'sent' : 'failed',
+              sentAt: success ? new Date() : null
+            })
+            .where(eq(notifications.id, notification.id));
+
+          results.push({ id: notification.id, success });
+        } catch (error) {
+          console.error(`Error sending to ${notification.recipient}:`, error);
+          await db.update(notifications)
+            .set({ status: 'failed' })
+            .where(eq(notifications.id, notification.id));
+          results.push({ id: notification.id, success: false });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      res.json({
+        message: `Campaign created and sent. ${successCount}/${results.length} messages delivered successfully.`,
+        campaignId: createdNotifications[0]?.id,
+        results
+      });
+    } else {
+      res.json({
+        message: 'Campaign scheduled successfully',
+        campaignId: createdNotifications[0]?.id,
+        scheduledFor
+      });
+    }
+  } catch (error) {
+    console.error('Error creating campaign:', error);
+    res.status(500).json({ error: 'Failed to create campaign' });
+  }
+});
+
+// Send scheduled campaign
+router.post('/campaigns/:id/send', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get scheduled notifications for this campaign
+    const scheduledNotifications = await db.select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.bookingId, 'campaign'),
+        eq(notifications.status, 'scheduled')
+      ));
+
+    const results = [];
+    for (const notification of scheduledNotifications) {
+      try {
+        let success = false;
+        if (notification.type === 'email') {
+          success = await notificationService.sendEmail(
+            notification.recipient,
+            notification.subject || 'Campaign Message',
+            templateProcessor.convertToHTML(notification.message),
+            notification.message
+          );
+        } else if (notification.type === 'sms') {
+          success = await notificationService.sendSMS(
+            notification.recipient,
+            notification.message
+          );
+        }
+
+        // Update notification status
+        await db.update(notifications)
+          .set({ 
+            status: success ? 'sent' : 'failed',
+            sentAt: success ? new Date() : null
+          })
+          .where(eq(notifications.id, notification.id));
+
+        results.push({ id: notification.id, success });
+      } catch (error) {
+        console.error(`Error sending to ${notification.recipient}:`, error);
+        await db.update(notifications)
+          .set({ status: 'failed' })
+          .where(eq(notifications.id, notification.id));
+        results.push({ id: notification.id, success: false });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    res.json({
+      message: `Campaign sent. ${successCount}/${results.length} messages delivered successfully.`,
+      results
+    });
+  } catch (error) {
+    console.error('Error sending campaign:', error);
+    res.status(500).json({ error: 'Failed to send campaign' });
+  }
+});
+
+// Get recipients with filters
+router.get('/recipients', async (req, res) => {
+  try {
+    const { 
+      fromDate, 
+      toDate, 
+      serviceId, 
+      barberId, 
+      minBookings = 0 
+    } = req.query;
+
+    let query = db
+      .select({
+        id: users.id,
+        name: sql`CONCAT(${users.firstName}, ' ', ${users.lastName})`.as('name'),
+        email: users.email,
+        phone: users.phone,
+        totalBookings: count(bookings.id),
+        lastBooking: sql`MAX(${bookings.createdAt})`.as('lastBooking')
+      })
+      .from(users)
+      .leftJoin(bookings, eq(users.id, bookings.userId))
+      .where(eq(users.role, 'customer'))
+      .groupBy(users.id, users.firstName, users.lastName, users.email, users.phone);
+
+    // Apply filters
+    const conditions = [eq(users.role, 'customer')];
+
+    if (fromDate) {
+      conditions.push(gte(bookings.createdAt, new Date(fromDate as string)));
+    }
+    if (toDate) {
+      conditions.push(lte(bookings.createdAt, new Date(toDate as string)));
+    }
+    if (serviceId && serviceId !== 'all') {
+      conditions.push(eq(bookings.serviceId, serviceId as string));
+    }
+    if (barberId && barberId !== 'all') {
+      conditions.push(eq(bookings.barberId, barberId as string));
+    }
+
+    const recipients = await query;
+
+    // Filter by minimum bookings (done in JS since it's an aggregate)
+    const filteredRecipients = recipients.filter(r => 
+      r.totalBookings >= parseInt(minBookings as string)
+    );
+
+    res.json(filteredRecipients);
+  } catch (error) {
+    console.error('Error fetching recipients:', error);
+    res.status(500).json({ error: 'Failed to fetch recipients' });
+  }
+});
+
+// Analytics endpoints
+router.get('/analytics/templates', async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    switch (period) {
+      case '7d':
+        startDate.setDate(endDate.getDate() - 7);
+        break;
+      case '90d':
+        startDate.setDate(endDate.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      default: // 30d
+        startDate.setDate(endDate.getDate() - 30);
+    }
+
+    // Overview metrics
+    const totalTemplates = await db.select({ count: count() }).from(notificationTemplates);
+    const activeTemplates = await db.select({ count: count() })
+      .from(notificationTemplates)
+      .where(eq(notificationTemplates.active, true));
+
+    const notificationStats = await db
+      .select({
+        total: count(),
+        sent: count(sql`CASE WHEN ${notifications.status} = 'sent' THEN 1 END`),
+        failed: count(sql`CASE WHEN ${notifications.status} = 'failed' THEN 1 END`)
+      })
+      .from(notifications)
+      .where(gte(notifications.createdAt, startDate));
+
+    const totalSent = notificationStats[0]?.sent || 0;
+    const totalFailed = notificationStats[0]?.failed || 0;
+    const totalNotifications = notificationStats[0]?.total || 0;
+
+    // Time series data (daily)
+    const timeSeriesData = await db
+      .select({
+        date: sql`DATE(${notifications.createdAt})`.as('date'),
+        emailsSent: count(sql`CASE WHEN ${notifications.type} = 'email' AND ${notifications.status} = 'sent' THEN 1 END`),
+        smsSent: count(sql`CASE WHEN ${notifications.type} = 'sms' AND ${notifications.status} = 'sent' THEN 1 END`),
+        delivered: count(sql`CASE WHEN ${notifications.status} = 'sent' THEN 1 END`),
+        opened: sql`0`.as('opened'), // Placeholder - would need tracking
+        clicked: sql`0`.as('clicked') // Placeholder - would need tracking
+      })
+      .from(notifications)
+      .where(gte(notifications.createdAt, startDate))
+      .groupBy(sql`DATE(${notifications.createdAt})`)
+      .orderBy(sql`DATE(${notifications.createdAt})`);
+
+    // Template performance
+    const templatePerformance = await db
+      .select({
+        id: notificationTemplates.id,
+        name: notificationTemplates.name,
+        type: notificationTemplates.type,
+        usageCount: count(notifications.id),
+        avgDeliveryRate: sql`
+          CASE 
+            WHEN COUNT(${notifications.id}) > 0 
+            THEN (COUNT(CASE WHEN ${notifications.status} = 'sent' THEN 1 END) * 100.0 / COUNT(${notifications.id}))
+            ELSE 0 
+          END
+        `.as('avgDeliveryRate'),
+        lastUsed: sql`MAX(${notifications.createdAt})`.as('lastUsed')
+      })
+      .from(notificationTemplates)
+      .leftJoin(notifications, eq(notificationTemplates.id, notifications.bookingId)) // This is a simplification
+      .groupBy(notificationTemplates.id, notificationTemplates.name, notificationTemplates.type);
+
+    // Re-engagement analytics
+    const reengagementData = await db
+      .select({
+        totalCampaignsSent: count(),
+        successfulReengagements: count(sql`CASE WHEN ${reengagementTracking.isSuccessful} = true THEN 1 END`),
+        avgDaysToReturn: sql`AVG(${reengagementTracking.daysBetweenNotificationAndBooking})`.as('avgDaysToReturn')
+      })
+      .from(reengagementTracking)
+      .where(gte(reengagementTracking.createdAt, startDate));
+
+    const reengagementStats = reengagementData[0] || {
+      totalCampaignsSent: 0,
+      successfulReengagements: 0,
+      avgDaysToReturn: 0
+    };
+
+    // Campaign stats by type
+    const campaignTypeStats = await db
+      .select({
+        campaignType: reengagementTracking.campaignType,
+        sent: count(),
+        successful: count(sql`CASE WHEN ${reengagementTracking.isSuccessful} = true THEN 1 END`)
+      })
+      .from(reengagementTracking)
+      .where(gte(reengagementTracking.createdAt, startDate))
+      .groupBy(reengagementTracking.campaignType);
+
+    const campaignStats = {
+      re_engagement: { sent: 0, successful: 0, rate: 0 },
+      discount_offer: { sent: 0, successful: 0, rate: 0 }
+    };
+
+    campaignTypeStats.forEach(stat => {
+      if (stat.campaignType === 're_engagement' || stat.campaignType === 'discount_offer') {
+        campaignStats[stat.campaignType] = {
+          sent: stat.sent,
+          successful: stat.successful,
+          rate: stat.sent > 0 ? (stat.successful / stat.sent) * 100 : 0
+        };
+      }
+    });
+
+    const analytics = {
+      overview: {
+        totalTemplates: totalTemplates[0]?.count || 0,
+        activeTemplates: activeTemplates[0]?.count || 0,
+        totalCampaigns: Math.floor(totalNotifications / 10), // Estimate
+        totalSent,
+        deliveryRate: totalNotifications > 0 ? (totalSent / totalNotifications) * 100 : 0,
+        openRate: 25, // Placeholder - would need email tracking
+        clickRate: 3, // Placeholder - would need link tracking
+        unsubscribeRate: 0.5 // Placeholder
+      },
+      timeSeriesData,
+      templatePerformance,
+      campaignPerformance: [], // Placeholder for individual campaigns
+      engagementMetrics: {
+        byTimeOfDay: Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          opens: Math.floor(Math.random() * 100),
+          clicks: Math.floor(Math.random() * 20)
+        })),
+        byDayOfWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
+          day,
+          opens: Math.floor(Math.random() * 200),
+          clicks: Math.floor(Math.random() * 40),
+          sends: Math.floor(Math.random() * 300)
+        }))
+      },
+      reengagementData: {
+        totalCampaignsSent: reengagementStats.totalCampaignsSent,
+        successfulReengagements: reengagementStats.successfulReengagements,
+        reengagementRate: reengagementStats.totalCampaignsSent > 0 
+          ? (reengagementStats.successfulReengagements / reengagementStats.totalCampaignsSent) * 100 
+          : 0,
+        averageDaysToReturn: Math.round(reengagementStats.avgDaysToReturn || 0),
+        campaignStats
+      }
+    };
+
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching template analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+// Get notification history
+router.get('/notifications', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, status, type } = req.query;
+
+    let query = db.select().from(notifications);
+    
+    const conditions = [];
+    if (status && status !== 'all') {
+      conditions.push(eq(notifications.status, status as string));
+    }
+    if (type && type !== 'all') {
+      conditions.push(eq(notifications.type, type as string));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const notificationHistory = await query
+      .orderBy(desc(notifications.createdAt))
+      .limit(parseInt(limit as string))
+      .offset(parseInt(offset as string));
+
+    res.json(notificationHistory);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+export default router;
