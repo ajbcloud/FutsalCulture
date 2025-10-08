@@ -403,14 +403,14 @@ export default function Invitations() {
                       <div>
                         <Label htmlFor="gender">Gender</Label>
                         <Select
-                          value={formData.gender}
-                          onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                          value={formData.gender || "none"}
+                          onValueChange={(value) => setFormData({ ...formData, gender: value === "none" ? "" : value })}
                         >
                           <SelectTrigger data-testid="select-gender">
                             <SelectValue placeholder="Select gender (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
                             <SelectItem value="boys">Boys</SelectItem>
                             <SelectItem value="girls">Girls</SelectItem>
                             <SelectItem value="coed">Coed</SelectItem>

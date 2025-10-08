@@ -38,8 +38,6 @@ const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/sessions", label: "Sessions", icon: Calendar },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
-  { href: "/admin/discount-codes", label: "Discount Codes", icon: Tag },
-  { href: "/admin/access-codes", label: "Access Codes", icon: Key },
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
   { href: "/admin/invitations", label: "Invitations", icon: UserPlus },

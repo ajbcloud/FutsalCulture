@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,8 +27,6 @@ import AdminPendingRegistrations from "@/pages/admin/pending-registrations";
 import AdminHelpRequests from "@/pages/admin/help-requests";
 import AdminSettings from "@/pages/admin/settings";
 import AdminIntegrations from "@/pages/admin/integrations";
-import AdminDiscountCodes from "@/pages/admin/discount-codes";
-import AdminAccessCodes from "@/pages/admin/access-codes";
 import AdminPayment from "@/pages/admin/payment";
 import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
 import AdminCommunications from "@/pages/admin/communications";
@@ -117,8 +115,12 @@ function Router() {
             <Route path="/admin/sessions/:id/waitlist" component={AdminSessionWaitlist} />
             <Route path="/admin/sessions/:id" component={AdminSessionDetail} />
             <Route path="/admin/payments" component={AdminPayments} />
-            <Route path="/admin/discount-codes" component={AdminDiscountCodes} />
-            <Route path="/admin/access-codes" component={AdminAccessCodes} />
+            <Route path="/admin/discount-codes">
+              <Redirect to="/admin/invitations" />
+            </Route>
+            <Route path="/admin/access-codes">
+              <Redirect to="/admin/invitations" />
+            </Route>
             <Route path="/admin/players" component={AdminPlayers} />
             <Route path="/admin/parents" component={AdminParents} />
             <Route path="/admin/invitations" component={AdminInvitations} />
