@@ -52,7 +52,7 @@ export const emailEventEnum = pgEnum("email_event", ["processed", "delivered", "
 export const smsEventEnum = pgEnum("sms_event", ["queued", "sent", "delivered", "undelivered", "failed"]);
 
 // User role enum
-export const userRoleEnum = pgEnum("user_role", ["parent", "player", "tenant_admin", "super_admin"]);
+export const userRoleEnum = pgEnum("user_role", ["parent", "adult", "player", "tenant_admin", "super_admin"]);
 
 // User status enum
 export const userStatusEnum = pgEnum("user_status", ["active", "locked"]);
@@ -194,7 +194,7 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false),
   isAssistant: boolean("is_assistant").default(false),
   isSuperAdmin: boolean("is_super_admin").default(false), // New Super-Admin role
-  role: userRoleEnum("role").default("parent"),
+  role: userRoleEnum("role").default("adult"),
   mfaEnabled: boolean("mfa_enabled").default(false),
   status: userStatusEnum("status").default("active"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
@@ -394,10 +394,42 @@ export const payments = pgTable("payments", {
   index("payments_tenant_id_idx").on(table.tenantId),
 ]);
 
-// User Credits table - replaces refund system
+// Households table - groups users and players for credit sharing
+export const households = pgTable("households", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: text("name").notNull(), // e.g., "Smith Family"
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("households_tenant_id_idx").on(table.tenantId),
+]);
+
+// Household Members table - links users and players to households
+export const householdMembers = pgTable("household_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").notNull().references(() => households.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").references(() => users.id),
+  playerId: varchar("player_id").references(() => players.id),
+  role: varchar("role").notNull().default("member"), // "admin", "member"
+  addedAt: timestamp("added_at").defaultNow(),
+  addedBy: varchar("added_by").references(() => users.id),
+}, (table) => [
+  index("household_members_household_id_idx").on(table.householdId),
+  index("household_members_tenant_id_idx").on(table.tenantId),
+  index("household_members_user_id_idx").on(table.userId),
+  index("household_members_player_id_idx").on(table.playerId),
+  // Ensure a user or player can only be in one household per tenant
+  uniqueIndex("household_members_tenant_user_unique_idx").on(table.tenantId, table.userId),
+  uniqueIndex("household_members_tenant_player_unique_idx").on(table.tenantId, table.playerId),
+]);
+
+// User Credits table - replaces refund system, supports household-level credits
 export const userCredits = pgTable("user_credits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id), // null for household credits
+  householdId: varchar("household_id").references(() => households.id), // null for user credits
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   amountCents: integer("amount_cents").notNull(),
   reason: text("reason").notNull(),
@@ -410,6 +442,7 @@ export const userCredits = pgTable("user_credits", {
   expiresAt: timestamp("expires_at"),
 }, (table) => [
   index("user_credits_user_id_idx").on(table.userId),
+  index("user_credits_household_id_idx").on(table.householdId),
   index("user_credits_tenant_id_idx").on(table.tenantId),
   index("user_credits_is_used_idx").on(table.isUsed),
 ]);
@@ -1295,6 +1328,9 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   smsEvents: many(smsEvents),
   // Impersonation Events relations
   impersonationEvents: many(impersonationEvents),
+  // Household relations
+  households: many(households),
+  householdMembers: many(householdMembers),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -1314,6 +1350,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   impersonationEventsAsAdmin: many(impersonationEvents, {
     relationName: "impersonationSuperAdmin"
   }),
+  // Household relations
+  householdMemberships: many(householdMembers),
 }));
 
 export const playersRelations = relations(players, ({ one, many }) => ({
@@ -1330,6 +1368,8 @@ export const playersRelations = relations(players, ({ one, many }) => ({
   attendanceSnapshots: many(attendanceSnapshots),
   devAchievements: many(devAchievements),
   progressionSnapshots: many(progressionSnapshots),
+  // Household relations
+  householdMemberships: many(householdMembers),
 }));
 
 export const futsalSessionsRelations = relations(futsalSessions, ({ many }) => ({
@@ -1632,6 +1672,51 @@ export const impersonationEventsRelations = relations(impersonationEvents, ({ on
   }),
 }));
 
+// Household Relations
+
+export const householdsRelations = relations(households, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [households.tenantId],
+    references: [tenants.id],
+  }),
+  members: many(householdMembers),
+  credits: many(userCredits),
+}));
+
+export const householdMembersRelations = relations(householdMembers, ({ one }) => ({
+  household: one(households, {
+    fields: [householdMembers.householdId],
+    references: [households.id],
+  }),
+  tenant: one(tenants, {
+    fields: [householdMembers.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [householdMembers.userId],
+    references: [users.id],
+  }),
+  player: one(players, {
+    fields: [householdMembers.playerId],
+    references: [players.id],
+  }),
+}));
+
+export const userCreditsRelations = relations(userCredits, ({ one }) => ({
+  user: one(users, {
+    fields: [userCredits.userId],
+    references: [users.id],
+  }),
+  household: one(households, {
+    fields: [userCredits.householdId],
+    references: [households.id],
+  }),
+  tenant: one(tenants, {
+    fields: [userCredits.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -1691,6 +1776,22 @@ export const insertUserCreditSchema = createInsertSchema(userCredits).omit({
 
 export type UserCreditInsert = z.infer<typeof insertUserCreditSchema>;
 export type UserCreditSelect = typeof userCredits.$inferSelect;
+
+export const insertHouseholdSchema = createInsertSchema(households).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type HouseholdInsert = z.infer<typeof insertHouseholdSchema>;
+export type HouseholdSelect = typeof households.$inferSelect;
+
+export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type HouseholdMemberInsert = z.infer<typeof insertHouseholdMemberSchema>;
+export type HouseholdMemberSelect = typeof householdMembers.$inferSelect;
 
 export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   id: true,
