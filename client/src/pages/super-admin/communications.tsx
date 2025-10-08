@@ -531,7 +531,7 @@ export default function SuperAdminCommunications() {
             <div>
               <h1 className="text-3xl font-bold">Platform Communications</h1>
               <p className="text-muted-foreground">
-                Manage platform-wide messaging and communication templates
+                Manage platform-wide messaging and communication templates <span className="text-green-500 font-mono text-xs ml-2">●</span>
               </p>
             </div>
           </div>
