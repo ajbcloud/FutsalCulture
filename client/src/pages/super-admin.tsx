@@ -25,6 +25,7 @@ import SecurityAudit from "@/pages/super-admin/security";
 import PlanManagement from "@/pages/super-admin/plan-management";
 import SuperAdminHelpRequests from "@/pages/super-admin/help-requests";
 import SuperAdminInvitations from "@/pages/super-admin/invitations";
+import SuperAdminCredits from "@/pages/super-admin/credits";
 
 import { 
   Building2, 
@@ -85,6 +86,7 @@ export default function SuperAdminPage() {
     { name: "Analytics", href: "/super-admin/analytics-v2", icon: BarChart3, current: basePath.startsWith("/super-admin/analytics-v2") },
     { name: "Help Requests", href: "/super-admin/help-requests", icon: HelpCircle, current: basePath === "/super-admin/help-requests" },
     { name: "Invitations", href: "/super-admin/invitations", icon: Ticket, current: basePath === "/super-admin/invitations" },
+    { name: "Credits", href: "/super-admin/credits", icon: CreditCard, current: basePath === "/super-admin/credits" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Communications", href: "/super-admin/communications", icon: Mail, current: basePath === "/super-admin/communications" },
@@ -143,6 +145,8 @@ export default function SuperAdminPage() {
         return <SuperAdminHelpRequests />;
       case basePath === "/super-admin/invitations":
         return <SuperAdminInvitations />;
+      case basePath === "/super-admin/credits":
+        return <SuperAdminCredits />;
       default:
         return <SuperAdminOverview />;
     }
