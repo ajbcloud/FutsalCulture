@@ -9,7 +9,7 @@ const router = Router();
 
 router.get('/contact-groups', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -29,7 +29,7 @@ router.get('/contact-groups', async (req: any, res) => {
 
 router.post('/contact-groups', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -62,7 +62,7 @@ router.post('/contact-groups', async (req: any, res) => {
 
 router.get('/contact-groups/:id', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -87,7 +87,7 @@ router.get('/contact-groups/:id', async (req: any, res) => {
 
 router.patch('/contact-groups/:id', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -111,7 +111,7 @@ router.patch('/contact-groups/:id', async (req: any, res) => {
 
 router.delete('/contact-groups/:id', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -135,7 +135,7 @@ router.delete('/contact-groups/:id', async (req: any, res) => {
 
 router.post('/contact-groups/:id/members', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -164,7 +164,7 @@ router.post('/contact-groups/:id/members', async (req: any, res) => {
 
 router.delete('/contact-groups/:id/members/:userId', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -188,7 +188,7 @@ router.delete('/contact-groups/:id/members/:userId', async (req: any, res) => {
 
 router.get('/contact-groups/:id/members', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -217,7 +217,7 @@ router.get('/contact-groups/:id/members', async (req: any, res) => {
 
 router.post('/contact-groups/:id/members/bulk', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -267,7 +267,8 @@ router.post('/contact-groups/:id/members/bulk', async (req: any, res) => {
 // GET /api/users - Get all parents/users for contact group selection
 router.get('/users', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    // Check authentication - handle both formats
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
@@ -302,7 +303,8 @@ router.get('/users', async (req: any, res) => {
 // GET /api/players - Get all players for contact group selection
 router.get('/players', async (req: any, res) => {
   try {
-    const userId = req.user?.claims?.sub;
+    // Check authentication - handle both formats
+    const userId = req.user?.id || req.user?.claims?.sub || req.session?.userId;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
     }
