@@ -825,7 +825,7 @@ export default function SuperAdminCommunications() {
           {/* Send Message Tab */}
           <TabsContent value="send" className="space-y-4">
             <Form {...sendForm}>
-              <form onSubmit={sendForm.handleSubmit(handleSendMessage)} className="space-y-4">
+              <form onSubmit={sendForm.handleSubmit(handleSendMessage)} className="space-y-4" data-form-version="v2">
                 <div className="grid gap-6 lg:grid-cols-2">
                   <Card>
                     <CardHeader>
