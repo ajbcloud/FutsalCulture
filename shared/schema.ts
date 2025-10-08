@@ -192,6 +192,7 @@ export const users = pgTable("users", {
   avatarColor: varchar("avatar_color").default("#2563eb"), // Custom avatar background color
   avatarTextColor: varchar("avatar_text_color"), // Custom avatar text color (null = auto-contrast)
   phone: varchar("phone"),
+  dateOfBirth: date("date_of_birth"), // For age verification during join-by-code
   isAdmin: boolean("is_admin").default(false),
   isAssistant: boolean("is_assistant").default(false),
   isSuperAdmin: boolean("is_super_admin").default(false), // New Super-Admin role
