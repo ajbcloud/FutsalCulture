@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useHelpRequestsEnabled } from "@/hooks/use-help-requests-enabled";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
@@ -11,6 +12,7 @@ import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle, Home } 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const helpRequestsEnabled = useHelpRequestsEnabled();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -45,9 +47,11 @@ export default function Navbar() {
                     <Link href="/calendar" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Calendar
                     </Link>
-                    <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
-                      Help
-                    </Link>
+                    {helpRequestsEnabled && (
+                      <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                        Help
+                      </Link>
+                    )}
                   </>
                 ) : (
                   <>
@@ -57,9 +61,11 @@ export default function Navbar() {
                     <Link href="/sessions" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Sessions
                     </Link>
-                    <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
-                      Help
-                    </Link>
+                    {helpRequestsEnabled && (
+                      <Link href="/help" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                        Help
+                      </Link>
+                    )}
                   </>
                 )}
               </div>
@@ -146,12 +152,14 @@ export default function Navbar() {
                     </DropdownMenuItem>
                   )}
                   
-                  <DropdownMenuItem asChild>
-                    <Link href="/help" className="cursor-pointer">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Help
-                    </Link>
-                  </DropdownMenuItem>
+                  {helpRequestsEnabled && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/help" className="cursor-pointer">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        Help
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
@@ -189,13 +197,15 @@ export default function Navbar() {
                   >
                     Calendar
                   </Link>
-                  <Link 
-                    href="/help" 
-                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Help
-                  </Link>
+                  {helpRequestsEnabled && (
+                    <Link 
+                      href="/help" 
+                      className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Help
+                    </Link>
+                  )}
                   <Link 
                     href="/profile" 
                     className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
@@ -254,13 +264,15 @@ export default function Navbar() {
                   >
                     Sessions
                   </Link>
-                  <Link 
-                    href="/help" 
-                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Help
-                  </Link>
+                  {helpRequestsEnabled && (
+                    <Link 
+                      href="/help" 
+                      className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Help
+                    </Link>
+                  )}
                   <a 
                     href="/login" 
                     className="block px-4 py-4 text-primary hover:text-primary/80 hover:bg-accent rounded-md transition-colors"
