@@ -92,7 +92,7 @@ import {
   type HouseholdMemberInsert,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
@@ -778,20 +778,71 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]> {
-    const credits = await db
+    // Get user's household IDs
+    const userHouseholds = await db
+      .select({ householdId: householdMembers.householdId })
+      .from(householdMembers)
+      .where(and(
+        eq(householdMembers.userId, userId),
+        eq(householdMembers.tenantId, tenantId)
+      ));
+    
+    const householdIds = userHouseholds.map(h => h.householdId);
+    
+    // Fetch user-level credits
+    const userCreditsQuery = db
       .select()
       .from(userCredits)
       .where(and(
         eq(userCredits.userId, userId),
         eq(userCredits.tenantId, tenantId)
-      ))
-      .orderBy(desc(userCredits.createdAt));
-    return credits;
+      ));
+    
+    // Fetch household-level credits if user belongs to any households
+    let householdCreditsQuery = null;
+    if (householdIds.length > 0) {
+      householdCreditsQuery = db
+        .select()
+        .from(userCredits)
+        .where(and(
+          inArray(userCredits.householdId, householdIds),
+          eq(userCredits.tenantId, tenantId)
+        ));
+    }
+    
+    // Execute queries and combine results
+    const [userCreds, householdCreds] = await Promise.all([
+      userCreditsQuery,
+      householdCreditsQuery || Promise.resolve([])
+    ]);
+    
+    // Combine and sort by createdAt ASC (FIFO - oldest first)
+    const allCredits = [...userCreds, ...householdCreds];
+    allCredits.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+    
+    return allCredits;
   }
 
   async getAvailableCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]> {
     const now = new Date();
-    const credits = await db
+    
+    // Get user's household IDs
+    const userHouseholds = await db
+      .select({ householdId: householdMembers.householdId })
+      .from(householdMembers)
+      .where(and(
+        eq(householdMembers.userId, userId),
+        eq(householdMembers.tenantId, tenantId)
+      ));
+    
+    const householdIds = userHouseholds.map(h => h.householdId);
+    
+    // Fetch available user-level credits
+    const userCreditsQuery = db
       .select()
       .from(userCredits)
       .where(and(
@@ -802,9 +853,40 @@ export class DatabaseStorage implements IStorage {
           sql`${userCredits.expiresAt} IS NULL`,
           gte(userCredits.expiresAt, now)
         )
-      ))
-      .orderBy(userCredits.createdAt); // oldest first for FIFO
-    return credits;
+      ));
+    
+    // Fetch available household-level credits if user belongs to any households
+    let householdCreditsQuery = null;
+    if (householdIds.length > 0) {
+      householdCreditsQuery = db
+        .select()
+        .from(userCredits)
+        .where(and(
+          inArray(userCredits.householdId, householdIds),
+          eq(userCredits.tenantId, tenantId),
+          eq(userCredits.isUsed, false),
+          or(
+            sql`${userCredits.expiresAt} IS NULL`,
+            gte(userCredits.expiresAt, now)
+          )
+        ));
+    }
+    
+    // Execute queries and combine results
+    const [userCreds, householdCreds] = await Promise.all([
+      userCreditsQuery,
+      householdCreditsQuery || Promise.resolve([])
+    ]);
+    
+    // Combine and sort by createdAt ASC (FIFO - oldest first)
+    const allCredits = [...userCreds, ...householdCreds];
+    allCredits.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+    
+    return allCredits;
   }
 
   async getAvailableCreditBalance(userId: string, tenantId: string): Promise<number> {
