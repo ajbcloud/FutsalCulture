@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +101,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function SuperAdminInvitations() {
   const { toast } = useToast();
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("all-codes");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBulkCreateOpen, setIsBulkCreateOpen] = useState(false);
@@ -107,6 +109,23 @@ export default function SuperAdminInvitations() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [transferId, setTransferId] = useState<string | null>(null);
   const [targetTenantId, setTargetTenantId] = useState("");
+  
+  // Read URL parameters on mount to set initial tab and action
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    const actionParam = params.get('action');
+    
+    if (tabParam && (tabParam === 'all-codes' || tabParam === 'platform-codes' || tabParam === 'analytics')) {
+      setActiveTab(tabParam);
+    }
+    
+    if (actionParam === 'create') {
+      setIsCreateOpen(true);
+      // Clean up URL after opening dialog
+      window.history.replaceState({}, '', window.location.pathname + '?tab=' + (tabParam || 'all-codes'));
+    }
+  }, [location]);
   
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);

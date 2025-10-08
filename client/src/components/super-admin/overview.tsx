@@ -404,7 +404,7 @@ export default function SuperAdminOverview() {
                 Top Code: {metricsData?.invitations?.topCode || 'N/A'}
               </Badge>
             </div>
-            <Link href="/super-admin/invitations?tab=platform-codes">
+            <Link href="/super-admin/invitations?tab=platform-codes&action=create">
               <Button variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Code
