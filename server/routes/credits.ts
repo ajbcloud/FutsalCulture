@@ -6,7 +6,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 const router = Router();
 
-// GET /api/credits/balance - Get user's available credit balance
+// GET /api/credits/balance - Get user's available credit balance with personal/household breakdown
 router.get('/credits/balance', async (req: any, res) => {
   try {
     const userId = req.user?.claims?.sub;
@@ -19,12 +19,24 @@ router.get('/credits/balance', async (req: any, res) => {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    // Get available credit balance using storage method
-    const balance = await storage.getAvailableCreditBalance(userId, user.tenantId);
+    // Get available credits with household-augmented balances using storage method
+    const availableCredits = await storage.getAvailableCredits(userId, user.tenantId);
+    
+    // Calculate personal and household credit breakdown
+    const personalCredits = availableCredits.filter(credit => credit.userId !== null);
+    const householdCredits = availableCredits.filter(credit => credit.householdId !== null);
+    
+    const personalCreditsCents = personalCredits.reduce((sum, credit) => sum + credit.amountCents, 0);
+    const householdCreditsCents = householdCredits.reduce((sum, credit) => sum + credit.amountCents, 0);
+    const totalBalance = personalCreditsCents + householdCreditsCents;
 
     res.json({ 
-      balance,
-      balanceDollars: (balance / 100).toFixed(2)
+      balance: totalBalance,
+      balanceDollars: (totalBalance / 100).toFixed(2),
+      personalCreditsCents,
+      personalCreditsDollars: (personalCreditsCents / 100).toFixed(2),
+      householdCreditsCents,
+      householdCreditsDollars: (householdCreditsCents / 100).toFixed(2)
     });
 
   } catch (error) {

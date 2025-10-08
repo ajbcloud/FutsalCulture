@@ -4,11 +4,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+type CreditBalanceResponse = {
+  balance: number;
+  balanceDollars: string;
+  personalCreditsCents: number;
+  personalCreditsDollars: string;
+  householdCreditsCents: number;
+  householdCreditsDollars: string;
+};
 
 interface SessionPaymentModalProps {
   isOpen: boolean;
@@ -33,10 +43,12 @@ interface SessionPaymentModalProps {
 }
 
 // Stripe Form Component
-function StripePaymentForm({ session, player, signup, onSuccess, onError }: {
+function StripePaymentForm({ session, player, signup, useCredits, finalAmount, onSuccess, onError }: {
   session: any;
   player: any;
   signup: any;
+  useCredits: boolean;
+  finalAmount: number;
   onSuccess: () => void;
   onError: (error: string) => void;
 }) {
@@ -81,9 +93,10 @@ function StripePaymentForm({ session, player, signup, onSuccess, onError }: {
         signupId: signup.id,
         sessionId: session.id,
         playerId: player.id,
-        amount: session.priceCents,
+        amount: finalAmount,
         paymentMethodId: paymentMethod.id,
-        provider: 'stripe'
+        provider: 'stripe',
+        useCredits
       });
 
       if (response.ok) {
@@ -128,7 +141,7 @@ function StripePaymentForm({ session, player, signup, onSuccess, onError }: {
             Processing...
           </>
         ) : (
-          `Pay $${(session.priceCents / 100).toFixed(2)}`
+          `Pay $${(finalAmount / 100).toFixed(2)}`
         )}
       </Button>
     </form>
@@ -136,10 +149,12 @@ function StripePaymentForm({ session, player, signup, onSuccess, onError }: {
 }
 
 // Braintree Form Component (placeholder)
-function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
+function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount, onSuccess, onError }: {
   session: any;
   player: any;
   signup: any;
+  useCredits: boolean;
+  finalAmount: number;
   onSuccess: () => void;
   onError: (error: string) => void;
 }) {
@@ -472,9 +487,10 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
         signupId: signup.id,
         sessionId: session.id,
         playerId: player.id,
-        amount: session.priceCents,
+        amount: finalAmount,
         provider: 'braintree',
-        paymentMethodNonce: nonce
+        paymentMethodNonce: nonce,
+        useCredits
       });
 
       if (response.ok) {
@@ -538,7 +554,7 @@ function BraintreePaymentForm({ session, player, signup, onSuccess, onError }: {
             {isMobileDevice() ? 'Complete in Venmo app...' : 'Processing Payment...'}
           </>
         ) : (
-          `Pay $${(session.priceCents / 100).toFixed(2)}`
+          `Pay $${(finalAmount / 100).toFixed(2)}`
         )}
       </Button>
     </div>
@@ -561,6 +577,33 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
     enabled: isOpen,
   });
 
+  // Fetch available credits balance with household-augmented balances
+  const { data: creditsBalance, isLoading: creditsLoading } = useQuery<CreditBalanceResponse>({
+    queryKey: ['/api/credits/balance'],
+    enabled: isOpen,
+  });
+
+  // Map balance endpoint response fields to personal and household totals
+  const personalCreditsCents = creditsBalance?.personalCreditsCents || 0;
+  const householdCreditsCents = creditsBalance?.householdCreditsCents || 0;
+  const totalAvailableCreditsCents = creditsBalance?.balance || 0;
+
+  // State for useCredits toggle - default to true if credits are available
+  const [useCredits, setUseCredits] = useState(totalAvailableCreditsCents > 0);
+
+  // Update useCredits when credits data changes
+  useEffect(() => {
+    if (totalAvailableCreditsCents > 0) {
+      setUseCredits(true);
+    }
+  }, [totalAvailableCreditsCents]);
+
+  // Calculate payment amounts
+  const originalPrice = session.priceCents;
+  const creditsApplied = useCredits ? Math.min(totalAvailableCreditsCents, originalPrice) : 0;
+  const finalAmount = originalPrice - creditsApplied;
+  const isFullyCoveredByCredits = useCredits && creditsApplied >= originalPrice;
+
   const handlePaymentSuccess = () => {
     toast({
       title: "Payment successful!",
@@ -568,6 +611,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
     });
     queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
     queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
     onClose();
   };
 
@@ -607,6 +651,67 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Available Credits Section */}
+          {!creditsLoading && totalAvailableCreditsCents > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg space-y-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="font-medium text-blue-900 dark:text-blue-100">Available Credits</h3>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-blue-700 dark:text-blue-300">
+                  <span>Personal Credits:</span>
+                  <span data-testid="text-personal-credits">${(personalCreditsCents / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-blue-700 dark:text-blue-300">
+                  <span>Household Credits:</span>
+                  <span data-testid="text-household-credits">${(householdCreditsCents / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-blue-900 dark:text-blue-100 pt-2 border-t border-blue-200 dark:border-blue-800">
+                  <span>Total Available:</span>
+                  <span data-testid="text-total-credits">${(totalAvailableCreditsCents / 100).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox
+                  id="use-credits"
+                  checked={useCredits}
+                  onCheckedChange={(checked) => setUseCredits(checked as boolean)}
+                  data-testid="checkbox-use-credits"
+                />
+                <label
+                  htmlFor="use-credits"
+                  className="text-sm font-medium text-blue-900 dark:text-blue-100 cursor-pointer"
+                >
+                  Use available credits (${(totalAvailableCreditsCents / 100).toFixed(2)})
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Breakdown */}
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+            <h3 className="font-medium text-sm text-gray-600 dark:text-gray-400">Payment Summary</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Original Price:</span>
+                <span data-testid="text-original-price">${(originalPrice / 100).toFixed(2)}</span>
+              </div>
+              {useCredits && creditsApplied > 0 && (
+                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                  <span>Credits Applied:</span>
+                  <span data-testid="text-credits-applied">-${(creditsApplied / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span>Final Amount to Pay:</span>
+                <span data-testid="text-final-amount">${(finalAmount / 100).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Session Details */}
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
             <h3 className="font-medium text-sm text-gray-600 dark:text-gray-400">Session Details</h3>
@@ -633,9 +738,46 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
             </div>
           </div>
 
-          {/* Payment Form */}
+          {/* Payment Form or Fully Covered Message */}
           <div className="space-y-4">
-            {configLoading ? (
+            {isFullyCoveredByCredits ? (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 rounded-lg text-center space-y-3">
+                <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
+                  <Wallet className="h-6 w-6" />
+                  <h3 className="text-lg font-semibold">Payment Fully Covered by Credits</h3>
+                </div>
+                <p className="text-sm text-green-600 dark:text-green-400" data-testid="text-fully-covered">
+                  Your available credits will cover the full cost of this session. Click Complete to enroll.
+                </p>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await apiRequest('POST', '/api/session-billing/process-payment', {
+                        signupId: signup.id,
+                        sessionId: session.id,
+                        playerId: player.id,
+                        amount: finalAmount,
+                        provider: null,
+                        useCredits: true
+                      });
+                      
+                      if (response.ok) {
+                        handlePaymentSuccess();
+                      } else {
+                        const errorData = await response.json();
+                        handlePaymentError(errorData.message || "Failed to apply credits");
+                      }
+                    } catch (err: any) {
+                      handlePaymentError(err.message || "Failed to process payment");
+                    }
+                  }}
+                  className="w-full"
+                  data-testid="button-complete-with-credits"
+                >
+                  Complete Enrollment with Credits
+                </Button>
+              </div>
+            ) : configLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span className="ml-2">Loading payment options...</span>
@@ -653,6 +795,8 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                     session={session}
                     player={player}
                     signup={signup}
+                    useCredits={useCredits}
+                    finalAmount={finalAmount}
                     onSuccess={handlePaymentSuccess}
                     onError={handlePaymentError}
                   />
@@ -669,6 +813,8 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                 session={session}
                 player={player}
                 signup={signup}
+                useCredits={useCredits}
+                finalAmount={finalAmount}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
               />
