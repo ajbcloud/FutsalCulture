@@ -22,6 +22,7 @@ import IntegrationsHealth from "@/pages/super-admin/integrations-health";
 import CommsDeliverability from "@/pages/super-admin/comms";
 import SecurityAudit from "@/pages/super-admin/security";
 import PlanManagement from "@/pages/super-admin/plan-management";
+import SuperAdminHelpRequests from "@/pages/super-admin/help-requests";
 
 import { 
   Building2, 
@@ -44,7 +45,8 @@ import {
   Webhook,
   Mail,
   Shield,
-  Crown
+  Crown,
+  HelpCircle
 } from "lucide-react";
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
@@ -78,6 +80,7 @@ export default function SuperAdminPage() {
     { name: "Overview", href: "/super-admin", icon: Home, current: basePath === "/super-admin" },
     { name: "Plan Management", href: "/super-admin/plan-management", icon: Crown, current: basePath === "/super-admin/plan-management" },
     { name: "Analytics", href: "/super-admin/analytics-v2", icon: BarChart3, current: basePath.startsWith("/super-admin/analytics-v2") },
+    { name: "Help Requests", href: "/super-admin/help-requests", icon: HelpCircle, current: basePath === "/super-admin/help-requests" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
@@ -129,6 +132,8 @@ export default function SuperAdminPage() {
         return <SuperAdminParents />;
       case basePath === "/super-admin/players":
         return <SuperAdminPlayers />;
+      case basePath === "/super-admin/help-requests":
+        return <SuperAdminHelpRequests />;
       default:
         return <SuperAdminOverview />;
     }

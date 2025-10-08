@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, AlertTriangle, Sparkles, Building2, CreditCard } from 'lucide-react';
+import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, AlertTriangle, Sparkles, Building2, CreditCard, HelpCircle, MessageSquare, Clock } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -49,6 +49,13 @@ export default function SuperAdminOverview() {
   // Query analytics data for client commerce
   const { data: analyticsData } = useQuery({
     queryKey: ['/api/super-admin/analytics', 'overview'],
+    enabled: true,
+    staleTime: 2 * 60 * 1000,
+  });
+  
+  // Query help request stats
+  const { data: helpRequestStats } = useQuery({
+    queryKey: ['/api/super-admin/help-requests/stats'],
     enabled: true,
     staleTime: 2 * 60 * 1000,
   });
@@ -155,6 +162,73 @@ export default function SuperAdminOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Help Requests Quick View */}
+      {helpRequestStats && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-blue-500" />
+                <CardTitle className="text-lg">Help Requests Overview</CardTitle>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = '/super-admin/help-requests'}
+              >
+                View All Requests
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="space-y-1">
+                <div className="text-2xl font-bold">{helpRequestStats.overview.openRequests}</div>
+                <div className="text-sm text-muted-foreground">Open Requests</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-yellow-600">{helpRequestStats.overview.highPriority}</div>
+                <div className="text-sm text-muted-foreground">High Priority</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-blue-600">{Math.round(helpRequestStats.overview.avgResponseTime || 0)} min</div>
+                <div className="text-sm text-muted-foreground">Avg Response Time</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold">{helpRequestStats.overview.totalRequests}</div>
+                <div className="text-sm text-muted-foreground">Total Requests</div>
+              </div>
+            </div>
+            
+            {/* Urgent Requests */}
+            {helpRequestStats.urgentRequests && helpRequestStats.urgentRequests.length > 0 && (
+              <div className="border-t pt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium">Urgent Requests</span>
+                </div>
+                <div className="space-y-2">
+                  {helpRequestStats.urgentRequests.slice(0, 3).map((request: any) => (
+                    <div key={request.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950 rounded-lg">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium truncate">{request.subject}</div>
+                        <div className="text-xs text-muted-foreground">{request.tenantName}</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-red-600" />
+                        <span className="text-xs text-red-600">
+                          {new Date(request.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Insights Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

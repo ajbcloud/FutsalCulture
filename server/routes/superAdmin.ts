@@ -50,6 +50,16 @@ r.get('/analytics/sessions', detailedAnalytics.sessionKPIs);
 r.get('/analytics/parents', detailedAnalytics.parentKPIs);
 r.get('/analytics/cross-cutting', detailedAnalytics.crossCuttingKPIs);
 
+// Help Request Management routes
+r.get('/help-requests', help.list);
+r.get('/help-requests/stats', help.getStats);
+r.get('/help-requests/export', help.exportToCsv);
+r.get('/help-requests/:id', help.getById);
+r.post('/help-requests/:id/reply', help.reply);
+r.patch('/help-requests/:id', help.update);
+r.post('/help-requests/bulk-update', help.bulkUpdate);
+
+// Legacy routes (keep for backward compatibility)
 r.get('/help', help.list);
 r.patch('/help/:id', help.update);
 
