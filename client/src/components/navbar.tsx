@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useHelpRequestsEnabled } from "@/hooks/use-help-requests-enabled";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
@@ -13,6 +14,7 @@ export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const helpRequestsEnabled = useHelpRequestsEnabled();
+  const { term } = useUserTerminology();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -88,7 +90,7 @@ export default function Navbar() {
             
             {!isAuthenticated ? (
               <Button asChild className="h-11 px-4 sm:h-auto sm:px-3">
-                <Link href="/login">Adult Login</Link>
+                <Link href="/login">{term} Login</Link>
               </Button>
             ) : (
               <DropdownMenu>
@@ -123,7 +125,7 @@ export default function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
-                        Adult Profile
+                        {term} Profile
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -287,7 +289,7 @@ export default function Navbar() {
                     href="/login" 
                     className="block px-4 py-4 text-primary hover:text-primary/80 hover:bg-accent rounded-md transition-colors"
                   >
-                    Parent Login
+                    {term} Login
                   </a>
                   
                   {/* Theme Toggle in Mobile Menu */}
