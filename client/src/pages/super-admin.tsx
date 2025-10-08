@@ -20,6 +20,7 @@ import PlatformBilling from "@/pages/super-admin/platform-billing";
 import SuperAdminDunning from "@/pages/super-admin/dunning";
 import IntegrationsHealth from "@/pages/super-admin/integrations-health";
 import CommsDeliverability from "@/pages/super-admin/comms";
+import SuperAdminCommunications from "@/pages/super-admin/communications";
 import SecurityAudit from "@/pages/super-admin/security";
 import PlanManagement from "@/pages/super-admin/plan-management";
 import SuperAdminHelpRequests from "@/pages/super-admin/help-requests";
@@ -83,6 +84,7 @@ export default function SuperAdminPage() {
     { name: "Help Requests", href: "/super-admin/help-requests", icon: HelpCircle, current: basePath === "/super-admin/help-requests" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
+    { name: "Communications", href: "/super-admin/communications", icon: Mail, current: basePath === "/super-admin/communications" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
     { name: "Comms Deliverability", href: "/super-admin/comms", icon: Mail, current: basePath === "/super-admin/comms" },
     { name: "Security & Audit", href: "/super-admin/security", icon: Shield, current: basePath === "/super-admin/security" },
@@ -116,6 +118,8 @@ export default function SuperAdminPage() {
         return <SuperAdminDunning />;
       case basePath === "/super-admin/integrations-health":
         return <IntegrationsHealth />;
+      case basePath === "/super-admin/communications":
+        return <SuperAdminCommunications />;
       case basePath === "/super-admin/comms":
         return <CommsDeliverability />;
       case basePath === "/super-admin/security":

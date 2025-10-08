@@ -6,6 +6,7 @@ import crypto from 'crypto';
 // Import platform settings controllers
 import { getPolicies, updatePolicies, getTenantDefaults, updateTenantDefaults, getTrialSettings, updateTrialSettings } from './controllers/superAdmin/platformSettings';
 import { trialManager } from './trial-management';
+import * as communicationsController from './controllers/superAdmin/communications';
 
 // Super admin email for authentication
 const SUPER_ADMIN_EMAIL = "admin@playhq.app";
@@ -509,6 +510,27 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch geographic analytics" });
     }
   });
+
+  // Communications API Routes
+  // Template Management
+  app.get('/api/super-admin/communications/templates', isAuthenticated, isSuperAdmin, communicationsController.getPlatformTemplates);
+  app.post('/api/super-admin/communications/templates', isAuthenticated, isSuperAdmin, communicationsController.createPlatformTemplate);
+  app.patch('/api/super-admin/communications/templates/:id', isAuthenticated, isSuperAdmin, communicationsController.updatePlatformTemplate);
+  app.delete('/api/super-admin/communications/templates/:id', isAuthenticated, isSuperAdmin, communicationsController.deletePlatformTemplate);
+  app.post('/api/super-admin/communications/templates/clone', isAuthenticated, isSuperAdmin, communicationsController.cloneTemplateToTenants);
+
+  // Message Sending
+  app.post('/api/super-admin/communications/send', isAuthenticated, isSuperAdmin, communicationsController.sendPlatformMessage);
+  app.get('/api/super-admin/communications/history', isAuthenticated, isSuperAdmin, communicationsController.getMessageHistory);
+  app.get('/api/super-admin/communications/recipients', isAuthenticated, isSuperAdmin, communicationsController.getAvailableRecipients);
+  app.post('/api/super-admin/communications/schedule', isAuthenticated, isSuperAdmin, communicationsController.scheduleMessage);
+  
+  // Campaign Management
+  app.delete('/api/super-admin/communications/campaigns/:id', isAuthenticated, isSuperAdmin, communicationsController.cancelScheduledCampaign);
+  app.get('/api/super-admin/communications/campaigns/:campaignId/analytics', isAuthenticated, isSuperAdmin, communicationsController.getCampaignAnalytics);
+  
+  // Export
+  app.get('/api/super-admin/communications/export', isAuthenticated, isSuperAdmin, communicationsController.exportAnalytics);
 
   // Geographic Distribution - Tenant Distribution by State for Map Component
   app.get('/api/super-admin/geographic-distribution', isAuthenticated, isSuperAdmin, async (req, res) => {
