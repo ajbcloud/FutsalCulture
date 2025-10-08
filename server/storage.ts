@@ -33,6 +33,8 @@ import {
   consentEvents,
   contactGroups,
   contactGroupMembers,
+  households,
+  householdMembers,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -84,6 +86,10 @@ import {
   type ContactGroupWithCount,
   type ContactGroupMember,
   type InsertContactGroupMember,
+  type HouseholdSelect,
+  type HouseholdInsert,
+  type HouseholdMemberSelect,
+  type HouseholdMemberInsert,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -312,6 +318,15 @@ export interface IStorage {
   removeGroupMember(groupId: string, userId: string): Promise<void>;
   getGroupMembers(groupId: string): Promise<Array<ContactGroupMember & { user: User }>>;
   getUserGroups(userId: string, tenantId: string): Promise<ContactGroup[]>;
+
+  // Household operations
+  getHouseholds(tenantId: string): Promise<Array<HouseholdSelect & { memberCount: number; members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }>>;
+  getHousehold(id: string, tenantId: string): Promise<(HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }) | undefined>;
+  createHousehold(household: HouseholdInsert): Promise<HouseholdSelect>;
+  updateHousehold(id: string, tenantId: string, data: Partial<HouseholdInsert>): Promise<HouseholdSelect>;
+  deleteHousehold(id: string, tenantId: string): Promise<void>;
+  addHouseholdMember(householdId: string, tenantId: string, member: Omit<HouseholdMemberInsert, 'id' | 'householdId' | 'tenantId' | 'addedAt'>): Promise<HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }>;
+  removeHouseholdMember(memberId: string, tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3815,6 +3830,112 @@ export class DatabaseStorage implements IStorage {
       );
     
     return groups;
+  }
+
+  // Household operations
+  async getHouseholds(tenantId: string): Promise<Array<HouseholdSelect & { memberCount: number; members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }>> {
+    const householdsList = await db
+      .select()
+      .from(households)
+      .where(eq(households.tenantId, tenantId))
+      .orderBy(desc(households.createdAt));
+
+    const result = await Promise.all(
+      householdsList.map(async (household) => {
+        const members = await db
+          .select()
+          .from(householdMembers)
+          .leftJoin(users, eq(householdMembers.userId, users.id))
+          .leftJoin(players, eq(householdMembers.playerId, players.id))
+          .where(eq(householdMembers.householdId, household.id));
+
+        const enrichedMembers = members.map(m => ({
+          ...m.household_members,
+          user: m.users || undefined,
+          player: m.players || undefined,
+        }));
+
+        return {
+          ...household,
+          memberCount: enrichedMembers.length,
+          members: enrichedMembers,
+        };
+      })
+    );
+
+    return result;
+  }
+
+  async getHousehold(id: string, tenantId: string): Promise<(HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }) | undefined> {
+    const [household] = await db
+      .select()
+      .from(households)
+      .where(and(eq(households.id, id), eq(households.tenantId, tenantId)));
+
+    if (!household) return undefined;
+
+    const members = await db
+      .select()
+      .from(householdMembers)
+      .leftJoin(users, eq(householdMembers.userId, users.id))
+      .leftJoin(players, eq(householdMembers.playerId, players.id))
+      .where(eq(householdMembers.householdId, id));
+
+    const enrichedMembers = members.map(m => ({
+      ...m.household_members,
+      user: m.users || undefined,
+      player: m.players || undefined,
+    }));
+
+    return {
+      ...household,
+      members: enrichedMembers,
+    };
+  }
+
+  async createHousehold(household: HouseholdInsert): Promise<HouseholdSelect> {
+    const [newHousehold] = await db
+      .insert(households)
+      .values(household)
+      .returning();
+    return newHousehold;
+  }
+
+  async updateHousehold(id: string, tenantId: string, data: Partial<HouseholdInsert>): Promise<HouseholdSelect> {
+    const [updated] = await db
+      .update(households)
+      .set(data)
+      .where(and(eq(households.id, id), eq(households.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteHousehold(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(households)
+      .where(and(eq(households.id, id), eq(households.tenantId, tenantId)));
+  }
+
+  async addHouseholdMember(householdId: string, tenantId: string, member: Omit<HouseholdMemberInsert, 'id' | 'householdId' | 'tenantId' | 'addedAt'>): Promise<HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }> {
+    await db
+      .insert(householdMembers)
+      .values({
+        ...member,
+        householdId,
+        tenantId,
+      });
+
+    const household = await this.getHousehold(householdId, tenantId);
+    if (!household) {
+      throw new Error('Household not found');
+    }
+    return household;
+  }
+
+  async removeHouseholdMember(memberId: string, tenantId: string): Promise<void> {
+    await db
+      .delete(householdMembers)
+      .where(and(eq(householdMembers.id, memberId), eq(householdMembers.tenantId, tenantId)));
   }
 }
 

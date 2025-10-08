@@ -12,7 +12,9 @@ import {
   joinWaitlistSchema,
   leaveWaitlistSchema,
   promoteWaitlistSchema,
-  waitlistSettingsSchema
+  waitlistSettingsSchema,
+  insertHouseholdSchema,
+  insertHouseholdMemberSchema
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -330,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get tenant ID from various sources
       // For new registrations, don't use existing user ID
-      const isNewRegistration = !req.user?.id || req.user?.id === 'ajosephfinch';
+      const isNewRegistration = !(req as any).user?.id || (req as any).user?.id === 'ajosephfinch';
       
       // Get tenant ID from the request body first, fallback to invite code lookup
       const targetTenantId = tenantId;
@@ -424,8 +426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get tenant ID from authenticated user, or allow all sessions for non-authenticated users
       let tenantId;
-      if (req.user?.id) {
-        const user = await storage.getUser(req.user.id);
+      if ((req as any).user?.id) {
+        const user = await storage.getUser((req as any).user.id);
         tenantId = user?.tenantId;
       }
 
@@ -507,8 +509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let tenantId = null;
 
-      if (req.user?.id) {
-        const user = await storage.getUser(req.user.id);
+      if ((req as any).user?.id) {
+        const user = await storage.getUser((req as any).user.id);
         tenantId = user?.tenantId;
       }
 
@@ -1538,22 +1540,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin payment refund route
-  app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {
-    try {
-      const { paymentId } = req.params;
-      const { reason } = req.body;
-      const user = req.user;
-
-      // Process refund (placeholder - would integrate with actual payment system)
-      const refund = await storage.processRefund(paymentId, reason, user.id);
-
-      res.json({ success: true, refund });
-    } catch (error) {
-      console.error("Error processing refund:", error);
-      res.status(500).json({ message: "Failed to process refund" });
-    }
-  });
+  // Admin payment refund route - DEPRECATED: Now using credit system instead of refunds
+  // When sessions are cancelled, credits are automatically issued to affected users
+  // app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {
+  //   try {
+  //     const { paymentId } = req.params;
+  //     const { reason } = req.body;
+  //     const user = req.user;
+  //
+  //     // Process refund (placeholder - would integrate with actual payment system)
+  //     const refund = await storage.processRefund(paymentId, reason, user.id);
+  //
+  //     res.json({ success: true, refund });
+  //   } catch (error) {
+  //     console.error("Error processing refund:", error);
+  //     res.status(500).json({ message: "Failed to process refund" });
+  //   }
+  // });
 
   // Multi-session booking route (no payment processing)
   app.post('/api/multi-checkout', isAuthenticated, async (req: any, res) => {
@@ -2154,6 +2157,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User help request routes
   const myHelpRequestRoutes = await import('./my-help-request-routes');
   app.use('/api/help', isAuthenticated, myHelpRequestRoutes.default);
+
+  // Household CRUD routes
+  // GET /api/households - List all households for tenant
+  app.get('/api/households', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const households = await storage.getHouseholds(tenantId);
+      res.json(households);
+    } catch (error) {
+      console.error("Error fetching households:", error);
+      res.status(500).json({ message: "Failed to fetch households" });
+    }
+  });
+
+  // POST /api/households - Create new household
+  app.post('/api/households', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const validatedData = insertHouseholdSchema.parse({
+        ...req.body,
+        tenantId,
+        createdBy: req.user.id,
+      });
+
+      const household = await storage.createHousehold(validatedData);
+      res.status(201).json(household);
+    } catch (error) {
+      console.error("Error creating household:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create household" });
+    }
+  });
+
+  // GET /api/households/:id - Get single household
+  app.get('/api/households/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { id } = req.params;
+      const household = await storage.getHousehold(id, tenantId);
+      
+      if (!household) {
+        return res.status(404).json({ message: "Household not found" });
+      }
+
+      res.json(household);
+    } catch (error) {
+      console.error("Error fetching household:", error);
+      res.status(500).json({ message: "Failed to fetch household" });
+    }
+  });
+
+  // PATCH /api/households/:id - Update household
+  app.patch('/api/households/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { id } = req.params;
+      const validatedData = insertHouseholdSchema.partial().parse(req.body);
+
+      const household = await storage.updateHousehold(id, tenantId, validatedData);
+      res.json(household);
+    } catch (error) {
+      console.error("Error updating household:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update household" });
+    }
+  });
+
+  // DELETE /api/households/:id - Delete household
+  app.delete('/api/households/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteHousehold(id, tenantId);
+      res.json({ success: true, message: "Household deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting household:", error);
+      res.status(500).json({ message: "Failed to delete household" });
+    }
+  });
+
+  // POST /api/households/:id/members - Add member to household
+  app.post('/api/households/:id/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { id: householdId } = req.params;
+      const { userId, playerId, role } = req.body;
+
+      // Validate: exactly one of userId or playerId is required
+      if ((!userId && !playerId) || (userId && playerId)) {
+        return res.status(400).json({ 
+          message: "Exactly one of userId or playerId is required" 
+        });
+      }
+
+      const validatedData = insertHouseholdMemberSchema.partial().parse({
+        userId: userId || null,
+        playerId: playerId || null,
+        role: role || "member",
+        addedBy: req.user.id,
+      });
+
+      const household = await storage.addHouseholdMember(householdId, tenantId, validatedData);
+      res.status(201).json(household);
+    } catch (error) {
+      console.error("Error adding household member:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      // Check for unique constraint violation
+      if ((error as any)?.message?.includes('unique') || (error as any)?.code === '23505') {
+        return res.status(400).json({ 
+          message: "This user or player is already in a household for this tenant" 
+        });
+      }
+      res.status(500).json({ message: "Failed to add household member" });
+    }
+  });
+
+  // DELETE /api/households/:householdId/members/:memberId - Remove member
+  app.delete('/api/households/:householdId/members/:memberId', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { householdId, memberId } = req.params;
+      await storage.removeHouseholdMember(memberId, tenantId);
+
+      // Return the updated household
+      const household = await storage.getHousehold(householdId, tenantId);
+      res.json(household);
+    } catch (error) {
+      console.error("Error removing household member:", error);
+      res.status(500).json({ message: "Failed to remove household member" });
+    }
+  });
 
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
