@@ -1,0 +1,296 @@
+Plan for Revamping the Super Admin Center
+Current State vs. Tenant Admin Portal
+
+The Super Admin portal currently provides a multi-tenant overview with sections for managing Tenants, Sessions, Payments, Registrations, Parents, Players, etc
+GitHub
+. In contrast, a tenant’s Admin portal includes features like Invitations, Pending Registrations, Communications, Player Development, Help Requests, etc.
+GitHub
+ that are either missing or not fully realized in the Super Admin UI. This gap means the Super Admin center has fallen behind in features and polish. We need to bring the Super Admin page on par with the tenant Admin page, adapting each feature to a platform-wide context. Below is a comprehensive plan covering analytics, client onboarding, automatic admin creation, and other improvements to make the Super Admin center robust and feature-complete.
+
+1. Enhanced Dashboard & Analytics
+
+The Super Admin should have a powerful dashboard that gives a high-level snapshot of the entire platform (all tenants) with drill-down capabilities. Key performance indicators (KPIs) and charts should mirror those a tenant admin sees, but aggregated or comparable across tenants. For example, the Overview page can show metrics like total platform revenue (year-to-date, month-to-date, etc.), number of active players and registrations, sessions happening this week, pending payments, growth rates, and other KPIs
+GitHub
+. Each KPI card should have an info tooltip defining the metric to ensure clarity.
+
+Crucially, all analytics should support filtering by tenant or viewing “All Tenants.” On the Super Admin analytics page, the Tenant filter should default to “All Tenants” and allow the Super Admin to select a specific tenant (or multiple) to drill down
+GitHub
+. When a tenant is selected, all charts and stats recalculate for that subset, just as a tenant admin’s analytics focuses on their club. The codebase already includes an updated Analytics V2 component with support for a tenant filter and multiple data “lanes” (e.g. platform vs commerce metrics) and time ranges, which we should leverage. We should continue modernizing this UI – making it spacious, legible, and fast. This includes interactive charts (e.g. revenue over time, registration trends) and possibly a geographic view of tenants (the code already includes a US map for tenant distribution). We can incorporate AI-assisted insights (as seen with an AIInsights bar component) to help interpret trends, but the core is to ensure the Super Admin has at-a-glance visibility into platform health (financial metrics like MRR/ARR, active tenant count and plan mix
+GitHub
+, top performers, churn risks, etc.).
+
+In summary, upgrading Super Admin Analytics means providing comprehensive platform-wide stats with tenant-level granularity. The end result is a dashboard where a Super Admin can quickly assess overall growth and drill into any tenant’s metrics, matching and exceeding what individual admins see for their own club.
+
+2. Tenant Onboarding Workflow
+
+A major responsibility of the Super Admin center is onboarding new client organizations (tenants). We need a streamlined process from sign-up to a fully active tenant with an admin. Currently, when a new organization uses the “Get Started” sign-up form, the backend creates a new tenant record and an associated user marked as an admin (the owner) for that tenant
+GitHub
+. This first user should automatically have the tenant admin role (and appropriate flags like isAdmin or role = tenant_admin), effectively becoming that club’s initial admin. We must ensure this happens reliably – the code confirms the plan to do so by inserting a user with isAdmin: true upon tenant creation
+GitHub
+.
+
+After sign-up, we should consider an email verification flow (which is partially implemented). The system should send a welcome/verification email to the admin’s address (the sign-up code was preparing a verification token and welcome email
+GitHub
+). The Super Admin settings should allow configuration of whether new tenants require manual approval or are auto-approved. Indeed, the platform has policy flags for autoApproveTenants and requireTenantApproval
+GitHub
+. If manual approval is required, the Super Admin portal should present a list or notification of “Pending Tenant Sign-ups” (tenants in a provisional status). The Tenants Management page can list such new sign-ups with a status (e.g. “inactive” or “pending”) and actions for Approve or Reject. Approving would activate the tenant (allowing its admin to log in), while rejecting could archive or delete the tenant record. This ensures that if the business wants to vet organizations (for instance, in a closed beta or to prevent spam), they have control. If auto-approval is enabled, new tenants become active immediately upon email verification.
+
+Additionally, the Tenants Management section should handle the full lifecycle: not only creating and approving tenants, but also possibly suspending or deleting tenants. Currently, the Super Admin Tenants page shows all organizations with fields like name, subdomain, contact email, status, plan, counts of admins/players/sessions, etc., and provides actions to create new tenants, edit info, and delete tenants
+GitHub
+GitHub
+. We should expand on this:
+
+Create New Tenant: The existing modal allows entering name, subdomain, contact email, etc.
+GitHub
+. We should ensure it also sets sensible defaults (e.g. default plan level, trial period) and immediately creates a tenant admin user for the provided email. (Currently the form just takes contact email and likely creates the user as in code, but we may enhance it by sending an invite or setting a temporary password if needed.)
+
+Automatic Admin Creation: As noted, when a tenant is created (via self-signup or manually by a Super Admin), the system should always create the first admin account for that tenant. This prevents “orphan” tenants with no owner. The codebase supports this logic by assigning the new user to the new tenant with admin rights
+GitHub
+, so our plan is to maintain that and build UI cues (e.g. showing the newly created admin in the tenant’s detail view).
+
+Welcome & Onboarding Emails: On approval or creation, trigger a welcome email to the new admin (the seed code indicates an email was sent with club URL, next steps like setting up sessions, etc.
+GitHub
+). We should update these templates as needed (which can be configured in the Super Admin Settings) to ensure new clients know how to get started.
+
+We’ll also track trial periods and plan activation. Each tenant has trial timing and billing status fields (e.g. trial start/end, current plan, billing status) in the database
+GitHub
+. The Super Admin should have visibility into which tenants are in trial, whose trial is expiring soon, and who has or hasn’t added a payment method. This could be part of the Overview metrics (e.g. number of tenants in trial) or a filter in the Tenants list (show all trialing tenants). It might also tie into the Dunning/Payment Recovery section for trials that ended without conversion.
+
+In summary, improving client onboarding involves robust sign-up flows with optional approval, automatic provisioning of the first admin user, clear communication (emails), and tools in the Super Admin UI to approve and monitor new tenants through their trial and into active subscription.
+
+3. Tenant Management & Impersonation Tools
+
+Managing tenants goes beyond onboarding. The Super Admin center should provide full CRUD and support actions for tenant organizations:
+
+View & Search Tenants: The Tenants page already lists all organizations, and includes a search bar and status filter
+GitHub
+GitHub
+. We should ensure you can search by name, subdomain, or contact email to quickly find a tenant. This is useful when support receives a request from a specific org – the Super Admin can pull up that tenant’s record fast.
+
+Edit Tenant Details: Allow updating basic info like name, subdomain (with caution), or contact email in an edit modal
+GitHub
+. This is important if a club rebrands or needs a new contact person. Edits should propagate to any relevant configurations (e.g., if subdomain changes, we might need to update DNS or notify the tenant admin).
+
+Tenant Status & Suspension: The portal should let Super Admins mark a tenant as inactive (suspended) which could prevent logins or usage until reactivated. This might be needed for non-payment or policy violations. Since our Tenant model includes a status field (active/inactive)
+GitHub
+, we can toggle that via the UI. Inactive tenants could be hidden by default in lists unless filtered for, and their admins should get an “account suspended” message if they try to log in.
+
+Impersonation (“Log in as”): A crucial support tool is the ability for a Super Admin to impersonate a tenant admin and see what they see. We should provide a “Log In as Admin” action for each tenant in the list
+GitHub
+. This is partially implemented: the UI imports an impersonation utility
+GitHub
+. We need to ensure the backend allows a super admin to assume a tenant admin’s identity (likely via a secure route that issues a session token or uses the existing session with a flag). In the Super Admin Settings, we see an impersonation policy (allow/disallow, time limit, require reason)
+GitHub
+ – this means the platform owners have considered impersonation carefully. Our plan: enable impersonation by default (if allow is true) with logging. When a Super Admin clicks “Log in as Tenant Admin,” perhaps require them to input a reason (for audit) if requireReason is true, then switch context. We must cap the duration (e.g. auto-expire the impersonation after maxMinutes to avoid lingering access
+GitHub
+). Additionally, log these events in the Security & Audit log (who impersonated whom, when, and why).
+
+Admins & Users Management: Beyond tenant organizations, the Super Admin should be able to manage user accounts globally. In a multi-tenant system, this is a bit complex, since tenant admins manage their own members. But the Super Admin should at least have read-access and emergency control (e.g. disabling a problematic user). We have two approaches:
+
+Provide global user directory pages like the existing Parents and Players pages which list all parents and players across the platform. These pages already exist in the code (Super Admin Parents/Players) to allow searching/filtering by name, age group, etc., with a Tenant column to identify their club.
+
+Consider a unified “User Management” page (not tenant-specific) where all user accounts (admins, parents, players) can be searched by email or name. In fact, there is a SuperAdminUsers component in code that fetches all users with filters by role and status
+GitHub
+. We might expose this as an “All Users” or “Admins & Members” page. This would be extremely useful for support: e.g., if a user writes to support, the Super Admin can search their email and see which tenant they belong to, their role, status, last login, etc. From there, actions like toggling status (active/disabled) or resetting a password can be offered. The code already supports toggling a user’s status and sending reset-password emails from the Super Admin side
+GitHub
+GitHub
+ – we should surface those actions in the UI (e.g. a dropdown on each user row with “Disable/Enable User” and “Send Password Reset” options).
+
+By implementing these tenant and user management tools, the Super Admin center becomes a true command center for the platform. A Super Admin will be able to find any tenant or user and take appropriate actions (support, edit, impersonate, suspend) all in one place, much like an admin can manage all their club members within their portal – but now at a global scale.
+
+4. Plan Management & Billing
+
+To mirror and extend admin functionality, the Super Admin must handle platform plans and billing for client organizations:
+
+Plan Management: We have a dedicated Plan Management section in the Super Admin nav which deals with features of each subscription plan. This is essentially a feature-flag management UI for different plan tiers (e.g. Free, Core, Growth, Elite). The code indicates a system of features (each with a key, category, type, etc.) and a comparison across plans
+GitHub
+GitHub
+. The Plan Management UI should allow the Super Admin to:
+
+View and compare what each plan includes (a comparison matrix of features by plan).
+
+Toggle features or adjust limits for a plan. For example, enable or disable a feature on the Core plan vs Elite plan, or set numeric limits (like max sessions or storage) for each plan. Changes can be saved and likely propagate via feature flags (FEATURE_KEYS) throughout the app.
+
+Manage tenant-specific overrides. If a particular tenant negotiates a custom arrangement (say they are on the Core plan but we enabled a certain premium feature just for them), the UI should allow adding an override. Indeed, our code is already prepared for Tenant Overrides: a tab where you can select a tenant and override specific feature flags for them
+GitHub
+GitHub
+. We should make this interface user-friendly, showing all available features and whether that tenant is using the default or an override, and letting the Super Admin set an override (with an optional reason and expiration if needed). This prevents needing database tweaks for special cases.
+
+Essentially, Plan Management gives the platform owner fine-grained control over product tiers and customer entitlements, all from the UI. We will refine it so changes are auditable and maybe require confirmation (since altering plans affects potentially many users).
+
+Platform Billing (Subscription Payments): This is another new area that tenant admins don’t see (they deal with their internal payments, not the SaaS billing). The Super Admin Platform Billing page should track all payments from tenants to the platform for their subscriptions. The UI and code already reflect this need: there’s a PlatformBilling component that lists platform subscription transactions with fields like tenant name, admin name, plan level, payment gateway/method, status, date, etc.
+GitHub
+. We will ensure this page:
+
+Shows a table of subscription charges (e.g. monthly or annual fees paid by each tenant). For each payment, include Tenant, amount (price tied to plan), method (card/ACH), status (completed, failed, pending) with colored badges for clarity
+GitHub
+.
+
+Filter and paginate: Provide filters for tenant, date range, status, payment method
+GitHub
+GitHub
+. This helps find, say, all failed payments in the last month or all payments for a particular tenant.
+
+Retry/Manage: If a payment failed (status “failed”), the Super Admin might need to retry charging or at least know to reach out. We should integrate this with the Dunning process (below) – possibly a “retry charge” button if the payment provider allows, or a “Send Reminder” action to prompt the tenant to update their payment method.
+
+Summary info: It might be useful to show totals (e.g. total subscription revenue this month) or counts of failed vs completed, but much of that is also in analytics (platform revenue, MRR, etc.). Platform Billing is more of a ledger view for finance tracking.
+
+Payment Recovery (Dunning): Failed subscription payments need special handling (dunning). The Super Admin Payment Recovery section will list tenants with overdue or failed payments (the nav calls it “Payment Recovery”). We can surface information like which tenants are past due, how long since the failure, and what retry attempts have been made. Our system likely flags these in tenant’s billingStatus (e.g. “past_due”) and might log events. The plan here is:
+
+Show a list of delinquent accounts: Tenant name, last payment date, days past due, current status (retry scheduled, final notice, etc.) – correlating with any dunning status enums in the system.
+
+Allow the Super Admin to trigger actions: e.g. resend invoice, send a custom email, or even temporarily downgrade/suspend service if payment remains uncollected after a threshold.
+
+This interface ensures no tenant falls through the cracks if their credit card fails – Super Admins will have a clear view of who owes money and can act (the “Payment Recovery” is essentially a collections dashboard).
+
+Tenant Billing Settings: While individual tenant admins manage their payment methods on their side, the Super Admin might occasionally need to intervene or view a tenant’s subscription details. We might integrate a tenant detail panel accessible from the Tenants page or Plan Management that shows that tenant’s current plan, next billing date, trial status, and payment method on file (without exposing sensitive data – just whether it’s provided and maybe last4 of card). In cases where a tenant’s payment method is failing, a Super Admin could use impersonation to assist them in updating it, or simply have a contact to reach out.
+
+By building out Plan Management and Billing features, the Super Admin center will cover all SaaS platform operations: configuring the service plans and handling the recurring billing. This brings business control directly into the portal rather than requiring code changes or database edits for plan features or chasing spreadsheets for payments.
+
+5. Integrations Health & Communications Deliverability
+
+The Super Admin is also responsible for platform-wide integrations and communication systems, areas a tenant admin only worries about in their own context. We need sections to monitor and configure these:
+
+Integrations Health: In a multi-tenant system, each tenant might have their own third-party integrations (or use global ones). For example, our platform might integrate with services like SendGrid/Twilio for email/SMS, payment gateways (Stripe), OAuth providers, etc. The Super Admin should have a bird’s-eye view of all these integrations’ status. We have an Integrations Health page in the nav, which likely checks that various integrations are properly configured and functioning:
+
+Global Integrations: Some integrations are global (e.g. the platform’s own SendGrid API key for transactional emails). The Super Admin Settings already includes fields for email API keys, SMS credentials, etc., which are stored in the integrations table with tenantId = null for global settings
+GitHub
+. We should show these and their health (e.g. “SendGrid API key – Connected ✔” or an error if the last test failed).
+
+Tenant-specific Integrations: If our platform allows each tenant to configure their own (for instance, a tenant might use their own Twilio number or their own Stripe account), then Integrations Health should list each tenant and whether their integrations are operational. For example, “Elite Footwork Academy – Email: OK, SMS: Failed (invalid API key)”. We can surface the lastTestedAt and testStatus from the integrations records
+GitHub
+. This way, support can proactively reach out to a tenant if, say, their emails aren’t sending due to a bad API key.
+
+Test/Validate Tools: Next to each integration config, provide a “Test” button for Super Admin to trigger a test (e.g. send a test email or ping the SMS service) and update the status. This helps in troubleshooting.
+
+Configuration Access: While tenant admins would enter their own API keys in their settings, the Super Admin might have override capabilities or at least view access. For global keys, the Super Admin can update them directly in a secure way (ensuring these forms are hidden from normal admins).
+
+Overall, Integrations Health ensures all the plumbing that keeps the platform running (emails, texts, payment webhooks, etc.) is intact. It’s essentially a systems health dashboard.
+
+Comms Deliverability: The Super Admin must keep track of how well communications are reaching users. The Comms Deliverability section focuses on email and SMS delivery analytics across the platform. This could include:
+
+Email Deliverability Stats: Total emails sent, open rates, bounce rates, spam reports, etc. across all tenants (with ability to filter by tenant or date). The system already categorizes email events (processed, delivered, open, click, bounce, etc.)
+GitHub
+, likely via webhooks from our email provider. We should aggregate these and highlight issues (e.g. “Bounce rate last week 2%” or “X emails bounced due to invalid addresses”). If one tenant has unusually high bounces (maybe they uploaded a bad list), the Super Admin can notice and take action.
+
+SMS Deliverability: Similarly, track SMS events (delivered, failed, etc.)
+GitHub
+. Perhaps show how many texts failed (e.g. due to opt-outs or wrong numbers).
+
+Per-Tenant Breakdown: A table of tenants with their email/sms stats (e.g. deliverability percentages) can identify if any tenant’s communications are problematic. For instance, if one tenant’s emails are mostly going to spam (perhaps due to their content), the platform owner might intervene to preserve overall sender reputation.
+
+Deliverability Settings: We might include controls for things like sending domains or reply-to addresses. If the platform allows customizing sender email by tenant, ensure that’s configured properly (and perhaps offer a way for Super Admin to input SPF/DKIM status if needed).
+
+In essence, Comms Deliverability is about monitoring the communication channels. Where tenant admins have a “Communications” page to send messages, the Super Admin’s concern is whether those messages actually reach the recipients. This section turns raw data (email and SMS events) into actionable insights (who needs to update their contact list, whether our email IP is healthy, etc.).
+
+6. Security & Audit
+
+Maintaining platform security is paramount, and the Super Admin center should have features to enforce and audit security across all tenants:
+
+Security Policies: In the Super Admin Settings, there are global security settings that need to be surfaced clearly. For example, enforcing MFA/2FA: the policies allow requiring MFA for all Super Admins and/or all tenant admins
+GitHub
+. We should expose these as toggles in a “Security” or “Policies” tab. If requireSuperAdminsMfa is on, the system will ensure any Super Admin user has 2FA set up (and prompt if not). Similarly for tenant admins. The UI can show these toggles with warnings about impact (“If enabled, all admins must activate 2FA at next login”).
+
+Audit Logs: A Security & Audit page (as listed in the nav) should list important events for auditability. This includes things like: Super Admin logins (especially failed login attempts), creation or deletion of tenants, addition of new Super Admins, any impersonation sessions (who impersonated which tenant admin and when), and changes to critical settings (like turning on/off MFA requirement, altering plan features, etc.). The log should record timestamp, actor, action, and relevant object (e.g. “2025-10-08 09:00 – Admin Alice (Super Admin) impersonated Tenant Bravo’s admin for 10 minutes”). We might fetch these from a dedicated audit table or from system logs. If not already present, implementing such logging is advisable as part of this security upgrade.
+
+Super Admin User Management: As part of security, we must manage who has Super Admin access. Currently, there might be just the original founder account, but as the company grows, additional Super Admins might be needed (or removed). In the Settings, we have an interface to add a Super Admin
+GitHub
+ – likely by specifying an email and name and sending them an invite. We should formalize this:
+
+An "Add Super Admin" dialog where you input the new administrator’s name, email, and whether to force them to set up MFA immediately (a checkbox exists for requireMfa
+GitHub
+). On submission, the system creates an account with super-admin privileges (and possibly sends an invite email with a temporary password or a link to set a password).
+
+Ability to remove or disable Super Admins: We should list existing Super Admin accounts (maybe in the same Settings tab or a Users tab). The list could show their name, email, last active time, and a toggle to deactivate. Only another Super Admin can perform this. This is important for governance (e.g. if a Super Admin leaves the company).
+
+Possibly integrate with audit logs: any addition/removal of Super Admin should be logged.
+
+Permissions & Data Access: Ensure the Super Admin pages themselves are secured by proper middleware (we already see that the SuperAdminPage component checks user.isSuperAdmin and blocks access if not
+GitHub
+). We’ll maintain that and also secure the APIs (routes under /api/super-admin/* should require Super Admin auth on the server side). The platform policies middleware is likely already enforcing this for certain routes.
+
+By reinforcing these security features, we not only protect sensitive Super Admin functions but also provide transparency. The Super Admin should feel confident that they can trace who did what in the system (especially among multiple super admins), and that certain actions (like impersonation or plan changes) are not abused or at least are recorded.
+
+7. Support & Help Desk Integration
+
+To truly match the admin portal (which has a Help Requests section for their internal support), the Super Admin center should include tools for customer support at the platform level:
+
+Help Requests Monitoring: Tenant admins can receive help requests from their users (parents/players). But what if those issues need platform support? Also, if a parent mistakenly reaches out via a global contact form (or if we provide a “Contact Platform Support” option), those come to the Super Admin. We have a Help Requests schema in the system which logs support tickets with fields like subject, category, priority, message, and tracks resolution info
+GitHub
+. The tenant admin portal likely shows help requests submitted by their members (source might be “parent_portal” etc.), and they can resolve them. For the Super Admin, we should:
+
+Include a Help Requests page that shows all help tickets across all tenants, or at least any that have been escalated or originated from the platform level. The spec for multi-tenant envisioned a Help Requests section in Super Admin
+GitHub
+. This page would list each request along with the tenant it belongs to (add a Tenant column in the table for context).
+
+Enable filtering by status (open/resolved) and possibly category or priority. The Super Admin can use this to ensure quality of support – e.g., see if any requests have been open too long and potentially step in.
+
+Resolution Workflow: Super Admins might not handle each club’s support directly, but they might if it’s a platform issue or if a tenant admin cannot solve it. We could allow Super Admin to post replies or mark things resolved. At minimum, they should have visibility into all requests. Perhaps a feature: if a help request’s category is “Technical issue” or something indicating a platform bug, it could alert the Super Admin team.
+
+Client Communication: Beyond support tickets, the Super Admin might need to send announcements or onboarding tips to tenant admins. We could introduce a way to broadcast an email or notification to all tenant admins (or select tenants). This isn’t in the current UI, but it’s a creative idea (“everything we can think of”) to improve platform-client communication. For example, if there’s a new feature or scheduled maintenance, a Super Admin could send a message to all admins. This could tie into the existing Communications system but targeted at admins rather than players. We can consider adding a simple form in the Super Admin portal for “Send Announcement” that delivers an email to all active tenant admins. (This would use the email service configured in integrations, with a template for platform announcements.)
+
+Knowledge Base/Help Center Links: While not strictly part of the admin pages, providing easy access for Super Admins to the knowledge base or FAQs (for helping clients) might be useful. Tenant admins have help resources; similarly, Super Admin interface could have quick links to admin documentation or an internal runbook for support staff.
+
+By including a support-oriented view, we ensure the Super Admin is not blind to user-level issues. It closes the loop: tenant admins handle member inquiries, but the platform admin can oversee and assist with any support case, guaranteeing a high standard of customer service across the board.
+
+8. UI/UX Improvements and Consistency
+
+Finally, as we add all these features, we must ensure the Super Admin portal is user-friendly and consistent with the rest of the app:
+
+Navigation & Layout: We’ve already structured the Super Admin nav into logical sections (Company vs. Client Activity). We should double-check that all relevant sections are present and logically grouped. For instance, adding “Help Requests” under client activity (since it deals with tenant/customer activities) if we include that, and possibly a “Users” or combining Parents/Players if needed. Keep section headings similar in style to the Admin portal (the admin sidebar is labeled “Admin Portal”, we might label the super admin one “Super Admin Portal” for clarity, if not already).
+
+Responsive Design: The Super Admin pages should be mobile-friendly just like the admin pages. The spec explicitly calls for responsive design (hamburger menu, tables turning into cards, sticky filter bars)
+GitHub
+. We will review each new page (Tenants, Sessions, Payments, etc.) to ensure it collapses nicely on smaller screens. Many UI components (cards, dropdowns) are already mobile-aware, but table-heavy pages might need alternate views on narrow screens. Implementing a consistent solution (like transforming table rows into a stacked card format with key-value pairs for mobile) will improve usability.
+
+Filter Controls & UX Consistency: Across admin and super admin pages, filters and search behave similarly. We should adopt the same UI components (date range pickers, search inputs, dropdown filters) so that a Super Admin using their portal feels familiar if they’ve used the admin portal. For example, the admin Sessions/Players pages have filters for status, age group, etc.; the super admin versions have an added Tenant filter but should otherwise function the same. Our plan is to ensure every listing page in Super Admin has a filter bar with at least a search and a tenant selector (except where not applicable). We already see this in Sessions Management (filter by tenant, status, etc.)
+GitHub
+GitHub
+ and Platform Billing filters
+GitHub
+. We will continue to refine these so they are intuitive (including adding placeholder text like “All Tenants” which is done, and making sure the options populate properly from the tenants list).
+
+Settings Organization: The Super Admin Settings page is quite extensive – it covers platform policies, default configurations, integration keys, etc., all in one. As part of our refactor, we should break it into clearer sub-sections (tabs) so that it’s not overwhelming. For example: Policies & Security, Tenant Defaults, Integrations Config, Advanced Settings. In fact, the code already implements a tabbed interface with an activeTab state
+GitHub
+. We should populate those tabs as follows:
+
+Policies & Security: toggles like auto-approve tenants, require approval, MFA requirements, idle session timeout, maintenance mode toggle (there is a maintenance flag and message in policies
+GitHub
+), impersonation rules, data retention settings
+GitHub
+, etc.
+
+Tenant Defaults: configurations applied to new tenants – e.g. default plan code, default session capacity, whether to seed sample content for new tenants
+GitHub
+. These let the Super Admin define what a fresh tenant looks like by default.
+
+Integrations: fields for global email API key, SMS credentials, payment gateway keys, etc., each grouped by provider (with masking for secrets and “Test Connection” buttons). Possibly also sub-sections for OAuth providers or webhooks if those exist.
+
+Super Admins: (if not a separate page) a place in settings to manage Super Admin accounts (invite/remove) as discussed.
+
+Other: any miscellaneous settings or system flags can go in an Advanced tab.
+
+By clearly segmenting settings, we make it easier to find and adjust specific things without wading through one huge form. This was a noted need (“Refactor Super Admin Settings into clearer categories”), and it will greatly improve usability.
+
+Visual Consistency: Use the same design system components as the rest of the app (the code uses a UI library for cards, tables, badges, etc., which we’ll continue to utilize). Ensure dark mode works in these new pages, as the admin layout supports theme toggling. Also, ensure icons and labels match their admin equivalents (e.g. using the same icons for Payments, Sessions as the admin did, to leverage familiarity).
+
+Performance: Some Super Admin pages could potentially load a lot of data (e.g. all players across all tenants). We should implement pagination or lazy loading where appropriate. For instance, the Platform Billing page already uses pagination for payments
+GitHub
+GitHub
+. Similarly, the global Users or Players listing might need pagination or at least virtual scrolling if the dataset is large. We’ll incorporate backend API support for querying with limits and filters to keep things responsive.
+
+Error Handling and Feedback: Make sure that each action in the Super Admin portal provides feedback. E.g., if approving a tenant fails (network issue), show an error toast. If toggling a user’s status succeeds, show a success message (the code uses toast notifications for these mutations
+GitHub
+). This way, the Super Admin is never left guessing about the outcome of an action.
+
+By focusing on these UI/UX details, we’ll end up with a Super Admin center that is not only powerful but also polished and easy to navigate. It should feel like a natural extension of the admin portal, tailored for platform owners.
+
+Conclusion
+
+Upgrading the Super Admin page is about empowering the platform owner with the same level of control over the entire system as a club admin has over their single tenant – and more. Our plan covered: robust cross-tenant analytics and dashboards, a smooth client onboarding flow with automatic admin provisioning
+GitHub
+ and optional approvals
+GitHub
+, comprehensive tenant management (with search, status control, and one-click impersonation for support), full oversight of plans and billing (including feature management per plan and handling subscription payments/failures), monitoring of all integrations and communication deliverability, enhanced security enforcement (MFA, audit logs, super admin user management), and support tools to keep track of help requests across the platform.
+
+Implementing these features will bring the Super Admin center to parity with – and in many ways beyond – the tenant admin portal. The goal is a detailed, thorough, and user-friendly Super Admin Center where the company that owns the platform can manage every aspect of the application: from high-level metrics down to individual user issues. By following this plan and leveraging existing code (much of which is already scaffolded for multi-tenant support), we ensure nothing is neglected in the Super Admin experience, thereby improving the efficiency of managing the platform and the satisfaction of our client organizations.
