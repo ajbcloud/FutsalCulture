@@ -667,6 +667,26 @@ export const featureRequests = pgTable("feature_requests", {
   index("feature_requests_plan_level_idx").on(table.planLevel),
 ]);
 
+// Tenant plan history tracking - logs all plan changes over time
+export const tenantPlanHistory = pgTable("tenant_plan_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  fromPlan: planLevelEnum("from_plan"), // null if this is the initial plan
+  toPlan: planLevelEnum("to_plan").notNull(),
+  changeType: varchar("change_type").notNull(), // 'initial', 'upgrade', 'downgrade', 'trial_conversion', 'reactivation'
+  reason: text("reason"), // Optional reason for the change
+  changedBy: varchar("changed_by"), // User ID who initiated the change (null for automated)
+  automatedTrigger: varchar("automated_trigger"), // 'trial_expired', 'payment_failed', 'subscription_renewed', etc.
+  mrr: integer("mrr"), // Monthly recurring revenue at time of change (in cents)
+  annualValue: integer("annual_value"), // Annual contract value (in cents)
+  metadata: jsonb("metadata"), // Additional context: {stripeSubscriptionId, promotionCode, notes, etc}
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("tenant_plan_history_tenant_idx").on(table.tenantId),
+  index("tenant_plan_history_change_type_idx").on(table.changeType),
+  index("tenant_plan_history_created_at_idx").on(table.createdAt),
+]);
+
 // Player Development Tables (Elite-only feature)
 
 // Development skill categories (Technical, Tactical, Physical, Psychological)
@@ -1907,6 +1927,14 @@ export const insertFeatureRequestSchema = createInsertSchema(featureRequests).om
 
 export type FeatureRequestInsert = z.infer<typeof insertFeatureRequestSchema>;
 export type FeatureRequestSelect = typeof featureRequests.$inferSelect;
+
+export const insertTenantPlanHistorySchema = createInsertSchema(tenantPlanHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TenantPlanHistoryInsert = z.infer<typeof insertTenantPlanHistorySchema>;
+export type TenantPlanHistorySelect = typeof tenantPlanHistory.$inferSelect;
 
 export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   id: true,
