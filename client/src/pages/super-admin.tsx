@@ -244,12 +244,12 @@ export default function SuperAdminPage() {
                   })}
                 </div>
               </div>
-
-              {/* Trial Status Indicator - embedded in sidebar */}
-              <div className="px-3 mt-4">
-                <TrialStatusIndicator />
-              </div>
             </nav>
+          </div>
+
+          {/* Trial Status Indicator - fixed above user profile */}
+          <div className="px-3 py-2 bg-card flex-shrink-0">
+            <TrialStatusIndicator />
           </div>
 
           {/* Fixed user info at bottom */}

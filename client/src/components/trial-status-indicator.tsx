@@ -73,35 +73,24 @@ export function TrialStatusIndicator() {
   };
 
   const getColorClasses = () => {
-    if (!trialStatus.trialEndsAt) return 'bg-green-100 text-green-800 border-green-200';
+    if (!trialStatus.trialEndsAt) return 'bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-950 dark:text-blue-100 dark:border-blue-800';
 
     const now = new Date();
     const endDate = new Date(trialStatus.trialEndsAt);
     const daysRemaining = differenceInDays(endDate, now);
 
     if (daysRemaining > 7) {
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-950 dark:text-blue-100 dark:border-blue-800';
     } else if (daysRemaining >= 3) {
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-900 dark:text-blue-100 dark:border-blue-700';
     } else {
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-blue-600 text-white border-blue-700 dark:bg-blue-700 dark:text-white dark:border-blue-600';
     }
   };
 
   const getBadgeVariant = () => {
-    if (!trialStatus.trialEndsAt) return 'default';
-
-    const now = new Date();
-    const endDate = new Date(trialStatus.trialEndsAt);
-    const daysRemaining = differenceInDays(endDate, now);
-
-    if (daysRemaining > 7) {
-      return 'default';
-    } else if (daysRemaining >= 3) {
-      return 'warning';
-    } else {
-      return 'destructive';
-    }
+    // Always use default variant to maintain brand blue consistency
+    return 'default';
   };
 
   const getPlanDisplayName = () => {
@@ -147,7 +136,7 @@ export function TrialStatusIndicator() {
             <Button
               onClick={handleUpgradeClick}
               size="sm"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8"
               data-testid="button-upgrade-trial"
             >
               <Zap className="w-3 h-3 mr-1" />
