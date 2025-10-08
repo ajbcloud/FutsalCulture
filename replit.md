@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
 ### Feature Specifications
 - **Core Booking**: Session management (creation, filtering by age/gender/location), interactive calendar, time-restricted booking (8 AM day-of rule, bookable until start time), real-time capacity monitoring, and automatic session closure.
 - **Payment & Credits**: Stripe integration for payment processing, including webhooks. A comprehensive user credit system replaces refunds, automatically issuing credits upon session cancellation, with FIFO application and automatic checkout integration.
+- **Signup & Registration**: Role-based signup flow where users explicitly select whether they're registering as a Player or Parent/Guardian. The system combines role selection with age-gating logic to route users to appropriate signup flows and determine portal access. Age policy evaluation remains independent of role selection.
 - **Admin & User Dashboards**: Parent dashboard for player/booking history. Admin panel for session management, analytics, user management, discount codes, help requests, and system settings.
 - **Multi-tenancy**: Super Admin portal for managing multiple organizations, including tenant defaults and policy settings.
 - **Advanced Features**: Recurring session functionality, comprehensive analytics dashboard, structured help request system, business branding customization, comprehensive seed data, and a session waitlist system with automated promotion and payment windows.

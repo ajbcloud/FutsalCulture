@@ -12,11 +12,19 @@ export const signupRouter = Router();
 signupRouter.post("/signup/evaluate", async (req: any, res) => {
   try {
     const tenantId = req.body.tenantId || req.user?.tenantId;
-    const { dob } = req.body; // ISO string
+    const { dob, role } = req.body; // ISO string, role: "player" | "parent"
     
     if (!dob) {
       return res.status(400).json({ error: "Date of birth required" });
     }
+    
+    // Validate role if provided
+    if (role && role !== "player" && role !== "parent") {
+      return res.status(400).json({ error: "Invalid role. Must be 'player' or 'parent'" });
+    }
+    
+    // Role is used for frontend routing logic, not age evaluation
+    // Age policy evaluation remains independent of role selection
     
     // For signup evaluation, we can use default policy if no tenant ID provided
     let policyData;

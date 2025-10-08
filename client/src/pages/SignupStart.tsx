@@ -4,13 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Ticket, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Ticket, Check, AlertCircle, Loader2, User, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function SignupStart() {
+  const [role, setRole] = useState<"player" | "parent" | "">("");
   const [dob, setDob] = useState("");
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
@@ -116,6 +118,15 @@ export default function SignupStart() {
   }
 
   async function handleNext() {
+    if (!role) {
+      toast({
+        title: "Role selection required",
+        description: "Please select whether you're signing up as a Player or Parent",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!dob) {
       toast({
         title: "Date of birth required",
@@ -129,28 +140,37 @@ export default function SignupStart() {
     try {
       const response = await apiRequest("POST", "/api/signup/evaluate", { 
         dob,
+        role,
         tenantId: localStorage.getItem("tenantId") || undefined 
       });
 
       const result = await response.json();
       const { outcome, policy } = result;
       
-      // Store policy outcome for use in next screens
+      // Store policy outcome and role for use in next screens
       sessionStorage.setItem("signupPolicy", JSON.stringify(outcome));
       sessionStorage.setItem("signupDob", dob);
+      sessionStorage.setItem("signupRole", role);
       
       // Build URL with code parameter if validated
       const codeParam = codeValidated && inviteCode ? `&code=${inviteCode}` : '';
       
-      if (outcome.parentRequired) {
-        // User is a child, needs parent signup
-        navigate(`/signup/parent?dob=${encodeURIComponent(dob)}${codeParam}`);
-      } else if (outcome.teenSelf) {
-        // User is a teen with self-access
-        navigate(`/signup/player?dob=${encodeURIComponent(dob)}&teen=true&pay=${outcome.whoCanPay}${codeParam}`);
-      } else {
-        // User is an adult
-        navigate(`/signup/player?dob=${encodeURIComponent(dob)}&adult=true${codeParam}`);
+      // Route based on role selection and age requirements
+      if (role === "parent") {
+        // If user selected Parent, always go to parent flow (they're signing up to manage players)
+        navigate(`/signup/parent?dob=${encodeURIComponent(dob)}&role=parent${codeParam}`);
+      } else if (role === "player") {
+        // If user selected Player, check age requirements
+        if (outcome.parentRequired) {
+          // Player is too young, needs parent to complete signup
+          navigate(`/signup/parent?dob=${encodeURIComponent(dob)}&role=player${codeParam}`);
+        } else if (outcome.teenSelf) {
+          // Teen player with self-access
+          navigate(`/signup/player?dob=${encodeURIComponent(dob)}&teen=true&pay=${outcome.whoCanPay}&role=player${codeParam}`);
+        } else {
+          // Adult player
+          navigate(`/signup/player?dob=${encodeURIComponent(dob)}&adult=true&role=player${codeParam}`);
+        }
       }
     } catch (error) {
       console.error("Error evaluating signup:", error);
@@ -182,10 +202,39 @@ export default function SignupStart() {
           </div>
           <CardTitle className="text-2xl">Create Your Account</CardTitle>
           <CardDescription>
-            Let's start with your date of birth to personalize your experience
+            Tell us about yourself to get started
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Role Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="role">I am signing up as a</Label>
+            <Select value={role} onValueChange={(value: "player" | "parent") => setRole(value)}>
+              <SelectTrigger id="role" data-testid="select-role">
+                <SelectValue placeholder="Select your role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="player" data-testid="option-player">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span>Player</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="parent" data-testid="option-parent">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>Parent/Guardian</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {role === "player" && "You'll create an account to book sessions and manage your own profile"}
+              {role === "parent" && "You'll create an account to manage bookings for your children"}
+              {!role && "Select whether you're registering for yourself or for your children"}
+            </p>
+          </div>
+
           {/* Invite Code Section */}
           <Collapsible open={showInviteCode} onOpenChange={setShowInviteCode}>
             <CollapsibleTrigger asChild>
@@ -271,7 +320,7 @@ export default function SignupStart() {
           <Button 
             onClick={handleNext} 
             className="w-full" 
-            disabled={loading || !dob}
+            disabled={loading || !role || !dob}
             data-testid="button-continue"
           >
             {loading ? "Processing..." : "Continue"}
