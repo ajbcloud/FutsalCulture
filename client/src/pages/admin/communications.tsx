@@ -15,6 +15,7 @@ import { Mail, MessageSquare, Users, Calendar, Clock, Send, Plus, Edit2, Trash2,
 import { format } from 'date-fns';
 import type { SelectCommunicationCampaign } from '@shared/schema';
 import AdminLayout from '@/components/admin-layout';
+import { TemplateManager } from '@/components/communications/TemplateManager';
 
 export default function AdminCommunications() {
   const { toast } = useToast();
@@ -374,17 +375,7 @@ export default function AdminCommunications() {
 
         {/* Templates Tab */}
         <TabsContent value="templates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Message Templates</CardTitle>
-              <CardDescription>Pre-built templates for common communications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Templates coming soon...
-              </div>
-            </CardContent>
-          </Card>
+          <TemplateManager />
         </TabsContent>
 
         {/* History Tab */}
