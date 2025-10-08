@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express';
 import { db } from './db';
 import { helpRequests, users } from '../shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { isAuthenticated } from './replitAuth';
+import { isAuthenticated } from './auth';
 import { storage } from './storage';
 
 const router = Router();
@@ -10,7 +10,7 @@ const router = Router();
 // GET /api/help/my-requests - Get help requests for current user
 router.get('/my-requests', isAuthenticated, async (req: any, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     const tenantId = user?.tenantId;
     const userEmail = user?.email;
@@ -59,7 +59,7 @@ router.get('/my-requests', isAuthenticated, async (req: any, res: Response) => {
 // GET /api/help/my-requests/:id - Get specific help request for current user
 router.get('/my-requests/:id', isAuthenticated, async (req: any, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     const tenantId = user?.tenantId;
     const userEmail = user?.email;

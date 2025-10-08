@@ -1,8 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupAuth as setupLocalAuth } from "./auth";
+import { setupAuth as setupLocalAuth, isAuthenticated } from "./auth";
 import { 
   insertPlayerSchema, 
   insertSessionSchema, 
@@ -45,12 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
 
-  // Auth middleware - Only use Replit Auth in development
-  if (process.env.NODE_ENV === 'development' && process.env.USE_REPLIT_AUTH === 'true') {
-    await setupAuth(app);
-  }
-
-  // Local email/password authentication - This is the primary auth method
+  // Local email/password authentication
   await setupLocalAuth(app);
 
   // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)

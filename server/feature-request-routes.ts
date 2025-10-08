@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express';
 import { db } from './db';
 import { featureRequests, users, insertFeatureRequestSchema } from '../shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { isAuthenticated } from './replitAuth';
+import { isAuthenticated } from './auth';
 import { storage } from './storage';
 import { hasFeature } from '@shared/feature-flags';
 import { FEATURE_KEYS } from '@shared/feature-flags';
@@ -12,7 +12,7 @@ const router = Router();
 // GET /api/feature-requests - Get feature requests for tenant (Elite only)
 router.get('/', isAuthenticated, async (req: any, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     const tenantId = user?.tenantId;
     
@@ -57,7 +57,7 @@ router.get('/', isAuthenticated, async (req: any, res: Response) => {
 // POST /api/feature-requests - Create new feature request (Elite only)
 router.post('/', isAuthenticated, async (req: any, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     const tenantId = user?.tenantId;
     
@@ -108,7 +108,7 @@ router.post('/', isAuthenticated, async (req: any, res: Response) => {
 // GET /api/feature-requests/:id - Get specific feature request (Elite only)
 router.get('/:id', isAuthenticated, async (req: any, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     const tenantId = user?.tenantId;
     const requestId = req.params.id;
@@ -158,7 +158,7 @@ router.patch('/:id', isAuthenticated, async (req: any, res: Response) => {
     const requestId = req.params.id;
     const { status, statusNotes } = req.body;
 
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const user = await storage.getUser(userId);
     
     // Only super admins can update feature request status

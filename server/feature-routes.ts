@@ -20,9 +20,9 @@ const router = Router();
 
 // Apply middleware to get user context
 router.use(async (req: any, res, next) => {
-  if (req.user?.claims?.sub) {
+  if (req.user?.id) {
     const { storage } = await import('./storage');
-    const user = await storage.getUser(req.user.claims.sub);
+    const user = await storage.getUser(req.user.id);
     (req as any).currentUser = user;
   }
   next();

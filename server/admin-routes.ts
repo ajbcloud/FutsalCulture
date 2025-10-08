@@ -184,17 +184,13 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
     }
-    // Check Replit Auth with claims.sub format
-    else if ((req as any).user?.claims?.sub) {
-      userId = (req as any).user.claims.sub;
-    }
-    // Check direct user.id format
+    // Check direct user.id format (local auth)
     else if ((req as any).user?.id) {
       userId = (req as any).user.id;
     }
     // Check if user is authenticated via isAuthenticated() passport method
     else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
-      userId = (req as any).user.id || (req as any).user.claims?.sub;
+      userId = (req as any).user.id;
     }
     // In development, always allow the hardcoded super admin user to bypass auth
     if (process.env.NODE_ENV === 'development' && !userId) {
@@ -269,11 +265,7 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
     }
-    // Fall back to Replit Auth user
-    else if ((req as any).user?.claims?.sub) {
-      userId = (req as any).user.claims.sub;
-    }
-    // Also check direct req.user.id format
+    // Check direct req.user.id format
     else if ((req as any).user?.id) {
       userId = (req as any).user.id;
     }
