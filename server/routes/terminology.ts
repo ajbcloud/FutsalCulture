@@ -4,6 +4,7 @@ import { tenantPolicies } from "../../shared/db/schema/tenantPolicy";
 import { households, householdMembers, players, tenants } from "../../shared/schema";
 import { eq, and, lt, sql, ne } from "drizzle-orm";
 import { differenceInYears } from "date-fns";
+import { getTerminologyLabels } from "../../shared/utils/terminology";
 
 export const terminologyRouter = Router();
 
@@ -195,6 +196,151 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching user terminology:", error);
     res.status(500).json({ error: "Failed to fetch user terminology" });
+  }
+});
+
+// Get terminology policy with labels
+terminologyRouter.get("/terminology/policy", async (req: any, res) => {
+  try {
+    const userId = req.user?.id;
+    const tenantId = req.user?.tenantId;
+
+    // Handle unauthenticated users by deriving tenant from subdomain/custom domain
+    let actualTenantId = tenantId;
+    
+    if (!userId || !tenantId) {
+      // User is not authenticated, derive tenant using two-phase resolution
+      const hostname = (req.get('host') || req.hostname || '')
+        .split(':')[0]
+        .toLowerCase()
+        .trim();
+      
+      const isPlatformDomain = PLATFORM_DOMAINS.some(domain => 
+        hostname === domain || hostname.endsWith(`.${domain}`)
+      );
+      
+      let tenant;
+      
+      if (isPlatformDomain) {
+        const subdomain = extractSubdomain(hostname);
+        if (subdomain) {
+          tenant = await db.select()
+            .from(tenants)
+            .where(eq(tenants.subdomain, subdomain))
+            .limit(1)
+            .then(rows => rows[0]);
+        }
+      } else {
+        tenant = await db.select()
+          .from(tenants)
+          .where(eq(tenants.customDomain, hostname))
+          .limit(1)
+          .then(rows => rows[0]);
+      }
+      
+      if (!tenant) {
+        return res.status(404).json({ error: "Tenant not found" });
+      }
+      
+      actualTenantId = tenant.id;
+    }
+
+    // Get tenant policy
+    const [policy] = await db
+      .select()
+      .from(tenantPolicies)
+      .where(eq(tenantPolicies.tenantId, actualTenantId));
+
+    if (!policy) {
+      return res.status(404).json({ error: "Policy not found for tenant" });
+    }
+
+    const audienceMode = policy.audienceMode || "youth_only";
+    
+    // Get terminology labels using utility function
+    const terminologyLabels = getTerminologyLabels(audienceMode);
+    
+    // Calculate userTerm based on user authentication and household composition
+    let userTerm: "Parent" | "Player" = "Player";
+    
+    if (userId && tenantId) {
+      // User is authenticated, calculate userTerm based on audience mode and household
+      if (audienceMode === "youth_only") {
+        userTerm = "Parent";
+      } else if (audienceMode === "adult_only") {
+        userTerm = "Player";
+      } else {
+        // Mixed mode - check if user has children in household
+        const [userHouseholdMember] = await db
+          .select()
+          .from(householdMembers)
+          .where(
+            and(
+              eq(householdMembers.userId, userId),
+              eq(householdMembers.tenantId, actualTenantId)
+            )
+          );
+
+        if (userHouseholdMember) {
+          const householdPlayers = await db
+            .select({
+              playerId: householdMembers.playerId,
+              playerUserId: players.userId,
+              dateOfBirth: players.dateOfBirth,
+              birthYear: players.birthYear,
+            })
+            .from(householdMembers)
+            .leftJoin(players, eq(householdMembers.playerId, players.id))
+            .where(
+              and(
+                eq(householdMembers.householdId, userHouseholdMember.householdId),
+                eq(householdMembers.tenantId, actualTenantId)
+              )
+            );
+
+          const hasChildren = householdPlayers.some((member) => {
+            if (!member.playerId || member.playerUserId === userId) return false;
+
+            let age: number;
+            if (member.dateOfBirth) {
+              age = differenceInYears(new Date(), new Date(member.dateOfBirth));
+            } else if (member.birthYear) {
+              age = new Date().getFullYear() - member.birthYear;
+            } else {
+              return false;
+            }
+
+            return age < 18;
+          });
+
+          userTerm = hasChildren ? "Parent" : "Player";
+        }
+      }
+    } else {
+      // Unauthenticated user - determine default based on audience mode
+      if (audienceMode === "youth_only") {
+        userTerm = "Parent";
+      } else {
+        userTerm = "Player";
+      }
+    }
+
+    // Return complete policy object with labels
+    res.json({
+      audienceMode: audienceMode,
+      adultAge: policy.adultAge,
+      parentRequiredBelow: policy.parentRequiredBelow,
+      teenSelfAccessAt: policy.teenSelfAccessAt,
+      labels: {
+        adultColumnLabel: terminologyLabels.adultColumnLabel,
+        userTerm: userTerm,
+        guardianTerm: terminologyLabels.guardianTerm
+      },
+      showGuardianColumns: terminologyLabels.showGuardianColumns
+    });
+  } catch (error) {
+    console.error("Error fetching terminology policy:", error);
+    res.status(500).json({ error: "Failed to fetch terminology policy" });
   }
 });
 
