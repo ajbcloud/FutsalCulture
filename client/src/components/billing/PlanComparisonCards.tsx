@@ -190,7 +190,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={isLoading}
                     className="w-full"
-                    variant={plan.id === 'elite' ? 'default' : 'outline'}
+                    variant="default"
                   >
                     {isLoading ? 'Loading...' : 'Upgrade'}
                   </Button>
