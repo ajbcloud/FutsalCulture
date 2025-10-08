@@ -204,7 +204,14 @@ export default function SuperAdminCommunications() {
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [templateFilter, setTemplateFilter] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
-  const { toast } = useToast();
+  const [exportFilters, setExportFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    campaignType: "all",
+    status: "all",
+  });
+  const [exportPopoverOpen, setExportPopoverOpen] = useState(false);
+  const { toast} = useToast();
 
   // Template form
   const templateForm = useForm<z.infer<typeof templateSchema>>({
@@ -472,7 +479,15 @@ export default function SuperAdminCommunications() {
 
   const exportAnalytics = async () => {
     try {
-      const response = await fetch("/api/super-admin/communications/export?format=csv");
+      const params = new URLSearchParams({
+        format: "csv",
+        ...(exportFilters.dateFrom && { dateFrom: exportFilters.dateFrom }),
+        ...(exportFilters.dateTo && { dateTo: exportFilters.dateTo }),
+        ...(exportFilters.campaignType !== "all" && { type: exportFilters.campaignType }),
+        ...(exportFilters.status !== "all" && { status: exportFilters.status }),
+      });
+      
+      const response = await fetch(`/api/super-admin/communications/export?${params.toString()}`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -482,6 +497,11 @@ export default function SuperAdminCommunications() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      setExportPopoverOpen(false);
+      toast({
+        title: "Success",
+        description: "Report exported successfully",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -515,10 +535,102 @@ export default function SuperAdminCommunications() {
               </p>
             </div>
           </div>
-          <Button onClick={exportAnalytics} variant="outline" data-testid="button-export">
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
-          </Button>
+          <Popover open={exportPopoverOpen} onOpenChange={setExportPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" data-testid="button-export">
+                <Download className="w-4 h-4 mr-2" />
+                Export Report
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Export Filters</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Filter the data before exporting
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="dateFrom" className="text-sm">From Date</Label>
+                    <Input
+                      id="dateFrom"
+                      type="date"
+                      value={exportFilters.dateFrom}
+                      onChange={(e) => setExportFilters({ ...exportFilters, dateFrom: e.target.value })}
+                      className="mt-1"
+                      data-testid="input-date-from"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="dateTo" className="text-sm">To Date</Label>
+                    <Input
+                      id="dateTo"
+                      type="date"
+                      value={exportFilters.dateTo}
+                      onChange={(e) => setExportFilters({ ...exportFilters, dateTo: e.target.value })}
+                      className="mt-1"
+                      data-testid="input-date-to"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="campaignType" className="text-sm">Campaign Type</Label>
+                    <Select
+                      value={exportFilters.campaignType}
+                      onValueChange={(value) => setExportFilters({ ...exportFilters, campaignType: value })}
+                    >
+                      <SelectTrigger id="campaignType" className="mt-1" data-testid="select-campaign-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="email">Email Only</SelectItem>
+                        <SelectItem value="sms">SMS Only</SelectItem>
+                        <SelectItem value="both">Email & SMS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="status" className="text-sm">Status</Label>
+                    <Select
+                      value={exportFilters.status}
+                      onValueChange={(value) => setExportFilters({ ...exportFilters, status: value })}
+                    >
+                      <SelectTrigger id="status" className="mt-1" data-testid="select-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={exportAnalytics} className="flex-1" data-testid="button-confirm-export">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setExportFilters({ dateFrom: "", dateTo: "", campaignType: "all", status: "all" });
+                    }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -712,17 +824,17 @@ export default function SuperAdminCommunications() {
 
           {/* Send Message Tab */}
           <TabsContent value="send" className="space-y-4">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Compose Message</CardTitle>
-                  <CardDescription>
-                    Create and send messages to platform users
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...sendForm}>
-                    <form onSubmit={sendForm.handleSubmit(handleSendMessage)} className="space-y-4">
+            <Form {...sendForm}>
+              <form onSubmit={sendForm.handleSubmit(handleSendMessage)} className="space-y-4">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Compose Message</CardTitle>
+                      <CardDescription>
+                        Create and send messages to platform users
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <FormField
                         control={sendForm.control}
                         name="type"
@@ -940,159 +1052,160 @@ export default function SuperAdminCommunications() {
                         )}
                       />
 
-                      <div className="flex gap-2">
-                        <Button
-                          type="submit"
-                          disabled={sendMessageMutation.isPending || scheduleMessageMutation.isPending}
-                          data-testid="button-send-message"
-                        >
-                          {sendMessageMutation.isPending || scheduleMessageMutation.isPending ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recipients</CardTitle>
+                      <CardDescription>
+                        Select who will receive this message
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={sendForm.control}
+                        name="recipientType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Recipient Type</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setRecipientType(value);
+                              }}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-recipient-type">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="all_admins">
+                                  <div className="flex items-center">
+                                    <Users className="w-4 h-4 mr-2" />
+                                    All Tenant Admins
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="by_plan">
+                                  <div className="flex items-center">
+                                    <Target className="w-4 h-4 mr-2" />
+                                    By Plan
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="trial_tenants">
+                                  <div className="flex items-center">
+                                    <Clock className="w-4 h-4 mr-2" />
+                                    Trial Tenants
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="specific_tenants">
+                                  <div className="flex items-center">
+                                    <Building className="w-4 h-4 mr-2" />
+                                    Specific Tenants
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+
+                      {recipientType === "by_plan" && (
+                        <div className="space-y-2">
+                          <Label>Select Plans</Label>
+                          <div className="space-y-2">
+                            {["Core", "Growth", "Elite"].map((plan) => (
+                              <div key={plan} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={plan}
+                                  checked={selectedRecipients.includes(plan.toLowerCase())}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedRecipients([...selectedRecipients, plan.toLowerCase()]);
+                                    } else {
+                                      setSelectedRecipients(selectedRecipients.filter(p => p !== plan.toLowerCase()));
+                                    }
+                                  }}
+                                />
+                                <Label htmlFor={plan}>{plan} Plan</Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          {recipientsLoading ? (
+                            "Loading recipients..."
                           ) : (
                             <>
-                              <Send className="w-4 h-4 mr-2" />
-                              {scheduleType === "immediate" ? "Send Now" : "Schedule"}
+                              {recipients.count} recipients selected based on current filters.
+                              {" "}
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="p-0 h-auto"
+                                onClick={() => setRecipientPreviewOpen(true)}
+                                data-testid="button-preview-recipients"
+                              >
+                                Preview Recipients
+                              </Button>
                             </>
                           )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => sendForm.reset()}
-                          data-testid="button-reset-form"
-                        >
-                          Reset
-                        </Button>
+                        </AlertDescription>
+                      </Alert>
+
+                      <Separator />
+
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Template Variables</h4>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div>{"{{userName}}"} - Recipient's full name</div>
+                          <div>{"{{tenantName}}"} - Organization name</div>
+                          <div>{"{{tenantUrl}}"} - Organization URL</div>
+                          <div>{"{{platformName}}"} - Platform name</div>
+                          <div>{"{{supportEmail}}"} - Support email</div>
+                          <div>{"{{billingUrl}}"} - Billing portal URL</div>
+                        </div>
                       </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recipients</CardTitle>
-                  <CardDescription>
-                    Select who will receive this message
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={sendForm.control}
-                    name="recipientType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Recipient Type</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            setRecipientType(value);
-                          }}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-recipient-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="all_admins">
-                              <div className="flex items-center">
-                                <Users className="w-4 h-4 mr-2" />
-                                All Tenant Admins
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="by_plan">
-                              <div className="flex items-center">
-                                <Target className="w-4 h-4 mr-2" />
-                                By Plan
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="trial_tenants">
-                              <div className="flex items-center">
-                                <Clock className="w-4 h-4 mr-2" />
-                                Trial Tenants
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="specific_tenants">
-                              <div className="flex items-center">
-                                <Building className="w-4 h-4 mr-2" />
-                                Specific Tenants
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-
-                  {recipientType === "by_plan" && (
-                    <div className="space-y-2">
-                      <Label>Select Plans</Label>
-                      <div className="space-y-2">
-                        {["Core", "Growth", "Elite"].map((plan) => (
-                          <div key={plan} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={plan}
-                              checked={selectedRecipients.includes(plan.toLowerCase())}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedRecipients([...selectedRecipients, plan.toLowerCase()]);
-                                } else {
-                                  setSelectedRecipients(selectedRecipients.filter(p => p !== plan.toLowerCase()));
-                                }
-                              }}
-                            />
-                            <Label htmlFor={plan}>{plan} Plan</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      {recipientsLoading ? (
-                        "Loading recipients..."
-                      ) : (
-                        <>
-                          {recipients.count} recipients selected based on current filters.
-                          {" "}
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 h-auto"
-                            onClick={() => setRecipientPreviewOpen(true)}
-                            data-testid="button-preview-recipients"
-                          >
-                            Preview Recipients
-                          </Button>
-                        </>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-
-                  <Separator />
-
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Template Variables</h4>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <div>{"{{userName}}"} - Recipient's full name</div>
-                      <div>{"{{tenantName}}"} - Organization name</div>
-                      <div>{"{{tenantUrl}}"} - Organization URL</div>
-                      <div>{"{{platformName}}"} - Platform name</div>
-                      <div>{"{{supportEmail}}"} - Support email</div>
-                      <div>{"{{billingUrl}}"} - Billing portal URL</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={sendMessageMutation.isPending || scheduleMessageMutation.isPending}
+                data-testid="button-send-message"
+              >
+                {sendMessageMutation.isPending || scheduleMessageMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    {scheduleType === "immediate" ? "Send Now" : "Schedule"}
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => sendForm.reset()}
+                data-testid="button-reset-form"
+              >
+                Reset
+              </Button>
             </div>
-          </TabsContent>
+          </form>
+        </Form>
+      </TabsContent>
 
           {/* History Tab */}
           <TabsContent value="history" className="space-y-4">
