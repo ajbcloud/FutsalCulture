@@ -1,11 +1,41 @@
 import { Router } from "express";
 import { db } from "../db";
 import { tenantPolicies } from "../../shared/db/schema/tenantPolicy";
-import { households, householdMembers, players } from "../../shared/schema";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { households, householdMembers, players, tenants } from "../../shared/schema";
+import { eq, and, lt, sql, ne } from "drizzle-orm";
 import { differenceInYears } from "date-fns";
 
 export const terminologyRouter = Router();
+
+// Platform-controlled domains for tenant resolution
+const PLATFORM_DOMAINS = ['playhq.com', 'localhost', 'replit.dev', 'replit.app'];
+
+// Helper function to extract subdomain from hostname
+function extractSubdomain(hostname: string): string | null {
+  if (!hostname) return null;
+  
+  // Remove port if present
+  const host = hostname.split(':')[0];
+  
+  // Split by dots
+  const parts = host.split('.');
+  
+  // Handle based on number of parts:
+  // 1 part (localhost) → null
+  // 2 parts (tenant.localhost OR customdomain.com) → first part
+  // 3+ parts (tenant.domain.com) → first part
+  if (parts.length === 1) {
+    // Single part like "localhost" - no subdomain
+    return null;
+  }
+  
+  if (parts.length >= 2) {
+    // 2+ parts - extract first part as subdomain/tenant identifier
+    return parts[0];
+  }
+  
+  return null;
+}
 
 // Get user terminology based on tenant policy and household composition
 terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
@@ -13,18 +43,87 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
     const userId = req.user?.id;
     const tenantId = req.user?.tenantId;
 
+    // ISSUE 1 FIX: Handle unauthenticated users by deriving tenant from subdomain
+    let actualTenantId = tenantId;
+    
     if (!userId || !tenantId) {
-      return res.status(400).json({ error: "User ID and Tenant ID required" });
+      // User is not authenticated, derive tenant using two-phase resolution
+      // Extract and normalize hostname
+      const hostname = (req.get('host') || req.hostname || '')
+        .split(':')[0]  // Remove port
+        .toLowerCase()  // Normalize case
+        .trim();
+      
+      // Check if this is a platform domain (require segment boundaries)
+      const isPlatformDomain = PLATFORM_DOMAINS.some(domain => 
+        hostname === domain ||                    // Exact match: "playhq.com"
+        hostname.endsWith(`.${domain}`)          // Subdomain match: "tenant.playhq.com"
+      );
+      
+      let tenant;
+      
+      if (isPlatformDomain) {
+        // Platform domain: use subdomain lookup
+        const subdomain = extractSubdomain(hostname);
+        if (subdomain) {
+          tenant = await db.select()
+            .from(tenants)
+            .where(eq(tenants.subdomain, subdomain))
+            .limit(1)
+            .then(rows => rows[0]);
+        }
+      } else {
+        // Custom domain: use exact hostname match
+        tenant = await db.select()
+          .from(tenants)
+          .where(eq(tenants.customDomain, hostname))
+          .limit(1)
+          .then(rows => rows[0]);
+      }
+      
+      if (!tenant) {
+        return res.status(404).json({ error: "Tenant not found" });
+      }
+      
+      actualTenantId = tenant.id;
+      
+      // Get tenant policy for unauthenticated user
+      const [policy] = await db
+        .select()
+        .from(tenantPolicies)
+        .where(eq(tenantPolicies.tenantId, actualTenantId));
+      
+      if (!policy) {
+        console.warn(`No policy found for tenant ${actualTenantId}, defaulting to youth_only for safety`);
+        return res.json({ term: "Parent" });
+      }
+      
+      const audienceMode = policy.audienceMode || "youth_only";
+      
+      // For unauthenticated users, return term based on audience mode
+      if (audienceMode === "youth_only") {
+        return res.json({ term: "Parent" });
+      } else if (audienceMode === "adult_only") {
+        return res.json({ term: "Player" });
+      } else {
+        // Mixed mode - default to "Player" since we can't check household
+        return res.json({ term: "Player" });
+      }
     }
 
+    // User is authenticated, proceed with existing logic
     // Get tenant policy
     const [policy] = await db
       .select()
       .from(tenantPolicies)
-      .where(eq(tenantPolicies.tenantId, tenantId));
+      .where(eq(tenantPolicies.tenantId, actualTenantId));
 
-    // Default policy if none exists
-    const audienceMode = policy?.audienceMode || "mixed";
+    if (!policy) {
+      console.warn(`No policy found for tenant ${actualTenantId}, defaulting to youth_only for safety`);
+      return res.json({ term: "Parent" });
+    }
+
+    const audienceMode = policy.audienceMode || "youth_only";
 
     // For "youth_only" mode, always return "Parent"
     if (audienceMode === "youth_only") {
@@ -44,7 +143,7 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
       .where(
         and(
           eq(householdMembers.userId, userId),
-          eq(householdMembers.tenantId, tenantId)
+          eq(householdMembers.tenantId, actualTenantId)
         )
       );
 
@@ -53,10 +152,11 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
       return res.json({ term: "Player" });
     }
 
-    // Get all players in the user's household
+    // ISSUE 2 FIX: Get all players in the user's household, excluding the current user's own player record
     const householdPlayers = await db
       .select({
         playerId: householdMembers.playerId,
+        playerUserId: players.userId,
         dateOfBirth: players.dateOfBirth,
         birthYear: players.birthYear,
       })
@@ -65,13 +165,16 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
       .where(
         and(
           eq(householdMembers.householdId, userHouseholdMember.householdId),
-          eq(householdMembers.tenantId, tenantId)
+          eq(householdMembers.tenantId, actualTenantId)
         )
       );
 
-    // Check if any player in the household is under 18
+    // Check if any OTHER player in the household is under 18 (exclude current user's own player)
     const hasChildren = householdPlayers.some((member) => {
       if (!member.playerId) return false;
+      
+      // ISSUE 2 FIX: Exclude the current user's own player record
+      if (member.playerUserId === userId) return false;
 
       // Calculate age from dateOfBirth if available, otherwise from birthYear
       let age: number;

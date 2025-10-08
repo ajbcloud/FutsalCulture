@@ -107,6 +107,7 @@ export const tenants = pgTable("tenants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   subdomain: varchar("subdomain").unique().notNull(),
+  customDomain: varchar("custom_domain").unique(),
   planLevel: planLevelEnum("plan_level").default("free"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),

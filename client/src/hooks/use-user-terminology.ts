@@ -9,6 +9,15 @@ export function useUserTerminology() {
     queryKey: ["/api/terminology/user-term"],
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    retry: (failureCount, error) => {
+      // Check if it's a response error with status
+      if (error instanceof Error && 'status' in error) {
+        const status = (error as any).status;
+        if (status === 400 || status === 401) return false;
+      }
+      // Otherwise allow 2 retries for network errors
+      return failureCount < 2;
+    },
   });
 
   return {
