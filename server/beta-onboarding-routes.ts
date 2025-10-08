@@ -2,12 +2,11 @@ import type { Express } from "express";
 import { randomToken, slugify, generateTenantCode } from "../shared/utils";
 import { 
   tenants, 
-  tenantUsers,
+  tenantMemberships,
   invites,
   emailVerifications, 
   subscriptions,
   auditEvents,
-  insertTenantUserSchema,
   insertInviteSchema,
   insertEmailVerificationSchema,
   insertSubscriptionSchema,
@@ -156,11 +155,12 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Invitation has expired" });
       }
 
-      // Create tenant user relationship
-      await db.insert(tenantUsers).values({
+      // Create tenant membership
+      await db.insert(tenantMemberships).values({
         tenantId: invite.tenantId,
         userId: user_id,
-        role: invite.role
+        role: invite.role as any,
+        status: 'active'
       });
 
       // Mark invite as used
@@ -203,10 +203,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       }
 
       // Check if user already a member
-      const existingMember = await db.query.tenantUsers.findFirst({
+      const existingMember = await db.query.tenantMemberships.findFirst({
         where: and(
-          eq(tenantUsers.tenantId, tenant.id),
-          eq(tenantUsers.userId, user_id)
+          eq(tenantMemberships.tenantId, tenant.id),
+          eq(tenantMemberships.userId, user_id)
         )
       });
 
@@ -248,6 +248,14 @@ export function setupBetaOnboardingRoutes(app: Express) {
 
       // If minor, require approval
       if (isMinor) {
+        // Create pending tenant membership
+        await db.insert(tenantMemberships).values({
+          tenantId: tenant.id,
+          userId: user_id,
+          role: role as any, // role enum conversion
+          status: 'pending'
+        });
+
         // Update user to pending status
         await db.update(users)
           .set({ 
@@ -297,11 +305,12 @@ export function setupBetaOnboardingRoutes(app: Express) {
 
       } else {
         // Adult or no age provided - proceed with normal flow
-        // Create tenant user relationship
-        await db.insert(tenantUsers).values({
+        // Create active tenant membership
+        await db.insert(tenantMemberships).values({
           tenantId: tenant.id,
           userId: user_id,
-          role
+          role: role as any, // role enum conversion
+          status: 'active'
         });
 
         // Update user to approved if they weren't already
@@ -342,10 +351,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       }
 
       // Verify user is member of tenant
-      const membership = await db.query.tenantUsers.findFirst({
+      const membership = await db.query.tenantMemberships.findFirst({
         where: and(
-          eq(tenantUsers.tenantId, tenant_id),
-          eq(tenantUsers.userId, user_id)
+          eq(tenantMemberships.tenantId, tenant_id),
+          eq(tenantMemberships.userId, user_id)
         )
       });
 
@@ -372,8 +381,8 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Missing user ID" });
       }
 
-      const userTenants = await db.query.tenantUsers.findMany({
-        where: eq(tenantUsers.userId, user_id)
+      const userTenants = await db.query.tenantMemberships.findMany({
+        where: eq(tenantMemberships.userId, user_id)
       });
 
       // Get tenant details separately

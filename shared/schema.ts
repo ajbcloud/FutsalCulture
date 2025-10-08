@@ -2317,6 +2317,7 @@ export const tenantUsers = pgTable("tenant_users", {
   tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   role: varchar("role").notNull().default("player"), // tenant_owner, coach, player, parent
+  status: tenantMembershipStatusEnum("status").notNull().default("active"), // active, pending
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("tenant_users_unique").on(table.tenantId, table.userId),
