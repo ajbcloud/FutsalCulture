@@ -42,6 +42,7 @@ interface LocationData {
 
 interface SystemSettings {
   autoApproveRegistrations: boolean;
+  enableHelpRequests: boolean;
   businessName: string;
   businessLogo?: string;
   contactEmail: string;
@@ -332,6 +333,7 @@ export default function AdminSettings() {
   }, [toast, queryClient]);
   const [settings, setSettings] = useState<SystemSettings>({
     autoApproveRegistrations: true,
+    enableHelpRequests: true,
     businessName: '',
     contactEmail: '',
     supportEmail: '',
@@ -1259,6 +1261,22 @@ export default function AdminSettings() {
                   onCheckedChange={(checked) => 
                     setSettings(prev => ({ ...prev, autoApproveRegistrations: checked }))
                   }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-foreground">Enable Help Request Section</Label>
+                  <p className="text-sm text-muted-foreground">
+                    When enabled, parents and players can submit help requests from the navigation menu
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enableHelpRequests}
+                  onCheckedChange={(checked) => 
+                    setSettings(prev => ({ ...prev, enableHelpRequests: checked }))
+                  }
+                  data-testid="switch-enable-help-requests"
                 />
               </div>
             </CardContent>
