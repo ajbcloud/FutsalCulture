@@ -12,6 +12,7 @@ import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
 import { format } from 'date-fns';
+import { userHasCapability, FINANCIAL_ANALYTICS } from './middleware/capabilities';
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -355,6 +356,9 @@ export async function setupAdminRoutes(app: any) {
 
       console.log('🏢 Dashboard metrics for tenant:', contextTenantId, 'user:', (req as any).currentUser?.id, 'isSuperAdmin:', isSuperAdmin);
       
+      // Check if user has financial analytics capability - MOVED UP TO SKIP QUERIES
+      const hasFinancialAccess = userHasCapability((req as any).currentUser, FINANCIAL_ANALYTICS);
+      
       // Date boundaries for calculations
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -367,57 +371,68 @@ export async function setupAdminRoutes(app: any) {
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
 
-      // 1. Monthly Revenue (current month only) - TENANT SCOPED
-      const monthlyRevenueResult = await db
-        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.tenantId, contextTenantId), // TENANT FILTER
-            sql`${payments.paidAt} IS NOT NULL`,
-            gte(payments.paidAt, firstOfMonth),
-            lte(payments.paidAt, now)
-          )
-        );
-      const monthlyCents = Number(monthlyRevenueResult[0]?.sum || 0);
+      // 1. Monthly Revenue (current month only) - TENANT SCOPED - SKIP FOR ASSISTANTS
+      let monthlyCents = 0;
+      if (hasFinancialAccess) {
+        const monthlyRevenueResult = await db
+          .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, contextTenantId), // TENANT FILTER
+              sql`${payments.paidAt} IS NOT NULL`,
+              gte(payments.paidAt, firstOfMonth),
+              lte(payments.paidAt, now)
+            )
+          );
+        monthlyCents = Number(monthlyRevenueResult[0]?.sum || 0);
+      }
 
-      // 2. YTD Revenue (year to date) - TENANT SCOPED
-      const ytdRevenueResult = await db
-        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.tenantId, contextTenantId), // TENANT FILTER
-            sql`${payments.paidAt} IS NOT NULL`,
-            gte(payments.paidAt, startOfYear),
-            lte(payments.paidAt, now)
-          )
-        );
-      const ytdCents = Number(ytdRevenueResult[0]?.sum || 0);
+      // 2. YTD Revenue (year to date) - TENANT SCOPED - SKIP FOR ASSISTANTS
+      let ytdCents = 0;
+      if (hasFinancialAccess) {
+        const ytdRevenueResult = await db
+          .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, contextTenantId), // TENANT FILTER
+              sql`${payments.paidAt} IS NOT NULL`,
+              gte(payments.paidAt, startOfYear),
+              lte(payments.paidAt, now)
+            )
+          );
+        ytdCents = Number(ytdRevenueResult[0]?.sum || 0);
+      }
 
-      // Debug log to verify calculations and growth data
-      console.log('→ revenue calculations:', { 
-        tenantId, 
-        monthlyCents, 
-        ytdCents, 
-        monthlyType: typeof monthlyCents,
-        ytdType: typeof ytdCents,
-        firstOfMonth, 
-        startOfYear,
-        debugTimestamp: new Date().toISOString()
-      });
+      // Debug log to verify calculations and growth data - SKIP FOR ASSISTANTS
+      if (hasFinancialAccess) {
+        console.log('→ revenue calculations:', { 
+          tenantId, 
+          monthlyCents, 
+          ytdCents, 
+          monthlyType: typeof monthlyCents,
+          ytdType: typeof ytdCents,
+          firstOfMonth, 
+          startOfYear,
+          debugTimestamp: new Date().toISOString()
+        });
+      }
 
-      // 3. Total Revenue (All Time) - TENANT SCOPED
-      const totalRevenueResult = await db
-        .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.tenantId, contextTenantId), // TENANT FILTER
-            sql`${payments.paidAt} IS NOT NULL`
-          )
-        );
-      const totalRevenue = Number(totalRevenueResult[0]?.sumCents || 0);
+      // 3. Total Revenue (All Time) - TENANT SCOPED - SKIP FOR ASSISTANTS
+      let totalRevenue = 0;
+      if (hasFinancialAccess) {
+        const totalRevenueResult = await db
+          .select({ sumCents: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, contextTenantId), // TENANT FILTER
+              sql`${payments.paidAt} IS NOT NULL`
+            )
+          );
+        totalRevenue = Number(totalRevenueResult[0]?.sumCents || 0);
+      }
 
       // 4. Total Players (All Time) - TENANT SCOPED
       const totalPlayersResult = await db
@@ -510,21 +525,25 @@ export async function setupAdminRoutes(app: any) {
       const prevWeekStart = new Date(startOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
       const prevWeekEnd = new Date(endOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-      // 1. Revenue Growth (current month vs last month) - TENANT SCOPED
-      const lastMonthRevenueResult = await db
-        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.tenantId, contextTenantId), // TENANT FILTER
-            sql`${payments.paidAt} IS NOT NULL`,
-            gte(payments.paidAt, firstOfLastMonth),
-            lte(payments.paidAt, endOfLastMonth)
-          )
-        );
-      const lastMonthCents = Number(lastMonthRevenueResult[0]?.sum || 0);
-      // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
-      const revenueGrowth = lastMonthCents === 0 ? (monthlyCents > 0 ? 100 : 0) : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
+      // 1. Revenue Growth (current month vs last month) - TENANT SCOPED - SKIP FOR ASSISTANTS
+      let lastMonthCents = 0;
+      let revenueGrowth = 0;
+      if (hasFinancialAccess) {
+        const lastMonthRevenueResult = await db
+          .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, contextTenantId), // TENANT FILTER
+              sql`${payments.paidAt} IS NOT NULL`,
+              gte(payments.paidAt, firstOfLastMonth),
+              lte(payments.paidAt, endOfLastMonth)
+            )
+          );
+        lastMonthCents = Number(lastMonthRevenueResult[0]?.sum || 0);
+        // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
+        revenueGrowth = lastMonthCents === 0 ? (monthlyCents > 0 ? 100 : 0) : Math.round(((monthlyCents - lastMonthCents) / lastMonthCents) * 100);
+      }
 
       // 2. Player Growth (current month vs last month new registrations) - TENANT SCOPED
       const lastMonthPlayersResult = await db
@@ -587,37 +606,43 @@ export async function setupAdminRoutes(app: any) {
       // If no previous data but current data exists, show 100% growth. If both zero, show 0%.
       const sessionsGrowth = lastWeekSessions === 0 ? (weeklySessions > 0 ? 100 : 0) : Math.round(((weeklySessions - lastWeekSessions) / lastWeekSessions) * 100);
 
-      // 5. YTD Growth (compare YTD revenue with last year's total revenue) - TENANT SCOPED
-      const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
-      const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
-      const lastYearRevenueResult = await db
-        .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.tenantId, contextTenantId), // TENANT FILTER
-            sql`${payments.paidAt} IS NOT NULL`,
-            gte(payments.paidAt, lastYearStart),
-            lte(payments.paidAt, lastYearEnd)
-          )
-        );
-      const lastYearCents = Number(lastYearRevenueResult[0]?.sum || 0);
-      const ytdGrowth = lastYearCents === 0 ? (ytdCents > 0 ? 100 : 0) : Math.round(((ytdCents - lastYearCents) / lastYearCents) * 100);
+      // 5. YTD Growth (compare YTD revenue with last year's total revenue) - TENANT SCOPED - SKIP FOR ASSISTANTS
+      let lastYearCents = 0;
+      let ytdGrowth = 0;
+      if (hasFinancialAccess) {
+        const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+        const lastYearRevenueResult = await db
+          .select({ sum: sql<number>`COALESCE(SUM(${payments.amountCents}),0)` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.tenantId, contextTenantId), // TENANT FILTER
+              sql`${payments.paidAt} IS NOT NULL`,
+              gte(payments.paidAt, lastYearStart),
+              lte(payments.paidAt, lastYearEnd)
+            )
+          );
+        lastYearCents = Number(lastYearRevenueResult[0]?.sum || 0);
+        ytdGrowth = lastYearCents === 0 ? (ytdCents > 0 ? 100 : 0) : Math.round(((ytdCents - lastYearCents) / lastYearCents) * 100);
+      }
 
-      // Debug growth calculations
-      console.log('→ growth calculations:', {
-        monthlyCents, lastMonthCents, revenueGrowth,
-        monthlyPlayers, lastMonthPlayers, playersGrowth,
-        thisMonthSignups, lastMonthSignups, registrationsGrowth,
-        weeklySessions, lastWeekSessions, sessionsGrowth,
-        ytdCents, lastYearCents, ytdGrowth
-      });
+      // Debug growth calculations - SKIP FOR ASSISTANTS
+      if (hasFinancialAccess) {
+        console.log('→ growth calculations:', {
+          monthlyCents, lastMonthCents, revenueGrowth,
+          monthlyPlayers, lastMonthPlayers, playersGrowth,
+          thisMonthSignups, lastMonthSignups, registrationsGrowth,
+          weeklySessions, lastWeekSessions, sessionsGrowth,
+          ytdCents, lastYearCents, ytdGrowth
+        });
+      }
 
       res.json({
         // Primary KPIs
-        totalRevenue,
-        monthlyRevenue: monthlyCents, // Current month revenue in cents
-        ytdRevenue: ytdCents, // Year-to-date revenue in cents
+        totalRevenue: hasFinancialAccess ? totalRevenue : 0,
+        monthlyRevenue: hasFinancialAccess ? monthlyCents : 0, // Current month revenue in cents
+        ytdRevenue: hasFinancialAccess ? ytdCents : 0, // Year-to-date revenue in cents
         totalPlayers,
         monthlyPlayers,
         totalSignups,
@@ -627,11 +652,11 @@ export async function setupAdminRoutes(app: any) {
         fillRate,
         
         // Growth indicators with actual calculations
-        revenueGrowth,
+        revenueGrowth: hasFinancialAccess ? revenueGrowth : 0,
         playersGrowth,
         registrationsGrowth,
         sessionsGrowth,
-        ytdGrowth,
+        ytdGrowth: hasFinancialAccess ? ytdGrowth : 0,
       });
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
