@@ -119,23 +119,20 @@ export async function sendCampaignEmail(
   template: string,
   variables: Record<string, string> = {}
 ): Promise<{ sent: number; failed: number }> {
+  const { replaceTemplateVariables } = await import('./utils/template-variables');
+  
   const emailRecipients = recipients.map(recipient => {
-    // Replace template variables with actual values
-    let personalizedSubject = subject;
-    let personalizedTemplate = template;
+    // Build template variables with common fields
+    const templateVars = {
+      name: recipient.name || 'there',
+      firstName: recipient.name?.split(' ')[0] || 'there',
+      recipientName: recipient.name || 'there',
+      ...variables
+    };
     
-    // Replace common variables
-    personalizedSubject = personalizedSubject.replace(/\{\{name\}\}/g, recipient.name || 'there');
-    personalizedSubject = personalizedSubject.replace(/\{\{firstName\}\}/g, recipient.name?.split(' ')[0] || 'there');
-    
-    personalizedTemplate = personalizedTemplate.replace(/\{\{name\}\}/g, recipient.name || 'there');
-    personalizedTemplate = personalizedTemplate.replace(/\{\{firstName\}\}/g, recipient.name?.split(' ')[0] || 'there');
-    
-    // Replace any custom variables
-    Object.entries(variables).forEach(([key, value]) => {
-      personalizedSubject = personalizedSubject.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-      personalizedTemplate = personalizedTemplate.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-    });
+    // Replace template variables using centralized utility
+    const personalizedSubject = replaceTemplateVariables(subject, templateVars);
+    const personalizedTemplate = replaceTemplateVariables(template, templateVars);
 
     return {
       email: recipient.email,

@@ -143,18 +143,19 @@ export async function sendCampaignSMS(
   template: string,
   variables: Record<string, string> = {}
 ): Promise<{ sent: number; failed: number }> {
+  const { replaceTemplateVariables } = await import('./utils/template-variables');
+  
   const smsRecipients = recipients.map(recipient => {
-    // Replace template variables with actual values
-    let personalizedBody = template;
+    // Build template variables with common fields
+    const templateVars = {
+      name: recipient.name || 'there',
+      firstName: recipient.name?.split(' ')[0] || 'there',
+      recipientName: recipient.name || 'there',
+      ...variables
+    };
     
-    // Replace common variables
-    personalizedBody = personalizedBody.replace(/\{\{name\}\}/g, recipient.name || 'there');
-    personalizedBody = personalizedBody.replace(/\{\{firstName\}\}/g, recipient.name?.split(' ')[0] || 'there');
-    
-    // Replace any custom variables
-    Object.entries(variables).forEach(([key, value]) => {
-      personalizedBody = personalizedBody.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-    });
+    // Replace template variables using centralized utility
+    const personalizedBody = replaceTemplateVariables(template, templateVars);
 
     return {
       phone: recipient.phone,
