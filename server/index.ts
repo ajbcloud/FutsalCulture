@@ -138,10 +138,26 @@ app.use((req, res, next) => {
   // Mount credits routes
   app.use('/api', creditsRouter);
   
-  // Mount communication system routes
-  app.use('/api', templatesRouter);
-  app.use('/api', notificationsRouter);
-  app.use('/api', contactGroupsRouter);
+  // Mount communication system routes (with auth check)
+  app.use('/api', (req: any, res, next) => {
+    // For these routes, ensure req.user is populated from session
+    if (req.session?.userId && !req.user) {
+      req.user = { id: req.session.userId, claims: { sub: req.session.userId } };
+    }
+    next();
+  }, templatesRouter);
+  app.use('/api', (req: any, res, next) => {
+    if (req.session?.userId && !req.user) {
+      req.user = { id: req.session.userId, claims: { sub: req.session.userId } };
+    }
+    next();
+  }, notificationsRouter);
+  app.use('/api', (req: any, res, next) => {
+    if (req.session?.userId && !req.user) {
+      req.user = { id: req.session.userId, claims: { sub: req.session.userId } };
+    }
+    next();
+  }, contactGroupsRouter);
   
   // Old invitation routes removed - using unified system
   
