@@ -122,7 +122,13 @@ export class TrialManager {
           paymentMethodVerified: options?.paymentMethodProvided || false,
           signupIpAddress: options?.ipAddress,
           signupUserAgent: options?.userAgent,
-          trialHistory: sql`COALESCE(${tenants.trialHistory}, '[]'::jsonb) || '[{"startedAt": "${trialStartsAt.toISOString()}", "plan": "${trialPlan}", "durationDays": ${settings.durationDays}}]'::jsonb`
+          trialHistory: sql`COALESCE(${tenants.trialHistory}, '[]'::jsonb) || jsonb_build_array(
+            jsonb_build_object(
+              'startedAt', ${trialStartsAt.toISOString()}::text,
+              'plan', ${trialPlan}::text,
+              'durationDays', ${settings.durationDays}::integer
+            )
+          )`
         })
         .where(eq(tenants.id, tenantId))
         .returning();
@@ -344,7 +350,7 @@ export class TrialManager {
       if (Object.keys(archivePaths).length > 0) {
         await db.update(tenants)
           .set({
-            archivedDataPaths: sql`COALESCE(${tenants.archivedDataPaths}, '{}'::jsonb) || '${JSON.stringify(archivePaths)}'::jsonb`
+            archivedDataPaths: sql`COALESCE(${tenants.archivedDataPaths}, '{}'::jsonb) || ${JSON.stringify(archivePaths)}::jsonb`
           })
           .where(eq(tenants.id, tenantId));
       }
@@ -402,6 +408,122 @@ export class TrialManager {
   private async scheduleTrialNotifications(tenantId: string, trialStart: Date, trialEnd: Date) {
     // Implementation would schedule email/SMS notifications based on trial settings
     console.log(`Scheduled trial notifications for tenant ${tenantId}: ${trialStart} to ${trialEnd}`);
+  }
+
+  // Check current trial status for a tenant
+  async checkTrialStatus(tenantId: string): Promise<{
+    status: 'active' | 'expired' | 'grace' | 'none';
+    gracePeriodEndsAt?: Date;
+  }> {
+    const tenant = await db.select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    if (!tenant.length || !tenant[0].trialEndsAt) {
+      return { status: 'none' };
+    }
+
+    const now = new Date();
+    const trialEndsAt = new Date(tenant[0].trialEndsAt);
+    
+    if (isAfter(now, trialEndsAt)) {
+      // Check if in grace period
+      if (tenant[0].trialGracePeriodEndsAt) {
+        const gracePeriodEndsAt = new Date(tenant[0].trialGracePeriodEndsAt);
+        if (isAfter(now, gracePeriodEndsAt)) {
+          return { status: 'expired' };
+        } else {
+          return { status: 'grace', gracePeriodEndsAt };
+        }
+      }
+      return { status: 'expired' };
+    }
+
+    return { status: 'active' };
+  }
+
+  // Get extension status for a tenant
+  async getExtensionStatus(tenantId: string): Promise<{
+    extensionsUsed: number;
+    maxExtensions: number;
+    canExtend: boolean;
+  }> {
+    if (!this.trialSettings) await this.loadTrialSettings();
+    const settings = this.trialSettings!;
+
+    const tenant = await db.select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    if (!tenant.length) {
+      return { extensionsUsed: 0, maxExtensions: 0, canExtend: false };
+    }
+
+    const extensionsUsed = tenant[0].trialExtensionsUsed || 0;
+    const maxExtensions = settings.maxExtensions;
+    const canExtend = extensionsUsed < maxExtensions && 
+                     (tenant[0].billingStatus === 'trialing' || tenant[0].billingStatus === 'trial');
+
+    return { extensionsUsed, maxExtensions, canExtend };
+  }
+
+  // Extend a trial
+  async extendTrial(tenantId: string, options?: {
+    reason?: string;
+  }): Promise<{
+    success: boolean;
+    newTrialEndsAt?: Date;
+    extensionsRemaining?: number;
+    error?: string;
+  }> {
+    if (!this.trialSettings) await this.loadTrialSettings();
+    const settings = this.trialSettings!;
+
+    const [tenant] = await db.select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    if (!tenant) {
+      return { success: false, error: 'Tenant not found' };
+    }
+
+    const extensionsUsed = tenant.trialExtensionsUsed || 0;
+    const maxExtensions = settings.maxExtensions;
+
+    if (extensionsUsed >= maxExtensions) {
+      return { success: false, error: 'Maximum extensions reached' };
+    }
+
+    if (!tenant.trialEndsAt) {
+      return { success: false, error: 'No active trial to extend' };
+    }
+
+    const currentTrialEnd = new Date(tenant.trialEndsAt);
+    const newTrialEnd = addDays(currentTrialEnd, settings.extensionDurationDays);
+
+    // Update tenant with extended trial
+    await db.update(tenants)
+      .set({
+        trialEndsAt: newTrialEnd,
+        trialExtensionsUsed: extensionsUsed + 1,
+        trialExtensionHistory: sql`COALESCE(${tenants.trialExtensionHistory}, '[]'::jsonb) || jsonb_build_array(
+          jsonb_build_object(
+            'extendedAt', ${new Date().toISOString()}::text,
+            'reason', ${options?.reason || 'user_requested'}::text,
+            'daysAdded', ${settings.extensionDurationDays}::integer
+          )
+        )`
+      })
+      .where(eq(tenants.id, tenantId));
+
+    return {
+      success: true,
+      newTrialEndsAt: newTrialEnd,
+      extensionsRemaining: maxExtensions - (extensionsUsed + 1)
+    };
   }
 
   // Process all expired trials (run as background job)

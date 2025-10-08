@@ -2565,6 +2565,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trial status endpoint for authenticated tenants
+  app.get('/api/trial/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const tenantId = req.user?.tenantId;
+
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant context required" });
+      }
+
+      // Import the TrialManager
+      const { TrialManager } = await import('./trial-management');
+      const trialManager = new TrialManager();
+
+      // Get tenant information
+      const tenant = await storage.getTenant(tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Check trial status
+      const trialStatus = await trialManager.checkTrialStatus(tenantId);
+      
+      // Calculate remaining time
+      const now = new Date();
+      const trialEndsAt = tenant.trialEndsAt ? new Date(tenant.trialEndsAt) : null;
+      const remainingMs = trialEndsAt ? Math.max(0, trialEndsAt.getTime() - now.getTime()) : 0;
+      
+      // Get extension information
+      const extensionInfo = await trialManager.getExtensionStatus(tenantId);
+
+      // Generate upgrade URL based on trial plan
+      const currentDomain = req.protocol + '://' + req.get('host');
+      let upgradeUrl = `${currentDomain}/admin/settings`;
+      
+      if (tenant.trialPlan) {
+        // Use the PlanUpgradeButtons logic for consistent URLs
+        const paymentLinks = {
+          core: 'https://buy.stripe.com/test_4gM14ob50dVidREeo22Fa04',
+          growth: 'https://buy.stripe.com/test_fZu8wQa0W5oM3d00xc2Fa05', 
+          elite: 'https://buy.stripe.com/test_14A6oI6OK4kI8xkfs62Fa06'
+        };
+        
+        const baseLink = paymentLinks[tenant.trialPlan as 'core' | 'growth' | 'elite'];
+        if (baseLink) {
+          const params = new URLSearchParams({
+            client_reference_id: tenantId,
+            success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${tenant.trialPlan}`,
+            cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
+          });
+          upgradeUrl = `${baseLink}?${params.toString()}`;
+        }
+      }
+
+      res.json({
+        status: trialStatus.status,
+        trialEndsAt,
+        remainingMs,
+        trialPlan: tenant.trialPlan || 'core',
+        gracePeriodEndsAt: trialStatus.gracePeriodEndsAt,
+        extensionsUsed: extensionInfo.extensionsUsed,
+        maxExtensions: extensionInfo.maxExtensions,
+        canExtend: extensionInfo.canExtend,
+        upgradeUrl,
+        billingStatus: tenant.billingStatus || 'none'
+      });
+    } catch (error) {
+      console.error("Error fetching trial status:", error);
+      res.status(500).json({ message: "Failed to fetch trial status" });
+    }
+  });
+
+  // Trial extension endpoint
+  app.post('/api/trial/extend', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant context required" });
+      }
+
+      // Import the TrialManager
+      const { TrialManager } = await import('./trial-management');
+      const trialManager = new TrialManager();
+
+      // Attempt to extend the trial
+      const extensionResult = await trialManager.extendTrial(tenantId, {
+        reason: req.body.reason || 'user_requested'
+      });
+
+      if (!extensionResult.success) {
+        return res.status(400).json({ 
+          message: extensionResult.error || "Failed to extend trial" 
+        });
+      }
+
+      res.json({
+        success: true,
+        newTrialEndsAt: extensionResult.newTrialEndsAt,
+        extensionsRemaining: extensionResult.extensionsRemaining,
+        message: "Trial extended successfully"
+      });
+    } catch (error) {
+      console.error("Error extending trial:", error);
+      res.status(500).json({ message: "Failed to extend trial" });
+    }
+  });
+
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {

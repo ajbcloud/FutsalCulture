@@ -35,6 +35,7 @@ Preferred communication style: Simple, everyday language.
 - **SaaS & Feature Control**: 3-Tier SaaS pricing structure (Core, Growth, Elite) with plan-based feature access control, enforced by a feature flag system (backend middleware, frontend hooks, database-driven feature management, and tenant overrides).
 - **Communication System**: Template-based email/SMS notification system with automated triggers, manual bulk sending, template management UI, variable replacement, consent management, and custom contact groups (SendGrid/Twilio integration).
 - **Invitation System**: Unified invitation code system (`inviteCodes` table) supporting invite, access, and discount codes with pre-fill metadata, custom JSON, usage tracking, and full CRUD admin UI.
+- **Trial Experience**: Client-facing trial status indicator in bottom-left corner showing real-time countdown, color-coded urgency (green/yellow/red), trial extension capability, and upgrade CTAs with direct Stripe checkout integration. Trial management enforces Super Admin-configured settings for duration, extensions, and grace periods.
 
 ### System Design Choices
 - **Development Environment**: Vite for fast development.

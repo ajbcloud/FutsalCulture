@@ -11,6 +11,7 @@ import { TerminologyProvider } from "@/contexts/TerminologyContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import ErrorBoundary from "@/components/error-boundary";
 import CookieConsentBanner from "@/components/ui/cookie-consent";
+import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import HomePlayHQ from "@/pages/HomePlayHQ";
 import FutsalLanding from "@/pages/FutsalLanding";
 import Sessions from "@/pages/sessions";
@@ -149,6 +150,9 @@ function Router() {
 
       {/* Cookie Consent Banner - shows globally */}
       <CookieConsentBanner />
+      
+      {/* Trial Status Indicator - shows for trial tenants */}
+      {isAuthenticated && user?.tenantId && <TrialStatusIndicator />}
     </div>
   );
 }
