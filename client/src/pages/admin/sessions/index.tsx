@@ -465,6 +465,7 @@ export default function AdminSessions() {
                 <SelectItem value="open">Open</SelectItem>
                 <SelectItem value="full">Full</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -588,11 +589,12 @@ export default function AdminSessions() {
                 <TableCell>
                   <Badge 
                     variant={
+                      session.status === 'cancelled' ? 'secondary' :
                       session.status === 'open' ? 'success' :
                       session.status === 'full' ? 'destructive' :
                       'warning'
                     }
-                    className="text-xs"
+                    className={`text-xs ${session.status === 'cancelled' ? 'bg-gray-600/20 text-gray-400 border border-gray-500' : ''}`}
                   >
                     {session.status}
                   </Badge>
@@ -787,6 +789,7 @@ export default function AdminSessions() {
                 </div>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs shrink-0 ${
+                session.status === 'cancelled' ? 'bg-gray-900 text-gray-400 border border-gray-500' :
                 session.status === 'open' ? 'bg-green-900 text-green-300' :
                 session.status === 'full' ? 'bg-red-900 text-red-300' :
                 'bg-yellow-900 text-yellow-300'

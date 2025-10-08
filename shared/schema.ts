@@ -281,7 +281,7 @@ export const players = pgTable("players", {
 ]);
 
 // Sessions table
-export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed"]);
+export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed", "cancelled"]);
 
 export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -247,27 +247,38 @@ export default function SessionCalendar({
                   }
                   
                   let statusColor = 'bg-primary/20';
+                  let borderColor = 'border-transparent';
                   let statusText = session.status;
                   
+                  // Handle cancelled status first
+                  if (session.status === 'cancelled') {
+                    statusColor = 'bg-gray-600/10';
+                    borderColor = 'border-gray-500';
+                    statusText = 'cancelled';
+                  }
                   // Override status based on real-time conditions
-                  if (sessionStarted) {
+                  else if (sessionStarted) {
                     statusColor = 'bg-muted/20';
+                    borderColor = 'border-border';
                     statusText = 'closed';
                   } else if (session.status === 'full') {
                     statusColor = 'bg-destructive/20';
+                    borderColor = 'border-destructive';
                     statusText = 'full';
                   } else if (bookingOpen && !['full', 'closed'].includes(session.status || '')) {
                     statusColor = 'bg-green-600/20 hover:bg-green-600/30';
+                    borderColor = 'border-green-600';
                     statusText = 'open';
                   } else if (!bookingOpen && !sessionStarted) {
                     statusColor = 'bg-yellow-600/20';
+                    borderColor = 'border-yellow-600';
                     statusText = 'upcoming';
                   }
                   
                   return (
                     <div 
                       key={session.id} 
-                      className={`min-h-[22px] sm:min-h-[28px] p-0.5 sm:p-1 cursor-pointer border border-transparent hover:border-border active:border-border/80 transition-all rounded text-foreground ${statusColor} touch-manipulation flex-shrink-0`}
+                      className={`min-h-[22px] sm:min-h-[28px] p-0.5 sm:p-1 cursor-pointer border hover:border-border/80 active:border-border transition-all rounded text-foreground ${statusColor} ${borderColor} touch-manipulation flex-shrink-0`}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -370,6 +381,10 @@ export default function SessionCalendar({
           <div className="w-3 h-3 bg-muted/20 border border-border rounded"></div>
           <span className="text-muted-foreground">Closed</span>
         </div>
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <div className="w-3 h-3 bg-gray-600/10 border border-gray-500 rounded"></div>
+          <span className="text-muted-foreground">Cancelled</span>
+        </div>
       </div>
 
       {/* Day Details Dialog */}
@@ -399,11 +414,13 @@ export default function SessionCalendar({
                 return daySessions.map(session => (
                   <Card 
                     key={session.id} 
-                    className={`border-none cursor-pointer transition-colors ${
-                      session.status === 'open' ? 'bg-green-600/20 hover:bg-green-600/30' :
-                      session.status === 'full' ? 'bg-destructive/20 hover:bg-destructive/30' :
-                      session.status === 'closed' ? 'bg-muted/20 hover:bg-muted/30' :
-                      'bg-primary/20 hover:bg-primary/30'
+                    className={`cursor-pointer transition-colors ${
+                      session.status === 'cancelled' ? 'bg-gray-600/10 hover:bg-gray-600/20 border border-gray-500' :
+                      session.status === 'open' ? 'bg-green-600/20 hover:bg-green-600/30 border border-green-600' :
+                      session.status === 'full' ? 'bg-destructive/20 hover:bg-destructive/30 border border-destructive' :
+                      session.status === 'closed' ? 'bg-muted/20 hover:bg-muted/30 border border-border' :
+                      session.status === 'upcoming' ? 'bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600' :
+                      'bg-primary/20 hover:bg-primary/30 border border-primary'
                     }`}
                     onClick={() => {
                       if (onSessionClick) {
