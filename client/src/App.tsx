@@ -62,6 +62,7 @@ import Status from "./pages/Status";
 import PersonalSettings from "./pages/personal-settings";
 import HouseholdManagement from "./pages/household-management";
 import CreditHistory from "./pages/credit-history";
+import PaymentHistory from "./pages/payment-history";
 import AdminCredits from "./pages/admin/credits";
 
 function Router() {
@@ -110,6 +111,7 @@ function Router() {
         <Route path="/my-help-requests" component={MyHelpRequests} />
         <Route path="/household" component={HouseholdManagement} />
         <Route path="/credits/history" component={CreditHistory} />
+        <Route path="/payments/history" component={PaymentHistory} />
         {(user?.isAdmin || user?.isAssistant) && (
           <>
             <Route path="/admin" component={AdminDashboard} />

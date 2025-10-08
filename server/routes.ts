@@ -2323,6 +2323,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/my/payments - Get current user's payment history
+  app.get('/api/my/payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const tenantId = req.user?.tenantId;
+      
+      if (!userId || !tenantId) {
+        return res.status(400).json({ message: "User ID and Tenant ID are required" });
+      }
+
+      const { signups, players, futsalSessions, payments, users, discountCodes } = await import('@shared/schema');
+      const { desc, and } = await import('drizzle-orm');
+
+      // Get all payments for this user's players
+      const userPayments = await db
+        .select({
+          id: signups.id,
+          playerId: signups.playerId,
+          sessionId: signups.sessionId,
+          paid: signups.paid,
+          createdAt: signups.createdAt,
+          // Discount info
+          discountCodeApplied: signups.discountCodeApplied,
+          discountAmountCents: signups.discountAmountCents,
+          // Player info
+          player: {
+            id: players.id,
+            firstName: players.firstName,
+            lastName: players.lastName,
+            birthYear: players.birthYear,
+            gender: players.gender,
+          },
+          // Session info
+          session: {
+            id: futsalSessions.id,
+            title: futsalSessions.title,
+            location: futsalSessions.location,
+            ageGroups: futsalSessions.ageGroups,
+            genders: futsalSessions.genders,
+            startTime: futsalSessions.startTime,
+            endTime: futsalSessions.endTime,
+            priceCents: futsalSessions.priceCents,
+          },
+          // Parent info
+          parent: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+          },
+          // Payment info
+          paymentId: payments.id,
+          paidAt: payments.paidAt,
+          paymentAmount: payments.amountCents,
+          paymentStatus: payments.status,
+          paymentIntentId: payments.paymentIntentId,
+          // Refund info
+          refundedAt: signups.refundedAt,
+          refundReason: signups.refundReason,
+          paymentProvider: signups.paymentProvider,
+        })
+        .from(signups)
+        .innerJoin(players, eq(signups.playerId, players.id))
+        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+        .innerJoin(users, eq(players.parentId, users.id))
+        .leftJoin(payments, eq(signups.id, payments.signupId))
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(signups.tenantId, tenantId),
+            eq(signups.paid, true)
+          )
+        )
+        .orderBy(desc(payments.paidAt));
+
+      res.json(userPayments);
+    } catch (error) {
+      console.error("Error fetching user payments:", error);
+      res.status(500).json({ message: "Failed to fetch payment history" });
+    }
+  });
+
   // Debug endpoint to test subscription update
   app.post('/api/debug/update-subscription', isAuthenticated, async (req: any, res) => {
     try {
