@@ -31,6 +31,8 @@ import {
   notifications,
   messageLogs,
   consentEvents,
+  contactGroups,
+  contactGroupMembers,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -77,6 +79,11 @@ import {
   type InsertMessageLog,
   type ConsentEvent,
   type InsertConsentEvent,
+  type ContactGroup,
+  type InsertContactGroup,
+  type ContactGroupWithCount,
+  type ContactGroupMember,
+  type InsertContactGroupMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -293,6 +300,18 @@ export interface IStorage {
 
   createConsentEvent(data: any): Promise<any>;
   getUserConsent(userId: string, channel: 'sms' | 'email'): Promise<any | undefined>;
+
+  // Contact Groups operations
+  createContactGroup(data: InsertContactGroup): Promise<ContactGroupWithCount>;
+  getContactGroups(tenantId: string): Promise<ContactGroupWithCount[]>;
+  getContactGroupById(id: string, tenantId: string): Promise<ContactGroup | undefined>;
+  updateContactGroup(id: string, tenantId: string, data: Partial<InsertContactGroup>): Promise<ContactGroupWithCount>;
+  deleteContactGroup(id: string, tenantId: string): Promise<void>;
+
+  addGroupMember(groupId: string, userId: string, addedBy: string): Promise<ContactGroupMember>;
+  removeGroupMember(groupId: string, userId: string): Promise<void>;
+  getGroupMembers(groupId: string): Promise<Array<ContactGroupMember & { user: User }>>;
+  getUserGroups(userId: string, tenantId: string): Promise<ContactGroup[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3654,6 +3673,148 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(consentEvents.occurredAt))
       .limit(1);
     return consent;
+  }
+
+  // Contact Groups operations
+  async createContactGroup(data: InsertContactGroup): Promise<ContactGroupWithCount> {
+    const [group] = await db
+      .insert(contactGroups)
+      .values(data)
+      .returning();
+    
+    const [groupWithCount] = await db
+      .select({
+        id: contactGroups.id,
+        tenantId: contactGroups.tenantId,
+        name: contactGroups.name,
+        description: contactGroups.description,
+        createdBy: contactGroups.createdBy,
+        createdAt: contactGroups.createdAt,
+        updatedAt: contactGroups.updatedAt,
+        memberCount: sql<number>`COUNT(DISTINCT ${contactGroupMembers.id})::int`
+      })
+      .from(contactGroups)
+      .leftJoin(contactGroupMembers, eq(contactGroups.id, contactGroupMembers.groupId))
+      .where(eq(contactGroups.id, group.id))
+      .groupBy(contactGroups.id);
+    
+    return groupWithCount as ContactGroupWithCount;
+  }
+
+  async getContactGroups(tenantId: string): Promise<ContactGroupWithCount[]> {
+    const groups = await db
+      .select({
+        id: contactGroups.id,
+        tenantId: contactGroups.tenantId,
+        name: contactGroups.name,
+        description: contactGroups.description,
+        createdBy: contactGroups.createdBy,
+        createdAt: contactGroups.createdAt,
+        updatedAt: contactGroups.updatedAt,
+        memberCount: sql<number>`COUNT(DISTINCT ${contactGroupMembers.id})::int`
+      })
+      .from(contactGroups)
+      .leftJoin(contactGroupMembers, eq(contactGroups.id, contactGroupMembers.groupId))
+      .where(eq(contactGroups.tenantId, tenantId))
+      .groupBy(contactGroups.id)
+      .orderBy(desc(contactGroups.createdAt));
+    
+    return groups as ContactGroupWithCount[];
+  }
+
+  async getContactGroupById(id: string, tenantId: string): Promise<ContactGroup | undefined> {
+    const [group] = await db
+      .select()
+      .from(contactGroups)
+      .where(and(eq(contactGroups.id, id), eq(contactGroups.tenantId, tenantId)));
+    return group;
+  }
+
+  async updateContactGroup(id: string, tenantId: string, data: Partial<InsertContactGroup>): Promise<ContactGroupWithCount> {
+    const [updated] = await db
+      .update(contactGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(contactGroups.id, id), eq(contactGroups.tenantId, tenantId)))
+      .returning();
+    
+    const [groupWithCount] = await db
+      .select({
+        id: contactGroups.id,
+        tenantId: contactGroups.tenantId,
+        name: contactGroups.name,
+        description: contactGroups.description,
+        createdBy: contactGroups.createdBy,
+        createdAt: contactGroups.createdAt,
+        updatedAt: contactGroups.updatedAt,
+        memberCount: sql<number>`COUNT(DISTINCT ${contactGroupMembers.id})::int`
+      })
+      .from(contactGroups)
+      .leftJoin(contactGroupMembers, eq(contactGroups.id, contactGroupMembers.groupId))
+      .where(eq(contactGroups.id, id))
+      .groupBy(contactGroups.id);
+    
+    return groupWithCount as ContactGroupWithCount;
+  }
+
+  async deleteContactGroup(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(contactGroups)
+      .where(and(eq(contactGroups.id, id), eq(contactGroups.tenantId, tenantId)));
+  }
+
+  async addGroupMember(groupId: string, userId: string, addedBy: string): Promise<ContactGroupMember> {
+    const [member] = await db
+      .insert(contactGroupMembers)
+      .values({ groupId, userId, addedBy })
+      .returning();
+    return member;
+  }
+
+  async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    await db
+      .delete(contactGroupMembers)
+      .where(
+        and(
+          eq(contactGroupMembers.groupId, groupId),
+          eq(contactGroupMembers.userId, userId)
+        )
+      );
+  }
+
+  async getGroupMembers(groupId: string): Promise<Array<ContactGroupMember & { user: User }>> {
+    const members = await db
+      .select()
+      .from(contactGroupMembers)
+      .leftJoin(users, eq(contactGroupMembers.userId, users.id))
+      .where(eq(contactGroupMembers.groupId, groupId));
+    
+    return members.map(m => ({
+      ...m.contact_group_members,
+      user: m.users!
+    }));
+  }
+
+  async getUserGroups(userId: string, tenantId: string): Promise<ContactGroup[]> {
+    const groups = await db
+      .select({
+        id: contactGroups.id,
+        tenantId: contactGroups.tenantId,
+        name: contactGroups.name,
+        description: contactGroups.description,
+        createdBy: contactGroups.createdBy,
+        createdAt: contactGroups.createdAt,
+        updatedAt: contactGroups.updatedAt,
+      })
+      .from(contactGroupMembers)
+      .innerJoin(contactGroups, eq(contactGroupMembers.groupId, contactGroups.id))
+      .where(
+        and(
+          eq(contactGroupMembers.userId, userId),
+          eq(contactGroups.tenantId, tenantId)
+        )
+      );
+    
+    return groups;
   }
 }
 

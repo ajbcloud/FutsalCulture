@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin-layout";
 import TemplateManager from "@/components/admin/template-manager";
 import SendNotification from "@/components/admin/send-notification";
+import ContactGroupsManager from "@/components/admin/contact-groups-manager";
 import {
   Tabs,
   TabsContent,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { MessageSquare, Mail, MessageCircle, Clock } from "lucide-react";
+import { MessageSquare, Mail, MessageCircle, Clock, Users } from "lucide-react";
 
 interface NotificationHistory {
   id: string;
@@ -56,7 +57,7 @@ export default function Communications() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="templates" data-testid="tab-templates">
               <Mail className="w-4 h-4 mr-2" />
               Templates
@@ -64,6 +65,10 @@ export default function Communications() {
             <TabsTrigger value="send" data-testid="tab-send">
               <MessageCircle className="w-4 h-4 mr-2" />
               Send Message
+            </TabsTrigger>
+            <TabsTrigger value="groups" data-testid="tab-groups">
+              <Users className="w-4 h-4 mr-2" />
+              Contact Groups
             </TabsTrigger>
             <TabsTrigger value="history" data-testid="tab-history">
               <Clock className="w-4 h-4 mr-2" />
@@ -77,6 +82,10 @@ export default function Communications() {
 
           <TabsContent value="send" className="space-y-4">
             <SendNotification />
+          </TabsContent>
+
+          <TabsContent value="groups" className="space-y-4">
+            <ContactGroupsManager />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">

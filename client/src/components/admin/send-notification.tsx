@@ -56,8 +56,10 @@ export default function SendNotification() {
   const { toast } = useToast();
   const [notificationType, setNotificationType] = useState<"email" | "sms">("email");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  const [recipientType, setRecipientType] = useState<"all_parents" | "all_players" | "age_groups" | "custom">("all_parents");
+  const [recipientType, setRecipientType] = useState<"all_parents" | "all_players" | "age_groups" | "contact_groups" | "custom">("all_parents");
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
+  const [selectedContactGroup, setSelectedContactGroup] = useState<string>("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [customRecipients, setCustomRecipients] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -73,6 +75,31 @@ export default function SendNotification() {
   });
 
   const templates = templatesData?.templates || [];
+
+  const { data: contactGroupsData } = useQuery({
+    queryKey: ['/api/contact-groups'],
+    queryFn: async () => {
+      const response = await fetch('/api/contact-groups');
+      if (!response.ok) throw new Error('Failed to fetch contact groups');
+      return response.json();
+    }
+  });
+
+  const contactGroups = contactGroupsData?.groups || [];
+
+  const { data: usersData } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
+
+  const allUsers = usersData?.users || [];
+  const eligibleUsers = allUsers.filter((u: any) => 
+    u.role === 'parent' || (u.role === 'player' && u.canAccessPortal)
+  );
 
   const { data: stats } = useQuery({
     queryKey: ["/api/admin/stats"],
@@ -106,6 +133,8 @@ export default function SendNotification() {
     setCustomMessage("");
     setCustomRecipients("");
     setSelectedAgeGroups([]);
+    setSelectedContactGroup("");
+    setSelectedUserIds([]);
   };
 
   const activeTemplates = templates.filter((t) => t.active);
@@ -122,8 +151,11 @@ export default function SendNotification() {
         const totalPlayers = stats?.totalPlayers || 0;
         const ageGroupCount = AGE_GROUPS.length;
         return Math.round((totalPlayers / ageGroupCount) * selectedAgeGroups.length);
+      case "contact_groups":
+        const selectedGroup = contactGroups.find((g: any) => g.id === selectedContactGroup);
+        return selectedGroup?.memberCount || 0;
       case "custom":
-        return customRecipients.split(/[,\n]/).filter((r) => r.trim()).length;
+        return selectedUserIds.length;
       default:
         return 0;
     }
@@ -152,8 +184,10 @@ export default function SendNotification() {
 
     if (recipientType === "age_groups") {
       data.ageGroups = selectedAgeGroups;
+    } else if (recipientType === "contact_groups") {
+      data.contactGroupId = selectedContactGroup;
     } else if (recipientType === "custom") {
-      data.recipients = customRecipients.split(/[,\n]/).filter((r) => r.trim());
+      data.userIds = selectedUserIds;
     }
 
     sendMutation.mutate(data);
@@ -262,6 +296,10 @@ export default function SendNotification() {
                   <Label htmlFor="age_groups">Specific Age Groups</Label>
                 </div>
                 <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="contact_groups" id="contact_groups" data-testid="radio-recipient-contact-groups" />
+                  <Label htmlFor="contact_groups">Contact Groups</Label>
+                </div>
+                <div className="flex items-center space-x-2">
                   <RadioGroupItem value="custom" id="custom" data-testid="radio-recipient-custom" />
                   <Label htmlFor="custom">Custom Recipients</Label>
                 </div>
@@ -292,23 +330,67 @@ export default function SendNotification() {
                 </div>
               )}
 
-              {recipientType === "custom" && (
+              {recipientType === "contact_groups" && (
                 <div className="ml-6">
-                  <Label htmlFor="customRecipients">
-                    {notificationType === "email" ? "Email Addresses" : "Phone Numbers"}
-                  </Label>
-                  <Textarea
-                    id="customRecipients"
-                    value={customRecipients}
-                    onChange={(e) => setCustomRecipients(e.target.value)}
-                    placeholder={
-                      notificationType === "email"
-                        ? "Enter email addresses (comma or newline separated)"
-                        : "Enter phone numbers (comma or newline separated)"
-                    }
-                    rows={4}
-                    data-testid="textarea-custom-recipients"
-                  />
+                  <Label htmlFor="contactGroup">Select Contact Group</Label>
+                  <Select value={selectedContactGroup} onValueChange={setSelectedContactGroup}>
+                    <SelectTrigger data-testid="select-contact-group">
+                      <SelectValue placeholder="Select a contact group..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contactGroups.map((group: any) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {recipientType === "custom" && (
+                <div className="ml-6 space-y-2">
+                  <Label>Select Recipients</Label>
+                  <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                    {eligibleUsers.map((user: any) => (
+                      <div key={user.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded">
+                        <Checkbox
+                          id={`user-${user.id}`}
+                          checked={selectedUserIds.includes(user.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedUserIds([...selectedUserIds, user.id]);
+                            } else {
+                              setSelectedUserIds(selectedUserIds.filter((id) => id !== user.id));
+                            }
+                          }}
+                          data-testid={`checkbox-user-${user.id}`}
+                        />
+                        <Label htmlFor={`user-${user.id}`} className="flex-1 cursor-pointer">
+                          {user.firstName} {user.lastName} ({user.email || user.phone})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedUserIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedUserIds.map((userId) => {
+                        const user = eligibleUsers.find((u: any) => u.id === userId);
+                        return user ? (
+                          <div key={userId} className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1">
+                            {user.firstName} {user.lastName}
+                            <button
+                              onClick={() => setSelectedUserIds(selectedUserIds.filter((id) => id !== userId))}
+                              className="ml-1 hover:text-destructive"
+                              data-testid={`remove-user-${userId}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

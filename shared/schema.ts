@@ -1079,6 +1079,31 @@ export const consentEvents = pgTable("consent_events", {
   index("consent_events_type_idx").on(table.type),
 ]);
 
+// Contact Groups for targeted messaging
+export const contactGroups = pgTable("contact_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("contact_groups_tenant_id_idx").on(table.tenantId),
+]);
+
+export const contactGroupMembers = pgTable("contact_group_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => contactGroups.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  addedBy: varchar("added_by").references(() => users.id),
+  addedAt: timestamp("added_at").defaultNow(),
+}, (table) => [
+  index("contact_group_members_group_id_idx").on(table.groupId),
+  index("contact_group_members_user_id_idx").on(table.userId),
+  uniqueIndex("contact_group_members_group_user_unique").on(table.groupId, table.userId),
+]);
+
 // Security Tables
 
 export const featureAdoptionEvents = pgTable("feature_adoption_events", {
@@ -2726,6 +2751,17 @@ export const insertConsentEventSchema = createInsertSchema(consentEvents).omit({
   occurredAt: true,
 });
 
+export const insertContactGroupSchema = createInsertSchema(contactGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContactGroupMemberSchema = createInsertSchema(contactGroupMembers).omit({
+  id: true,
+  addedAt: true,
+});
+
 // Communication system types
 export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
 export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
@@ -2735,3 +2771,8 @@ export type MessageLog = typeof messageLogs.$inferSelect;
 export type InsertMessageLog = z.infer<typeof insertMessageLogSchema>;
 export type ConsentEvent = typeof consentEvents.$inferSelect;
 export type InsertConsentEvent = z.infer<typeof insertConsentEventSchema>;
+export type ContactGroup = typeof contactGroups.$inferSelect;
+export type InsertContactGroup = z.infer<typeof insertContactGroupSchema>;
+export type ContactGroupWithCount = ContactGroup & { memberCount: number };
+export type ContactGroupMember = typeof contactGroupMembers.$inferSelect;
+export type InsertContactGroupMember = z.infer<typeof insertContactGroupMemberSchema>;
