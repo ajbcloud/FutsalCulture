@@ -706,52 +706,6 @@ export async function setupAdminRoutes(app: any) {
         });
       });
 
-      // Get recent refunds with player and parent details  
-      const recentRefundsWithParents = await db
-        .select({
-          id: payments.id,
-          amountCents: payments.amountCents,
-          refundedAt: payments.refundedAt,
-          refundReason: payments.refundReason,
-          playerId: signups.playerId,
-          playerFirstName: players.firstName,
-          playerLastName: players.lastName,
-          sessionId: signups.sessionId,
-          parentFirstName: users.firstName,
-          parentLastName: users.lastName
-        })
-        .from(payments)
-        .innerJoin(signups, eq(payments.signupId, signups.id))
-        .innerJoin(players, eq(signups.playerId, players.id))
-        .innerJoin(users, eq(players.parentId, users.id))
-        .where(and(
-          eq(players.tenantId, tenantId),
-          sql`${payments.refundedAt} IS NOT NULL AND ${payments.refundedAt} >= ${startTime} AND ${payments.refundedAt} <= ${endTime}`
-        ))
-        .orderBy(desc(payments.refundedAt))
-        .limit(10);
-
-      recentRefundsWithParents.forEach(refund => {
-        const reasonSnippet = refund.refundReason && refund.refundReason.length > 30 
-          ? `${refund.refundReason.substring(0, 30)}...` 
-          : refund.refundReason || 'No reason provided';
-
-        activities.push({
-          id: `refund-${refund.id}`,
-          type: 'refund',
-          icon: '💸',
-          message: `Refund issued: $${(refund.amountCents / 100).toFixed(2)} to ${refund.parentFirstName} ${refund.parentLastName} for ${refund.playerFirstName} ${refund.playerLastName}`,
-          timestamp: refund.refundedAt!,
-          timeAgo: getTimeAgo(refund.refundedAt!),
-          reasonSnippet,
-          fullReason: refund.refundReason,
-          // Navigation metadata
-          navigationUrl: '/admin/payments',
-          searchTerm: `${refund.parentFirstName} ${refund.parentLastName}`,
-          playerId: refund.playerId
-        });
-      });
-
       // Get recent player registrations (including approvals today)
       const recentPlayers = await db
         .select()
@@ -1166,10 +1120,90 @@ export async function setupAdminRoutes(app: any) {
   app.delete('/api/admin/sessions/:id', requireFullAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      // TODO: Implement deleteSession method in storage
-      // await storage.deleteSession(id);
+      const userId = (req as any).user?.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser?.tenantId) {
+        return res.status(400).json({ message: 'Tenant ID required' });
+      }
+
+      // Get session details
+      const sessionDetails = await db.select()
+        .from(futsalSessions)
+        .where(and(
+          eq(futsalSessions.id, id),
+          eq(futsalSessions.tenantId, currentUser.tenantId)
+        ))
+        .limit(1);
+
+      if (!sessionDetails.length) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+
+      const session = sessionDetails[0];
+
+      // Get all paid signups for this session with ACTUAL payment amounts
+      const paidSignups = await db.select({
+        id: signups.id,
+        playerId: signups.playerId,
+        sessionId: signups.sessionId,
+        paid: signups.paid,
+        paymentId: signups.paymentId,
+        parentId: players.parentId,
+        listPriceCents: futsalSessions.priceCents,
+        actualAmountCents: payments.amountCents, // ACTUAL payment amount from payments table
+      })
+      .from(signups)
+      .innerJoin(players, eq(signups.playerId, players.id))
+      .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
+      .leftJoin(payments, eq(signups.paymentId, payments.id))
+      .where(and(
+        eq(signups.sessionId, id),
+        eq(signups.paid, true),
+        eq(signups.tenantId, currentUser.tenantId)
+      ));
+
+      // Create credit records for each paid signup using ACTUAL payment amounts
+      const creditsCreated = [];
+      for (const signup of paidSignups) {
+        if (!signup.parentId) {
+          console.warn(`⚠️ Signup ${signup.id} has no parentId, skipping credit creation`);
+          continue;
+        }
+
+        // Use actual payment amount if available, otherwise log warning and skip
+        if (signup.actualAmountCents) {
+          const credit = await storage.createCredit({
+            userId: signup.parentId,
+            tenantId: currentUser.tenantId,
+            amountCents: signup.actualAmountCents, // Use ACTUAL payment amount
+            reason: `Credit for cancelled session: ${session.title}`,
+            sessionId: id,
+            signupId: signup.id,
+          });
+          creditsCreated.push(credit);
+        } else {
+          // No payment record found - this is an edge case that should be investigated
+          console.warn(
+            `⚠️ No payment record found for paid signup ${signup.id} ` +
+            `(paymentId: ${signup.paymentId}). Skipping credit creation. ` +
+            `This may indicate data inconsistency.`
+          );
+        }
+      }
+
+      // Delete the session
       await db.delete(futsalSessions).where(eq(futsalSessions.id, id));
-      res.json({ message: "Session deleted successfully" });
+
+      res.json({ 
+        message: "Session deleted successfully",
+        creditsIssued: creditsCreated.length,
+        totalCreditAmount: creditsCreated.reduce((sum, c) => sum + c.amountCents, 0) / 100,
+      });
     } catch (error) {
       console.error("Error deleting session:", error);
       res.status(500).json({ message: "Failed to delete session" });
@@ -1223,12 +1257,9 @@ export async function setupAdminRoutes(app: any) {
               lastName: users.lastName,
               email: users.email,
             },
-            // Payment info including refund status
+            // Payment info
             paidAt: payments.paidAt,
             paymentAmount: payments.amountCents,
-            refundedAt: payments.refundedAt,
-            refundReason: payments.refundReason,
-            refundedBy: payments.refundedBy,
             adminNotes: payments.adminNotes,
             paymentStatus: payments.status,
           })
@@ -1242,7 +1273,7 @@ export async function setupAdminRoutes(app: any) {
         
         res.json(paidSignups);
       } else {
-        // Return all payments (pending, paid, and refunded)
+        // Return all payments (pending and paid)
         const [pendingSignups, paidSignups] = await Promise.all([
           storage.getPendingPaymentSignups(),
           db
@@ -1281,12 +1312,9 @@ export async function setupAdminRoutes(app: any) {
                 lastName: users.lastName,
                 email: users.email,
               },
-              // Payment info including refund status
+              // Payment info
               paidAt: payments.paidAt,
               paymentAmount: payments.amountCents,
-              refundedAt: payments.refundedAt,
-              refundReason: payments.refundReason,
-              refundedBy: payments.refundedBy,
               adminNotes: payments.adminNotes,
               paymentStatus: payments.status,
             })
@@ -1489,9 +1517,6 @@ export async function setupAdminRoutes(app: any) {
         paymentId: signups.paymentId,
         paymentProvider: signups.paymentProvider,
         paymentIntentId: signups.paymentIntentId,
-        refunded: signups.refunded,
-        refundReason: signups.refundReason,
-        refundedAt: signups.refundedAt,
         createdAt: signups.createdAt,
         updatedAt: signups.updatedAt,
       })
@@ -1527,9 +1552,6 @@ export async function setupAdminRoutes(app: any) {
         paymentId: session.paymentId,
         paymentProvider: session.paymentProvider,
         paymentIntentId: session.paymentIntentId,
-        refunded: session.refunded || false,
-        refundReason: session.refundReason,
-        refundedAt: session.refundedAt,
         createdAt: session.createdAt,
       }));
 
@@ -3735,82 +3757,6 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     } catch (error) {
       console.error('Error deleting parent:', error);
       res.status(500).json({ error: 'Failed to delete parent' });
-    }
-  });
-
-  // Refund payment endpoint
-  app.post('/api/admin/payments/:id/refund', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params; // This is the signup ID
-      const { reason } = req.body;
-      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
-      
-      if (!reason || reason.trim().length < 5) {
-        return res.status(400).json({ message: "Refund reason is required and must be at least 5 characters" });
-      }
-
-      // Find the payment record by signup ID
-      const payment = await db.select().from(payments).where(eq(payments.signupId, id)).limit(1);
-      
-      if (!payment.length) {
-        return res.status(404).json({ message: "Payment not found" });
-      }
-
-      if (payment[0].refundedAt) {
-        return res.status(400).json({ message: "Payment has already been refunded" });
-      }
-
-      // Get signup and player details for activity log
-      const signupDetails = await db
-        .select({
-          signup: signups,
-          player: {
-            firstName: players.firstName,
-            lastName: players.lastName,
-          },
-          session: {
-            title: futsalSessions.title,
-            startTime: futsalSessions.startTime,
-          }
-        })
-        .from(signups)
-        .innerJoin(players, eq(signups.playerId, players.id))
-        .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
-        .where(eq(signups.id, id))
-        .limit(1);
-
-      if (!signupDetails.length) {
-        return res.status(404).json({ message: "Signup details not found" });
-      }
-
-      const details = signupDetails[0];
-
-      // Update the payment record to mark as refunded
-      await db.update(payments)
-        .set({
-          status: 'refunded',
-          refundedAt: new Date(),
-          refundReason: reason.trim(),
-          refundedBy: adminUserId
-        })
-        .where(eq(payments.signupId, id));
-
-      // Update the signup to mark as unpaid
-      await db.update(signups)
-        .set({
-          paid: false
-        })
-        .where(eq(signups.id, id));
-
-      res.json({ 
-        message: "Refund processed successfully",
-        refundedAt: new Date(),
-        reason: reason.trim(),
-        refundedBy: adminUserId
-      });
-    } catch (error) {
-      console.error("Error processing refund:", error);
-      res.status(500).json({ message: "Failed to process refund" });
     }
   });
 

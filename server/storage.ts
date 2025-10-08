@@ -26,6 +26,7 @@ import {
   consentDocuments,
   consentSignatures,
   consentDocumentAccess,
+  userCredits,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -62,6 +63,8 @@ import {
   type InsertConsentSignature,
   type ConsentDocumentAccess,
   type InsertConsentDocumentAccess,
+  type UserCreditInsert,
+  type UserCreditSelect,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -133,6 +136,13 @@ export interface IStorage {
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(signupId: string, paidAt: Date): Promise<void>;
+
+  // Credit operations
+  createCredit(credit: UserCreditInsert): Promise<UserCreditSelect>;
+  getUserCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]>;
+  getAvailableCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]>;
+  getAvailableCreditBalance(userId: string, tenantId: string): Promise<number>;
+  useCredit(creditId: string, signupId: string): Promise<UserCreditSelect>;
 
   // Help request operations
   createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest>;
@@ -685,6 +695,60 @@ export class DatabaseStorage implements IStorage {
     await db.update(signups).set({ paid: true }).where(eq(signups.id, signupId));
   }
 
+  // Credit operations
+  async createCredit(credit: UserCreditInsert): Promise<UserCreditSelect> {
+    const [newCredit] = await db.insert(userCredits).values(credit).returning();
+    return newCredit;
+  }
+
+  async getUserCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]> {
+    const credits = await db
+      .select()
+      .from(userCredits)
+      .where(and(
+        eq(userCredits.userId, userId),
+        eq(userCredits.tenantId, tenantId)
+      ))
+      .orderBy(desc(userCredits.createdAt));
+    return credits;
+  }
+
+  async getAvailableCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]> {
+    const now = new Date();
+    const credits = await db
+      .select()
+      .from(userCredits)
+      .where(and(
+        eq(userCredits.userId, userId),
+        eq(userCredits.tenantId, tenantId),
+        eq(userCredits.isUsed, false),
+        or(
+          sql`${userCredits.expiresAt} IS NULL`,
+          gte(userCredits.expiresAt, now)
+        )
+      ))
+      .orderBy(userCredits.createdAt); // oldest first for FIFO
+    return credits;
+  }
+
+  async getAvailableCreditBalance(userId: string, tenantId: string): Promise<number> {
+    const credits = await this.getAvailableCredits(userId, tenantId);
+    return credits.reduce((sum, credit) => sum + credit.amountCents, 0);
+  }
+
+  async useCredit(creditId: string, signupId: string): Promise<UserCreditSelect> {
+    const [updatedCredit] = await db
+      .update(userCredits)
+      .set({
+        isUsed: true,
+        usedAt: new Date(),
+        usedForSignupId: signupId,
+      })
+      .where(eq(userCredits.id, creditId))
+      .returning();
+    return updatedCredit;
+  }
+
   async getPendingPaymentSignups(tenantId?: string): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User }>> {
     const results = await db
       .select({
@@ -740,10 +804,8 @@ export class DatabaseStorage implements IStorage {
         session: futsalSessions,
         // Parent fields
         parent: users,
-        // Payment record fields (for refund information)
+        // Payment record fields
         paymentStatus: payments.status,
-        refundedAt: payments.refundedAt,
-        refundReason: payments.refundReason,
       })
       .from(signups)
       .innerJoin(players, eq(signups.playerId, players.id))
@@ -760,49 +822,10 @@ export class DatabaseStorage implements IStorage {
     return results.map(result => ({
       ...result,
       transactionId: result.paymentId,
-      // Add refund status to help with frontend display
-      status: result.refundedAt ? 'refunded' : 'paid',
+      status: 'paid',
     })) as Array<Signup & { player: Player; session: FutsalSession; parent: User; transactionId?: string; paymentProvider?: string }>;
   }
 
-  async processRefund(paymentId: string, reason: string, adminUserId: string): Promise<any> {
-    return await db.transaction(async (tx) => {
-      // Find the payment record
-      const [payment] = await tx
-        .select()
-        .from(payments)
-        .where(eq(payments.signupId, paymentId));
-
-      if (!payment) {
-        throw new Error('Payment not found');
-      }
-
-      // Update payment record with refund information
-      const [updatedPayment] = await tx
-        .update(payments)
-        .set({
-          status: 'refunded',
-          refundedAt: new Date(),
-          refundReason: reason,
-          refundedBy: adminUserId,
-        })
-        .where(eq(payments.signupId, paymentId))
-        .returning();
-
-      // ALSO update the signups table to set refunded = true
-      await tx
-        .update(signups)
-        .set({
-          refunded: true,
-          refundedAt: new Date(),
-          refundReason: reason,
-          refundTransactionId: updatedPayment.id,
-        })
-        .where(eq(signups.id, paymentId));
-
-      return updatedPayment;
-    });
-  }
 
   async getSignupWithDetails(signupId: string): Promise<(Signup & { player: Player; session: FutsalSession; parent: User }) | undefined> {
     const [result] = await db

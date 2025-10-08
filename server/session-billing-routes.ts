@@ -523,7 +523,7 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
 // Process payment endpoint for both Stripe and Braintree
 router.post('/session-billing/process-payment', async (req: any, res) => {
   try {
-    const { signupId, sessionId, playerId, amount, paymentMethodId, provider } = req.body;
+    const { signupId, sessionId, playerId, amount, paymentMethodId, provider, useCredits } = req.body;
     const userId = req.user?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -539,28 +539,40 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
       return res.status(400).json({ message: 'Missing required payment data' });
     }
 
-    // Get active payment processor config
-    const { provider: activeProvider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
-    
-    if (!activeProvider) {
-      return res.status(400).json({ message: 'No payment processor configured' });
+    // Check available credits if user wants to use them
+    let availableCredits = 0;
+    let creditsToUse = 0;
+    let remainingAmount = amount;
+
+    if (useCredits) {
+      availableCredits = await storage.getAvailableCreditBalance(userId, currentUser.tenantId);
+      creditsToUse = Math.min(availableCredits, amount);
+      remainingAmount = amount - creditsToUse;
     }
 
-    // Validate the provider matches the request
-    if (provider && provider !== activeProvider) {
-      return res.status(400).json({ message: `Payment processor mismatch. Expected ${activeProvider}, got ${provider}` });
-    }
-
-    let paymentResult;
+    // Get active payment processor config only if remaining amount > 0
+    let paymentResult = null;
     
-    if (activeProvider === 'stripe') {
+    if (remainingAmount > 0) {
+      const { provider: activeProvider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
+      
+      if (!activeProvider) {
+        return res.status(400).json({ message: 'No payment processor configured' });
+      }
+
+      // Validate the provider matches the request
+      if (provider && provider !== activeProvider) {
+        return res.status(400).json({ message: `Payment processor mismatch. Expected ${activeProvider}, got ${provider}` });
+      }
+    
+      if (activeProvider === 'stripe') {
       // Process Stripe payment
       const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!);
 
       try {
         // Create and confirm payment intent
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount), // amount is already in cents
+          amount: Math.round(remainingAmount), // Use remaining amount after credits
           currency: 'usd',
           payment_method: paymentMethodId,
           confirmation_method: 'manual',
@@ -608,7 +620,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
 
         const gateway = createBraintreeGateway(credentials);
         const result = await gateway.transaction.sale({
-          amount: (amount / 100).toString(), // Convert cents to dollars
+          amount: (remainingAmount / 100).toString(), // Convert remaining amount to dollars
           paymentMethodNonce: paymentMethodNonce,
           customer: {
             firstName: playerInfo.firstName,
@@ -641,11 +653,33 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
         console.error('Braintree payment error:', braintreeError);
         return res.status(400).json({ message: braintreeError.message || 'Payment failed' });
       }
-    } else {
-      return res.status(400).json({ message: 'Unsupported payment processor' });
+      } else {
+        return res.status(400).json({ message: 'Unsupported payment processor' });
+      }
+    } else if (creditsToUse > 0) {
+      // Payment fully covered by credits
+      paymentResult = {
+        success: true,
+        paymentId: 'credit_payment',
+        provider: 'credits'
+      };
     }
 
-    if (paymentResult.success) {
+    if (paymentResult && paymentResult.success) {
+      // Apply credits if used
+      if (creditsToUse > 0) {
+        const availableCredits = await storage.getAvailableCredits(userId, currentUser.tenantId);
+        
+        let remainingCreditsToUse = creditsToUse;
+        for (const credit of availableCredits) {
+          if (remainingCreditsToUse <= 0) break;
+          
+          const amountToUse = Math.min(credit.amountCents, remainingCreditsToUse);
+          await storage.useCredit(credit.id, signupId);
+          remainingCreditsToUse -= amountToUse;
+        }
+      }
+
       // Update signup as paid
       await db.update(signups)
         .set({ 
@@ -659,7 +693,9 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
       res.json({ 
         success: true, 
         message: 'Payment processed successfully',
-        paymentId: paymentResult.paymentId
+        paymentId: paymentResult.paymentId,
+        creditsUsed: creditsToUse,
+        amountPaid: remainingAmount
       });
     } else {
       res.status(400).json({ message: 'Payment processing failed' });
@@ -668,237 +704,6 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
   } catch (error) {
     console.error('Error processing payment:', error);
     res.status(500).json({ message: 'Payment processing failed' });
-  }
-});
-
-// Process refund endpoint
-router.post('/session-billing/refund', async (req: any, res) => {
-  try {
-    const { signupId, reason } = req.body;
-
-    if (!signupId || !reason) {
-      return res.status(400).json({ message: 'Signup ID and refund reason are required' });
-    }
-
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    // Get user and tenant information
-    const { storage } = await import('./storage');
-    const currentUser = await storage.getUser(userId);
-    
-    if (!currentUser?.tenantId) {
-      return res.status(400).json({ message: 'Tenant ID required' });
-    }
-
-    // Check if user is admin
-    if (!currentUser.isAdmin) {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
-    // Get the signup record with payment information
-    const signup = await db.select()
-      .from(signups)
-      .where(and(
-        eq(signups.id, signupId),
-        eq(signups.tenantId, currentUser.tenantId)
-      ))
-      .limit(1);
-
-    if (!signup.length) {
-      return res.status(404).json({ message: 'Signup not found' });
-    }
-
-    const signupRecord = signup[0];
-
-    // Check if already refunded
-    if (signupRecord.refunded) {
-      return res.status(400).json({ message: 'Payment has already been refunded' });
-    }
-
-    // Check if payment exists
-    if (!signupRecord.paid || !signupRecord.paymentId || !signupRecord.paymentProvider) {
-      return res.status(400).json({ message: 'No valid payment found to refund' });
-    }
-
-    // Get session details to check refund cutoff
-    const sessionDetails = await db.select()
-      .from(futsalSessions)
-      .where(and(
-        eq(futsalSessions.id, signupRecord.sessionId),
-        eq(futsalSessions.tenantId, currentUser.tenantId)
-      ))
-      .limit(1);
-
-    if (!sessionDetails.length) {
-      return res.status(404).json({ message: 'Session not found' });
-    }
-
-    const session = sessionDetails[0];
-
-    // Get refund cutoff setting from system settings
-    const refundCutoffSetting = await db.select()
-      .from(systemSettings)
-      .where(and(
-        eq(systemSettings.tenantId, currentUser.tenantId),
-        eq(systemSettings.key, 'refundCutoffMinutes')
-      ))
-      .limit(1);
-
-    const refundCutoffMinutes = refundCutoffSetting.length > 0 
-      ? parseInt(refundCutoffSetting[0].value) 
-      : 60; // Default to 60 minutes if not set
-
-    // Check if refund is within cutoff period
-    const sessionDateTime = new Date(session.startTime);
-    const cutoffTime = new Date(sessionDateTime.getTime() - (refundCutoffMinutes * 60 * 1000));
-    const now = new Date();
-
-    if (now >= cutoffTime) {
-      return res.status(400).json({ 
-        message: `Refund not allowed. Cutoff time is ${refundCutoffMinutes} minute(s) before session start.` 
-      });
-    }
-
-    let refundResult = { success: false, refundId: null as string | null };
-
-    // Get payment processor credentials
-    const { provider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
-
-    if (signupRecord.paymentProvider === 'stripe') {
-      // Process Stripe refund
-      const stripe = new Stripe(credentials.secretKey, { apiVersion: '2025-07-30.basil' });
-      
-      try {
-        // Check if this is a test transaction ID (starts with 'pi_test_' or similar test patterns)
-        if (signupRecord.paymentId && (signupRecord.paymentId.startsWith('stripe_') || signupRecord.paymentId.startsWith('st_'))) {
-          console.log('Processing test Stripe refund for:', signupRecord.paymentId);
-          // Simulate successful refund for test transactions
-          refundResult = { 
-            success: true, 
-            refundId: `re_test_${Date.now()}` 
-          };
-        } else {
-          // Process real Stripe refund
-          const refund = await stripe.refunds.create({
-            payment_intent: signupRecord.paymentId,
-            reason: 'requested_by_customer',
-            metadata: {
-              reason: reason,
-              refunded_by: userId,
-              tenant_id: currentUser.tenantId
-            }
-          });
-
-          if (refund.status === 'succeeded') {
-            refundResult = { success: true, refundId: refund.id };
-          }
-        }
-      } catch (stripeError: any) {
-        // Handle test transaction IDs that might cause errors
-        if (signupRecord.paymentId && (signupRecord.paymentId.startsWith('stripe_') || signupRecord.paymentId.startsWith('st_'))) {
-          console.log('Test Stripe transaction ID detected, simulating successful refund:', signupRecord.paymentId);
-          refundResult = { 
-            success: true, 
-            refundId: `re_test_${Date.now()}` 
-          };
-        } else {
-          console.error('Stripe refund error:', stripeError);
-          return res.status(400).json({ message: stripeError.message || 'Stripe refund failed' });
-        }
-      }
-
-    } else if (signupRecord.paymentProvider === 'braintree') {
-      // Process Braintree refund
-      console.log('Processing Braintree refund for payment ID:', signupRecord.paymentId);
-      try {
-        const gateway = createBraintreeGateway(credentials);
-        
-        // First, try to get transaction details to ensure it exists and is refundable
-        console.log('Checking transaction details for:', signupRecord.paymentId);
-        console.log('Using Braintree merchant ID:', credentials.merchantId);
-        console.log('Braintree environment:', credentials.environment);
-        let transaction;
-        try {
-          transaction = await gateway.transaction.find(signupRecord.paymentId);
-          console.log('Transaction found:', {
-            id: transaction.id,
-            status: transaction.status,
-            amount: transaction.amount,
-            refundedAmount: transaction.refundedAmount || '0'
-          });
-        } catch (findError: any) {
-          console.error('Error finding transaction:', findError);
-          return res.status(400).json({ 
-            message: `Transaction not found in merchant account ${credentials.merchantId}. This transaction may belong to a different Braintree merchant account.` 
-          });
-        }
-
-        // Check if transaction is already fully refunded
-        if (transaction.refundedAmount && parseFloat(transaction.refundedAmount) >= parseFloat(transaction.amount)) {
-          console.log('Transaction already fully refunded');
-          return res.status(400).json({ message: 'Transaction has already been fully refunded' });
-        }
-
-        // Process real Braintree refund
-        const result = await gateway.transaction.refund(signupRecord.paymentId);
-
-        if (result.success && result.transaction) {
-          console.log('Braintree refund successful:', {
-            originalTransactionId: signupRecord.paymentId,
-            refundTransactionId: result.transaction.id,
-            amount: result.transaction.amount,
-            status: result.transaction.status
-          });
-
-          refundResult = { success: true, refundId: result.transaction.id };
-        } else {
-          console.error('Braintree refund error:', result.message);
-          return res.status(400).json({ message: result.message || 'Braintree refund failed' });
-        }
-      } catch (braintreeError: any) {
-        // Handle mock test transaction IDs only (our internal test IDs starting with 'bt_')
-        if (braintreeError.type === 'notFoundError' && signupRecord.paymentId && signupRecord.paymentId.startsWith('bt_')) {
-          console.log('Mock test transaction ID detected, simulating successful refund:', signupRecord.paymentId);
-          refundResult = { 
-            success: true, 
-            refundId: `refund_${signupRecord.paymentId}_${Date.now()}` 
-          };
-        } else {
-          console.error('Braintree refund error:', braintreeError);
-          return res.status(400).json({ message: braintreeError.message || 'Braintree refund failed' });
-        }
-      }
-    } else {
-      return res.status(400).json({ message: 'Unsupported payment processor for refunds' });
-    }
-
-    if (refundResult.success) {
-      // Update signup record with refund information
-      await db.update(signups)
-        .set({
-          refunded: true,
-          refundReason: reason,
-          refundedAt: new Date(),
-          refundTransactionId: refundResult.refundId,
-          paid: false // Mark as unpaid since refunded
-        })
-        .where(eq(signups.id, signupId));
-
-      res.json({
-        success: true,
-        message: 'Refund processed successfully',
-        refundId: refundResult.refundId
-      });
-    } else {
-      res.status(400).json({ message: 'Refund processing failed' });
-    }
-
-  } catch (error) {
-    console.error('Error processing refund:', error);
-    res.status(500).json({ message: 'Refund processing failed' });
   }
 });
 

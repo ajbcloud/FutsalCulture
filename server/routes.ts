@@ -1129,9 +1129,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paid: signups.paid,
         paymentId: signups.paymentId,
         paymentProvider: signups.paymentProvider,
-        refunded: signups.refunded,
-        refundReason: signups.refundReason,
-        refundedAt: signups.refundedAt,
         createdAt: signups.createdAt,
         updatedAt: signups.updatedAt,
       })
@@ -1167,9 +1164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paid: session.paid,
         paymentId: session.paymentId,
         paymentProvider: session.paymentProvider,
-        refunded: session.refunded || false,
-        refundReason: session.refundReason,
-        refundedAt: session.refundedAt,
         createdAt: session.createdAt,
       }));
 

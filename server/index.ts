@@ -30,6 +30,7 @@ import authVerificationRouter from './routes/auth-verification';
 import userRouter from './routes/user';
 import authRedirectRouter from './routes/auth-redirect';
 import { stripeWebhookRouter } from './stripe-webhooks';
+import creditsRouter from './routes/credits';
 
 const app = express();
 
@@ -129,6 +130,9 @@ app.use((req, res, next) => {
   
   // Mount admin campaigns routes
   app.use('/api/admin', adminCampaignsRoutes);
+  
+  // Mount credits routes
+  app.use('/api', creditsRouter);
   
   // Old invitation routes removed - using unified system
   

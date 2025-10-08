@@ -387,6 +387,26 @@ export const payments = pgTable("payments", {
   index("payments_tenant_id_idx").on(table.tenantId),
 ]);
 
+// User Credits table - replaces refund system
+export const userCredits = pgTable("user_credits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  amountCents: integer("amount_cents").notNull(),
+  reason: text("reason").notNull(),
+  sessionId: varchar("session_id").references(() => futsalSessions.id),
+  signupId: varchar("signup_id").references(() => signups.id),
+  isUsed: boolean("is_used").default(false),
+  usedAt: timestamp("used_at"),
+  usedForSignupId: varchar("used_for_signup_id").references(() => signups.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("user_credits_user_id_idx").on(table.userId),
+  index("user_credits_tenant_id_idx").on(table.tenantId),
+  index("user_credits_is_used_idx").on(table.isUsed),
+]);
+
 // Help requests table
 export const helpRequests = pgTable("help_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1554,6 +1574,14 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
   createdAt: true,
 });
+
+export const insertUserCreditSchema = createInsertSchema(userCredits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type UserCreditInsert = z.infer<typeof insertUserCreditSchema>;
+export type UserCreditSelect = typeof userCredits.$inferSelect;
 
 export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   id: true,
