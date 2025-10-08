@@ -15,9 +15,16 @@ import {
   TrendingUp,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  ClipboardList,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  ArrowRight
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
+import { format } from "date-fns";
 
 interface SuperAdminMetrics {
   totalRevenue: number;
@@ -30,6 +37,142 @@ interface SuperAdminMetrics {
   revenueGrowth: number;
   playersGrowth: number;
   tenantsGrowth: number;
+}
+
+// Pending Registrations Widget Component
+function PendingRegistrationsWidget() {
+  // Fetch pending registration stats
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['/api/super-admin/pending-registrations/stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/pending-registrations/stats', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        return {
+          totalPending: 0,
+          pendingByType: { parents: 0, players: 0 },
+          pendingByTenant: [],
+          recentRegistrations: [],
+          trendData: []
+        };
+      }
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <ClipboardList className="w-5 h-5 mr-2" />
+            Pending Registrations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!stats || stats.totalPending === 0) {
+    return null; // Don't show widget if no pending registrations
+  }
+
+  return (
+    <Card className="w-full border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-950/30">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <ClipboardList className="w-5 h-5 mr-2 text-orange-600" />
+            Pending Registrations
+          </CardTitle>
+          <Link href="/super-admin/pending-registrations">
+            <Button variant="outline" size="sm" className="gap-2">
+              View All
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {stats.totalPending}
+              </div>
+              <div className="text-xs text-muted-foreground">Total Pending</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {stats.pendingByType.parents}
+              </div>
+              <div className="text-xs text-muted-foreground">Parents</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {stats.pendingByType.players}
+              </div>
+              <div className="text-xs text-muted-foreground">Players</div>
+            </div>
+          </div>
+
+          {/* Top Tenants with Pending */}
+          {stats.pendingByTenant && stats.pendingByTenant.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-2">By Organization</div>
+              <div className="space-y-2">
+                {stats.pendingByTenant.slice(0, 3).map((tenant: any) => (
+                  <div key={tenant.tenantId} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground truncate">{tenant.tenantName}</span>
+                    <Badge variant="secondary">{tenant.pendingCount}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Registrations */}
+          {stats.recentRegistrations && stats.recentRegistrations.length > 0 && (
+            <div>
+              <div className="text-sm font-medium mb-2">Recent Registrations</div>
+              <div className="space-y-2">
+                {stats.recentRegistrations.slice(0, 3).map((reg: any) => (
+                  <div key={reg.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      {reg.type === 'parent' ? (
+                        <Users className="w-3 h-3 text-muted-foreground" />
+                      ) : (
+                        <Users className="w-3 h-3 text-blue-500" />
+                      )}
+                      <span className="truncate">{reg.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(reg.createdAt), 'MMM d')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Alert Message */}
+          <div className="flex items-center gap-2 p-3 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-orange-600 flex-shrink-0" />
+            <span className="text-sm text-orange-900 dark:text-orange-200">
+              {stats.totalPending} registration{stats.totalPending !== 1 ? 's' : ''} awaiting approval
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function SuperAdminOverview() {
@@ -201,20 +344,13 @@ export default function SuperAdminOverview() {
               icon={kpi.icon}
               definition={kpi.definition}
               className={kpi.isAlert ? "border-red-500 bg-red-50 dark:bg-red-950" : ""}
-            >
-              {kpi.growth !== 0 && (
-                <div className={`flex items-center space-x-1 ${growthInfo.color}`}>
-                  <GrowthIcon className="w-3 h-3" />
-                  <span className="text-xs font-medium">{growthInfo.text}</span>
-                  {kpi.comparison && (
-                    <span className="text-xs text-muted-foreground">{kpi.comparison}</span>
-                  )}
-                </div>
-              )}
-            </KPICard>
+            />
           );
         })}
       </div>
+
+      {/* Pending Registrations Widget */}
+      <PendingRegistrationsWidget />
 
       {/* Geographic Distribution - Full Width */}
       <div className="w-full">

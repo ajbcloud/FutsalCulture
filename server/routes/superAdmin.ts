@@ -7,6 +7,7 @@ import * as sessions from '../controllers/superAdmin/sessions';
 import * as payments from '../controllers/superAdmin/payments';
 import * as platformPayments from '../controllers/superAdmin/platformPayments';
 import * as registrations from '../controllers/superAdmin/registrations';
+import * as pendingRegistrations from '../controllers/superAdmin/pendingRegistrations';
 import * as parents from '../controllers/superAdmin/parents';
 import * as players from '../controllers/superAdmin/players';
 import * as analytics from '../controllers/superAdmin/analytics';
@@ -32,6 +33,16 @@ r.get('/sessions', sessions.list);
 r.get('/payments', payments.list);
 
 r.get('/registrations', registrations.list);
+
+// Pending Registrations Management
+r.get('/pending-registrations', pendingRegistrations.list);
+r.get('/pending-registrations/stats', pendingRegistrations.getStats);
+r.get('/pending-registrations/export', pendingRegistrations.exportToCsv);
+r.get('/pending-registrations/:id', pendingRegistrations.getById);
+r.post('/pending-registrations/:id/approve', pendingRegistrations.approve);
+r.post('/pending-registrations/:id/reject', pendingRegistrations.reject);
+r.post('/pending-registrations/bulk-approve', pendingRegistrations.bulkApprove);
+r.post('/pending-registrations/bulk-reject', pendingRegistrations.bulkReject);
 
 r.get('/parents', parents.list);
 

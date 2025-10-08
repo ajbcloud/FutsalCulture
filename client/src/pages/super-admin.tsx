@@ -12,7 +12,7 @@ import SuperAdminAnalytics from "@/components/super-admin/analytics";
 import SuperAdminSettings from "@/pages/super-admin/settings";
 import SuperAdminSessions from "@/components/super-admin/sessions";
 import SuperAdminPayments from "@/components/super-admin/payments";
-import SuperAdminRegistrations from "@/components/super-admin/registrations";
+import SuperAdminPendingRegistrations from "@/pages/super-admin/pending-registrations";
 import SuperAdminParents from "@/components/super-admin/parents";
 import SuperAdminPlayers from "@/components/super-admin/players";
 import AnalyticsV2 from "@/pages/super-admin/analytics-v2";
@@ -95,7 +95,7 @@ export default function SuperAdminPage() {
     { name: "Tenants", href: "/super-admin/tenants", icon: Building2, current: basePath === "/super-admin/tenants" },
     { name: "Sessions", href: "/super-admin/sessions", icon: Calendar, current: basePath === "/super-admin/sessions" },
     { name: "Payments", href: "/super-admin/payments", icon: CreditCard, current: basePath === "/super-admin/payments" },
-    { name: "Registrations", href: "/super-admin/registrations", icon: ClipboardList, current: basePath === "/super-admin/registrations" },
+    { name: "Pending Registrations", href: "/super-admin/pending-registrations", icon: ClipboardList, current: basePath === "/super-admin/pending-registrations" },
     { name: "Parents", href: "/super-admin/parents", icon: UserCheck, current: basePath === "/super-admin/parents" },
     { name: "Players", href: "/super-admin/players", icon: Shirt, current: basePath === "/super-admin/players" },
   ];
@@ -130,8 +130,8 @@ export default function SuperAdminPage() {
         return <SuperAdminSessions />;
       case basePath === "/super-admin/payments":
         return <SuperAdminPayments />;
-      case basePath === "/super-admin/registrations":
-        return <SuperAdminRegistrations />;
+      case basePath === "/super-admin/pending-registrations":
+        return <SuperAdminPendingRegistrations />;
       case basePath === "/super-admin/parents":
         return <SuperAdminParents />;
       case basePath === "/super-admin/players":
