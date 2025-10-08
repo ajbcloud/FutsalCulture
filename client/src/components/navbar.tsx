@@ -124,23 +124,12 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   
-                  {!(user?.isAdmin || user?.isAssistant) && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        {term} Profile
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  
-                  {(user?.isAdmin || user?.isAssistant || user?.isSuperAdmin) && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/personal-settings" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Personal Settings
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
                   
                   {(user?.isAdmin || user?.isAssistant) && (
                     <DropdownMenuItem asChild>

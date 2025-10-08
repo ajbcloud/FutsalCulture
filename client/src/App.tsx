@@ -59,7 +59,6 @@ import Parent2Invite from "@/pages/parent2-invite";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Status from "./pages/Status";
-import PersonalSettings from "./pages/personal-settings";
 import HouseholdManagement from "./pages/household-management";
 import CreditHistory from "./pages/credit-history";
 import PaymentHistory from "./pages/payment-history";
@@ -96,14 +95,11 @@ function Router() {
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />
         <Route path="/profile" component={Profile} />
-        <Route path="/personal-settings" component={PersonalSettings} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/sessions" component={Sessions} />
         <Route path="/sessions/:id" component={SessionDetail} />
         <Route path="/session/:id/payment" component={SessionPayment} />
-        <Route path="/dashboard" component={Dashboard} />
         <Route path="/calendar" component={Calendar} />
-        <Route path="/profile" component={Profile} />
         <Route path="/multi-checkout" component={MultiCheckout} />
         <Route path="/player-invite/:token" component={PlayerInvite} />
         <Route path="/parent2-invite/:token" component={Parent2Invite} />

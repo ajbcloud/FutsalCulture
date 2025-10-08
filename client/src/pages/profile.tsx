@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3 } from "lucide-react";
+import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3, Lock } from "lucide-react";
 import { type NotificationPreferences } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -31,6 +31,12 @@ export default function Profile() {
     avatarTextColor: "", // Empty string means auto-contrast
     emailReminder: true,
     smsReminder: false,
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   // Notification preferences query
@@ -107,8 +113,58 @@ export default function Profile() {
     },
   });
 
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: typeof passwordData) => {
+      await apiRequest("POST", "/api/user/change-password", {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+    },
+    onSuccess: () => {
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      toast({
+        title: "Password Changed",
+        description: "Your password has been changed successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = () => {
     updateProfileMutation.mutate(formData);
+  };
+
+  const handlePasswordChange = () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "New password and confirmation do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    changePasswordMutation.mutate(passwordData);
   };
 
   const handleCancel = () => {
@@ -246,6 +302,69 @@ export default function Profile() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Change Password */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-foreground flex items-center">
+                <Lock className="w-5 h-5 mr-2" />
+                Change Password
+              </h3>
+              <p className="text-sm text-muted-foreground">Update your password to keep your account secure</p>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Current Password
+                  </Label>
+                  <Input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    placeholder="Enter your current password"
+                    className="bg-input border-border text-foreground focus:border-primary"
+                    data-testid="input-current-password"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    New Password
+                  </Label>
+                  <Input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    placeholder="Enter new password (min. 8 characters)"
+                    className="bg-input border-border text-foreground focus:border-primary"
+                    data-testid="input-new-password"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Confirm New Password
+                  </Label>
+                  <Input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    placeholder="Confirm your new password"
+                    className="bg-input border-border text-foreground focus:border-primary"
+                    data-testid="input-confirm-password"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handlePasswordChange}
+                  disabled={changePasswordMutation.isPending || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-change-password"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                </Button>
               </div>
             </div>
 
