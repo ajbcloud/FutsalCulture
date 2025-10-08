@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ type CreditHistoryItem = {
 export default function HouseholdManagement() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { term } = useUserTerminology();
   const [householdName, setHouseholdName] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -322,7 +324,7 @@ export default function HouseholdManagement() {
                   <div className="flex items-center gap-3">
                     <User className="w-5 h-5 text-blue-600" />
                     <div>
-                      <div className="text-sm text-muted-foreground">Personal Credits</div>
+                      <div className="text-sm text-muted-foreground">{term} Credits</div>
                       <div className="text-xl font-semibold" data-testid="text-personal-credits">
                         ${(personalCredits / 100).toFixed(2)}
                       </div>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 import Navbar from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ type CreditHistoryItem = {
 
 export default function CreditHistory() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { term } = useUserTerminology();
 
   const { data: creditsData, isLoading: creditsLoading } = useQuery<{ credits: CreditHistoryItem[] }>({
     queryKey: ["/api/credits/history"],
@@ -73,7 +75,7 @@ export default function CreditHistory() {
             Credit History
           </h1>
           <p className="text-muted-foreground mt-2" data-testid="text-page-description">
-            View all your personal and household credits
+            View all your {term.toLowerCase()} and household credits
           </p>
         </div>
 
@@ -114,7 +116,7 @@ export default function CreditHistory() {
                             ) : (
                               <Badge variant="default" className="flex items-center gap-1 w-fit" data-testid={`badge-personal-${credit.id}`}>
                                 <User className="w-3 h-3" />
-                                Personal
+                                {term}
                               </Badge>
                             )}
                           </TableCell>

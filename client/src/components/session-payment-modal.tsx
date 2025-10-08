@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTerminology } from "@/hooks/use-user-terminology";
 import { apiRequest } from "@/lib/queryClient";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -570,6 +571,7 @@ interface PaymentConfig {
 export function SessionPaymentModal({ isOpen, onClose, session, player, signup }: SessionPaymentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { term } = useUserTerminology();
 
   // Get payment configuration
   const { data: paymentConfig, isLoading: configLoading, error: configError } = useQuery<PaymentConfig>({
@@ -661,7 +663,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between text-blue-700 dark:text-blue-300">
-                  <span>Personal Credits:</span>
+                  <span>{term} Credits:</span>
                   <span data-testid="text-personal-credits">${(personalCreditsCents / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-blue-700 dark:text-blue-300">
