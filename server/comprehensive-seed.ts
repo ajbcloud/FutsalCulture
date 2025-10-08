@@ -20,13 +20,16 @@ import {
   payments, 
   helpRequests,
   notificationPreferences,
+  notificationTemplates,
+  tenants,
   type UpsertUser,
   type InsertPlayer,
   type InsertSession,
   type InsertSignup,
   type InsertPayment,
   type InsertHelpRequest,
-  type InsertNotificationPreferences
+  type InsertNotificationPreferences,
+  type InsertNotificationTemplate
 } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -351,6 +354,184 @@ async function createNotificationPreferences(parents: UpsertUser[]) {
   await db.insert(notificationPreferences).values(preferencesData);
 }
 
+async function createDefaultTemplates() {
+  // Get all tenants to create templates for
+  const allTenants = await db.select().from(tenants);
+  
+  if (allTenants.length === 0) {
+    console.log('No tenants found - skipping template creation');
+    return;
+  }
+
+  for (const tenant of allTenants) {
+    const templates: InsertNotificationTemplate[] = [
+      // Booking Confirmation Email
+      {
+        tenantId: tenant.id,
+        name: 'Booking Confirmation Email',
+        type: 'email',
+        method: 'booking_confirmation',
+        subject: 'Session Booking Confirmed - {{sessionAgeGroup}} on {{sessionDate}}',
+        template: `Hi {{parentName}},
+
+Your booking for {{playerName}} has been confirmed!
+
+Session Details:
+- Date: {{sessionDate}}
+- Time: {{sessionTime}}
+- Location: {{sessionLocation}}
+- Age Group: {{sessionAgeGroup}}
+
+We look forward to seeing {{playerName}} at the session!
+
+Best regards,
+{{organizationName}}
+{{organizationPhone}}`,
+        active: true,
+      },
+      // Booking Confirmation SMS
+      {
+        tenantId: tenant.id,
+        name: 'Booking Confirmation SMS',
+        type: 'sms',
+        method: 'booking_confirmation',
+        subject: null,
+        template: '{{organizationName}}: {{playerName}} is confirmed for {{sessionAgeGroup}} on {{sessionDate}} at {{sessionTime}}. Location: {{sessionLocation}}',
+        active: true,
+      },
+      // 24-Hour Reminder Email
+      {
+        tenantId: tenant.id,
+        name: '24-Hour Reminder Email',
+        type: 'email',
+        method: 'reminder_24h',
+        subject: 'Reminder: {{playerName}}\'s Session Tomorrow',
+        template: `Hi {{parentName}},
+
+This is a friendly reminder that {{playerName}} has a session tomorrow!
+
+Session Details:
+- Date: {{sessionDate}}
+- Time: {{sessionTime}}
+- Location: {{sessionLocation}}
+- Age Group: {{sessionAgeGroup}}
+
+See you there!
+
+Best regards,
+{{organizationName}}
+{{organizationPhone}}`,
+        active: true,
+      },
+      // 24-Hour Reminder SMS
+      {
+        tenantId: tenant.id,
+        name: '24-Hour Reminder SMS',
+        type: 'sms',
+        method: 'reminder_24h',
+        subject: null,
+        template: 'Reminder: {{playerName}} has {{sessionAgeGroup}} tomorrow at {{sessionTime}}. Location: {{sessionLocation}} - {{organizationName}}',
+        active: true,
+      },
+      // Session Cancelled Email
+      {
+        tenantId: tenant.id,
+        name: 'Session Cancelled Email',
+        type: 'email',
+        method: 'session_cancelled',
+        subject: 'Session Cancelled - {{sessionAgeGroup}} on {{sessionDate}}',
+        template: `Hi {{parentName}},
+
+We regret to inform you that the {{sessionAgeGroup}} session scheduled for {{sessionDate}} at {{sessionTime}} has been cancelled.
+
+We apologize for any inconvenience this may cause. If you have already paid, a credit has been applied to your account.
+
+Please contact us if you have any questions.
+
+Best regards,
+{{organizationName}}
+{{organizationPhone}}`,
+        active: true,
+      },
+      // Session Cancelled SMS
+      {
+        tenantId: tenant.id,
+        name: 'Session Cancelled SMS',
+        type: 'sms',
+        method: 'session_cancelled',
+        subject: null,
+        template: 'CANCELLED: {{sessionAgeGroup}} on {{sessionDate}} at {{sessionTime}} has been cancelled. Credit applied. - {{organizationName}}',
+        active: true,
+      },
+      // Credit Applied Email
+      {
+        tenantId: tenant.id,
+        name: 'Credit Applied Email',
+        type: 'email',
+        method: 'credit_applied',
+        subject: 'Credit Applied to Your Account',
+        template: `Hi {{parentName}},
+
+A credit of {{creditAmount}} has been applied to your account for {{playerName}}.
+
+You can use this credit for future session bookings.
+
+Best regards,
+{{organizationName}}
+{{organizationPhone}}`,
+        active: true,
+      },
+      // Credit Applied SMS
+      {
+        tenantId: tenant.id,
+        name: 'Credit Applied SMS',
+        type: 'sms',
+        method: 'credit_applied',
+        subject: null,
+        template: '{{organizationName}}: {{creditAmount}} credit applied to your account for {{playerName}}. Use for future bookings.',
+        active: true,
+      },
+      // Payment Received Email
+      {
+        tenantId: tenant.id,
+        name: 'Payment Received Email',
+        type: 'email',
+        method: 'payment_received',
+        subject: 'Payment Received - {{sessionAgeGroup}}',
+        template: `Hi {{parentName}},
+
+Thank you! We have received your payment for {{playerName}}'s session.
+
+Session Details:
+- Date: {{sessionDate}}
+- Time: {{sessionTime}}
+- Location: {{sessionLocation}}
+- Age Group: {{sessionAgeGroup}}
+
+See you there!
+
+Best regards,
+{{organizationName}}
+{{organizationPhone}}`,
+        active: true,
+      },
+      // Payment Received SMS
+      {
+        tenantId: tenant.id,
+        name: 'Payment Received SMS',
+        type: 'sms',
+        method: 'payment_received',
+        subject: null,
+        template: '{{organizationName}}: Payment received for {{playerName}}. {{sessionAgeGroup}} on {{sessionDate}} at {{sessionTime}}.',
+        active: true,
+      },
+    ];
+
+    await db.insert(notificationTemplates).values(templates);
+    console.log(`✅ Created ${templates.length} default templates for tenant: ${tenant.name}`);
+  }
+}
+
 async function printSummaryStats() {
   
   // Revenue by month
@@ -411,6 +592,7 @@ async function main() {
     
     await createHelpRequests(parents);
     await createNotificationPreferences(parents);
+    await createDefaultTemplates();
     
     await printSummaryStats();
     

@@ -84,6 +84,13 @@ export const invitationTypeEnum = pgEnum("invitation_type", ["email", "code", "p
 // Invitation status enum for unified system
 export const invitationStatusEnum = pgEnum("invitation_status", ["pending", "sent", "viewed", "accepted", "expired", "cancelled"]);
 
+// Communication system enums
+export const notificationTypeEnum = pgEnum("notification_type", ["email", "sms"]);
+export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed"]);
+export const messageDirectionEnum = pgEnum("message_direction", ["outbound", "inbound"]);
+export const consentTypeEnum = pgEnum("consent_type", ["opt_in", "opt_out"]);
+export const consentChannelEnum = pgEnum("consent_channel", ["sms", "email"]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -993,6 +1000,83 @@ export const unsubscribes = pgTable("unsubscribes", {
 }, (table) => [
   index("unsubscribes_channel_idx").on(table.channel),
   index("unsubscribes_address_idx").on(table.address),
+]);
+
+// Communication System Tables
+
+export const notificationTemplates = pgTable("notification_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  type: notificationTypeEnum("type").notNull(),
+  method: varchar("method", { length: 50 }).notNull(),
+  subject: text("subject"),
+  template: text("template").notNull(),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("notification_templates_tenant_id_idx").on(table.tenantId),
+  index("notification_templates_type_idx").on(table.type),
+  index("notification_templates_method_idx").on(table.method),
+]);
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  signupId: varchar("signup_id").references(() => signups.id, { onDelete: "set null" }),
+  type: notificationTypeEnum("type").notNull(),
+  recipient: varchar("recipient").notNull(),
+  recipientUserId: varchar("recipient_user_id").references(() => users.id, { onDelete: "set null" }),
+  subject: varchar("subject"),
+  message: text("message").notNull(),
+  status: notificationStatusEnum("status").default("pending"),
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("notifications_tenant_id_idx").on(table.tenantId),
+  index("notifications_status_idx").on(table.status),
+  index("notifications_type_idx").on(table.type),
+  index("notifications_recipient_user_id_idx").on(table.recipientUserId),
+  index("notifications_created_at_idx").on(table.createdAt),
+]);
+
+export const messageLogs = pgTable("message_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull().default("twilio"),
+  externalId: text("external_id"),
+  to: text("to").notNull(),
+  from: text("from").notNull(),
+  body: text("body").notNull(),
+  direction: messageDirectionEnum("direction").notNull(),
+  status: text("status").notNull().default("queued"),
+  errorCode: text("error_code"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("message_logs_tenant_id_idx").on(table.tenantId),
+  index("message_logs_direction_idx").on(table.direction),
+  index("message_logs_status_idx").on(table.status),
+  index("message_logs_created_at_idx").on(table.createdAt),
+]);
+
+export const consentEvents = pgTable("consent_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  channel: consentChannelEnum("channel").notNull(),
+  type: consentTypeEnum("type").notNull(),
+  source: text("source").notNull(),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  occurredAt: timestamp("occurred_at").defaultNow(),
+}, (table) => [
+  index("consent_events_tenant_id_idx").on(table.tenantId),
+  index("consent_events_user_id_idx").on(table.userId),
+  index("consent_events_channel_idx").on(table.channel),
+  index("consent_events_type_idx").on(table.type),
 ]);
 
 // Security Tables
@@ -2619,3 +2703,35 @@ export type InsertTenantInviteCode = z.infer<typeof insertTenantInviteCodeSchema
 
 // NotificationPreferences type export (was missing)
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+
+// Communication system schemas
+export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMessageLogSchema = createInsertSchema(messageLogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConsentEventSchema = createInsertSchema(consentEvents).omit({
+  id: true,
+  occurredAt: true,
+});
+
+// Communication system types
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type MessageLog = typeof messageLogs.$inferSelect;
+export type InsertMessageLog = z.infer<typeof insertMessageLogSchema>;
+export type ConsentEvent = typeof consentEvents.$inferSelect;
+export type InsertConsentEvent = z.infer<typeof insertConsentEventSchema>;

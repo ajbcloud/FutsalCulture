@@ -27,6 +27,10 @@ import {
   consentSignatures,
   consentDocumentAccess,
   userCredits,
+  notificationTemplates,
+  notifications,
+  messageLogs,
+  consentEvents,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -65,6 +69,14 @@ import {
   type InsertConsentDocumentAccess,
   type UserCreditInsert,
   type UserCreditSelect,
+  type NotificationTemplate,
+  type InsertNotificationTemplate,
+  type Notification,
+  type InsertNotification,
+  type MessageLog,
+  type InsertMessageLog,
+  type ConsentEvent,
+  type InsertConsentEvent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -264,6 +276,23 @@ export interface IStorage {
 
   logConsentDocumentAccess(access: InsertConsentDocumentAccess): Promise<ConsentDocumentAccess>;
   getConsentDocumentAccessLog(documentId: string): Promise<ConsentDocumentAccess[]>;
+
+  // Communication system operations
+  createTemplate(data: any): Promise<any>;
+  getTemplates(tenantId: string, type?: 'email' | 'sms'): Promise<any[]>;
+  getTemplateById(id: string, tenantId: string): Promise<any | undefined>;
+  updateTemplate(id: string, tenantId: string, data: any): Promise<any>;
+  deleteTemplate(id: string, tenantId: string): Promise<void>;
+
+  createNotification(data: any): Promise<any>;
+  getNotifications(tenantId: string, filters?: { status?: string; type?: string; limit?: number }): Promise<any[]>;
+  updateNotificationStatus(id: string, status: string, sentAt?: Date, errorMessage?: string): Promise<any>;
+
+  createMessageLog(data: any): Promise<any>;
+  getMessageLogs(tenantId: string, filters?: { direction?: string; limit?: number }): Promise<any[]>;
+
+  createConsentEvent(data: any): Promise<any>;
+  getUserConsent(userId: string, channel: 'sms' | 'email'): Promise<any | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3472,6 +3501,159 @@ export class DatabaseStorage implements IStorage {
       .from(consentDocumentAccess)
       .where(eq(consentDocumentAccess.documentId, documentId))
       .orderBy(desc(consentDocumentAccess.accessedAt));
+  }
+
+  async createTemplate(data: InsertNotificationTemplate): Promise<NotificationTemplate> {
+    const [template] = await db
+      .insert(notificationTemplates)
+      .values(data)
+      .returning();
+    return template;
+  }
+
+  async getTemplates(tenantId: string, type?: 'email' | 'sms'): Promise<NotificationTemplate[]> {
+    const conditions = [eq(notificationTemplates.tenantId, tenantId)];
+    if (type) {
+      conditions.push(eq(notificationTemplates.type, type));
+    }
+    return await db
+      .select()
+      .from(notificationTemplates)
+      .where(and(...conditions))
+      .orderBy(notificationTemplates.name);
+  }
+
+  async getTemplateById(id: string, tenantId: string): Promise<NotificationTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(notificationTemplates)
+      .where(
+        and(
+          eq(notificationTemplates.id, id),
+          eq(notificationTemplates.tenantId, tenantId)
+        )
+      );
+    return template;
+  }
+
+  async updateTemplate(id: string, tenantId: string, data: Partial<NotificationTemplate>): Promise<NotificationTemplate> {
+    const [updated] = await db
+      .update(notificationTemplates)
+      .set(data)
+      .where(
+        and(
+          eq(notificationTemplates.id, id),
+          eq(notificationTemplates.tenantId, tenantId)
+        )
+      )
+      .returning();
+    return updated;
+  }
+
+  async deleteTemplate(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(notificationTemplates)
+      .where(
+        and(
+          eq(notificationTemplates.id, id),
+          eq(notificationTemplates.tenantId, tenantId)
+        )
+      );
+  }
+
+  async createNotification(data: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(data)
+      .returning();
+    return notification;
+  }
+
+  async getNotifications(tenantId: string, filters?: { status?: string; type?: string; limit?: number }): Promise<Notification[]> {
+    const conditions = [eq(notifications.tenantId, tenantId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(notifications.status, filters.status as any));
+    }
+    if (filters?.type) {
+      conditions.push(eq(notifications.type, filters.type as any));
+    }
+
+    let query = db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    return await query;
+  }
+
+  async updateNotificationStatus(id: string, status: string, sentAt?: Date, errorMessage?: string): Promise<Notification> {
+    const updateData: any = { status };
+    if (sentAt) updateData.sentAt = sentAt;
+    if (errorMessage) updateData.errorMessage = errorMessage;
+
+    const [updated] = await db
+      .update(notifications)
+      .set(updateData)
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createMessageLog(data: InsertMessageLog): Promise<MessageLog> {
+    const [log] = await db
+      .insert(messageLogs)
+      .values(data)
+      .returning();
+    return log;
+  }
+
+  async getMessageLogs(tenantId: string, filters?: { direction?: string; limit?: number }): Promise<MessageLog[]> {
+    const conditions = [eq(messageLogs.tenantId, tenantId)];
+    
+    if (filters?.direction) {
+      conditions.push(eq(messageLogs.direction, filters.direction as any));
+    }
+
+    let query = db
+      .select()
+      .from(messageLogs)
+      .where(and(...conditions))
+      .orderBy(desc(messageLogs.createdAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    return await query;
+  }
+
+  async createConsentEvent(data: InsertConsentEvent): Promise<ConsentEvent> {
+    const [event] = await db
+      .insert(consentEvents)
+      .values(data)
+      .returning();
+    return event;
+  }
+
+  async getUserConsent(userId: string, channel: 'sms' | 'email'): Promise<ConsentEvent | undefined> {
+    const [consent] = await db
+      .select()
+      .from(consentEvents)
+      .where(
+        and(
+          eq(consentEvents.userId, userId),
+          eq(consentEvents.channel, channel)
+        )
+      )
+      .orderBy(desc(consentEvents.occurredAt))
+      .limit(1);
+    return consent;
   }
 }
 

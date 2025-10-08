@@ -31,6 +31,8 @@ import userRouter from './routes/user';
 import authRedirectRouter from './routes/auth-redirect';
 import { stripeWebhookRouter } from './stripe-webhooks';
 import creditsRouter from './routes/credits';
+import templatesRouter from './routes/templates';
+import notificationsRouter from './routes/notifications';
 
 const app = express();
 
@@ -133,6 +135,10 @@ app.use((req, res, next) => {
   
   // Mount credits routes
   app.use('/api', creditsRouter);
+  
+  // Mount communication system routes
+  app.use('/api', templatesRouter);
+  app.use('/api', notificationsRouter);
   
   // Old invitation routes removed - using unified system
   
