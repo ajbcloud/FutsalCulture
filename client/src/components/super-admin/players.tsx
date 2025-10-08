@@ -429,7 +429,7 @@ export default function SuperAdminPlayers() {
                     <TableHead className="min-w-[140px]">Tenant</TableHead>
                     <TableHead className="min-w-[150px]">Player</TableHead>
                     <TableHead className="min-w-[120px]">Age & Gender</TableHead>
-                    <TableHead className="min-w-[180px]">Parent</TableHead>
+                    <TableHead className="min-w-[180px]">Adult</TableHead>
                     <TableHead className="min-w-[110px]">Registered</TableHead>
                     <TableHead className="min-w-[100px] text-center">Bookings</TableHead>
                     <TableHead className="min-w-[120px] text-center">Portal</TableHead>

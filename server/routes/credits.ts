@@ -155,7 +155,7 @@ router.post('/credits/apply', async (req: any, res) => {
 
     // Check if user belongs to a household and if household credit is requested
     let householdId = null;
-    let userId = targetUserId;
+    let creditUserId = targetUserId;
 
     if (applyToHousehold) {
       const household = await storage.getUserHousehold(targetUserId, currentUser.tenantId);
@@ -163,12 +163,12 @@ router.post('/credits/apply', async (req: any, res) => {
         return res.status(400).json({ message: 'User is not part of a household. Cannot apply household credit.' });
       }
       householdId = household.id;
-      userId = null;
+      creditUserId = null;
     }
 
     // Create credit record
     const credit = await storage.createCredit({
-      userId,
+      userId: creditUserId,
       householdId,
       tenantId: currentUser.tenantId,
       amountCents,

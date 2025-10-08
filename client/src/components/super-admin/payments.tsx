@@ -310,7 +310,7 @@ export default function SuperAdminPayments() {
                 <TableHead>Tenant</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Player</TableHead>
-                <TableHead>Parent</TableHead>
+                <TableHead>Adult</TableHead>
                 <TableHead>Session</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Method</TableHead>

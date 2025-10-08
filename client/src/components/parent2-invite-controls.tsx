@@ -44,7 +44,7 @@ export default function Parent2InviteControls({ userId, currentParent2 }: Parent
     onSuccess: (data) => {
       toast({
         title: "Invitation sent!",
-        description: `Parent 2 invitation has been sent via ${inviteMethod}.`,
+        description: `Second adult invitation has been sent via ${inviteMethod}.`,
         variant: "default",
       });
       
@@ -96,10 +96,10 @@ export default function Parent2InviteControls({ userId, currentParent2 }: Parent
         <CardHeader>
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" />
-            <CardTitle className="text-lg">Second Parent/Guardian</CardTitle>
+            <CardTitle className="text-lg">Second Adult/Guardian</CardTitle>
           </div>
           <CardDescription>
-            Another parent/guardian is connected to your account
+            Another adult/guardian is connected to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,10 +127,10 @@ export default function Parent2InviteControls({ userId, currentParent2 }: Parent
       <CardHeader>
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-blue-600" />
-          <CardTitle className="text-lg">Add Second Parent/Guardian</CardTitle>
+          <CardTitle className="text-lg">Add Second Adult/Guardian</CardTitle>
         </div>
         <CardDescription>
-          Invite another parent or guardian to help manage your children's activities
+          Invite another adult or guardian to help manage your children's activities
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

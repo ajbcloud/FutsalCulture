@@ -322,7 +322,7 @@ export default function DiscountCodes() {
                 </div>
               </div>
 
-              {/* Player/Parent Restrictions */}
+              {/* Player/Adult Restrictions */}
               <div className="border-t pt-4">
                 <h4 className="text-sm font-semibold text-foreground mb-3">Usage Restrictions (Optional)</h4>
                 <div className="grid grid-cols-2 gap-4">
@@ -349,7 +349,7 @@ export default function DiscountCodes() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lockedToParentId">Lock to Specific Parent</Label>
+                    <Label htmlFor="lockedToParentId">Lock to Specific Adult</Label>
                     <Combobox
                       options={[
                         { value: "none", label: "Any parent can use" },

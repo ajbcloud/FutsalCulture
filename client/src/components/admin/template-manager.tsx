@@ -72,7 +72,7 @@ const TEMPLATE_METHODS = [
 ];
 
 const AVAILABLE_VARIABLES = [
-  { var: "{{parentName}}", desc: "Parent's full name" },
+  { var: "{{parentName}}", desc: "Adult's full name" },
   { var: "{{playerName}}", desc: "Player's full name" },
   { var: "{{sessionDate}}", desc: "Session date" },
   { var: "{{sessionTime}}", desc: "Session time" },

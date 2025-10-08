@@ -85,7 +85,7 @@ export default function Navbar() {
             
             {!isAuthenticated ? (
               <Button asChild className="h-11 px-4 sm:h-auto sm:px-3">
-                <Link href="/login">Parent Login</Link>
+                <Link href="/login">Adult Login</Link>
               </Button>
             ) : (
               <DropdownMenu>
@@ -120,7 +120,7 @@ export default function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
-                        Parent Profile
+                        Adult Profile
                       </Link>
                     </DropdownMenuItem>
                   )}

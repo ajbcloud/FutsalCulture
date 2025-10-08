@@ -51,7 +51,7 @@ const MERGE_FIELDS = [
   { field: '{{COMPANY_STATE}}', description: 'Business state from primary location' },
   { field: '{{COMPANY_POSTAL_CODE}}', description: 'Business postal code from primary location' },
   { field: '{{PLAYER_NAME}}', description: "Player's full name" },
-  { field: '{{PARENT_NAME}}', description: "Parent/guardian's full name" },
+  { field: '{{PARENT_NAME}}', description: "Adult/guardian's full name" },
   { field: '{{DATE_SIGNED}}', description: 'Date the document was signed' },
 ];
 
@@ -61,7 +61,7 @@ const DEFAULT_TEMPLATES = {
     content: `<h3>Medical Information Release and Emergency Treatment Authorization</h3>
 <p><strong>{{COMPANY_NAME}}</strong></p>
 <p><strong>Player:</strong> {{PLAYER_NAME}}<br>
-<strong>Parent/Guardian:</strong> {{PARENT_NAME}}<br>
+<strong>Adult/Guardian:</strong> {{PARENT_NAME}}<br>
 <strong>Date:</strong> {{DATE_SIGNED}}</p>
 
 <p>I hereby authorize the coaching staff and administration of {{COMPANY_NAME}} to obtain emergency medical treatment for my child/ward in the event that I cannot be reached. I understand that every effort will be made to contact me before any treatment is administered.</p>
@@ -90,7 +90,7 @@ const DEFAULT_TEMPLATES = {
     content: `<h3>Assumption of Risk, Waiver of Claims, and Release Agreement</h3>
 <p><strong>{{COMPANY_NAME}}</strong></p>
 <p><strong>Player:</strong> {{PLAYER_NAME}}<br>
-<strong>Parent/Guardian:</strong> {{PARENT_NAME}}<br>
+<strong>Adult/Guardian:</strong> {{PARENT_NAME}}<br>
 <strong>Date:</strong> {{DATE_SIGNED}}</p>
 
 <p>I acknowledge that participation in futsal activities organized by {{COMPANY_NAME}} involves inherent risks of injury. I understand these risks and voluntarily assume them on behalf of my child/ward.</p>
@@ -117,7 +117,7 @@ const DEFAULT_TEMPLATES = {
     content: `<h3>Photo and Video Release Authorization</h3>
 <p><strong>{{COMPANY_NAME}}</strong></p>
 <p><strong>Player:</strong> {{PLAYER_NAME}}<br>
-<strong>Parent/Guardian:</strong> {{PARENT_NAME}}<br>
+<strong>Adult/Guardian:</strong> {{PARENT_NAME}}<br>
 <strong>Date:</strong> {{DATE_SIGNED}}</p>
 
 <p>I grant permission for my child's image, likeness, and voice to be used in photographs, videos, and other media produced by {{COMPANY_NAME}}.</p>
@@ -151,7 +151,7 @@ const DEFAULT_TEMPLATES = {
     content: `<h3>Privacy Policy and Data Collection Notice</h3>
 <p><strong>{{COMPANY_NAME}}</strong></p>
 <p><strong>Player:</strong> {{PLAYER_NAME}}<br>
-<strong>Parent/Guardian:</strong> {{PARENT_NAME}}<br>
+<strong>Adult/Guardian:</strong> {{PARENT_NAME}}<br>
 <strong>Date:</strong> {{DATE_SIGNED}}</p>
 
 <p>This notice explains how {{COMPANY_NAME}} collects, uses, and protects your family's personal information.</p>
@@ -159,7 +159,7 @@ const DEFAULT_TEMPLATES = {
 <h4>Information We Collect:</h4>
 <ul>
 <li>Player registration information (name, age, contact details)</li>
-<li>Parent/guardian contact information</li>
+<li>Adult/guardian contact information</li>
 <li>Emergency contact details</li>
 <li>Medical information necessary for safe participation</li>
 <li>Payment information for session fees</li>
@@ -399,7 +399,7 @@ export default function ConsentTemplateSettings() {
   });
 
   const handleFileUpload = (templateType: string) => async () => {
-    const response = await apiRequest("POST", "/api/admin/consent-templates/upload", {});
+    const response = await apiRequest("POST", "/api/admin/consent-templates/upload", {}) as any;
     return { method: 'PUT' as const, url: response.uploadURL };
   };
 

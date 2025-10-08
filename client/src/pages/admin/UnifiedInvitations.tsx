@@ -245,7 +245,7 @@ export default function UnifiedInvitations() {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="parent">Parent</SelectItem>
+                        <SelectItem value="parent">Adult</SelectItem>
                         <SelectItem value="player">Player</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="assistant">Assistant</SelectItem>
@@ -337,7 +337,7 @@ export default function UnifiedInvitations() {
                           <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="parent">Adult</SelectItem>
                           <SelectItem value="player">Player</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="assistant">Assistant</SelectItem>

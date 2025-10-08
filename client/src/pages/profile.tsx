@@ -557,7 +557,7 @@ export default function Profile() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Role:</span>
                           <Badge variant="secondary" className="text-xs">
-                            {document.subjectRole === 'player' ? 'Player' : 'Parent'}
+                            {document.subjectRole === 'player' ? 'Player' : 'Adult'}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between text-sm">
@@ -579,7 +579,7 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Parent 2 Section */}
+            {/* Second Adult Section */}
             <div className="space-y-6">
               <Parent2InviteControls />
             </div>

@@ -279,21 +279,21 @@ export default function SignupPlayerFlow() {
               <div className="flex justify-center mb-4">
                 <User className="h-12 w-12 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Parent Contact</CardTitle>
+              <CardTitle className="text-2xl">Adult Contact</CardTitle>
               <CardDescription>
-                We need your parent's contact information
+                We need your adult's contact information
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Your parent will receive an email to verify and manage your account
+                  Your adult will receive an email to verify and manage your account
                 </AlertDescription>
               </Alert>
               
               <div className="space-y-2">
-                <Label htmlFor="parentName">Parent's Name</Label>
+                <Label htmlFor="parentName">Adult's Name</Label>
                 <Input
                   id="parentName"
                   value={parentContact.parentName}
@@ -304,7 +304,7 @@ export default function SignupPlayerFlow() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="parentEmail">Parent's Email *</Label>
+                <Label htmlFor="parentEmail">Adult's Email *</Label>
                 <Input
                   id="parentEmail"
                   type="email"
@@ -317,7 +317,7 @@ export default function SignupPlayerFlow() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="parentPhone">Parent's Phone (Optional)</Label>
+                <Label htmlFor="parentPhone">Adult's Phone (Optional)</Label>
                 <Input
                   id="parentPhone"
                   type="tel"
@@ -373,9 +373,9 @@ export default function SignupPlayerFlow() {
                 
                 {isTeen && parentContact.parentEmail && (
                   <div className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-2">Parent Contact</h3>
+                    <h3 className="font-medium mb-2">Adult Contact</h3>
                     <p className="text-sm text-muted-foreground">
-                      {parentContact.parentName || 'Parent'} • {parentContact.parentEmail}
+                      {parentContact.parentName || 'Adult'} • {parentContact.parentEmail}
                     </p>
                   </div>
                 )}
@@ -389,7 +389,7 @@ export default function SignupPlayerFlow() {
                 <p className="text-sm text-blue-600 dark:text-blue-400">
                   You'll be asked to review and digitally sign consent documents including medical authorization, 
                   liability waivers, and photo releases.
-                  {isTeen && " Your parent will be notified of your registration."}
+                  {isTeen && " Your adult will be notified of your registration."}
                 </p>
               </div>
               

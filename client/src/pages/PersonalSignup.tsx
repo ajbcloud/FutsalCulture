@@ -186,7 +186,7 @@ export default function PersonalSignup() {
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="parent">Adult</SelectItem>
                   <SelectItem value="player">Player</SelectItem>
                 </SelectContent>
               </Select>

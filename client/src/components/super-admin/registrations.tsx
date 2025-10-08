@@ -325,7 +325,7 @@ export default function SuperAdminRegistrations() {
               <TableRow>
                 <TableHead>Tenant</TableHead>
                 <TableHead>Player</TableHead>
-                <TableHead>Parent</TableHead>
+                <TableHead>Adult</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Session</TableHead>
                 <TableHead>Session Date</TableHead>

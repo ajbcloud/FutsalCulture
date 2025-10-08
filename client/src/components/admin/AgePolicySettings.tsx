@@ -91,9 +91,9 @@ export default function AgePolicySettings() {
       requireParent: 13,
       teenSelfMin: 13,
       teenPayMin: 16,
-      audience: "youth",
+      audience: "youth" as const,
       ...policy
-    };
+    } as Partial<TenantPolicy>;
 
     // Validation
     if (validatedPolicy.audience === "youth" && (!validatedPolicy.maxAge || validatedPolicy.maxAge > 18)) {
@@ -106,10 +106,10 @@ export default function AgePolicySettings() {
     }
 
     // Validate parent requirement age
-    if (validatedPolicy.requireParent && validatedPolicy.requireParent < validatedPolicy.minAge) {
+    if (validatedPolicy.requireParent && validatedPolicy.minAge && validatedPolicy.requireParent < validatedPolicy.minAge) {
       toast({
         title: "Invalid parent requirement",
-        description: "Parent requirement age must be greater than or equal to minimum age",
+        description: "Adult requirement age must be greater than or equal to minimum age",
         variant: "destructive",
       });
       return;
@@ -119,7 +119,7 @@ export default function AgePolicySettings() {
     if (validatedPolicy.requireParent && validatedPolicy.teenSelfMin && validatedPolicy.requireParent > validatedPolicy.teenSelfMin) {
       toast({
         title: "Invalid configuration",
-        description: "Parent requirement age cannot be greater than teen self-signup age",
+        description: "Adult requirement age cannot be greater than teen self-signup age",
         variant: "destructive",
       });
       return;
@@ -263,11 +263,11 @@ export default function AgePolicySettings() {
             )}
           </div>
 
-          {/* Parent Requirements */}
+          {/* Adult Requirements */}
           {policy.audience !== "adult" && (
             <div className="space-y-3">
               <Label htmlFor="requireParent">
-                Require Parent Account Under Age
+                Require Adult Account Under Age
               </Label>
               <Input
                 id="requireParent"
@@ -414,7 +414,7 @@ export default function AgePolicySettings() {
             {policy.audience === "youth" && (
               <>
                 <p>• Ages {policy.minAge}-{policy.maxAge || 18} can participate</p>
-                <p>• Under age {policy.requireParent}: Parent must create account</p>
+                <p>• Under age {policy.requireParent}: Adult must create account</p>
                 <p>• Ages {policy.teenSelfMin || 13}-{policy.maxAge || 18}: Can self-signup with parent notification</p>
                 <p>• Ages {policy.teenPayMin || 16}+: Can make their own payments</p>
               </>
@@ -422,7 +422,7 @@ export default function AgePolicySettings() {
             {policy.audience === "mixed" && (
               <>
                 <p>• Ages {policy.minAge}+ can participate</p>
-                <p>• Under age {policy.requireParent}: Parent must create account</p>
+                <p>• Under age {policy.requireParent}: Adult must create account</p>
                 <p>• Ages {policy.teenSelfMin || 13}-17: Can self-signup with parent notification</p>
                 <p>• Ages {policy.teenPayMin || 16}-17: Can make their own payments</p>
                 <p>• Ages 18+: Full adult access</p>

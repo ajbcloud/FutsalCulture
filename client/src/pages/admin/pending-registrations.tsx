@@ -104,7 +104,7 @@ export default function AdminPendingRegistrations() {
 
       toast({
         title: "Success",
-        description: `${type === 'parent' ? 'Parent' : 'Player'} registration approved`,
+        description: `${type === 'parent' ? 'Adult' : 'Player'} registration approved`,
       });
 
       // Refresh the list and invalidate related queries
@@ -148,7 +148,7 @@ export default function AdminPendingRegistrations() {
 
       toast({
         title: "Success",
-        description: `${type === 'parent' ? 'Parent' : 'Player'} registration rejected`,
+        description: `${type === 'parent' ? 'Adult' : 'Player'} registration rejected`,
       });
 
       setShowRejectDialog(null);

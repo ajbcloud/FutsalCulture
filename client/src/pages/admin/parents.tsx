@@ -243,7 +243,7 @@ export default function AdminParents() {
   const handleSave = async () => {
     try {
       await adminParents.update(selectedParent?.id, editForm);
-      toast({ title: "Parent updated successfully" });
+      toast({ title: "Adult updated successfully" });
       setShowEditModal(false);
       loadParents();
     } catch (error) {
@@ -256,7 +256,7 @@ export default function AdminParents() {
     if (confirm('Are you sure you want to delete this parent account? This will also remove all associated players.')) {
       try {
         await adminParents.delete(parentId);
-        toast({ title: "Parent deleted successfully" });
+        toast({ title: "Adult deleted successfully" });
         loadParents();
       } catch (error) {
         console.error('Error deleting parent:', error);
@@ -297,7 +297,7 @@ export default function AdminParents() {
   const getRoleDisplay = (parent: any) => {
     if (parent.isAdmin) return <Badge className="bg-red-900 text-red-300">Admin</Badge>;
     if (parent.isAssistant) return <Badge className="bg-blue-900 text-blue-300">Assistant</Badge>;
-    return <Badge variant="secondary" className="bg-muted text-muted-foreground">Parent</Badge>;
+    return <Badge variant="secondary" className="bg-muted text-muted-foreground">Adult</Badge>;
   };
 
   // Calculate parent statistics
@@ -412,7 +412,7 @@ export default function AdminParents() {
           </div>
         </div>
 
-        {/* Parent Statistics KPIs */}
+        {/* Adult Statistics KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -806,7 +806,7 @@ export default function AdminParents() {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Edit Parent Account</DialogTitle>
+            <DialogTitle className="text-white">Edit Adult Account</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">

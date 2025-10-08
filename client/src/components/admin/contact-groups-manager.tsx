@@ -477,7 +477,7 @@ export default function ContactGroupsManager() {
                               <div className="text-sm text-muted-foreground">{user.email}</div>
                             </div>
                             <Badge variant="outline" className="ml-2">
-                              {user.role === 'player' ? 'Player' : 'Parent'}
+                              {user.role === 'player' ? 'Player' : 'Adult'}
                             </Badge>
                           </CommandItem>
                         ))}
@@ -633,7 +633,7 @@ export default function ContactGroupsManager() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" data-testid={`badge-member-type-${member.id}`}>
-                              {user.role === 'player' ? 'Player' : 'Parent'}
+                              {user.role === 'player' ? 'Player' : 'Adult'}
                             </Badge>
                           </TableCell>
                           <TableCell data-testid={`text-member-added-${member.id}`}>

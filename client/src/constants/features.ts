@@ -10,7 +10,7 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
     description: 'Create individual training sessions' 
   },
   parentPlayerBooking: { 
-    label: 'Parent and player session booking', 
+    label: 'Adult and player session booking', 
     description: 'Allow parents and players to book session spots' 
   },
   emailSmsNotifications: { 

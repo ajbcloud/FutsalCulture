@@ -136,9 +136,9 @@ export default function SignupParentFlow() {
               <div className="flex justify-center mb-4">
                 <UserCheck className="h-12 w-12 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Parent Information</CardTitle>
+              <CardTitle className="text-2xl">Adult Information</CardTitle>
               <CardDescription>
-                Let's start with your information as the parent or guardian
+                Let's start with your information as the adult or guardian
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -311,7 +311,7 @@ export default function SignupParentFlow() {
             <CardContent className="space-y-6">
               <div className="grid gap-4">
                 <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2">Parent Information</h3>
+                  <h3 className="font-medium mb-2">Adult Information</h3>
                   <p className="text-sm text-muted-foreground">
                     {parentData.firstName} {parentData.lastName} • {parentData.email}
                   </p>

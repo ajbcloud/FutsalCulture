@@ -68,7 +68,7 @@ export default function Landing() {
             Join hundreds of families who trust <BusinessBranding variant="default" textClassName="inline text-gray-600" inline={true} /> for their children's development.
           </p>
           <Button asChild size="lg" className="bg-futsal-600 hover:bg-futsal-700">
-            <a href="/login">Create Parent Account</a>
+            <a href="/login">Create Adult Account</a>
           </Button>
         </div>
       </section>
@@ -89,7 +89,7 @@ export default function Landing() {
               <ul className="space-y-2">
                 <li><Link href="/sessions" className="text-gray-300 hover:text-white">Browse Sessions</Link></li>
                 <li><Link href="/help" className="text-gray-300 hover:text-white">Help Center</Link></li>
-                <li><a href="/login" className="text-gray-300 hover:text-white">Parent Login</a></li>
+                <li><a href="/login" className="text-gray-300 hover:text-white">Adult Login</a></li>
               </ul>
             </div>
             <div>

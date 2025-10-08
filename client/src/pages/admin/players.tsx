@@ -541,8 +541,8 @@ export default function AdminPlayers() {
               <SortableHeader field="age">Age</SortableHeader>
               <SortableHeader field="gender">Gender</SortableHeader>
               <TableHead className="text-muted-foreground">Soccer Club</TableHead>
-              <SortableHeader field="parentName">Parent 1</SortableHeader>
-              <TableHead className="text-muted-foreground">Parent 2</TableHead>
+              <SortableHeader field="parentName">Adult 1</SortableHeader>
+              <TableHead className="text-muted-foreground">Adult 2</TableHead>
               <TableHead className="text-muted-foreground">Portal Access</TableHead>
               <TableHead className="text-muted-foreground">Consent Forms</TableHead>
               <SortableHeader field="signupCount">Sessions</SortableHeader>
@@ -677,7 +677,7 @@ export default function AdminPlayers() {
 
                 {player.parentName && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Parent:</span>
+                    <span className="text-muted-foreground">Adult:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parentName)}&parentId=${player.parentId}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parentName}
@@ -688,7 +688,7 @@ export default function AdminPlayers() {
 
                 {player.parent2Name && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Parent 2:</span>
+                    <span className="text-muted-foreground">Adult 2:</span>
                     <Link href={`/admin/parents?filter=${encodeURIComponent(player.parent2Name)}&parentId=${player.parent2Id}`}>
                       <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline max-w-32 truncate inline-block">
                         {player.parent2Name}

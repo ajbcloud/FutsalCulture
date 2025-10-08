@@ -284,12 +284,12 @@ export default function PersonalSettings() {
                 <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 rounded-full text-sm font-medium">
                   {user?.isSuperAdmin ? "Super Admin" : 
                    user?.isAdmin ? "Admin" : 
-                   user?.isAssistant ? "Assistant" : "Parent"}
+                   user?.isAssistant ? "Assistant" : "Adult"}
                 </div>
                 <span className="text-gray-600 dark:text-gray-400">
                   {user?.isSuperAdmin ? "Full system access" : 
                    user?.isAdmin ? "Full admin access for your organization" : 
-                   user?.isAssistant ? "Limited admin access" : "Parent account"}
+                   user?.isAssistant ? "Limited admin access" : "Adult account"}
                 </span>
               </div>
             </CardContent>

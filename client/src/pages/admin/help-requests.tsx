@@ -470,7 +470,7 @@ export default function AdminHelpRequests() {
           <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 h-auto">
             <TabsTrigger value="help-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Parent/Player Help Requests</span>
+              <span className="hidden sm:inline">Adult/Player Help Requests</span>
               <span className="sm:hidden">Help Requests</span>
             </TabsTrigger>
             <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
@@ -485,7 +485,7 @@ export default function AdminHelpRequests() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Parent/Player Help Requests */}
+          {/* Tab 1: Adult/Player Help Requests */}
           <TabsContent value="help-requests" className="space-y-4 md:space-y-6 mt-4">
             {/* Filter Controls */}
         <div className="bg-card p-3 md:p-4 rounded-lg border border-border">
@@ -521,7 +521,7 @@ export default function AdminHelpRequests() {
               >
                 <option value="">All Sources</option>
                 <option value="main_page">Main Page</option>
-                <option value="parent_portal">Parent Portal</option>
+                <option value="parent_portal">Adult Portal</option>
                 <option value="player_portal">Player Portal</option>
               </select>
             </div>
@@ -655,7 +655,7 @@ export default function AdminHelpRequests() {
                       'bg-muted border-border text-muted-foreground'
                     }
                   >
-                    {request.source === 'parent_portal' ? 'Parent Portal' :
+                    {request.source === 'parent_portal' ? 'Adult Portal' :
                      request.source === 'player_portal' ? 'Player Portal' :
                      'Main Page'}
                   </Badge>
@@ -802,7 +802,7 @@ export default function AdminHelpRequests() {
                           'bg-muted border-border text-muted-foreground'
                         }`}
                       >
-                        {request.source === 'parent_portal' ? 'Parent' :
+                        {request.source === 'parent_portal' ? 'Adult' :
                          request.source === 'player_portal' ? 'Player' :
                          'Main'}
                       </Badge>

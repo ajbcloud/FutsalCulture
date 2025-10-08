@@ -199,7 +199,7 @@ export default function SuperAdminParents() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Parent Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Adult Management</h1>
         </div>
         <div className="space-y-4">
           {[...Array(10)].map((_, i) => (
@@ -230,7 +230,7 @@ export default function SuperAdminParents() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Parent Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Adult Management</h1>
           <p className="text-muted-foreground">Manage parents across all organizations</p>
         </div>
       </div>
@@ -315,7 +315,7 @@ export default function SuperAdminParents() {
         <CardContent>
           <div className="rounded-md border">
             <div className="grid grid-cols-12 gap-4 p-4 font-medium border-b bg-muted/50">
-              <div className="col-span-2">Parent</div>
+              <div className="col-span-2">Adult</div>
               <div className="col-span-2">Organization</div>
               <div className="col-span-1">Players</div>
               <div className="col-span-1">Consent</div>

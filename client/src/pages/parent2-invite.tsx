@@ -204,7 +204,7 @@ export default function Parent2Invite() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Users className="w-6 h-6 text-blue-600" />
-            <CardTitle>Join as Second Parent</CardTitle>
+            <CardTitle>Join as Second Adult</CardTitle>
           </div>
           <CardDescription>
             Create your account to manage your children's activities together

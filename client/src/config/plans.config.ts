@@ -23,7 +23,7 @@ export const plans: PlanConfig[] = [
     playerLimit: 10,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Manual only', status: 'included' },
-      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
       payments: { name: 'Accept Online Payments', status: 'not_included' },
       emailNotifications: { name: 'Email Notifications', status: 'not_included' },
       smsNotifications: { name: 'SMS Notifications', status: 'not_included' },
@@ -51,7 +51,7 @@ export const plans: PlanConfig[] = [
     playerLimit: 150,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring', status: 'included' },
-      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
       payments: { name: 'Accept Online Payments', status: 'not_included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'not_included' },
@@ -79,7 +79,7 @@ export const plans: PlanConfig[] = [
     playerLimit: 500,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
-      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
       payments: { name: 'Accept Online Payments', description: 'Stripe only', status: 'included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'included' },
@@ -107,7 +107,7 @@ export const plans: PlanConfig[] = [
     playerLimit: 'unlimited',
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
-      parentPlayerBooking: { name: 'Parent/Player Booking', status: 'included' },
+      parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
       payments: { name: 'Accept Online Payments', description: 'Multiple payment integrations (Stripe, QuickBooks, more)', status: 'included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'included' },

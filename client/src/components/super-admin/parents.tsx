@@ -324,7 +324,7 @@ export default function SuperAdminParents() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="w-5 h-5 mr-2" />
-            Parent Filters
+            Adult Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -440,7 +440,7 @@ export default function SuperAdminParents() {
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   <TableHead>Tenant</TableHead>
-                  <TableHead>Parent</TableHead>
+                  <TableHead>Adult</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Registered</TableHead>
                   <TableHead>Players</TableHead>
