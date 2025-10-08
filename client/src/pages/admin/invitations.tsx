@@ -1,730 +1,729 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Plus,
-  Copy,
-  RefreshCw,
-  Send,
-  Users,
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Shield,
-  LinkIcon,
-  Trash2,
-  ToggleLeft,
-  ToggleRight,
-  Edit,
-  Pencil,
-  Save,
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import AdminLayout from "@/components/admin-layout";
+import { Pagination } from "@/components/pagination";
+import { format } from "date-fns";
+import { Plus, Trash2, Edit, Copy, Star } from "lucide-react";
+import type { inviteCodes } from "@shared/schema";
 
-interface TenantInviteCode {
-  id: string;
-  code: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
-  usageCount: number;
-  maxUsage?: number;
-  createdAt: string;
-}
+type InviteCode = typeof inviteCodes.$inferSelect;
 
-interface Invitation {
-  id: string;
-  recipientEmail: string;
-  role: string;
-  status: "pending" | "accepted" | "expired" | "cancelled";
-  createdAt: string;
-  expiresAt: string;
-  acceptedAt?: string;
-  createdByName?: string;
-  invitedBy?: {
-    firstName: string;
-    lastName: string;
-  };
-}
-
-export default function InvitationsPage() {
+export default function Invitations() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("codes");
-  const [selectedRole, setSelectedRole] = useState("parent");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [isInviting, setIsInviting] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingCode, setEditingCode] = useState<InviteCode | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [setDefaultId, setSetDefaultId] = useState<string | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [formData, setFormData] = useState({
+    code: "",
+    codeType: "invite" as "invite" | "access" | "discount",
+    description: "",
+    isActive: true,
+    ageGroup: "",
+    gender: "",
+    location: "",
+    club: "",
+    discountType: "full" as "full" | "percentage" | "fixed",
+    discountValue: 0,
+    maxUses: null as number | null,
+    validFrom: "",
+    validUntil: "",
+    metadataJson: "{}",
+  });
 
-  // Send invitation mutation
-  const sendInvitationMutation = useMutation({
-    mutationFn: async (inviteData: { email: string; role: string }) => {
-      const response = await fetch('/api/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: 'email',
-          recipientEmail: inviteData.email,
-          role: inviteData.role,
-          expirationDays: 14
-        }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to send invitation');
-      }
-      return response.json();
-    },
+  const { data: inviteCodes = [], isLoading } = useQuery<InviteCode[]>({
+    queryKey: ["/api/admin/invite-codes"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/invite-codes", data),
     onSuccess: () => {
-      toast({ title: "Success", description: "Invitation sent successfully!" });
-      setInviteEmail('');
-      setSelectedRole('parent');
-      setIsInviting(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/invitations'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+      toast({ title: "Invite code created successfully" });
+      setIsCreateOpen(false);
+      resetForm();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      setIsInviting(false);
-    }
-  });
-
-  // Cancel invitation mutation
-  const cancelInvitationMutation = useMutation({
-    mutationFn: async (invitationId: string) => {
-      const response = await fetch(`/api/invitations/${invitationId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create invite code",
+        description: error.message,
+        variant: "destructive",
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to cancel invitation');
-      }
-      return response.json();
     },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      apiRequest("PUT", `/api/admin/invite-codes/${id}`, data),
     onSuccess: () => {
-      toast({ title: "Success", description: "Invitation cancelled successfully!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/invitations'] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
-  });
-
-  const handleSendInvitation = () => {
-    if (!inviteEmail.trim()) {
-      toast({ title: "Error", description: "Please enter an email address", variant: "destructive" });
-      return;
-    }
-    
-    setIsInviting(true);
-    sendInvitationMutation.mutate({
-      email: inviteEmail.trim(),
-      role: selectedRole
-    });
-  };
-
-  // Edit main invite code state
-  const [editCodeDialogOpen, setEditCodeDialogOpen] = useState(false);
-  const [editingCode, setEditingCode] = useState<TenantInviteCode | null>(null);
-  const [editCodeValue, setEditCodeValue] = useState('');
-  const [editCodeName, setEditCodeName] = useState('');
-  const [editCodeDescription, setEditCodeDescription] = useState('');
-
-  // Create new invite code state
-  const [createCodeDialogOpen, setCreateCodeDialogOpen] = useState(false);
-  const [newCodeName, setNewCodeName] = useState('');
-  const [newCodeDescription, setNewCodeDescription] = useState('');
-
-  // Fetch invite codes
-  const { data: inviteCodes = [], isLoading: codesLoading, error: codesError, refetch: refetchCodes } = useQuery<TenantInviteCode[]>({
-    queryKey: ['/api/admin/tenant/current/invite-codes'],
-    enabled: activeTab === "codes",
-  });
-
-
-  // Fetch invitations
-  const { data: invitationsResponse, isLoading: invitationsLoading, error: invitationsError, refetch: refetchInvitations } = useQuery({
-    queryKey: ['/api/invitations'],
-    enabled: activeTab === "invitations",
-  });
-
-  const invitations: Invitation[] = invitationsResponse?.invitations || [];
-
-  // Update invite code mutation
-  const updateCodeMutation = useMutation({
-    mutationFn: async (updates: { id: string; code: string; name: string; description?: string }) => {
-      const response = await fetch(`/api/admin/tenant/current/invite-codes/${updates.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ code: updates.code, name: updates.name, description: updates.description }),
-      });
-      if (!response.ok) throw new Error('Failed to update invite code');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Invite code updated successfully!" });
-      setEditCodeDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+      toast({ title: "Invite code updated successfully" });
       setEditingCode(null);
-      setEditCodeValue('');
-      setEditCodeName('');
-      setEditCodeDescription('');
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
+      resetForm();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update invite code", variant: "destructive" });
-    }
-  });
-
-  // Toggle code active status mutation
-  const toggleCodeMutation = useMutation({
-    mutationFn: async (codeId: string) => {
-      const response = await fetch(`/api/admin/tenant/current/invite-codes/${codeId}/toggle`, {
-        method: 'PATCH',
-        credentials: 'include',
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update invite code",
+        description: error.message,
+        variant: "destructive",
       });
-      if (!response.ok) throw new Error('Failed to toggle invite code');
-      return response.json();
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Invite code status updated!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update invite code", variant: "destructive" });
-    }
   });
 
-  // Delete code mutation
-  const deleteCodeMutation = useMutation({
-    mutationFn: async (codeId: string) => {
-      const response = await fetch(`/api/admin/tenant/current/invite-codes/${codeId}`, {
-        method: 'DELETE',
-        credentials: 'include',
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("DELETE", `/api/admin/invite-codes/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+      toast({ title: "Invite code deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete invite code",
+        description: error.message,
+        variant: "destructive",
       });
-      if (!response.ok) throw new Error('Failed to delete invite code');
-      return response.json();
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Invite code deleted successfully!" });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete invite code", variant: "destructive" });
-    }
   });
 
-  // Create new code mutation
-  const createCodeMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; maxUsage?: number }) => {
-      const response = await fetch('/api/admin/tenant/current/invite-codes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("POST", `/api/admin/invite-codes/set-default/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+      toast({ title: "Default invite code updated successfully" });
+      setSetDefaultId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to set default code",
+        description: error.message,
+        variant: "destructive",
       });
-      if (!response.ok) throw new Error('Failed to create invite code');
-      return response.json();
+      setSetDefaultId(null);
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Invite code created successfully!" });
-      setCreateCodeDialogOpen(false);
-      setNewCodeName('');
-      setNewCodeDescription('');
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/tenant/current/invite-codes'] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create invite code", variant: "destructive" });
-    }
   });
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast({
-      title: "Code copied to clipboard",
-      description: `Invite code ${code} has been copied to your clipboard.`,
+  const resetForm = () => {
+    setFormData({
+      code: "",
+      codeType: "invite",
+      description: "",
+      isActive: true,
+      ageGroup: "",
+      gender: "",
+      location: "",
+      club: "",
+      discountType: "full",
+      discountValue: 0,
+      maxUses: null,
+      validFrom: "",
+      validUntil: "",
+      metadataJson: "{}",
     });
   };
 
-  const handleEditCode = (code: TenantInviteCode) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    let metadata: Record<string, any> = {};
+    try {
+      if (formData.metadataJson.trim()) {
+        metadata = JSON.parse(formData.metadataJson);
+      }
+    } catch (error) {
+      toast({
+        title: "Invalid JSON in metadata",
+        description: "Please check your metadata JSON format",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload: any = {
+      code: formData.code.toUpperCase(),
+      codeType: formData.codeType,
+      description: formData.description || null,
+      isActive: formData.isActive,
+      ageGroup: formData.ageGroup || null,
+      gender: formData.gender || null,
+      location: formData.location || null,
+      club: formData.club || null,
+      maxUses: formData.maxUses || null,
+      validFrom: formData.validFrom || null,
+      validUntil: formData.validUntil || null,
+      metadata: Object.keys(metadata).length > 0 ? metadata : null,
+    };
+
+    if (formData.codeType === "discount") {
+      payload.discountType = formData.discountType;
+      if (formData.discountType !== "full") {
+        payload.discountValue = formData.discountValue;
+      } else {
+        payload.discountValue = null;
+      }
+    } else {
+      payload.discountType = null;
+      payload.discountValue = null;
+    }
+
+    if (editingCode) {
+      updateMutation.mutate({
+        id: editingCode.id,
+        data: payload,
+      });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const handleEdit = (code: InviteCode) => {
     setEditingCode(code);
-    setEditCodeValue(code.code);
-    setEditCodeName(code.name);
-    setEditCodeDescription(code.description || '');
-    setEditCodeDialogOpen(true);
-  };
-
-  const handleUpdateCode = () => {
-    if (!editingCode || !editCodeValue.trim() || !editCodeName.trim()) {
-      toast({ title: "Error", description: "Please fill in the code value and name", variant: "destructive" });
-      return;
-    }
-    
-    updateCodeMutation.mutate({
-      id: editingCode.id,
-      code: editCodeValue.trim().toUpperCase(),
-      name: editCodeName.trim(),
-      description: editCodeDescription.trim() || undefined
+    setFormData({
+      code: code.code,
+      codeType: code.codeType as any,
+      description: code.description || "",
+      isActive: code.isActive ?? true,
+      ageGroup: code.ageGroup || "",
+      gender: code.gender || "",
+      location: code.location || "",
+      club: code.club || "",
+      discountType: (code.discountType as any) || "full",
+      discountValue: code.discountValue || 0,
+      maxUses: code.maxUses,
+      validFrom: code.validFrom ? format(new Date(code.validFrom), "yyyy-MM-dd'T'HH:mm") : "",
+      validUntil: code.validUntil ? format(new Date(code.validUntil), "yyyy-MM-dd'T'HH:mm") : "",
+      metadataJson: code.metadata ? JSON.stringify(code.metadata, null, 2) : "{}",
     });
   };
 
-  const handleCreateCode = () => {
-    if (!newCodeName.trim()) {
-      toast({ title: "Error", description: "Please enter a name for the invite code", variant: "destructive" });
-      return;
-    }
-    
-    createCodeMutation.mutate({
-      name: newCodeName.trim(),
-      description: newCodeDescription.trim() || undefined
-    });
+  const copyToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({ title: "Code copied to clipboard" });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const getCodeTypeBadgeVariant = (type: string) => {
+    switch (type) {
+      case "invite":
+        return "default";
+      case "access":
+        return "secondary";
+      case "discount":
+        return "outline";
+      default:
+        return "default";
+    }
   };
+
+  const getCodeTypeColor = (type: string) => {
+    switch (type) {
+      case "invite":
+        return "bg-blue-500 text-white";
+      case "access":
+        return "bg-purple-500 text-white";
+      case "discount":
+        return "bg-green-500 text-white";
+      default:
+        return "bg-gray-500 text-white";
+    }
+  };
+
+  const totalPages = Math.ceil(inviteCodes.length / itemsPerPage);
+  const paginatedCodes = inviteCodes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Invitations & Codes</h1>
-          <p className="text-muted-foreground">
-            Invite parents and players to join your organization
-          </p>
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground">Invite Codes</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage invite, access, and discount codes for your organization
+            </p>
+          </div>
+          <Dialog open={isCreateOpen || !!editingCode} onOpenChange={(open) => {
+            if (!open) {
+              setIsCreateOpen(false);
+              setEditingCode(null);
+              resetForm();
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} size="sm" data-testid="button-create-invite-code">
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Create Invite Code</span>
+                <span className="sm:hidden">Create Code</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingCode ? "Edit Invite Code" : "Create Invite Code"}</DialogTitle>
+                <DialogDescription>
+                  {editingCode ? "Update the invite code settings" : "Create a new invite code with optional pre-fill data and discount settings"}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="basic" data-testid="tab-basic-info">Basic Info</TabsTrigger>
+                    <TabsTrigger value="prefill" data-testid="tab-prefill-data">Pre-fill Data</TabsTrigger>
+                    <TabsTrigger value="discount" data-testid="tab-discount-settings">Discount</TabsTrigger>
+                    <TabsTrigger value="limits" data-testid="tab-usage-limits">Usage & Limits</TabsTrigger>
+                    <TabsTrigger value="metadata" data-testid="tab-metadata">Metadata</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="basic" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="code">Code *</Label>
+                        <Input
+                          id="code"
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                          placeholder="SUMMER2025"
+                          required
+                          minLength={3}
+                          maxLength={50}
+                          data-testid="input-code"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="codeType">Code Type *</Label>
+                        <Select
+                          value={formData.codeType}
+                          onValueChange={(value: any) => setFormData({ ...formData, codeType: value })}
+                        >
+                          <SelectTrigger data-testid="select-code-type">
+                            <SelectValue placeholder="Select code type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="invite">Invite</SelectItem>
+                            <SelectItem value="access">Access</SelectItem>
+                            <SelectItem value="discount">Discount</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Enter a description for this code..."
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+                        data-testid="input-description"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="isActive"
+                        checked={formData.isActive}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                        data-testid="switch-is-active"
+                      />
+                      <Label htmlFor="isActive">Active</Label>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="prefill" className="space-y-4 mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Pre-fill data will automatically populate signup forms when users use this code
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="ageGroup">Age Group</Label>
+                        <Input
+                          id="ageGroup"
+                          value={formData.ageGroup}
+                          onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
+                          placeholder="e.g., U12, U15"
+                          data-testid="input-age-group"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select
+                          value={formData.gender}
+                          onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                        >
+                          <SelectTrigger data-testid="select-gender">
+                            <SelectValue placeholder="Select gender (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="boys">Boys</SelectItem>
+                            <SelectItem value="girls">Girls</SelectItem>
+                            <SelectItem value="coed">Coed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={formData.location}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          placeholder="e.g., Downtown Arena"
+                          data-testid="input-location"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="club">Club</Label>
+                        <Input
+                          id="club"
+                          value={formData.club}
+                          onChange={(e) => setFormData({ ...formData, club: e.target.value })}
+                          placeholder="e.g., City FC"
+                          data-testid="input-club"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="discount" className="space-y-4 mt-4">
+                    {formData.codeType === "discount" ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="discountType">Discount Type</Label>
+                            <Select
+                              value={formData.discountType}
+                              onValueChange={(value: any) => setFormData({ ...formData, discountType: value })}
+                            >
+                              <SelectTrigger data-testid="select-discount-type">
+                                <SelectValue placeholder="Select discount type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full">Full (100% Off)</SelectItem>
+                                <SelectItem value="percentage">Percentage</SelectItem>
+                                <SelectItem value="fixed">Fixed Amount</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {formData.discountType !== "full" && (
+                            <div>
+                              <Label htmlFor="discountValue">
+                                {formData.discountType === "percentage" ? "Percentage Off" : "Amount Off ($)"}
+                              </Label>
+                              <Input
+                                id="discountValue"
+                                type="number"
+                                value={formData.discountValue}
+                                onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
+                                placeholder={formData.discountType === "percentage" ? "50" : "5"}
+                                min="0"
+                                max={formData.discountType === "percentage" ? "100" : undefined}
+                                data-testid="input-discount-value"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <Card>
+                        <CardContent className="pt-6">
+                          <p className="text-sm text-muted-foreground">
+                            Discount settings are only available for codes with type "Discount". 
+                            Change the code type to "Discount" in the Basic Info tab to configure discounts.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="limits" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="maxUses">Max Uses (optional)</Label>
+                      <Input
+                        id="maxUses"
+                        type="number"
+                        value={formData.maxUses || ""}
+                        onChange={(e) => setFormData({ ...formData, maxUses: e.target.value ? Number(e.target.value) : null })}
+                        placeholder="Leave empty for unlimited"
+                        min="1"
+                        data-testid="input-max-uses"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="validFrom">Valid From (optional)</Label>
+                        <Input
+                          id="validFrom"
+                          type="datetime-local"
+                          value={formData.validFrom}
+                          onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+                          data-testid="input-valid-from"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="validUntil">Valid Until (optional)</Label>
+                        <Input
+                          id="validUntil"
+                          type="datetime-local"
+                          value={formData.validUntil}
+                          onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
+                          data-testid="input-valid-until"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="metadata" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="metadata">Custom Variables (JSON)</Label>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Add custom variables for email templates (e.g., teamName, coachName)
+                      </p>
+                      <Textarea
+                        id="metadata"
+                        value={formData.metadataJson}
+                        onChange={(e) => setFormData({ ...formData, metadataJson: e.target.value })}
+                        placeholder='{"teamName": "Eagles", "coachName": "John Smith"}'
+                        className="font-mono bg-background border-border text-foreground placeholder:text-muted-foreground min-h-[200px]"
+                        data-testid="input-metadata"
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsCreateOpen(false);
+                      setEditingCode(null);
+                      resetForm();
+                    }}
+                    data-testid="button-cancel"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" data-testid="button-submit">
+                    {editingCode ? "Update Code" : "Create Code"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="invitations" data-testid="tab-sent-invitations">
-            Sent Invitations
-          </TabsTrigger>
-          <TabsTrigger value="codes" data-testid="tab-invite-codes">
-            Invite Codes
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="invitations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Send className="w-5 h-5" />
-                Send Invitation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter email address"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    data-testid="input-invite-email"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <select
-                    id="role"
-                    className="w-full p-2 border rounded-md"
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    data-testid="select-invite-role"
-                  >
-                    <option value="parent">Parent</option>
-                    <option value="player">Player</option>
-                    <option value="admin">Admin</option>
-                    <option value="assistant">Assistant</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleSendInvitation}
-                    disabled={isInviting || !inviteEmail}
-                    className="w-full"
-                    data-testid="button-send-invitation"
-                  >
-                    {isInviting ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4 mr-2" />
-                    )}
-                    Send Invitation
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Sent Invitations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {invitationsLoading ? (
-                <div className="flex justify-center py-4">
-                  <RefreshCw className="w-6 h-6 animate-spin" />
-                </div>
-              ) : invitationsError ? (
-                <div className="text-center py-8">
-                  <p className="text-red-600 mb-2">Failed to load invitations</p>
-                  <Button onClick={() => refetchInvitations()} variant="outline">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Retry
-                  </Button>
-                </div>
-              ) : invitations.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600">No invitations sent yet</p>
-                  <p className="text-sm text-gray-500">
-                    Send your first invitation using the form above
-                  </p>
-                </div>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Pre-fill Info</TableHead>
+                <TableHead>Usage</TableHead>
+                <TableHead>Valid Dates</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedCodes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    No invite codes found. Create your first code to get started.
+                  </TableCell>
+                </TableRow>
               ) : (
-                <div className="space-y-2">
-                  {invitations.map((invitation: Invitation) => (
-                    <div
-                      key={invitation.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{invitation.recipientEmail}</span>
-                            <Badge
-                              variant={
-                                invitation.status === "accepted"
-                                  ? "default"
-                                  : invitation.status === "expired" || invitation.status === "cancelled"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                            >
-                              {invitation.status}
-                            </Badge>
-                            <Badge variant="outline" className="capitalize">
-                              {invitation.role}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {invitation.invitedBy ? 
-                              `Invited by: ${invitation.invitedBy.firstName} ${invitation.invitedBy.lastName}` : 
-                              `Sent to: ${invitation.recipientEmail}`}
-                          </p>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Sent: {formatDate(invitation.createdAt)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              Expires: {formatDate(invitation.expiresAt)}
-                            </span>
-                            {invitation.acceptedAt && (
-                              <span className="flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                Accepted: {formatDate(invitation.acceptedAt)}
-                              </span>
-                            )}
-                          </div>
+                paginatedCodes.map((code) => (
+                  <TableRow key={code.id} data-testid={`row-invite-code-${code.id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono bg-muted px-2 py-1 rounded" data-testid={`text-code-${code.id}`}>
+                          {code.code}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(code.code)}
+                          data-testid={`button-copy-${code.id}`}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getCodeTypeColor(code.codeType)} data-testid={`badge-type-${code.id}`}>
+                        {code.codeType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate" data-testid={`text-description-${code.id}`}>
+                      {code.description || "-"}
+                    </TableCell>
+                    <TableCell data-testid={`text-prefill-${code.id}`}>
+                      {code.ageGroup || code.gender || code.location || code.club ? (
+                        <div className="text-xs space-y-1">
+                          {code.ageGroup && <div>Age: {code.ageGroup}</div>}
+                          {code.gender && <div>Gender: {code.gender}</div>}
+                          {code.location && <div>Location: {code.location}</div>}
+                          {code.club && <div>Club: {code.club}</div>}
                         </div>
-                        
-                        {/* Cancel button - only show for pending invitations */}
-                        {invitation.status === "pending" && (
-                          <div className="flex items-center gap-2 ml-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to cancel the invitation for ${invitation.recipientEmail}? This action cannot be undone.`)) {
-                                  cancelInvitationMutation.mutate(invitation.id);
-                                }
-                              }}
-                              disabled={cancelInvitationMutation.isPending}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                              data-testid={`button-cancel-invitation-${invitation.id}`}
-                            >
-                              <XCircle className="w-4 h-4" />
-                              Cancel
-                            </Button>
-                          </div>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell data-testid={`text-usage-${code.id}`}>
+                      {code.currentUses || 0}/{code.maxUses || "∞"}
+                    </TableCell>
+                    <TableCell data-testid={`text-dates-${code.id}`}>
+                      {code.validFrom || code.validUntil ? (
+                        <div className="text-xs space-y-1">
+                          {code.validFrom && <div>From: {format(new Date(code.validFrom), "MM/dd/yyyy")}</div>}
+                          {code.validUntil && <div>Until: {format(new Date(code.validUntil), "MM/dd/yyyy")}</div>}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={code.isActive ? "default" : "secondary"} className={code.isActive ? "bg-green-500" : "bg-gray-500"} data-testid={`badge-active-${code.id}`}>
+                          {code.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        {code.isDefault && (
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300" data-testid={`badge-default-${code.id}`}>
+                            DEFAULT
+                          </Badge>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="codes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <LinkIcon className="w-5 h-5" />
-                    Organization Invite Codes
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">
-                    Static invite codes that parents and players can use to join your organization
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setCreateCodeDialogOpen(true)}
-                  className="flex items-center gap-2"
-                  data-testid="button-create-code"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create New Code
-                </Button>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {codesLoading ? (
-                <div className="flex justify-center py-4">
-                  <RefreshCw className="w-6 h-6 animate-spin" />
-                </div>
-              ) : codesError ? (
-                <div className="text-center py-8">
-                  <Shield className="w-12 h-12 mx-auto mb-4 text-red-500 opacity-50" />
-                  <p className="text-red-600 mb-2">Unable to load invite codes</p>
-                  <Button onClick={() => refetchCodes()} variant="outline">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Retry
-                  </Button>
-                </div>
-              ) : inviteCodes.length === 0 ? (
-                <div className="text-center py-8">
-                  <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600 mb-2">No invite codes created yet</p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Create your first invite code using the "Create New Code" button above
-                  </p>
-                  <Button
-                    onClick={() => setCreateCodeDialogOpen(true)}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create First Code
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {inviteCodes.map((code) => (
-                    <div
-                      key={code.id}
-                      className={`border rounded-lg p-4 ${!code.isActive ? 'opacity-50 bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium text-gray-900 dark:text-gray-100">{code.name}</h3>
-                            <Badge variant={code.isActive ? "default" : "secondary"}>
-                              {code.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          
-                          {code.description && (
-                            <p className="text-sm text-gray-800 dark:text-gray-200 mb-2">{code.description}</p>
-                          )}
-                          
-                          <div className="flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300">
-                            <span>Used: {code.usageCount} times</span>
-                            {code.maxUsage && (
-                              <span>Limit: {code.maxUsage}</span>
-                            )}
-                            <span>Created: {formatDate(code.createdAt)}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2">
-                            <code className="text-lg font-mono bg-muted text-foreground px-3 py-1 rounded border">
-                              {code.code}
-                            </code>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCopyCode(code.code)}
-                              data-testid={`button-copy-code-${code.id}`}
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(code)}
+                          data-testid={`button-edit-${code.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        {!code.isDefault && (
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => toggleCodeMutation.mutate(code.id)}
-                            disabled={toggleCodeMutation.isPending}
-                            data-testid={`button-toggle-code-${code.id}`}
+                            onClick={() => setSetDefaultId(code.id)}
+                            data-testid={`button-set-default-${code.id}`}
                           >
-                            {code.isActive ? (
-                              <ToggleRight className="w-4 h-4" />
-                            ) : (
-                              <ToggleLeft className="w-4 h-4" />
-                            )}
+                            <Star className="w-4 h-4" />
                           </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditCode(code)}
-                            data-testid={`button-edit-code-${code.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteCodeMutation.mutate(code.id)}
-                            disabled={deleteCodeMutation.isPending}
-                            data-testid={`button-delete-code-${code.id}`}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete the code "${code.code}"?`)) {
+                              deleteMutation.mutate(code.id);
+                            }
+                          }}
+                          data-testid={`button-delete-${code.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        </Tabs>
+            </TableBody>
+          </Table>
+        </div>
 
-        {/* Edit Code Dialog */}
-      <Dialog open={editCodeDialogOpen} onOpenChange={setEditCodeDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Invite Code</DialogTitle>
-            <DialogDescription>
-              Customize your organization's invite code that parents and players use to register.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-code-value">Invite Code *</Label>
-              <Input
-                id="edit-code-value"
-                placeholder="e.g., LIVERPOOL2025"
-                value={editCodeValue}
-                onChange={(e) => setEditCodeValue(e.target.value.toUpperCase())}
-                className="font-mono"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Use 4-12 characters. Letters and numbers only. Avoid confusing characters (0, O, I, 1).
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="edit-code-name">Display Name *</Label>
-              <Input
-                id="edit-code-name"
-                placeholder="e.g., Main Registration Code"
-                value={editCodeName}
-                onChange={(e) => setEditCodeName(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-code-description">Description (Optional)</Label>
-              <Textarea
-                id="edit-code-description"
-                placeholder="Brief description of what this code is for"
-                value={editCodeDescription}
-                onChange={(e) => setEditCodeDescription(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditCodeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateCode} disabled={updateCodeMutation.isPending}>
-              {updateCodeMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-        </Dialog>
-
-      {/* Create New Code Dialog */}
-      <Dialog open={createCodeDialogOpen} onOpenChange={setCreateCodeDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Invite Code</DialogTitle>
-            <DialogDescription>
-              Create a new invite code for your organization. The code will be generated automatically.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="new-code-name">Display Name *</Label>
-              <Input
-                id="new-code-name"
-                placeholder="e.g., Parent Registration Code"
-                value={newCodeName}
-                onChange={(e) => setNewCodeName(e.target.value)}
-                data-testid="input-new-code-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-code-description">Description (Optional)</Label>
-              <Textarea
-                id="new-code-description"
-                placeholder="Brief description of what this code is for"
-                value={newCodeDescription}
-                onChange={(e) => setNewCodeDescription(e.target.value)}
-                data-testid="textarea-new-code-description"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateCodeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateCode} disabled={createCodeMutation.isPending} data-testid="button-create-code-submit">
-              {createCodeMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
-              Create Code
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-        </Dialog>
+        {inviteCodes.length > 10 && (
+          <Pagination
+            totalItems={inviteCodes.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        )}
       </div>
+
+      <AlertDialog open={!!setDefaultId} onOpenChange={(open) => !open && setSetDefaultId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Set as Default Invite Code</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to set this as your tenant's default invite code? 
+              This will unset any existing default code.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-set-default">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setDefaultId && setDefaultMutation.mutate(setDefaultId)}
+              data-testid="button-confirm-set-default"
+            >
+              Set as Default
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
