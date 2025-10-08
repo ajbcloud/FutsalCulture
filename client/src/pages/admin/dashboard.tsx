@@ -524,30 +524,34 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 quick-actions">
-                  <a 
-                    href="/admin/sessions/new" 
-                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
+                  <button 
+                    onClick={() => setLocation("/admin/sessions/new")}
+                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                    data-testid="button-create-session"
                   >
                     Create Session
-                  </a>
-                  <a 
-                    href="/admin/payments" 
-                    className="p-3 bg-green-600 hover:bg-green-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
+                  </button>
+                  <button 
+                    onClick={() => setLocation("/admin/payments")}
+                    className="p-3 bg-green-600 hover:bg-green-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                    data-testid="button-review-payments"
                   >
                     Review Payments
-                  </a>
-                  <a 
-                    href="/admin/players" 
-                    className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
+                  </button>
+                  <button 
+                    onClick={() => setLocation("/admin/players")}
+                    className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                    data-testid="button-import-players"
                   >
                     Import Players
-                  </a>
-                  <a 
-                    href="/admin/help-requests" 
-                    className="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
+                  </button>
+                  <button 
+                    onClick={() => setLocation("/admin/help-requests")}
+                    className="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                    data-testid="button-help-requests"
                   >
                     Help Requests
-                  </a>
+                  </button>
                 </div>
               </CardContent>
             </Card>
