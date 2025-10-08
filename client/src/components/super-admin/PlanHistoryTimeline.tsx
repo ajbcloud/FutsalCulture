@@ -111,7 +111,11 @@ export function PlanHistoryTimeline({ tenantId, limit = 20 }: PlanHistoryTimelin
             const isLast = index === history.length - 1;
 
             return (
-              <div key={item.id} className="relative">
+              <div 
+                key={item.id} 
+                className="relative"
+                data-testid={`plan-history-item-${item.id}`}
+              >
                 {/* Timeline line */}
                 {!isLast && (
                   <div className="absolute left-[15px] top-[40px] bottom-[-16px] w-0.5 bg-border" />

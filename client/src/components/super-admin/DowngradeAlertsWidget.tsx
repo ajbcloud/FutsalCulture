@@ -32,6 +32,11 @@ const PLAN_LABELS: Record<string, string> = {
   elite: 'Elite',
 };
 
+// Helper function to get plan label with fallback
+const getPlanLabel = (plan: string): string => {
+  return PLAN_LABELS[plan] || plan.charAt(0).toUpperCase() + plan.slice(1);
+};
+
 export function DowngradeAlertsWidget() {
   const { data: downgrades, isLoading } = useQuery<DowngradeAlert[]>({
     queryKey: ['/api/super-admin/plan-history/downgrades'],
@@ -126,11 +131,11 @@ export function DowngradeAlertsWidget() {
 
                     <div className="flex items-center gap-2 text-xs">
                       <Badge variant="outline" className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                        {PLAN_LABELS[downgrade.fromPlan]}
+                        {getPlanLabel(downgrade.fromPlan)}
                       </Badge>
                       <ArrowRight className="w-3 h-3 text-muted-foreground" />
                       <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800">
-                        {PLAN_LABELS[downgrade.toPlan]}
+                        {getPlanLabel(downgrade.toPlan)}
                       </Badge>
                     </div>
 
