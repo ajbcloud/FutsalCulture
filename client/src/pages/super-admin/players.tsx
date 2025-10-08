@@ -15,7 +15,9 @@ import {
   Building,
   Calendar,
   Download,
-  User
+  User,
+  UserCheck,
+  ClipboardList
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -189,28 +191,44 @@ export default function SuperAdminPlayers() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Players</CardTitle>
+            <Users className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
             <div className="text-2xl font-bold">{players.length}</div>
-            <p className="text-xs text-muted-foreground">Total Players</p>
+            <p className="text-xs text-muted-foreground mt-1">Across all tenants</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Portal Access</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
             <div className="text-2xl font-bold">{activePlayers}</div>
-            <p className="text-xs text-muted-foreground">Portal Access Enabled</p>
+            <p className="text-xs text-muted-foreground mt-1">Access enabled</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{boysCount}/{girlsCount}</div>
-            <p className="text-xs text-muted-foreground">Boys / Girls</p>
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Booking Permission</CardTitle>
+            <ClipboardList className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{players.filter(p => p.bookingPermission === 'allowed').length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Can book sessions</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <Calendar className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
             <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-xs text-muted-foreground">Total Bookings</p>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
       </div>
@@ -327,10 +345,12 @@ export default function SuperAdminPlayers() {
                   />
                 </div>
                 <div className="col-span-1">
-                  <Badge variant={
-                    player.portalAccess === 'enabled' ? 'default' : 'secondary'
+                  <Badge className={
+                    player.portalAccess === 'enabled' 
+                      ? 'bg-green-100 text-green-700 hover:bg-green-100' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-100'
                   }>
-                    {player.portalAccess === 'enabled' ? 'Enabled' : 'Disabled'}
+                    {player.portalAccess === 'enabled' ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="col-span-1">
