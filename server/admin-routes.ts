@@ -11,6 +11,7 @@ import multer from 'multer';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
+import { format } from 'date-fns';
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -1194,6 +1195,118 @@ export async function setupAdminRoutes(app: any) {
             `This may indicate data inconsistency.`
           );
         }
+      }
+
+      // Send session cancellation notifications
+      try {
+        const tenant = await db.select()
+          .from(tenants)
+          .where(eq(tenants.id, currentUser.tenantId))
+          .limit(1);
+
+        if (tenant.length) {
+          const tenantData = tenant[0];
+          
+          // Get session cancelled template
+          const allTemplates = await storage.getTemplates(currentUser.tenantId);
+          const emailTemplates = allTemplates.filter((t: any) => t.type === 'email');
+          const template = emailTemplates.find((t: any) => t.method === 'session_cancelled' && t.active);
+
+          if (template) {
+            // Send notification to each parent who received credit
+            for (const signup of paidSignups) {
+              if (signup.parentId && signup.actualAmountCents) {
+                const [parent, player] = await Promise.all([
+                  storage.getUser(signup.parentId),
+                  db.select().from(players).where(eq(players.id, signup.playerId)).limit(1)
+                ]);
+
+                if (parent?.email && player.length) {
+                  const playerData = player[0];
+                  
+                  let message = template.template;
+                  const variables = {
+                    '{{parentName}}': `${parent.firstName || ''} ${parent.lastName || ''}`.trim(),
+                    '{{playerName}}': `${playerData.firstName} ${playerData.lastName}`,
+                    '{{sessionDate}}': format(new Date(session.startTime), 'EEEE, MMMM d, yyyy'),
+                    '{{sessionTime}}': format(new Date(session.startTime), 'h:mm a'),
+                    '{{sessionLocation}}': session.location || '',
+                    '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
+                    '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
+                    '{{organizationName}}': tenantData.name || 'PlayHQ',
+                    '{{organizationPhone}}': tenantData.phone || ''
+                  };
+
+                  Object.entries(variables).forEach(([key, value]) => {
+                    message = message.replace(new RegExp(key, 'g'), value || '');
+                  });
+
+                  await storage.createNotification({
+                    tenantId: currentUser.tenantId,
+                    signupId: signup.id,
+                    type: 'email',
+                    recipient: parent.email,
+                    recipientUserId: parent.id,
+                    subject: template.subject,
+                    message,
+                    status: 'pending'
+                  });
+                }
+              }
+            }
+          }
+
+          // Check for SMS template
+          const allSmsTemplates = await storage.getTemplates(currentUser.tenantId);
+          const smsTemplates = allSmsTemplates.filter((t: any) => t.type === 'sms');
+          const smsTemplate = smsTemplates.find((t: any) => t.method === 'session_cancelled' && t.active);
+
+          if (smsTemplate) {
+            for (const signup of paidSignups) {
+              if (signup.parentId && signup.actualAmountCents) {
+                const [parent, player] = await Promise.all([
+                  storage.getUser(signup.parentId),
+                  db.select().from(players).where(eq(players.id, signup.playerId)).limit(1)
+                ]);
+
+                if (parent?.phone && player.length) {
+                  const playerData = player[0];
+                  
+                  let smsMessage = smsTemplate.template;
+                  const smsVariables = {
+                    '{{parentName}}': `${parent.firstName || ''} ${parent.lastName || ''}`.trim(),
+                    '{{playerName}}': `${playerData.firstName} ${playerData.lastName}`,
+                    '{{sessionDate}}': format(new Date(session.startTime), 'EEEE, MMMM d, yyyy'),
+                    '{{sessionTime}}': format(new Date(session.startTime), 'h:mm a'),
+                    '{{sessionLocation}}': session.location || '',
+                    '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
+                    '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
+                    '{{organizationName}}': tenantData.name || 'PlayHQ',
+                    '{{organizationPhone}}': tenantData.phone || ''
+                  };
+
+                  Object.entries(smsVariables).forEach(([key, value]) => {
+                    smsMessage = smsMessage.replace(new RegExp(key, 'g'), value || '');
+                  });
+
+                  await storage.createNotification({
+                    tenantId: currentUser.tenantId,
+                    signupId: signup.id,
+                    type: 'sms',
+                    recipient: parent.phone,
+                    recipientUserId: parent.id,
+                    subject: smsTemplate.subject,
+                    message: smsMessage,
+                    status: 'pending'
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to send cancellation notifications:', error);
+        // Don't fail the session deletion if notification fails
       }
 
       // Delete the session
@@ -4573,7 +4686,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       res.json(template);
     } catch (error) {
       console.error('Error creating consent template:', error);
-      res.status(400).json({ error: error.message || 'Failed to create consent template' });
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to create consent template' });
     }
   });
 
@@ -4599,7 +4712,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       res.json(template);
     } catch (error) {
       console.error('Error updating consent template:', error);
-      res.status(400).json({ error: error.message || 'Failed to update consent template' });
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to update consent template' });
     }
   });
 

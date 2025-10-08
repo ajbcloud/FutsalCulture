@@ -4,6 +4,7 @@ import { futsalSessions, signups, players, tenants, integrations, systemSettings
 import { eq, and, sql } from 'drizzle-orm';
 import Stripe from 'stripe';
 import braintree from 'braintree';
+import { format } from 'date-fns';
 
 const router = Router();
 
@@ -689,6 +690,95 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
           reservationExpiresAt: null // Clear reservation since payment is complete
         })
         .where(eq(signups.id, signupId));
+
+      // Send booking confirmation notification
+      try {
+        const [session, player, parent, tenant] = await Promise.all([
+          db.select().from(futsalSessions).where(eq(futsalSessions.id, sessionId)).limit(1),
+          db.select().from(players).where(eq(players.id, playerId)).limit(1),
+          storage.getUser(userId),
+          db.select().from(tenants).where(eq(tenants.id, currentUser.tenantId)).limit(1)
+        ]);
+
+        if (session.length && player.length && parent && tenant.length) {
+          const sessionData = session[0];
+          const playerData = player[0];
+          const tenantData = tenant[0];
+
+          // Get booking confirmation template
+          const allTemplates = await storage.getTemplates(currentUser.tenantId);
+          const emailTemplates = allTemplates.filter((t: any) => t.type === 'email');
+          const template = emailTemplates.find((t: any) => t.method === 'booking_confirmation' && t.active);
+
+          if (template && parent.email) {
+            // Replace template variables
+            let message = template.template;
+            const variables = {
+              '{{parentName}}': `${parent.firstName || ''} ${parent.lastName || ''}`.trim(),
+              '{{playerName}}': `${playerData.firstName} ${playerData.lastName}`,
+              '{{sessionDate}}': format(new Date(sessionData.startTime), 'EEEE, MMMM d, yyyy'),
+              '{{sessionTime}}': format(new Date(sessionData.startTime), 'h:mm a'),
+              '{{sessionLocation}}': sessionData.location || '',
+              '{{sessionAgeGroup}}': sessionData.ageGroups?.join(', ') || '',
+              '{{organizationName}}': tenantData.name || 'PlayHQ',
+              '{{organizationPhone}}': tenantData.phone || ''
+            };
+
+            Object.entries(variables).forEach(([key, value]) => {
+              message = message.replace(new RegExp(key, 'g'), value || '');
+            });
+
+            // Create notification record
+            await storage.createNotification({
+              tenantId: currentUser.tenantId,
+              signupId: signupId,
+              type: 'email',
+              recipient: parent.email,
+              recipientUserId: parent.id,
+              subject: template.subject,
+              message,
+              status: 'pending'
+            });
+          }
+
+          // Check for SMS template if parent has phone
+          const allSmsTemplates = await storage.getTemplates(currentUser.tenantId);
+          const smsTemplates = allSmsTemplates.filter((t: any) => t.type === 'sms');
+          const smsTemplate = smsTemplates.find((t: any) => t.method === 'booking_confirmation' && t.active);
+
+          if (smsTemplate && parent.phone) {
+            let smsMessage = smsTemplate.template;
+            const smsVariables = {
+              '{{parentName}}': `${parent.firstName || ''} ${parent.lastName || ''}`.trim(),
+              '{{playerName}}': `${playerData.firstName} ${playerData.lastName}`,
+              '{{sessionDate}}': format(new Date(sessionData.startTime), 'EEEE, MMMM d, yyyy'),
+              '{{sessionTime}}': format(new Date(sessionData.startTime), 'h:mm a'),
+              '{{sessionLocation}}': sessionData.location || '',
+              '{{sessionAgeGroup}}': sessionData.ageGroups?.join(', ') || '',
+              '{{organizationName}}': tenantData.name || 'PlayHQ',
+              '{{organizationPhone}}': tenantData.phone || ''
+            };
+
+            Object.entries(smsVariables).forEach(([key, value]) => {
+              smsMessage = smsMessage.replace(new RegExp(key, 'g'), value || '');
+            });
+
+            await storage.createNotification({
+              tenantId: currentUser.tenantId,
+              signupId: signupId,
+              type: 'sms',
+              recipient: parent.phone,
+              recipientUserId: parent.id,
+              subject: smsTemplate.subject,
+              message: smsMessage,
+              status: 'pending'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to send booking confirmation notification:', error);
+        // Don't fail the booking if notification fails
+      }
 
       res.json({ 
         success: true, 
