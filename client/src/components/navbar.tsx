@@ -43,7 +43,7 @@ export default function Navbar() {
               <div className="flex border-b border-border">
                 {isAuthenticated ? (
                   <>
-                    <Link href="/" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
+                    <Link href="/dashboard" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Home
                     </Link>
                     <Link href="/calendar" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
