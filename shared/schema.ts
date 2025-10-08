@@ -390,7 +390,7 @@ export const payments = pgTable("payments", {
 // User Credits table - replaces refund system
 export const userCredits = pgTable("user_credits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user__id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   amountCents: integer("amount_cents").notNull(),
   reason: text("reason").notNull(),
@@ -875,7 +875,7 @@ export const tenantPlanAssignments = pgTable("tenant_plan_assignments", {
 
 export const tenantUsageDaily = pgTable("tenant_usage_daily", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant__id").notNull().references(() => tenants.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   date: timestamp("date").notNull(), // date column stored as timestamp
   counters: jsonb("counters").notNull(), // JSON with players, sessions, emails, sms, storage_mb, api_calls
   createdAt: timestamp("created_at").defaultNow(),
@@ -2619,61 +2619,3 @@ export type InsertTenantInviteCode = z.infer<typeof insertTenantInviteCodeSchema
 
 // NotificationPreferences type export (was missing)
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
-
-// Notification template tables
-export const notificationTemplates = pgTable('notification_templates', {
-  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar('name', { length: 100 }).notNull(),
-  type: varchar('type').notNull(), // email, sms, push
-  method: varchar('method', { length: 50 }).notNull().default('manual'),
-  subject: text('subject'),
-  template: text('template').notNull(),
-  active: boolean('active').default(true),
-  tenantId: varchar('tenant_id').notNull().references(() => tenants.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
-
-export const reengagementTracking = pgTable('reengagement_tracking', {
-  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
-  customerId: varchar('customer_id').notNull(),
-  notificationId: varchar('notification_id').notNull(),
-  campaignType: varchar('campaign_type').notNull(),
-  discountCodeId: varchar('discount_code_id'),
-  responseBookingId: varchar('response_booking_id'),
-  daysBetweenNotificationAndBooking: integer('days_between_notification_and_booking'),
-  isSuccessful: boolean('is_successful').default(false),
-  tenantId: varchar('tenant_id').notNull().references(() => tenants.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  respondedAt: timestamp('responded_at')
-});
-
-export const messageLog = pgTable('message_log', {
-  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
-  provider: text('provider').notNull().default('twilio'),
-  externalId: text('external_id'),
-  toNumber: text('to_number').notNull(),
-  fromNumber: text('from_number').notNull(),
-  body: text('body').notNull(),
-  direction: text('direction').notNull(), // outbound, inbound
-  status: text('status').notNull().default('queued'),
-  errorCode: text('error_code'),
-  tenantId: varchar('tenant_id').notNull().references(() => tenants.id),
-  campaignId: varchar('campaign_id'),
-  templateId: varchar('template_id'),
-  meta: jsonb('meta').default(sql`'{}'`),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
-
-export const consentEvents = pgTable('consent_events', {
-  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar('user_id').notNull().references(() => users.id),
-  tenantId: varchar('tenant_id').notNull().references(() => tenants.id),
-  channel: text('channel').notNull(), // sms, email
-  type: text('type').notNull(), // opt_in, opt_out
-  source: text('source').notNull(), // signup, booking, keyword, admin
-  ip: text('ip'),
-  userAgent: text('user_agent'),
-  occurredAt: timestamp('occurred_at').defaultNow().notNull()
-});

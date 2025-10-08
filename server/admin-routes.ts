@@ -11,16 +11,9 @@ import multer from 'multer';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
-import analyticsRoutes from './routes/super-admin-email';
-import sessionBillingRoutes from './session-billing-routes';
-import myHelpRequestRoutes from './my-help-request-routes';
-import featureRequestRoutes from './feature-request-routes';
-import playerDevelopmentRoutes from './player-development-routes';
-import adminCampaignsRoutes from './admin-campaigns-routes';
-import notificationTemplatesRoutes from './routes/notification-templates';
 
 // Configure multer for file uploads
-const upload = multer({
+const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
@@ -184,10 +177,10 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
     let userId;
-
+    
     // Session validation for authentication
-
-    // Check for local session first (password-based users)
+    
+    // Check for local session first (password-based users)  
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
     }
@@ -209,16 +202,16 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
       }
       // Development failsafe admin access
     }
-
+    
     // Authentication validation complete
-
+    
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
+    
     // Check user's admin status directly from database
     let user = await storage.getUser(userId);
-
+    
     // Apply failsafe super admin permissions if this is the hardcoded admin
     if (userId === 'ajosephfinch') {
       if (user) {
@@ -245,13 +238,13 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
         };
       }
     }
-
+    
     // Final user permissions validation
-
+    
     if (!user?.isAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
-
+    
     // Attach user to request for convenience
     (req as any).currentUser = user;
     (req as any).adminTenantId = user?.tenantId;
@@ -267,7 +260,7 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
     let userId;
-
+    
     // Check for local session first (password-based users)
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
@@ -276,17 +269,17 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
     else if ((req as any).user?.id) {
       userId = (req as any).user.id;
     }
-
+    
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
-
+    
     // Check user's admin status directly from database
     const user = await storage.getUser(userId);
     if (!user?.isAdmin) {
       return res.status(403).json({ message: "Full admin access required" });
     }
-
+    
     // Attach user to request for convenience
     (req as any).currentUser = user;
     next();
@@ -300,13 +293,13 @@ export async function requireFullAdmin(req: Request, res: Response, next: Functi
 async function createRecurringSessions(baseSessionData: any, storage: any) {
   const { recurringType, recurringCount, recurringEndDate, ...sessionTemplate } = baseSessionData;
   const sessions = [];
-
+  
   const startDate = new Date(sessionTemplate.startTime);
   const sessionDuration = new Date(sessionTemplate.endTime).getTime() - startDate.getTime();
-
+  
   for (let i = 0; i < recurringCount; i++) {
     const sessionDate = new Date(startDate);
-
+    
     // Calculate next occurrence based on type
     if (recurringType === 'weekly') {
       sessionDate.setDate(startDate.getDate() + (i * 7));
@@ -315,37 +308,37 @@ async function createRecurringSessions(baseSessionData: any, storage: any) {
     } else if (recurringType === 'monthly') {
       sessionDate.setMonth(startDate.getMonth() + i);
     }
-
+    
     // Stop if we've exceeded the end date
     if (recurringEndDate && sessionDate > new Date(recurringEndDate)) {
       break;
     }
-
+    
     // Create session data for this occurrence
     const sessionData = {
       ...sessionTemplate,
       startTime: sessionDate,
       endTime: new Date(sessionDate.getTime() + sessionDuration),
     };
-
+    
     // Create the session
     const session = await storage.createSession(sessionData);
     sessions.push(session);
   }
-
+  
   return sessions;
 }
 
 export async function setupAdminRoutes(app: any) {
-  // New comprehensive dashboard metrics endpoint
+  // New comprehensive dashboard metrics endpoint  
   app.get('/api/admin/dashboard-metrics', requireAdmin, async (req: Request, res: Response) => {
     try {
       const now = new Date();
-
+      
       // Get tenant ID from authenticated user - CRITICAL FOR MULTI-TENANT ISOLATION
       const tenantId = (req as any).currentUser?.tenantId || (req as any).currentUser?.tenant_id;
       const isSuperAdmin = (req as any).currentUser?.isSuperAdmin;
-
+      
       if (!tenantId && !isSuperAdmin) {
         console.error('❌ CRITICAL: No tenant ID found for user', (req as any).currentUser?.id);
         return res.status(400).json({ error: 'Tenant context required' });
@@ -360,11 +353,11 @@ export async function setupAdminRoutes(app: any) {
       }
 
       console.log('🏢 Dashboard metrics for tenant:', contextTenantId, 'user:', (req as any).currentUser?.id, 'isSuperAdmin:', isSuperAdmin);
-
+      
       // Date boundaries for calculations
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-
+      
       // Current week boundaries
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - now.getDay());
@@ -402,13 +395,13 @@ export async function setupAdminRoutes(app: any) {
       const ytdCents = Number(ytdRevenueResult[0]?.sum || 0);
 
       // Debug log to verify calculations and growth data
-      console.log('→ revenue calculations:', {
-        tenantId,
-        monthlyCents,
-        ytdCents,
+      console.log('→ revenue calculations:', { 
+        tenantId, 
+        monthlyCents, 
+        ytdCents, 
         monthlyType: typeof monthlyCents,
         ytdType: typeof ytdCents,
-        firstOfMonth,
+        firstOfMonth, 
         startOfYear,
         debugTimestamp: new Date().toISOString()
       });
@@ -488,10 +481,10 @@ export async function setupAdminRoutes(app: any) {
 
       // 10. Session Fill Rate (correct calculation - average fill rate per session) - TENANT SCOPED
       const fillRateResult = await db.execute(sql`
-        SELECT
+        SELECT 
           COALESCE(AVG(session_fill_rate), 0) as average_fill_rate
         FROM (
-          SELECT
+          SELECT 
             fs.id,
             fs.capacity,
             COUNT(s.id) as signups_count,
@@ -502,16 +495,16 @@ export async function setupAdminRoutes(app: any) {
           GROUP BY fs.id, fs.capacity
         ) session_stats
       `);
-
+      
       const fillRateRow = fillRateResult.rows[0] as { average_fill_rate: number };
       const fillRate = Math.round(Number(fillRateRow.average_fill_rate) || 0);
 
       // Calculate growth rates by comparing with previous periods
-
+      
       // Previous month boundaries for growth calculations
       const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-
+      
       // Previous week boundaries
       const prevWeekStart = new Date(startOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
       const prevWeekEnd = new Date(endOfWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
@@ -561,7 +554,7 @@ export async function setupAdminRoutes(app: any) {
           )
         );
       const thisMonthSignups = thisMonthSignupsResult[0]?.count || 0;
-
+      
       const lastMonthSignupsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(signups)
@@ -631,7 +624,7 @@ export async function setupAdminRoutes(app: any) {
         pendingPayments,
         activeParents,
         fillRate,
-
+        
         // Growth indicators with actual calculations
         revenueGrowth,
         playersGrowth,
@@ -655,9 +648,9 @@ export async function setupAdminRoutes(app: any) {
 
       const { date = 'today', before } = req.query;
       const now = new Date();
-
+      
       let startTime: Date, endTime: Date;
-
+      
       if (date === 'today') {
         startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -781,7 +774,7 @@ export async function setupAdminRoutes(app: any) {
         const userType = isAdmin ? 'admin' : 'parent';
         const userIcon = isAdmin ? '👨‍💼' : '👨‍👩‍👧‍👦';
         const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
-
+        
         activities.push({
           id: `${userType}-reg-${user.id}`,
           type: 'registration',
@@ -789,7 +782,7 @@ export async function setupAdminRoutes(app: any) {
           message: `New ${userType} registered: ${user.firstName} ${user.lastName}`,
           timestamp: user.createdAt!,
           timeAgo: getTimeAgo(user.createdAt!),
-          // Navigation metadata
+          // Navigation metadata  
           navigationUrl: navigationUrl,
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
@@ -808,12 +801,12 @@ export async function setupAdminRoutes(app: any) {
         .limit(5);
 
       console.log('Found parent approvals:', recentParentApprovals.length);
-
+      
       recentParentApprovals.forEach(user => {
         const isAdmin = user.isAdmin || user.isSuperAdmin;
         const userType = isAdmin ? 'admin' : 'parent';
         const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
-
+        
         activities.push({
           id: `${userType}-approval-${user.id}`,
           type: 'approval',
@@ -821,7 +814,7 @@ export async function setupAdminRoutes(app: any) {
           message: `${userType.charAt(0).toUpperCase() + userType.slice(1)} registration approved: ${user.firstName} ${user.lastName}`,
           timestamp: user.approvedAt!,
           timeAgo: getTimeAgo(user.approvedAt!),
-          // Navigation metadata
+          // Navigation metadata  
           navigationUrl: navigationUrl,
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
@@ -865,17 +858,17 @@ export async function setupAdminRoutes(app: any) {
   app.get('/api/admin/stats', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       // For now, return basic stats using existing methods
       const sessions = await storage.getSessions({});
       const analytics = await storage.getAnalytics();
-
+      
       // Get sessions this week
       const now = new Date();
       const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
-
+      
       const sessionsThisWeek = sessions.filter(s => {
         const sessionDate = new Date(s.startTime);
         return sessionDate >= weekStart && sessionDate < weekEnd;
@@ -890,9 +883,9 @@ export async function setupAdminRoutes(app: any) {
         .from(systemSettings)
         .where(eq(systemSettings.key, 'autoApproveRegistrations'))
         .limit(1);
-
+      
       const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
-
+      
       // Get pending registrations for current tenant only (if auto-approve is disabled)
       let totalPendingRegistrations = 0;
       if (!autoApprove) {
@@ -922,7 +915,7 @@ export async function setupAdminRoutes(app: any) {
           action: '/admin/payments',
         });
       }
-
+      
       if (totalPendingRegistrations > 0) {
         pendingTasks.push({
           id: 'pending-registrations',
@@ -1053,11 +1046,11 @@ export async function setupAdminRoutes(app: any) {
         waitlistEntries: waitlistsBySession[s.id] || [],
       }));
 
-      console.log('Sessions with signup counts:', sessionsWithDetails.slice(0, 2).map(s => ({
-        id: s.id,
-        signupCount: s.signupCount,
+      console.log('Sessions with signup counts:', sessionsWithDetails.slice(0, 2).map(s => ({ 
+        id: s.id, 
+        signupCount: s.signupCount, 
         signupsCount: s.signupsCount,
-        capacity: s.capacity
+        capacity: s.capacity 
       })));
       res.json(sessionsWithDetails);
     } catch (error) {
@@ -1070,10 +1063,10 @@ export async function setupAdminRoutes(app: any) {
     try {
       const user = req.user as any;
       const requestData = { ...req.body };
-
+      
       // Add tenant ID from authenticated user
       requestData.tenantId = user.tenantId;
-
+      
       // Convert date strings to Date objects
       if (requestData.startTime) {
         requestData.startTime = new Date(requestData.startTime);
@@ -1081,11 +1074,11 @@ export async function setupAdminRoutes(app: any) {
       if (requestData.endTime) {
         requestData.endTime = new Date(requestData.endTime);
       }
-
+      
       // Ensure booking time defaults are applied
       requestData.bookingOpenHour = requestData.bookingOpenHour ?? 8;
       requestData.bookingOpenMinute = requestData.bookingOpenMinute ?? 0;
-
+      
       // Handle recurring sessions
       if (requestData.isRecurring) {
         const sessions = await createRecurringSessions(requestData, storage);
@@ -1106,7 +1099,7 @@ export async function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const updateData = { ...req.body };
-
+      
       // Convert datetime strings to Date objects if they exist
       if (updateData.startTime && typeof updateData.startTime === 'string') {
         updateData.startTime = new Date(updateData.startTime);
@@ -1114,7 +1107,7 @@ export async function setupAdminRoutes(app: any) {
       if (updateData.endTime && typeof updateData.endTime === 'string') {
         updateData.endTime = new Date(updateData.endTime);
       }
-
+      
       console.log('Updating session with data:', { id, updateData });
       const session = await storage.updateSession(id, updateData);
       res.json(session);
@@ -1128,7 +1121,7 @@ export async function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const userId = (req as any).user?.claims?.sub;
-
+      
       if (!userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
@@ -1206,7 +1199,7 @@ export async function setupAdminRoutes(app: any) {
       // Delete the session
       await db.delete(futsalSessions).where(eq(futsalSessions.id, id));
 
-      res.json({
+      res.json({ 
         message: "Session deleted successfully",
         creditsIssued: creditsCreated.length,
         totalCreditAmount: creditsCreated.reduce((sum, c) => sum + c.amountCents, 0) / 100,
@@ -1221,7 +1214,7 @@ export async function setupAdminRoutes(app: any) {
   app.get('/api/admin/payments', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { status } = req.query;
-
+      
       if (status === 'pending') {
         // Get pending payment signups (unpaid reservations)
         const pendingSignups = await storage.getPendingPaymentSignups();
@@ -1277,7 +1270,7 @@ export async function setupAdminRoutes(app: any) {
           .leftJoin(payments, eq(signups.id, payments.signupId))
           .where(eq(signups.paid, true))
           .orderBy(desc(payments.paidAt));
-
+        
         res.json(paidSignups);
       } else {
         // Return all payments (pending and paid)
@@ -1333,7 +1326,7 @@ export async function setupAdminRoutes(app: any) {
             .where(eq(signups.paid, true))
             .orderBy(desc(payments.paidAt))
         ]);
-
+        
         // Combine and return all payments
         res.json([...pendingSignups, ...paidSignups]);
       }
@@ -1346,21 +1339,21 @@ export async function setupAdminRoutes(app: any) {
   app.post('/api/admin/payments/:id/mark-paid', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-
+      
       // Get the signup details
       const signup = await storage.getSignupWithDetails(id);
       if (!signup) {
         return res.status(404).json({ message: "Signup not found" });
       }
-
-      // Create a payment record with current timestamp
+      
+      // Create a payment record with current timestamp 
       await storage.createPayment({
         tenantId: signup.player?.tenantId || 'default-tenant',
         signupId: id,
         amountCents: signup.session?.priceCents || 1000, // Default $10
         paidAt: new Date()
       });
-
+      
       // Update the signup status
       const updatedSignup = await storage.updateSignupPaymentStatus(id, true);
       res.json(updatedSignup);
@@ -1374,7 +1367,7 @@ export async function setupAdminRoutes(app: any) {
   app.get('/api/admin/players', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { search, playerId } = req.query;
-
+      
       // Get all players with parent information and signup counts
       const allPlayers = await db.select({
         id: players.id,
@@ -1399,8 +1392,8 @@ export async function setupAdminRoutes(app: any) {
         parent2Email: sql<string>`parent2.email`,
         // Signup count
         signupCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM ${signups}
+          SELECT COUNT(*)::int 
+          FROM ${signups} 
           WHERE ${signups.playerId} = ${players.id}
         )`,
       })
@@ -1408,7 +1401,7 @@ export async function setupAdminRoutes(app: any) {
       .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
       .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`)
       .where(
-        playerId ? eq(players.id, playerId as string) :
+        playerId ? eq(players.id, playerId as string) : 
         search ? or(
           sql`${players.firstName} ILIKE ${`%${search}%`}`,
           sql`${players.lastName} ILIKE ${`%${search}%`}`,
@@ -1428,7 +1421,7 @@ export async function setupAdminRoutes(app: any) {
         parentName: `${player.parentFirstName || ''} ${player.parentLastName || ''}`.trim(),
         parentEmail: player.parentEmail,
         parent2Id: player.parent2Id,
-        parent2Name: player.parent2FirstName && player.parent2LastName ?
+        parent2Name: player.parent2FirstName && player.parent2LastName ? 
           `${player.parent2FirstName} ${player.parent2LastName}`.trim() : null,
         parent2Email: player.parent2Email,
         canAccessPortal: player.canAccessPortal,
@@ -1451,20 +1444,20 @@ export async function setupAdminRoutes(app: any) {
     try {
       const { id } = req.params;
       const updateData = req.body;
-
+      
       // If attempting to enable portal access, validate age requirement
       if (updateData.canAccessPortal === true) {
         const existingPlayer = await db.select().from(players).where(eq(players.id, id)).limit(1);
         if (existingPlayer.length > 0) {
           const age = calculateAge(existingPlayer[0].birthYear);
           if (age < MINIMUM_PORTAL_AGE) {
-            return res.status(400).json({
-              message: `Portal access can only be enabled for players ${MINIMUM_PORTAL_AGE} years or older. This player is currently ${age} years old.`
+            return res.status(400).json({ 
+              message: `Portal access can only be enabled for players ${MINIMUM_PORTAL_AGE} years or older. This player is currently ${age} years old.` 
             });
           }
         }
       }
-
+      
       const player = await storage.updatePlayer(id, updateData);
       res.json(player);
     } catch (error) {
@@ -1479,7 +1472,7 @@ export async function setupAdminRoutes(app: any) {
       const { id: playerId } = req.params;
       const { page = '1', limit = '20' } = req.query;
       const user = req.user as any;
-
+      
       if (!user.tenantId) {
         return res.status(403).json({ message: "Access denied: no tenant context" });
       }
@@ -1499,8 +1492,8 @@ export async function setupAdminRoutes(app: any) {
       }
 
       // Get total count of sessions for this player
-      const [totalResult] = await db.select({
-        count: sql<number>`count(*)::int`
+      const [totalResult] = await db.select({ 
+        count: sql<number>`count(*)::int` 
       })
       .from(signups)
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
@@ -1543,14 +1536,14 @@ export async function setupAdminRoutes(app: any) {
         sessionId: session.sessionId,
         sessionName: session.sessionName || 'Training Session',
         date: session.date,
-        time: `${new Date(session.startTime).toLocaleTimeString([], {
-          hour: 'numeric',
+        time: `${new Date(session.startTime).toLocaleTimeString([], { 
+          hour: 'numeric', 
           minute: '2-digit',
-          hour12: true
-        })} - ${new Date(session.endTime).toLocaleTimeString([], {
-          hour: 'numeric',
+          hour12: true 
+        })} - ${new Date(session.endTime).toLocaleTimeString([], { 
+          hour: 'numeric', 
           minute: '2-digit',
-          hour12: true
+          hour12: true 
         })}`,
         sessionDate: new Date(session.startTime).toISOString().split('T')[0], // YYYY-MM-DD format
         sessionStartTime: new Date(session.startTime).toISOString().split('T')[1].split('.')[0], // HH:MM:SS format in UTC
@@ -1580,11 +1573,11 @@ export async function setupAdminRoutes(app: any) {
     try {
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
       console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
-
+      
       // Build date filters
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const dateEnd = endDate ? new Date(endDate as string) : new Date();
-
+      
       // Get filtered sessions
       let sessionQuery = db
         .select({
@@ -1595,8 +1588,8 @@ export async function setupAdminRoutes(app: any) {
           capacity: futsalSessions.capacity,
           startTime: futsalSessions.startTime,
           signupCount: sql<number>`(
-            SELECT COUNT(*)::int
-            FROM ${signups}
+            SELECT COUNT(*)::int 
+            FROM ${signups} 
             WHERE ${signups.sessionId} = ${futsalSessions.id}
           )`,
         })
@@ -1620,16 +1613,16 @@ export async function setupAdminRoutes(app: any) {
       }
 
       const applicableSessions = await sessionQuery;
-
+      
       // Filter sessions by age group and gender
       let filteredSessions = applicableSessions;
       if (ageGroup && ageGroup !== 'all') {
-        filteredSessions = filteredSessions.filter(session =>
+        filteredSessions = filteredSessions.filter(session => 
           session.ageGroups && session.ageGroups.includes(ageGroup as string)
         );
       }
       if (gender && gender !== 'all') {
-        filteredSessions = filteredSessions.filter(session =>
+        filteredSessions = filteredSessions.filter(session => 
           session.genders && session.genders.includes(gender as string)
         );
       }
@@ -1665,7 +1658,7 @@ export async function setupAdminRoutes(app: any) {
             );
         }
       }
-
+      
       // Get filtered players
       let filteredPlayers: any[] = [];
       if (filteredSignups.length > 0) {
@@ -1674,7 +1667,7 @@ export async function setupAdminRoutes(app: any) {
           .select()
           .from(players)
           .where(inArray(players.id, playerIds));
-
+          
         // Apply player-level filters
         if (ageGroup && ageGroup !== 'all') {
           const targetAge = parseInt((ageGroup as string).substring(1));
@@ -1683,19 +1676,19 @@ export async function setupAdminRoutes(app: any) {
             return Math.abs(age - targetAge) <= 2; // Within 2 years
           });
         }
-
+        
         if (gender && gender !== 'all') {
           filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
         }
       }
-
+      
       // Calculate filtered analytics
       const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
       const totalSessions = filteredSessions.length;
       const totalSignups = filteredSignups.length;
       const totalCapacity = filteredSessions.reduce((sum, session) => sum + session.capacity, 0);
       const avgFillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
-
+      
       // Revenue over time (from filtered payments)
       const revenueData = await db.select({
         day: sql<string>`date_trunc('day', ${payments.createdAt})::date`,
@@ -1711,13 +1704,13 @@ export async function setupAdminRoutes(app: any) {
       )
       .groupBy(sql`date_trunc('day', ${payments.createdAt})`)
       .orderBy(sql`date_trunc('day', ${payments.createdAt})`);
-
+      
       // Session occupancy trends for filtered sessions
       const occupancyData = filteredSessions.map(session => ({
         day: session.startTime.toISOString().split('T')[0],
         fillRate: session.capacity > 0 ? Math.round((session.signupCount / session.capacity) * 100) : 0
       }));
-
+      
       // Player growth over time for filtered players
       const playerGrowthData = await db.select({
         day: sql<string>`date_trunc('day', ${players.createdAt})::date`,
@@ -1733,16 +1726,16 @@ export async function setupAdminRoutes(app: any) {
       )
       .groupBy(sql`date_trunc('day', ${players.createdAt})`)
       .orderBy(sql`date_trunc('day', ${players.createdAt})`);
-
+      
       res.json({
         // Summary KPIs
-        totalPlayers: filteredPlayers.length,
         monthlyRevenue: totalRevenue,
         totalRevenue: totalRevenue,
+        totalPlayers: filteredPlayers.length,
         activeSessions: totalSessions,
         avgFillRate: avgFillRate,
         totalSignups: totalSignups,
-
+        
         // Detail charts
         revenue: revenueData,
         occupancy: occupancyData,
@@ -1756,16 +1749,1185 @@ export async function setupAdminRoutes(app: any) {
     }
   });
 
+  // Admin Help Requests
+  app.get('/api/admin/help-requests', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const helpRequests = await storage.getHelpRequests(tenantId);
+      res.json(helpRequests);
+    } catch (error) {
+      console.error("Error fetching help requests:", error);
+      res.status(500).json({ message: "Failed to fetch help requests" });
+    }
+  });
+
+  app.post('/api/admin/help-requests/:id/resolve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { resolutionNote } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+
+      if (!resolutionNote || resolutionNote.trim().length < 10) {
+        return res.status(400).json({ 
+          message: "Resolution note is required and must be at least 10 characters" 
+        });
+      }
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+
+      // Update help request with resolution details
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          resolved: true,
+          status: 'resolved',
+          resolvedBy: adminUserId,
+          resolutionNote: resolutionNote.trim(),
+          resolvedAt: new Date()
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      res.json({
+        ...updatedRequest,
+        message: "Help request resolved successfully"
+      });
+    } catch (error) {
+      console.error("Error resolving help request:", error);
+      res.status(500).json({ message: "Failed to resolve help request" });
+    }
+  });
+
+  app.post('/api/admin/help-requests/:id/reply', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { message } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+
+      if (!message || message.trim().length < 1) {
+        return res.status(400).json({ message: "Reply message is required" });
+      }
+
+      // Get current help request to append to reply history
+      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
+      
+      if (!currentRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      // Create new reply object
+      const newReply = {
+        message: message.trim(),
+        repliedBy: adminUserId,
+        repliedAt: new Date().toISOString()
+      };
+
+      // Update reply history and status
+      const updatedReplyHistory = [...(currentRequest.replyHistory || []), newReply];
+      
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          status: 'replied',
+          replyHistory: updatedReplyHistory
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+      
+      // TODO: Implement email sending
+      
+      res.json({ 
+        ...updatedRequest,
+        message: "Reply sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending help request reply:", error);
+      res.status(500).json({ message: "Failed to send reply" });
+    }
+  });
+
+  app.post('/api/admin/help-requests/:id/reply-and-resolve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { message, resolutionNote } = req.body;
+      const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        return res.status(401).json({ message: "Admin authentication required" });
+      }
+
+      if (!message || message.trim().length < 1) {
+        return res.status(400).json({ message: "Reply message is required" });
+      }
+
+      // Get current help request to append to reply history
+      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
+      
+      if (!currentRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+
+      // Create new reply object
+      const newReply = {
+        message: message.trim(),
+        repliedBy: adminUserId,
+        repliedAt: new Date().toISOString()
+      };
+
+      // Update reply history and resolve
+      const updatedReplyHistory = [...(currentRequest.replyHistory || []), newReply];
+      
+      const [updatedRequest] = await db.update(helpRequests)
+        .set({
+          resolved: true,
+          status: 'resolved',
+          resolvedBy: adminUserId,
+          resolutionNote: resolutionNote || message,
+          resolvedAt: new Date(),
+          replyHistory: updatedReplyHistory
+        })
+        .where(eq(helpRequests.id, id))
+        .returning();
+
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Help request not found" });
+      }
+      
+      // TODO: Implement email sending
+      
+      res.json({ 
+        ...updatedRequest,
+        message: "Reply sent and request resolved successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending help request reply and resolve:", error);
+      res.status(500).json({ message: "Failed to send reply and resolve" });
+    }
+  });
+
+  // Pending Registrations Management
+  app.get('/api/admin/pending-registrations', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Check if auto-approve is enabled
+      const autoApproveSetting = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.key, 'autoApproveRegistrations'))
+        .limit(1);
+      
+      const autoApprove = autoApproveSetting[0]?.value === 'true' || autoApproveSetting.length === 0; // Default to true if not set
+      
+      // If auto-approve is enabled, return empty array since nothing should be pending
+      if (autoApprove) {
+        return res.json([]);
+      }
+
+      const pendingUsers = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+        registrationStatus: users.registrationStatus,
+        createdAt: users.createdAt,
+      }).from(users)
+      .where(eq(users.registrationStatus, 'pending'));
+
+      const pendingPlayers = await db.select({
+        id: players.id,
+        firstName: players.firstName,
+        lastName: players.lastName,
+        email: players.email,
+        phoneNumber: players.phoneNumber,
+        registrationStatus: players.registrationStatus,
+        createdAt: players.createdAt,
+        parentId: players.parentId,
+      }).from(players)
+      .where(eq(players.registrationStatus, 'pending'));
+
+      // Combine and format results
+      const pendingRegistrations = [
+        ...pendingUsers.map(user => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          type: 'parent',
+          registrationStatus: user.registrationStatus,
+          createdAt: user.createdAt,
+        })),
+        ...pendingPlayers.map(player => ({
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          email: player.email,
+          phone: player.phoneNumber,
+          type: 'player',
+          registrationStatus: player.registrationStatus,
+          createdAt: player.createdAt,
+          parentId: player.parentId,
+        }))
+      ].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+      res.json(pendingRegistrations);
+    } catch (error) {
+      console.error("Error fetching pending registrations:", error);
+      res.status(500).json({ message: "Failed to fetch pending registrations" });
+    }
+  });
+
+  // Approve Registration
+  app.post('/api/admin/registrations/:id/approve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { type } = req.body; // 'parent' or 'player'
+      const adminUserId = (req as any).currentUser?.id;
+
+      if (type === 'parent') {
+        const [updatedUser] = await db.update(users)
+          .set({
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            approvedBy: adminUserId,
+          })
+          .where(eq(users.id, id))
+          .returning();
+
+        // TODO: Send approval email notification
+        res.json({ message: "Parent registration approved", user: updatedUser });
+      } else if (type === 'player') {
+        const [updatedPlayer] = await db.update(players)
+          .set({
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            approvedBy: adminUserId,
+          })
+          .where(eq(players.id, id))
+          .returning();
+
+        // TODO: Send approval email notification
+        res.json({ message: "Player registration approved", player: updatedPlayer });
+      } else {
+        res.status(400).json({ message: "Invalid registration type" });
+      }
+    } catch (error) {
+      console.error("Error approving registration:", error);
+      res.status(500).json({ message: "Failed to approve registration" });
+    }
+  });
+
+  // Bulk Approve Registrations
+  app.post('/api/admin/registrations/bulk-approve', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { registrations } = req.body; // Array of {id, type} objects
+      const adminUserId = (req as any).currentUser?.id;
+      
+      if (!Array.isArray(registrations) || registrations.length === 0) {
+        return res.status(400).json({ message: 'No registrations provided' });
+      }
+
+      const results = { approved: 0, failed: 0, errors: [] as string[] };
+
+      for (const registration of registrations) {
+        try {
+          if (registration.type === 'parent') {
+            await db.update(users)
+              .set({
+                isApproved: true,
+                registrationStatus: 'approved',
+                approvedAt: new Date(),
+                approvedBy: adminUserId,
+              })
+              .where(eq(users.id, registration.id));
+          } else if (registration.type === 'player') {
+            await db.update(players)
+              .set({
+                isApproved: true,
+                registrationStatus: 'approved',
+                approvedAt: new Date(),
+                approvedBy: adminUserId,
+              })
+              .where(eq(players.id, registration.id));
+          }
+          results.approved++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to approve ${registration.type} ${registration.id}`);
+        }
+      }
+
+      res.json({
+        message: `Bulk approval completed: ${results.approved} approved, ${results.failed} failed`,
+        results
+      });
+    } catch (error) {
+      console.error('Error bulk approving registrations:', error);
+      res.status(500).json({ message: 'Failed to bulk approve registrations' });
+    }
+  });
+
+  // Bulk Reject Registrations
+  app.post('/api/admin/registrations/bulk-reject', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { registrations, reason } = req.body; // Array of {id, type} objects and reason
+      const adminUserId = (req as any).currentUser?.id;
+      
+      if (!Array.isArray(registrations) || registrations.length === 0) {
+        return res.status(400).json({ message: 'No registrations provided' });
+      }
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: 'Rejection reason is required' });
+      }
+
+      const results = { rejected: 0, failed: 0, errors: [] as string[] };
+
+      for (const registration of registrations) {
+        try {
+          if (registration.type === 'parent') {
+            await db.update(users)
+              .set({
+                registrationStatus: 'rejected',
+                rejectedAt: new Date(),
+                rejectedBy: adminUserId,
+                rejectionReason: reason,
+              })
+              .where(eq(users.id, registration.id));
+          } else if (registration.type === 'player') {
+            await db.update(players)
+              .set({
+                registrationStatus: 'rejected',
+              })
+              .where(eq(players.id, registration.id));
+          }
+          results.rejected++;
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Failed to reject ${registration.type} ${registration.id}`);
+        }
+      }
+
+      res.json({
+        message: `Bulk rejection completed: ${results.rejected} rejected, ${results.failed} failed`,
+        results
+      });
+    } catch (error) {
+      console.error('Error bulk rejecting registrations:', error);
+      res.status(500).json({ message: 'Failed to bulk reject registrations' });
+    }
+  });
+
+  // Reject Registration
+  app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { type, reason } = req.body; // 'parent' or 'player', and rejection reason
+      const adminUserId = (req as any).currentUser?.id;
+
+      if (type === 'parent') {
+        const [updatedUser] = await db.update(users)
+          .set({
+            registrationStatus: 'rejected',
+            rejectedAt: new Date(),
+            rejectedBy: adminUserId,
+            rejectionReason: reason,
+          })
+          .where(eq(users.id, id))
+          .returning();
+
+        // TODO: Send rejection email notification
+        res.json({ message: "Parent registration rejected", user: updatedUser });
+      } else if (type === 'player') {
+        const [updatedPlayer] = await db.update(players)
+          .set({
+            registrationStatus: 'rejected',
+            // rejectedAt: new Date(), // Field doesn't exist in schema
+            // rejectedBy: adminUserId, // Field doesn't exist in schema
+            // rejectionReason: reason, // Field doesn't exist in schema
+          })
+          .where(eq(players.id, id))
+          .returning();
+
+        // TODO: Send rejection email notification
+        res.json({ message: "Player registration rejected", player: updatedPlayer });
+      } else {
+        res.status(400).json({ message: "Invalid registration type" });
+      }
+    } catch (error) {
+      console.error("Error rejecting registration:", error);
+      res.status(500).json({ message: "Failed to reject registration" });
+    }
+  });
+
+  // Age Policy endpoints
+  app.get('/api/admin/age-policy', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      // Get age policy settings from system settings
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(and(
+          eq(systemSettings.tenantId, tenantId),
+          sql`${systemSettings.key} IN ('audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent')`
+        ));
+
+      const policyData = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse boolean values explicitly for requireConsent and enforceAgeGating
+        if (setting.key === 'requireConsent' || setting.key === 'enforceAgeGating') {
+          // Handle all possible boolean representations
+          value = value === 'true' || value === true || value === '1' || value === 1;
+        } else if (value === 'true' || value === '1') {
+          value = true;
+        } else if (value === 'false' || value === '0') {
+          value = false;
+        } else if (!isNaN(Number(value)) && setting.key !== 'audience') {
+          // Parse numeric values (but not for boolean fields)
+          value = Number(value);
+        }
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Set defaults if no settings exist
+      const defaultPolicy = {
+        audience: "youth",
+        minAge: 5,
+        maxAge: 18,
+        requireParent: 13,
+        teenSelfMin: 13,
+        teenPayMin: 16,
+        enforceAgeGating: true,
+        requireConsent: false,
+        ...policyData
+      };
+
+      res.json(defaultPolicy);
+    } catch (error) {
+      console.error('Error fetching age policy:', error);
+      res.status(500).json({ error: 'Failed to fetch age policy' });
+    }
+  });
+
+  app.put('/api/admin/age-policy', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      const policyData = req.body;
+      const userId = (req as any).user?.id || (req as any).currentUser?.id;
+
+      // Save each policy setting to system settings
+      for (const [key, value] of Object.entries(policyData)) {
+        if (['audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent'].includes(key)) {
+          await db.insert(systemSettings)
+            .values({
+              tenantId,
+              key,
+              value: String(value),
+              updatedBy: userId,
+              updatedAt: new Date()
+            })
+            .onConflictDoUpdate({
+              target: [systemSettings.tenantId, systemSettings.key],
+              set: {
+                value: String(value),
+                updatedBy: userId,
+                updatedAt: new Date()
+              }
+            });
+        }
+      }
+
+      res.json({ success: true, message: 'Age policy updated successfully' });
+    } catch (error) {
+      console.error('Error updating age policy:', error);
+      res.status(500).json({ error: 'Failed to update age policy' });
+    }
+  });
+
+  // Admin Settings
+  app.get('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const currentUser = (req as any).currentUser;
+      
+      // Get tenant information for default business name and contact email
+      let tenantInfo = null;
+      if (tenantId) {
+        const [tenant] = await db.select()
+          .from(tenants)
+          .where(eq(tenants.id, tenantId))
+          .limit(1);
+        tenantInfo = tenant;
+      }
+      
+      // Get system settings from database for this tenant
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.tenantId, tenantId));
+      
+      const settingsMap = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse boolean values
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        // Parse numeric values
+        if (!isNaN(Number(value))) value = Number(value);
+        // Parse JSON arrays (for availableLocations)
+        if (setting.key === 'availableLocations' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            // If parsing fails, treat as string and split by comma
+            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+          }
+        }
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Use tenant's actual organization name and admin email as defaults
+      const defaultBusinessName = tenantInfo?.name || "Your Organization";
+      const defaultContactEmail = currentUser?.email || "admin@example.com";
+
+      // Default settings if none exist
+      const defaultSettings = {
+        autoApproveRegistrations: true,
+        businessName: defaultBusinessName,
+        businessLogo: "",
+        contactEmail: defaultContactEmail,
+        supportEmail: defaultContactEmail,
+        supportPhone: "",
+        supportHours: "Monday - Friday",
+        supportLocation: "",
+        timezone: "America/New_York",
+        emailNotifications: true,
+        smsNotifications: false,
+        sessionCapacityWarning: 3,
+        paymentReminderMinutes: 60, // Default to 60 minutes
+        paymentSubmissionTimeMinutes: 30, // Default payment submission time
+        refundCutoffMinutes: 60, // Default refund cutoff time
+        // Business schedule settings
+        weekdayStart: "monday", // Business week starts on Monday by default
+        weekdayEnd: "sunday", // Business week ends on Sunday by default
+        // Fiscal year settings
+        fiscalYearType: "calendar", // Default to calendar year
+        fiscalYearStartMonth: 1, // January (only used when fiscalYearType is 'fiscal')
+        // New tenants start with empty locations (no sample data)
+        availableLocations: [],
+        ...settingsMap
+      };
+      
+      // Convert legacy paymentReminderHours to paymentReminderMinutes if it exists
+      if (settingsMap.paymentReminderHours && !settingsMap.paymentReminderMinutes) {
+        defaultSettings.paymentReminderMinutes = settingsMap.paymentReminderHours * 60;
+        delete defaultSettings.paymentReminderHours;
+      }
+
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.post('/api/admin/settings', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const updates = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+      const tenantId = (req as any).currentUser?.tenantId;
+
+      console.log('Settings update request:', { 
+        keyCount: Object.keys(updates).length,
+        keys: Object.keys(updates),
+        adminUserId,
+        tenantId,
+        logoSize: updates.businessLogo ? updates.businessLogo.length : 'N/A'
+      });
+
+      // Update each setting in the database
+      for (const [key, value] of Object.entries(updates)) {
+        try {
+          console.log(`Updating setting: ${key}, value length: ${String(value).length}`);
+          
+          // Handle array values (like availableLocations) by JSON stringifying them
+          const stringValue = Array.isArray(value) ? JSON.stringify(value) : String(value);
+          
+          await db.insert(systemSettings)
+            .values({
+              tenantId,
+              key,
+              value: stringValue,
+              updatedBy: adminUserId,
+              updatedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: [systemSettings.tenantId, systemSettings.key],
+              set: {
+                value: stringValue,
+                updatedBy: adminUserId,
+                updatedAt: new Date(),
+              },
+            });
+            
+          console.log(`Successfully updated setting: ${key}`);
+        } catch (settingError: any) {
+          console.error(`Error updating setting ${key}:`, settingError);
+          throw new Error(`Failed to update setting ${key}: ${settingError?.message || 'Unknown error'}`);
+        }
+      }
+
+      res.json({ message: "Settings updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ 
+        message: "Failed to update settings", 
+        error: error?.message || "Unknown error"
+      });
+    }
+  });
+
+  // Integrations Management Endpoints
+  app.get('/api/admin/integrations', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const allIntegrations = await db.select({
+        id: integrations.id,
+        provider: integrations.provider,
+        enabled: integrations.enabled,
+        lastTestedAt: integrations.lastTestedAt,
+        testStatus: integrations.testStatus,
+        createdAt: integrations.createdAt,
+        updatedAt: integrations.updatedAt,
+      }).from(integrations);
+
+      res.json(allIntegrations);
+    } catch (error) {
+      console.error("Error fetching integrations:", error);
+      res.status(500).json({ message: "Failed to fetch integrations" });
+    }
+  });
+
+  app.get('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Mask sensitive credentials for security
+      const integrationData = integration[0];
+      const maskedCredentials = maskCredentials(integrationData.provider, integrationData.credentials as any);
+      
+      res.json({
+        ...integrationData,
+        credentials: maskedCredentials,
+      });
+    } catch (error) {
+      console.error("Error fetching integration:", error);
+      res.status(500).json({ message: "Failed to fetch integration" });
+    }
+  });
+
+  app.post('/api/admin/integrations', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { provider, credentials, enabled = true } = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
+
+      // Validate credentials based on provider
+      const validationError = validateCredentials(provider, credentials);
+      if (validationError) {
+        return res.status(400).json({ message: validationError });
+      }
+
+      // Handle payment processor mutual exclusivity (Stripe vs Braintree)
+      if ((provider === 'stripe' || provider === 'braintree') && enabled) {
+        const otherProvider = provider === 'stripe' ? 'braintree' : 'stripe';
+        const otherProcessorIntegration = await db.select()
+          .from(integrations)
+          .where(and(
+            eq(integrations.provider, otherProvider),
+            eq(integrations.enabled, true)
+          ))
+          .limit(1);
+
+        if (otherProcessorIntegration.length > 0) {
+          // Disable the other payment processor
+          await db.update(integrations)
+            .set({
+              enabled: false,
+              updatedAt: new Date(),
+              configuredBy: adminUserId,
+            })
+            .where(eq(integrations.provider, otherProvider));
+          
+          // Add a note about the automatic switch
+          console.log(`Automatically disabled ${otherProvider} integration when enabling ${provider}`);
+        }
+      }
+
+      // Check if integration already exists
+      const existing = await db.select()
+        .from(integrations)
+        .where(eq(integrations.provider, provider))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing integration
+        const updated = await db.update(integrations)
+          .set({
+            credentials,
+            enabled,
+            configuredBy: adminUserId,
+            updatedAt: new Date(),
+          })
+          .where(eq(integrations.provider, provider))
+          .returning();
+
+        res.json(updated[0]);
+      } else {
+        // Create new integration
+        const created = await db.insert(integrations)
+          .values({
+            provider,
+            credentials,
+            enabled,
+            configuredBy: adminUserId,
+          })
+          .returning();
+
+        res.json(created[0]);
+      }
+    } catch (error) {
+      console.error("Error creating/updating integration:", error);
+      res.status(500).json({ message: "Failed to save integration" });
+    }
+  });
+
+  app.patch('/api/admin/integrations/:id', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { enabled } = req.body;
+      const adminUserId = (req as any).currentUser?.id;
+
+      // Get the integration to check its provider
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
+
+      const updated = await db.update(integrations)
+        .set({
+          enabled,
+          configuredBy: adminUserId,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, id))
+        .returning();
+
+      if (!updated.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error updating integration:", error);
+      res.status(500).json({ message: "Failed to update integration" });
+    }
+  });
+
+  app.delete('/api/admin/integrations/:id', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      // Get the integration to check its provider before deletion
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
+
+      const deleted = await db.delete(integrations)
+        .where(eq(integrations.id, id))
+        .returning();
+
+      if (!deleted.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      res.json({ message: "Integration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting integration:", error);
+      res.status(500).json({ message: "Failed to delete integration" });
+    }
+  });
+
+  app.post('/api/admin/integrations/:id/test', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      if (!integration.length) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+
+      // Check feature access for specific providers
+      const planLevel = (req as any).planLevel;
+      const provider = integration[0].provider;
+      if (provider === 'quickbooks' && !hasFeature(planLevel, 'integrations_quickbooks')) {
+        return res.status(403).json({ 
+          error: 'QuickBooks integration requires Elite plan',
+          upgradeRequired: true
+        });
+      }
+      if (provider === 'braintree' && !hasFeature(planLevel, 'integrations_braintree')) {
+        return res.status(403).json({ 
+          error: 'Braintree integration requires Growth plan or higher',
+          upgradeRequired: true
+        });
+      }
+
+      const testResult = await testIntegration(integration[0]);
+      
+      // Update test status
+      await db.update(integrations)
+        .set({
+          lastTestedAt: new Date(),
+          testStatus: testResult.success ? 'success' : 'failure',
+          testErrorMessage: testResult.error || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.id, id));
+
+      res.json(testResult);
+    } catch (error) {
+      console.error("Error testing integration:", error);
+      res.status(500).json({ message: "Failed to test integration" });
+    }
+  });
+
+  // Discount Code Management
+  app.get('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const codes = await storage.getDiscountCodes();
+      res.json(codes);
+    } catch (error) {
+      console.error("Error fetching discount codes:", error);
+      res.status(500).json({ message: "Failed to fetch discount codes" });
+    }
+  });
+
+  app.post('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const adminUserId = (req as any).currentUser?.id;
+      const discountData = {
+        ...req.body,
+        createdBy: adminUserId,
+      };
+      const code = await storage.createDiscountCode(discountData);
+      res.json(code);
+    } catch (error) {
+      console.error("Error creating discount code:", error);
+      res.status(500).json({ message: "Failed to create discount code" });
+    }
+  });
+
+  app.put('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const code = await storage.updateDiscountCode(id, req.body);
+      res.json(code);
+    } catch (error) {
+      console.error("Error updating discount code:", error);
+      res.status(500).json({ message: "Failed to update discount code" });
+    }
+  });
+
+  app.delete('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteDiscountCode(id);
+      res.json({ message: "Discount code deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting discount code:", error);
+      res.status(500).json({ message: "Failed to delete discount code" });
+    }
+  });
+
+  // Session management endpoints
+  app.get('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const session = await storage.getSession(id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching session:", error);
+      res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  app.post('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const sessionData = req.body;
+      const session = await storage.createSession(sessionData);
+      res.json(session);
+    } catch (error) {
+      console.error("Error creating session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = { ...req.body };
+      
+      // Convert datetime strings to Date objects if they exist
+      if (updateData.startTime && typeof updateData.startTime === 'string') {
+        updateData.startTime = new Date(updateData.startTime);
+      }
+      if (updateData.endTime && typeof updateData.endTime === 'string') {
+        updateData.endTime = new Date(updateData.endTime);
+      }
+      
+      console.log('Updating session with data:', { id, updateData });
+      const session = await storage.updateSession(id, updateData);
+      res.json(session);
+    } catch (error) {
+      console.error("Error updating session:", error);
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
+  // Admin Analytics with real database filtering
+  app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
+      console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
+      
+      // Build date filters
+      const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const dateEnd = endDate ? new Date(endDate as string) : new Date();
+      
+      // Get filtered sessions
+      let sessionQuery = db
+        .select({
+          id: futsalSessions.id,
+          ageGroups: futsalSessions.ageGroups,
+          genders: futsalSessions.genders,
+          location: futsalSessions.location,
+          capacity: futsalSessions.capacity,
+          startTime: futsalSessions.startTime,
+          signupCount: sql<number>`(
+            SELECT COUNT(*)::int 
+            FROM ${signups} 
+            WHERE ${signups.sessionId} = ${futsalSessions.id}
+          )`,
+        })
+        .from(futsalSessions)
+        .where(
+          and(
+            gte(futsalSessions.startTime, dateStart),
+            lte(futsalSessions.startTime, dateEnd)
+          )
+        );
+
+      const filteredSessions = await sessionQuery;
+      
+      // Apply additional filters
+      let applicableSessions = filteredSessions;
+      
+      if (ageGroup && ageGroup !== 'all') {
+        applicableSessions = filteredSessions.filter(session => 
+          session.ageGroups.includes(ageGroup as string)
+        );
+      }
+      
+      if (gender && gender !== 'all') {
+        applicableSessions = filteredSessions.filter(session =>
+          session.genders.includes(gender as string)
+        );
+      }
+      
+      if (location) {
+        applicableSessions = filteredSessions.filter(session =>
+          session.location.toLowerCase().includes((location as string).toLowerCase())
+        );
+      }
+      
+      // Get filtered signups and payments
+      const sessionIds = applicableSessions.map(s => s.id);
+      
+      let filteredSignups: any[] = [];
+      let filteredPayments: any[] = [];
+      
+      if (sessionIds.length > 0) {
+        filteredSignups = await db
+          .select()
+          .from(signups)
+          .where(
+            and(
+              inArray(signups.sessionId, sessionIds),
+              gte(signups.createdAt, dateStart),
+              lte(signups.createdAt, dateEnd)
+            )
+          );
+          
+        const signupIds = filteredSignups.map(s => s.id);
+        
+        if (signupIds.length > 0) {
+          filteredPayments = await db
+            .select()
+            .from(payments)
+            .where(
+              and(
+                inArray(payments.signupId, signupIds),
+                gte(payments.createdAt, dateStart),
+                lte(payments.createdAt, dateEnd)
+              )
+            );
+        }
+      }
+      
+      // Get filtered players
+      let filteredPlayers: any[] = [];
+      if (filteredSignups.length > 0) {
+        const playerIds = Array.from(new Set(filteredSignups.map(s => s.playerId)));
+        filteredPlayers = await db
+          .select()
+          .from(players)
+          .where(inArray(players.id, playerIds));
+          
+        // Apply player-level filters
+        if (ageGroup && ageGroup !== 'all') {
+          const targetAge = parseInt((ageGroup as string).substring(1));
+          filteredPlayers = filteredPlayers.filter(player => {
+            const age = new Date().getFullYear() - player.birthYear;
+            return Math.abs(age - targetAge) <= 2; // Within 2 years
+          });
+        }
+        
+        if (gender && gender !== 'all') {
+          filteredPlayers = filteredPlayers.filter(player => player.gender === gender);
+        }
+      }
+      
+      // Calculate filtered analytics
+      const totalRevenue = filteredPayments.reduce((sum, payment) => sum + payment.amountCents, 0) / 100;
+      const totalSessions = applicableSessions.length;
+      const totalSignups = filteredSignups.length;
+      const totalCapacity = applicableSessions.reduce((sum, session) => sum + session.capacity, 0);
+      const fillRate = totalCapacity > 0 ? Math.round((totalSignups / totalCapacity) * 100) : 0;
+      
+      console.log('Analytics calculation:', {
+        filteredPayments: filteredPayments.length,
+        totalRevenue,
+        totalSessions,
+        totalSignups,
+        totalCapacity,
+        fillRate,
+        filteredPlayers: filteredPlayers.length
+      });
+      
+      const filteredAnalytics = {
+        totalPlayers: filteredPlayers.length,
+        monthlyRevenue: Math.round(totalRevenue),
+        activeSessions: totalSessions,
+        avgFillRate: fillRate,
+        totalSignups: totalSignups,
+        pendingPayments: 0, // All payments are complete in demo data
+      };
+      
+      res.json(filteredAnalytics);
+    } catch (error) {
+      console.error("Error fetching admin analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   // CSV Template Downloads
   app.get('/api/admin/template/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       // Get system settings from database for this tenant (same pattern as /api/admin/settings)
       const settings = await db.select()
         .from(systemSettings)
         .where(eq(systemSettings.tenantId, tenantId));
-
+      
       const settingsMap = settings.reduce((acc, setting) => {
         let value: any = setting.value;
         // Parse JSON arrays (for availableLocations)
@@ -1786,10 +2948,10 @@ export async function setupAdminRoutes(app: any) {
         { name: "Sports Hub", addressLine1: "Sports Hub", city: "Singapore", country: "SG" },
         { name: "Jurong East", addressLine1: "Jurong East", city: "Singapore", country: "SG" }
       ];
-
+      
       const locations = settingsMap.availableLocations || defaultLocations;
       const locationNames = locations.map((loc: any) => loc.name).join(', ');
-
+      
       const csvContent = `# SESSION IMPORT TEMPLATE - FUTSAL CULTURE
 # Instructions: Fill in the data rows below. Required fields marked with *
 # Available Locations: ${locationNames}
@@ -1876,25 +3038,25 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       const { csvData, dryRun = true } = req.body;
       const tenantId = (req as any).currentUser?.tenantId;
       const adminUserId = (req as any).currentUser?.id;
-
+      
       if (!csvData || typeof csvData !== 'string') {
-        return res.status(400).json({
+        return res.status(400).json({ 
           summary: { rows: 0, errors: 1, warnings: 0 },
           errors: [{ row: 1, column: 'file', value: '', code: 'missing_data', message: 'CSV data is required' }],
           warnings: [],
           validRows: []
         });
       }
-
+      
       // Use our new parser for validation
       const { parseSessionsCSV } = await import('./lib/csv/sessions');
       const validation = parseSessionsCSV(csvData);
-
+      
       // If there are errors, return them immediately
       if (validation.errors.length > 0) {
         return res.status(400).json(validation);
       }
-
+      
       // If this is a dry run (preview), return the validation results
       if (dryRun) {
         return res.json({
@@ -1903,21 +3065,21 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
           message: `Preview: ${validation.validRows.length} sessions ready to import`
         });
       }
-
+      
       // Actual import: create sessions in the database
       const importedSessions: any[] = [];
       const newLocations = new Set<string>();
-
+      
       for (const parsedRow of validation.validRows) {
         try {
           // Check if location exists, create if needed
           const settings = await db.select()
             .from(systemSettings)
             .where(eq(systemSettings.tenantId, tenantId));
-
+          
           const locationsSetting = settings.find(s => s.key === 'availableLocations');
           let availableLocations: any[] = [];
-
+          
           if (locationsSetting?.value) {
             try {
               availableLocations = JSON.parse(locationsSetting.value);
@@ -1925,12 +3087,12 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
               availableLocations = [];
             }
           }
-
+          
           // Check if location exists
           const locationExists = availableLocations.some(
             (loc: any) => (typeof loc === 'string' ? loc : loc.name) === parsedRow.location
           );
-
+          
           if (!locationExists) {
             // Add new location
             const newLocation = {
@@ -1941,7 +3103,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
             };
             availableLocations.push(newLocation);
             newLocations.add(parsedRow.location);
-
+            
             // Update locations in settings
             await db.insert(systemSettings)
               .values({
@@ -1960,7 +3122,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
                 },
               });
           }
-
+          
           // Create session data for database
           const sessionData = {
             tenantId,
@@ -1986,26 +3148,26 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
             createdBy: adminUserId,
             createdAt: new Date(),
           };
-
+          
           // Insert session into database
           const insertedSessions = await db.insert(futsalSessions).values(sessionData).returning();
           importedSessions.push(...insertedSessions);
-
+          
           // Handle recurring sessions if enabled
           if (parsedRow.recurring && parsedRow.recurringRule) {
             // Basic RRULE parsing for common patterns
             const rule = parsedRow.recurringRule;
             let additionalSessions: any[] = [];
-
+            
             if (rule.includes('FREQ=WEEKLY')) {
               const countMatch = rule.match(/COUNT=(\d+)/);
               const count = countMatch ? parseInt(countMatch[1]) : 4;
-
+              
               for (let i = 1; i < count; i++) {
                 const weekOffset = i * 7 * 24 * 60 * 60 * 1000;
                 const newStartTime = new Date(parsedRow.startTime.getTime() + weekOffset);
                 const newEndTime = new Date(parsedRow.endTime.getTime() + weekOffset);
-
+                
                 // Skip sessions in the past
                 if (newStartTime > new Date()) {
                   const recurringSessionData = {
@@ -2015,7 +3177,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
                     isRecurring: false, // Individual occurrences are not recurring
                     recurringRule: null,
                   };
-
+                  
                   const recurringInserted = await db.insert(futsalSessions)
                     .values(recurringSessionData)
                     .returning();
@@ -2023,17 +3185,17 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
                 }
               }
             }
-
+            
             importedSessions.push(...additionalSessions);
           }
-
+          
         } catch (error: any) {
           console.error(`Error creating session from parsed row:`, error);
           // This shouldn't happen since we already validated, but handle gracefully
         }
       }
-
-      res.json({
+      
+      res.json({ 
         summary: {
           imported: importedSessions.length,
           newLocations: newLocations.size,
@@ -2042,10 +3204,10 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         message: `Successfully imported ${importedSessions.length} sessions${newLocations.size > 0 ? `. Added ${newLocations.size} new locations.` : ''}`,
         newLocationsAdded: Array.from(newLocations)
       });
-
+      
     } catch (error) {
       console.error("Error importing sessions:", error);
-      res.status(500).json({
+      res.status(500).json({ 
         summary: { rows: 0, errors: 1, warnings: 0 },
         errors: [{ row: 1, column: 'server', value: '', code: 'server_error', message: 'Internal server error during import' }],
         warnings: [],
@@ -2058,14 +3220,14 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   app.post('/api/admin/imports/sessions/errors', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { errors } = req.body;
-
+      
       if (!errors || !Array.isArray(errors)) {
         return res.status(400).json({ message: 'Errors array is required' });
       }
-
+      
       const { generateErrorsCSV } = await import('./lib/csv/sessions');
       const errorsCsv = generateErrorsCSV(errors);
-
+      
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename="sessions_import_errors.csv"');
       res.send(errorsCsv);
@@ -2080,7 +3242,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     try {
       const { id } = req.params;
       const updateData = req.body;
-
+      
       // Validate required fields if they're being updated
       if (updateData.firstName && typeof updateData.firstName !== 'string') {
         return res.status(400).json({ message: "First name must be a string" });
@@ -2099,8 +3261,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       if (updateData.canAccessPortal === true && updateData.birthYear) {
         const age = new Date().getFullYear() - updateData.birthYear;
         if (age < MINIMUM_PORTAL_AGE) {
-          return res.status(400).json({
-            message: `Portal access can only be enabled for players ${MINIMUM_PORTAL_AGE} years or older. This player is currently ${age} years old.`
+          return res.status(400).json({ 
+            message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
           });
         }
       }
@@ -2115,8 +3277,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       if (updateData.canAccessPortal === true && !updateData.birthYear) {
         const age = calculateAge(new Date(currentPlayer[0].birthYear, 0, 1));
         if (age < MINIMUM_PORTAL_AGE) {
-          return res.status(400).json({
-            message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old`
+          return res.status(400).json({ 
+            message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
           });
         }
       }
@@ -2155,8 +3317,8 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         parent2Email: sql<string>`parent2.email`,
         // Signup count
         signupCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM ${signups}
+          SELECT COUNT(*)::int 
+          FROM ${signups} 
           WHERE ${signups.playerId} = ${players.id}
         )`,
       })
@@ -2183,7 +3345,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         parentName: `${player.parentFirstName || ''} ${player.parentLastName || ''}`.trim(),
         parentEmail: player.parentEmail,
         parent2Id: player.parent2Id,
-        parent2Name: player.parent2FirstName && player.parent2LastName ?
+        parent2Name: player.parent2FirstName && player.parent2LastName ? 
           `${player.parent2FirstName} ${player.parent2LastName}`.trim() : null,
         parent2Email: player.parent2Email,
         soccerClub: player.soccerClub,
@@ -2207,7 +3369,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
     try {
       const tenantId = (req as any).currentUser?.tenantId;
       const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
-
+      
       if (!tenantId) {
         return res.status(400).json({ message: "Tenant ID required" });
       }
@@ -2219,14 +3381,14 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       const sendInviteEmails = req.body.sendInviteEmails === 'true';
       const csvContent = req.file.buffer.toString('utf-8');
       const lines = csvContent.split('\n').filter(line => line.trim());
-
+      
       if (lines.length < 2) {
         return res.status(400).json({ message: "CSV must contain header row and at least one data row" });
       }
 
       const headerRow = lines[0];
       const expectedHeaders = ['firstName', 'lastName', 'birthYear', 'gender', 'parentEmail', 'parentPhone', 'soccerClub', 'canAccessPortal', 'canBookAndPay'];
-
+      
       // Parse header and validate
       const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
@@ -2242,7 +3404,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
         if (!row.trim()) continue;
-
+        
         const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
         if (values.length !== headers.length) {
           errors.push(`Row ${i + 2}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
@@ -2305,7 +3467,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
               createdAt: new Date(),
               updatedAt: new Date()
             }).returning();
-
+            
             parentId = newParent[0].id;
             if (sendInviteEmails) {
               inviteEmails.push(rowData.parentEmail);
@@ -2350,11 +3512,11 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         }
       }
 
-      res.json({
+      res.json({ 
         imported,
         errors,
         emailsSent: sendInviteEmails ? inviteEmails.length : 0,
-        message: `Successfully imported ${imported} players${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+        message: `Successfully imported ${imported} players${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
       });
     } catch (error) {
       console.error("Error importing players:", error);
@@ -2380,7 +3542,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const tenantId = (req as any).currentUser?.tenantId;
       const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
-
+      
       if (!tenantId) {
         return res.status(400).json({ message: "Tenant ID required" });
       }
@@ -2392,14 +3554,14 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const sendInviteEmails = req.body.sendInviteEmails === 'true';
       const csvContent = req.file.buffer.toString('utf-8');
       const lines = csvContent.split('\n').filter(line => line.trim());
-
+      
       if (lines.length < 2) {
         return res.status(400).json({ message: "CSV must contain header row and at least one data row" });
       }
 
       const headerRow = lines[0];
       const expectedHeaders = ['firstName', 'lastName', 'email', 'phone'];
-
+      
       // Parse header and validate
       const headers = headerRow.split(',').map(h => h.trim().replace(/"/g, ''));
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
@@ -2415,7 +3577,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       for (let i = 0; i < dataRows.length; i++) {
         const row = dataRows[i];
         if (!row.trim()) continue;
-
+        
         const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
         if (values.length !== headers.length) {
           errors.push(`Row ${i + 2}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
@@ -2467,7 +3629,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
             createdAt: new Date(),
             updatedAt: new Date()
           });
-
+          
           if (sendInviteEmails) {
             inviteEmails.push(rowData.email);
           }
@@ -2492,11 +3654,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         }
       }
 
-      res.json({
+      res.json({ 
         imported,
         errors,
         emailsSent: sendInviteEmails ? inviteEmails.length : 0,
-        message: `Successfully imported ${imported} parents${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+        message: `Successfully imported ${imported} parents${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
       });
     } catch (error) {
       console.error("Error importing parents:", error);
@@ -2513,22 +3675,22 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       }
 
       const { filter, parentId } = req.query;
-
+      
       // If parentId is provided, filter by specific parent
-      const allUsers = parentId
+      const allUsers = parentId 
         ? await db.select().from(users).where(and(eq(users.id, parentId as string), eq(users.tenantId, tenantId)))
         : await db.select().from(users).where(eq(users.tenantId, tenantId));
-
+      
       // If filtering by name and no parentId specified
       let filteredUsers = allUsers;
       if (filter && !parentId) {
         const searchTerm = (filter as string).toLowerCase();
-        filteredUsers = allUsers.filter(user =>
+        filteredUsers = allUsers.filter(user => 
           `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm) ||
           user.email?.toLowerCase().includes(searchTerm)
         );
       }
-
+      
       const parentsWithCounts = await Promise.all(
         filteredUsers.map(async (user) => {
           const userPlayers = await storage.getPlayersByParent(user.id, tenantId);
@@ -2546,7 +3708,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           };
         })
       );
-
+      
       res.json(parentsWithCounts);
     } catch (error) {
       console.error('Error fetching parents:', error);
@@ -2558,7 +3720,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { id } = req.params;
       const { firstName, lastName, email, phone, isAdmin, isAssistant } = req.body;
-
+      
       await db.update(users).set({
         firstName,
         lastName,
@@ -2579,15 +3741,15 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.delete('/api/admin/parents/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-
+      
       // Delete associated signups first
       await db.delete(signups).where(
         sql`${signups.playerId} IN (SELECT id FROM ${players} WHERE ${players.parentId} = ${id})`
       );
-
-      // Delete associated players
+      
+      // Delete associated players 
       await db.delete(players).where(eq(players.parentId, id));
-
+      
       // Delete the parent
       await db.delete(users).where(eq(users.id, id));
 
@@ -2630,15 +3792,15 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { amount, description } = req.body;
       const currentUser = (req as any).currentUser;
-
+      
       if (!process.env.STRIPE_SECRET_KEY) {
-        return res.status(400).json({
-          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable."
+        return res.status(400).json({ 
+          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." 
         });
       }
 
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
+      
       // Get business name from settings
       const settings = await db.select().from(systemSettings);
       const settingsMap = settings.reduce((acc, setting) => {
@@ -2646,7 +3808,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         return acc;
       }, {} as any);
       const businessName = settingsMap.businessName || "Futsal Culture";
-
+      
       // Create or get customer for better tracking
       const customerData: any = {
         name: businessName,
@@ -2664,7 +3826,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       }
 
       const customer = await stripe.customers.create(customerData);
-
+      
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount), // Amount should already be in cents
         currency: "usd",
@@ -2677,10 +3839,10 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           customer_type: "business_subscription"
         }
       });
-
-      res.json({
+      
+      res.json({ 
         clientSecret: paymentIntent.client_secret,
-        message: 'Service payment intent created successfully'
+        message: 'Service payment intent created successfully' 
       });
     } catch (error: any) {
       console.error("Error creating service payment:", error);
@@ -2708,7 +3870,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         const tenantData = tenant[0];
         const planPricing = {
           'core': 9900,     // $99.00 in cents
-          'growth': 19900,  // $199.00 in cents
+          'growth': 19900,  // $199.00 in cents  
           'elite': 49900    // $499.00 in cents
         };
 
@@ -2749,6 +3911,10 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
             status: "inactive",
             current_period_start: null,
             current_period_end: null,
+            planName: null,
+            amount: 0,
+            currentPeriodEnd: null,
+            hostedInvoiceUrl: null,
             plan: null,
             customer: null
           },
@@ -2770,7 +3936,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 
         // Check if we have a stored customer ID for this user
         let customerId = currentUser?.customerId;
-
+        
         if (!customerId) {
           // Create a new customer in Stripe
           const customer = await stripe.customers.create({
@@ -2782,9 +3948,9 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
               service_type: "platform_subscription"
             }
           });
-
+          
           customerId = customer.id;
-
+          
           // Store the customer ID in the database
           if (currentUser?.id) {
             await db.update(users)
@@ -2806,13 +3972,13 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         if (subscriptions.data.length > 0) {
           // Get the most recent subscription
           subscription = subscriptions.data[0];
-
+          
           // Get invoices for this subscription
           const invoiceList = await stripe.invoices.list({
             customer: customerId,
             limit: 5
           });
-
+          
           invoices = invoiceList.data.map(invoice => ({
             id: invoice.id,
             status: invoice.status,
@@ -2844,11 +4010,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           status: subscription.status,
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
-          planName: subscription.items?.data?.[0]?.price?.nickname ||
-                   (subscription.items?.data?.[0]?.price?.product as any)?.name ||
+          planName: subscription.items?.data?.[0]?.price?.nickname || 
+                   (subscription.items?.data?.[0]?.price?.product as any)?.name || 
                    'Unknown Plan',
           amount: subscription.items?.data?.[0]?.price?.unit_amount || 0,
-          currentPeriodEnd: subscription.current_period_end ?
+          currentPeriodEnd: subscription.current_period_end ? 
                            new Date(subscription.current_period_end * 1000).toISOString() : null,
           hostedInvoiceUrl: invoices.length > 0 ? invoices[0].hosted_invoice_url : null,
           plan: subscription.items?.data?.[0]?.price ? {
@@ -2885,7 +4051,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         });
       } catch (stripeError: any) {
         console.error("Stripe API error:", stripeError);
-        return res.status(500).json({
+        return res.status(500).json({ 
           message: "Failed to fetch subscription data from Stripe",
           error: stripeError?.message || 'Unknown Stripe error'
         });
@@ -2900,8 +4066,8 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.post('/api/admin/create-billing-portal', requireAdmin, async (req: Request, res: Response) => {
     try {
       if (!process.env.STRIPE_SECRET_KEY) {
-        return res.status(400).json({
-          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable."
+        return res.status(400).json({ 
+          message: "Stripe not configured. Please add STRIPE_SECRET_KEY environment variable." 
         });
       }
 
@@ -2929,17 +4095,17 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         res.json({ url: session.url });
       } catch (stripeError: any) {
         console.error("Stripe portal error:", stripeError);
-
+        
         // Handle specific Stripe billing portal configuration error
-        if (stripeError.type === 'StripeInvalidRequestError' &&
+        if (stripeError.type === 'StripeInvalidRequestError' && 
             stripeError.message?.includes('No configuration provided')) {
-          return res.status(400).json({
+          return res.status(400).json({ 
             message: "Stripe billing portal not configured. Please set up your customer portal settings in your Stripe dashboard first.",
             setupUrl: "https://dashboard.stripe.com/test/settings/billing/portal"
           });
         }
-
-        return res.status(500).json({
+        
+        return res.status(500).json({ 
           message: "Failed to create billing portal session. Please check your Stripe configuration."
         });
       }
@@ -3011,9 +4177,9 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         })
         .where(eq(futsalSessions.id, sessionId));
 
-      res.json({
-        message: hasAccessCode
-          ? "Session protected with access code"
+      res.json({ 
+        message: hasAccessCode 
+          ? "Session protected with access code" 
           : "Session access protection removed"
       });
     } catch (error: any) {
@@ -3040,8 +4206,8 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       // Find peak hour range
       const peakHour = Object.entries(hourCounts)
         .sort(([,a], [,b]) => b - a)[0]?.[0];
-      const peakHourStr = peakHour ?
-        `${parseInt(peakHour) > 12 ? parseInt(peakHour) - 12 : parseInt(peakHour)}${parseInt(peakHour) >= 12 ? ' PM' : ' AM'}` :
+      const peakHourStr = peakHour ? 
+        `${parseInt(peakHour) > 12 ? parseInt(peakHour) - 12 : parseInt(peakHour)}${parseInt(peakHour) >= 12 ? ' PM' : ' AM'}` : 
         '6 PM';
 
       // Get all players for age group analysis
@@ -3086,8 +4252,8 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 
       const thisMonthRevenue = thisMonthPayments.reduce((sum, p) => sum + p.amountCents, 0) / 100;
       const lastMonthRevenue = lastMonthPayments.reduce((sum, p) => sum + p.amountCents, 0) / 100;
-
-      const revenueGrowth = lastMonthRevenue > 0
+      
+      const revenueGrowth = lastMonthRevenue > 0 
         ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
         : thisMonthRevenue > 0 ? 100 : 0;
 
@@ -3102,10 +4268,10 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 
       res.json({
         peakHours: `Most sessions scheduled around ${peakHourStr}`,
-        popularAgeGroups: popularAgeGroups.length > 0
+        popularAgeGroups: popularAgeGroups.length > 0 
           ? `${popularAgeGroups.join(' and ')} have highest enrollment`
           : 'Building diverse age group participation',
-        revenueGrowth: revenueGrowth !== 0
+        revenueGrowth: revenueGrowth !== 0 
           ? `${revenueGrowth > 0 ? '+' : ''}${revenueGrowth}% change month-over-month`
           : 'Establishing revenue baseline',
         utilizationRate: `${utilizationRate}% average session capacity filled`,
@@ -3145,11 +4311,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         assessedBy: adminUserId,
         assessmentDate: new Date(req.body.assessmentDate || new Date())
       };
-
+      
       const [assessment] = await db.insert(playerAssessments)
         .values(assessmentData)
         .returning();
-
+      
       res.json(assessment);
     } catch (error) {
       console.error("Error creating player assessment:", error);
@@ -3181,11 +4347,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         createdBy: adminUserId,
         targetDate: new Date(req.body.targetDate)
       };
-
+      
       const [goal] = await db.insert(playerGoals)
         .values(goalData)
         .returning();
-
+      
       res.json(goal);
     } catch (error) {
       console.error("Error creating player goal:", error);
@@ -3217,11 +4383,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         // recordedBy: adminUserId, // Field not available in schema
         // recordedAt: new Date(req.body.recordedAt || new Date()) // Field not available in schema
       };
-
+      
       const [progress] = await db.insert(progressionSnapshots)
         .values(progressData)
         .returning();
-
+      
       res.json(progress);
     } catch (error) {
       console.error("Error creating progression snapshot:", error);
@@ -3252,11 +4418,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         tenantId,
         createdBy: adminUserId
       };
-
+      
       const [plan] = await db.insert(trainingPlans)
         .values(planData)
         .returning();
-
+      
       res.json(plan);
     } catch (error) {
       console.error("Error creating training plan:", error);
@@ -3286,11 +4452,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         tenantId,
         // earnedAt: new Date(req.body.earnedAt || new Date()) // Field not available in schema
       };
-
+      
       const [achievement] = await db.insert(devAchievements)
         .values(achievementData)
         .returning();
-
+      
       res.json(achievement);
     } catch (error) {
       console.error("Error creating achievement:", error);
@@ -3320,11 +4486,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         tenantId,
         // snapshotDate: new Date(req.body.snapshotDate || new Date()) // Field not available in schema
       };
-
+      
       const [attendance] = await db.insert(attendanceSnapshots)
         .values(attendanceData)
         .returning();
-
+      
       res.json(attendance);
     } catch (error) {
       console.error("Error creating attendance snapshot:", error);
@@ -3337,7 +4503,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { provider } = req.params;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       // Mock successful test response for all providers
       const testResults = {
         stripe: { success: true, message: "Stripe connection verified successfully" },
@@ -3351,29 +4517,29 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       };
 
       const result = testResults[provider as keyof typeof testResults];
-
+      
       if (!result) {
-        return res.status(400).json({
-          success: false,
-          error: `Integration test not supported for provider: ${provider}`
+        return res.status(400).json({ 
+          success: false, 
+          error: `Integration test not supported for provider: ${provider}` 
         });
       }
 
       // Add a small delay to simulate real API testing
       await new Promise(resolve => setTimeout(resolve, 100));
-
+      
       res.json(result);
     } catch (error) {
       console.error(`Error testing ${req.params.provider} integration:`, error);
-      res.status(500).json({
-        success: false,
-        error: `Failed to test ${req.params.provider} integration`
+      res.status(500).json({ 
+        success: false, 
+        error: `Failed to test ${req.params.provider} integration` 
       });
     }
   });
 
   // =================== CONSENT DOCUMENT MANAGEMENT ===================
-
+  
   // Get all consent templates for a tenant (admin view - includes inactive)
   app.get('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -3390,14 +4556,14 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.post('/api/admin/consent-templates', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       // If there's a filePath, normalize it
       let templateBody = { ...req.body };
       if (templateBody.filePath) {
         const objectStorageService = new ObjectStorageService();
         templateBody.filePath = objectStorageService.normalizeObjectEntityPath(templateBody.filePath);
       }
-
+      
       const templateData = insertConsentTemplateSchema.parse({
         ...templateBody,
         tenantId
@@ -3428,7 +4594,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { id } = req.params;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       const template = await storage.updateConsentTemplate(id, req.body);
       res.json(template);
     } catch (error) {
@@ -3443,7 +4609,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const { id } = req.params;
       const { isActive } = req.body;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       const template = await storage.toggleConsentTemplate(id, tenantId, isActive);
       res.json(template);
     } catch (error) {
@@ -3457,7 +4623,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { id } = req.params;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       await storage.deactivateConsentTemplate(id, tenantId);
       res.json({ success: true });
     } catch (error) {
@@ -3471,15 +4637,15 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { templateType } = req.params;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       // Get the active template for this type
       const templates = await storage.getConsentTemplates(tenantId);
       let template = templates.find(t => t.templateType === templateType && t.isActive);
-
+      
       // If no custom template, use default template content
       let templateContent = '';
       let templateTitle = '';
-
+      
       if (template && template.content) {
         templateContent = template.content;
         templateTitle = template.title;
@@ -3513,7 +4679,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 <p><strong>Known Allergies or Medical Conditions:</strong> [To be filled by parent]</p>
 <p><strong>Current Medications:</strong> [To be filled by parent]</p>
 
-<p>For questions or concerns, please contact us at {{SUPPORT_EMAIL}} or {{SUPPORT_PHONE}}.</p>
+<p>For questions or concerns, please contact us at {{SUPPORT_EMAIL}} or {{SUPPORT_PHONE}} during {{SUPPORT_HOURS}}.</p>
 
 <p><em>{{COMPANY_NAME}}<br>
 {{COMPANY_ADDRESS}}<br>
@@ -3624,18 +4790,18 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 {{CONTACT_EMAIL}} • {{SUPPORT_PHONE}}</em></p>`
           }
         };
-
+        
         const defaultTemplate = defaultTemplates[templateType];
         if (!defaultTemplate) {
-          // If it's not a default template type and no active template found,
+          // If it's not a default template type and no active template found, 
           // this might be a custom template type without content
           return res.status(404).json({ error: `No active consent template found for type '${templateType}'. Please activate a template or create content for this template type.` });
         }
-
+        
         templateContent = defaultTemplate.content;
         templateTitle = defaultTemplate.title;
       }
-
+      
       // Create sample data for preview
       const pdfGenerator = new SimplePDFGeneratorService();
       const sampleData = {
@@ -3651,10 +4817,10 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         ipAddress: '192.168.1.100',
         userAgent: 'Sample User Agent for Preview'
       };
-
+      
       // Generate the PDF
       const document = await pdfGenerator.generateAndStoreConsentDocument(sampleData);
-
+      
       // Set response headers based on content type
       if (document.isHtmlFallback) {
         // Send as HTML for fallback case
@@ -3665,10 +4831,10 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${templateType}-consent-preview.pdf"`);
       }
-
+      
       res.setHeader('Content-Length', document.pdfBuffer.length);
       res.send(document.pdfBuffer);
-
+      
     } catch (error) {
       console.error('Error generating preview PDF:', error);
       res.status(500).json({ error: 'Failed to generate preview PDF' });
@@ -3676,11 +4842,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   });
 
   // Check missing consent forms for a player
-  app.get('/api/consent/missing/:playerId/:parentId', requireAdmin, async (req: Request, res: Response) => {
+  app.get('/api/admin/consent/missing/:playerId/:parentId', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { playerId, parentId } = req.params;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       const missingForms = await storage.checkMissingConsentForms(playerId, parentId, tenantId);
       res.json(missingForms);
     } catch (error) {
@@ -3694,18 +4860,18 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { templateType, title, content } = req.body;
       const tenantId = (req as any).currentUser?.tenantId;
-
+      
       if (!templateType || !title) {
         return res.status(400).json({ error: 'Template type and title are required' });
       }
-
+      
       // Check if active template of this type already exists
       const allTemplates = await storage.getAllConsentTemplates(tenantId);
       const existing = allTemplates.find((t: any) => t.templateType === templateType && t.isActive);
       if (existing) {
         return res.status(400).json({ error: 'An active template of this type already exists' });
       }
-
+      
       const template = await storage.createConsentTemplate({
         tenantId,
         templateType,
@@ -3715,7 +4881,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         version: 1,
         isActive: true,
       });
-
+      
       res.json(template);
     } catch (error) {
       console.error('Error creating consent template:', error);
@@ -3841,7 +5007,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const userId = (req as any).currentUser?.id;
 
       const documents = await storage.getConsentDocumentsByPlayer(playerId, tenantId);
-
+      
       // Log access for audit trail
       for (const doc of documents) {
         await storage.logConsentDocumentAccess({
@@ -3869,7 +5035,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const tenantId = (req as any).currentUser?.tenantId;
 
       const documents = await storage.getConsentDocumentsByParent(parentId, tenantId);
-
+      
       // Log access for audit trail
       for (const doc of documents) {
         await storage.logConsentDocumentAccess({
@@ -3905,7 +5071,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       // Check access permissions (admin, parent, or player 13+)
       const isAdmin = (req as any).currentUser?.isAdmin;
       const isParent = document.parentId === userId;
-
+      
       // For player access, check if user is the player and over 13
       let isAuthorizedPlayer = false;
       if (!isAdmin && !isParent) {
@@ -3937,7 +5103,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       // Get the document from object storage
       const objectStorageService = new ObjectStorageService();
       const objectFile = await objectStorageService.getObjectEntityFile(document.pdfFilePath);
-
+      
       // Set appropriate headers for PDF download
       res.set({
         'Content-Type': 'application/pdf',
@@ -4036,7 +5202,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { playerId } = req.params;
       const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
-
+      
       if (!tenantId) {
         return res.status(400).json({ error: 'Tenant ID required' });
       }
@@ -4055,7 +5221,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     try {
       const { parentId } = req.params;
       const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
-
+      
       if (!tenantId) {
         return res.status(400).json({ error: 'Tenant ID required' });
       }
@@ -4071,9 +5237,4 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Import and use tenant invite codes routes
   const { default: tenantInviteCodesRoutes } = await import('./routes/tenant-invite-codes.js');
   app.use('/api/admin', tenantInviteCodesRoutes);
-
-  // Mount notification template routes
-  app.use('/api/admin/notification-templates', notificationTemplatesRoutes);
-
-  console.log('✅ All admin routes configured');
 }
