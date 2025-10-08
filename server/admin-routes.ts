@@ -2996,6 +2996,109 @@ export async function setupAdminRoutes(app: any) {
     }
   });
 
+  // Credit management endpoints
+  app.get('/api/admin/credits', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser((req as any).user?.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const { userId, includeTransactions } = req.query;
+      const credits = await storage.getCredits(user.tenantId, userId as string);
+      
+      // If includeTransactions is true, fetch transactions for each credit
+      let creditsWithTransactions = credits;
+      if (includeTransactions === 'true') {
+        creditsWithTransactions = await Promise.all(
+          credits.map(async (credit) => ({
+            ...credit,
+            transactions: await storage.getCreditTransactions(credit.id)
+          }))
+        );
+      }
+
+      res.json(creditsWithTransactions);
+    } catch (error: any) {
+      console.error('Error fetching credits:', error);
+      res.status(500).json({ error: 'Failed to fetch credits' });
+    }
+  });
+
+  app.post('/api/admin/credits', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser((req as any).user?.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const { userId, amount, reason, expiresAt } = req.body;
+      
+      if (!userId || !amount || !reason) {
+        return res.status(400).json({ error: 'userId, amount, and reason are required' });
+      }
+
+      if (amount <= 0) {
+        return res.status(400).json({ error: 'Amount must be positive' });
+      }
+
+      const credit = await storage.createCredit(
+        user.tenantId,
+        userId,
+        amount,
+        reason,
+        expiresAt ? new Date(expiresAt) : undefined,
+        (req as any).user?.id
+      );
+
+      res.json(credit);
+    } catch (error: any) {
+      console.error('Error creating credit:', error);
+      res.status(500).json({ error: 'Failed to create credit' });
+    }
+  });
+
+  app.get('/api/admin/credits/balance/:userId', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser((req as any).user?.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const { userId } = req.params;
+      const balance = await storage.getUserCreditsBalance(user.tenantId, userId);
+
+      res.json({ 
+        userId,
+        balance,
+        formattedBalance: `$${balance.toFixed(2)}`
+      });
+    } catch (error: any) {
+      console.error('Error fetching credit balance:', error);
+      res.status(500).json({ error: 'Failed to fetch credit balance' });
+    }
+  });
+
+  app.get('/api/admin/credits/tenant-balance', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser((req as any).user?.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const balance = await storage.getTenantCreditsBalance(user.tenantId);
+
+      res.json({ 
+        tenantId: user.tenantId,
+        balance,
+        formattedBalance: `$${balance.toFixed(2)}`
+      });
+    } catch (error: any) {
+      console.error('Error fetching tenant credit balance:', error);
+      res.status(500).json({ error: 'Failed to fetch tenant credit balance' });
+    }
+  });
+
   // Session management endpoints
   app.get('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {

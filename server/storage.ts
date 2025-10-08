@@ -76,6 +76,15 @@ import {
   type InsertConsentDocumentAccess,
   type UserCreditInsert,
   type UserCreditSelect,
+  type Credit,
+  type InsertCredit,
+  type TenantCredit,
+  type InsertTenantCredit,
+  type CreditTransaction,
+  type InsertCreditTransaction,
+  credits,
+  tenantCredits,
+  creditTransactions,
   type NotificationTemplate,
   type InsertNotificationTemplate,
   type Notification,
@@ -166,7 +175,15 @@ export interface IStorage {
   updatePaymentStatus(signupId: string, paidAt: Date): Promise<void>;
 
   // Credit operations
-  createCredit(credit: UserCreditInsert): Promise<UserCreditSelect>;
+  createCredit(tenantId: string, userId: string | undefined, amount: number, reason: string, expiresAt: Date | undefined, createdBy: string): Promise<Credit | TenantCredit>;
+  getCredits(tenantId: string, userId?: string): Promise<Array<Credit | TenantCredit>>;
+  getUserCreditsBalance(tenantId: string, userId: string): Promise<number>;
+  getTenantCreditsBalance(tenantId: string): Promise<number>;
+  applyCredits(tenantId: string, userId: string, amount: number, sessionId?: string): Promise<CreditTransaction[]>;
+  getCreditTransactions(creditId: string): Promise<CreditTransaction[]>;
+  
+  // Legacy credit operations (to be removed after migration)
+  createUserCredit(credit: UserCreditInsert): Promise<UserCreditSelect>;
   getUserCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]>;
   getAvailableCredits(userId: string, tenantId: string): Promise<UserCreditSelect[]>;
   getAvailableCreditBalance(userId: string, tenantId: string): Promise<number>;
@@ -942,6 +959,177 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userCredits.id, creditId))
       .returning();
     return updatedCredit;
+  }
+
+  // New credit operations implementation
+  async createCredit(
+    tenantId: string, 
+    userId: string | undefined, 
+    amount: number, 
+    reason: string, 
+    expiresAt: Date | undefined, 
+    createdBy: string
+  ): Promise<Credit | TenantCredit> {
+    if (userId) {
+      // Create user-level credit
+      const [newCredit] = await db.insert(credits).values({
+        tenantId,
+        userId,
+        amount: amount.toString(),
+        reason,
+        expiresAt,
+        createdBy,
+      }).returning();
+      return newCredit;
+    } else {
+      // Create tenant-level credit
+      const [newCredit] = await db.insert(tenantCredits).values({
+        tenantId,
+        amount: amount.toString(),
+        reason,
+        expiresAt,
+        createdBy,
+      }).returning();
+      return newCredit;
+    }
+  }
+
+  async getCredits(tenantId: string, userId?: string): Promise<Array<Credit | TenantCredit>> {
+    const now = new Date();
+    
+    if (userId) {
+      // Get both user-specific and tenant-level credits
+      const [userCredits, tenantLevelCredits] = await Promise.all([
+        db.select()
+          .from(credits)
+          .where(and(
+            eq(credits.tenantId, tenantId),
+            eq(credits.userId, userId),
+            eq(credits.isActive, true),
+            or(
+              sql`${credits.expiresAt} IS NULL`,
+              gte(credits.expiresAt, now)
+            )
+          ))
+          .orderBy(asc(credits.createdAt)),
+        db.select()
+          .from(tenantCredits)
+          .where(and(
+            eq(tenantCredits.tenantId, tenantId),
+            eq(tenantCredits.isActive, true),
+            or(
+              sql`${tenantCredits.expiresAt} IS NULL`,
+              gte(tenantCredits.expiresAt, now)
+            )
+          ))
+          .orderBy(asc(tenantCredits.createdAt))
+      ]);
+      
+      return [...userCredits, ...tenantLevelCredits];
+    } else {
+      // Get only tenant-level credits
+      const tenantLevelCredits = await db.select()
+        .from(tenantCredits)
+        .where(and(
+          eq(tenantCredits.tenantId, tenantId),
+          eq(tenantCredits.isActive, true),
+          or(
+            sql`${tenantCredits.expiresAt} IS NULL`,
+            gte(tenantCredits.expiresAt, now)
+          )
+        ))
+        .orderBy(asc(tenantCredits.createdAt));
+      
+      return tenantLevelCredits;
+    }
+  }
+
+  async getUserCreditsBalance(tenantId: string, userId: string): Promise<number> {
+    const allCredits = await this.getCredits(tenantId, userId);
+    return allCredits.reduce((sum, credit) => {
+      const available = parseFloat(credit.amount) - parseFloat(credit.usedAmount);
+      return sum + available;
+    }, 0);
+  }
+
+  async getTenantCreditsBalance(tenantId: string): Promise<number> {
+    const tenantLevelCredits = await this.getCredits(tenantId);
+    return tenantLevelCredits.reduce((sum, credit) => {
+      const available = parseFloat(credit.amount) - parseFloat(credit.usedAmount);
+      return sum + available;
+    }, 0);
+  }
+
+  async applyCredits(
+    tenantId: string, 
+    userId: string, 
+    amount: number, 
+    sessionId?: string
+  ): Promise<CreditTransaction[]> {
+    const allCredits = await this.getCredits(tenantId, userId);
+    const transactions: CreditTransaction[] = [];
+    let remainingAmount = amount;
+
+    // Apply credits using FIFO (oldest first)
+    for (const credit of allCredits) {
+      if (remainingAmount <= 0) break;
+
+      const available = parseFloat(credit.amount) - parseFloat(credit.usedAmount);
+      if (available <= 0) continue;
+
+      const amountToUse = Math.min(available, remainingAmount);
+      
+      // Update the credit's used amount
+      if ('userId' in credit) {
+        // User-level credit
+        await db.update(credits)
+          .set({
+            usedAmount: (parseFloat(credit.usedAmount) + amountToUse).toString(),
+            isActive: parseFloat(credit.amount) <= parseFloat(credit.usedAmount) + amountToUse ? false : credit.isActive,
+            updatedAt: new Date(),
+          })
+          .where(eq(credits.id, credit.id));
+      } else {
+        // Tenant-level credit
+        await db.update(tenantCredits)
+          .set({
+            usedAmount: (parseFloat(credit.usedAmount) + amountToUse).toString(),
+            isActive: parseFloat(credit.amount) <= parseFloat(credit.usedAmount) + amountToUse ? false : credit.isActive,
+            updatedAt: new Date(),
+          })
+          .where(eq(tenantCredits.id, credit.id));
+      }
+
+      // Create transaction record
+      const [transaction] = await db.insert(creditTransactions).values({
+        creditId: credit.id,
+        creditType: 'userId' in credit ? 'user' : 'tenant',
+        amount: amountToUse.toString(),
+        sessionId,
+        description: sessionId ? `Applied to session booking ${sessionId}` : 'Applied to booking',
+      }).returning();
+      
+      transactions.push(transaction);
+      remainingAmount -= amountToUse;
+    }
+
+    if (remainingAmount > 0) {
+      throw new Error(`Insufficient credits. Need ${amount}, but only ${amount - remainingAmount} available.`);
+    }
+
+    return transactions;
+  }
+
+  async getCreditTransactions(creditId: string): Promise<CreditTransaction[]> {
+    return await db.select()
+      .from(creditTransactions)
+      .where(eq(creditTransactions.creditId, creditId))
+      .orderBy(desc(creditTransactions.createdAt));
+  }
+
+  // Rename old credit methods to indicate they're legacy
+  async createUserCredit(credit: UserCreditInsert): Promise<UserCreditSelect> {
+    return this.createCredit(credit) as any; // Legacy compatibility
   }
 
   async getPendingPaymentSignups(tenantId?: string): Promise<Array<Signup & { player: Player; session: FutsalSession; parent: User }>> {

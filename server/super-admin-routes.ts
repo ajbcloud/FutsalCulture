@@ -1683,4 +1683,193 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to fetch consent status' });
     }
   });
+
+  // Tenant credit management routes
+  app.get('/api/super-admin/tenant-credits', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId, includeTransactions } = req.query;
+      
+      // Get credits for all tenants or a specific tenant
+      if (tenantId) {
+        const credits = await storage.getCredits(tenantId as string);
+        
+        // If includeTransactions is true, fetch transactions for each credit
+        let creditsWithTransactions = credits;
+        if (includeTransactions === 'true') {
+          creditsWithTransactions = await Promise.all(
+            credits.map(async (credit) => ({
+              ...credit,
+              transactions: await storage.getCreditTransactions(credit.id)
+            }))
+          );
+        }
+        
+        res.json(creditsWithTransactions);
+      } else {
+        // Get tenant credits for all tenants
+        const tenants = await storage.getTenants();
+        const allCredits = await Promise.all(
+          tenants.map(async (tenant) => ({
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            credits: await storage.getCredits(tenant.id),
+            balance: await storage.getTenantCreditsBalance(tenant.id)
+          }))
+        );
+        res.json(allCredits);
+      }
+    } catch (error: any) {
+      console.error('Error fetching tenant credits:', error);
+      res.status(500).json({ error: 'Failed to fetch tenant credits' });
+    }
+  });
+
+  app.post('/api/super-admin/tenant-credits', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId, amount, reason, expiresAt } = req.body;
+      
+      if (!tenantId || !amount || !reason) {
+        return res.status(400).json({ error: 'tenantId, amount, and reason are required' });
+      }
+
+      if (amount <= 0) {
+        return res.status(400).json({ error: 'Amount must be positive' });
+      }
+
+      const tenant = await storage.getTenant(tenantId);
+      if (!tenant) {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+
+      const credit = await storage.createCredit(
+        tenantId,
+        undefined, // No userId for tenant-level credit
+        amount,
+        reason,
+        expiresAt ? new Date(expiresAt) : undefined,
+        (req as any).user?.id || 'super-admin'
+      );
+
+      res.json(credit);
+    } catch (error: any) {
+      console.error('Error creating tenant credit:', error);
+      res.status(500).json({ error: 'Failed to create tenant credit' });
+    }
+  });
+
+  // Platform invitation management routes
+  app.get('/api/super-admin/invitations', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { page = 1, pageSize = 20, tenantId, codeType, status, isPlatform, search } = req.query;
+      
+      const filters = {
+        tenantId: tenantId as string | undefined,
+        codeType: codeType as string | undefined,
+        status: status as 'active' | 'expired' | 'fully_used' | undefined,
+        isPlatform: isPlatform === 'true' ? true : isPlatform === 'false' ? false : undefined,
+        search: search as string | undefined
+      };
+      
+      const result = await storage.getSuperAdminInviteCodes(filters, Number(page), Number(pageSize));
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error fetching invitations:', error);
+      res.status(500).json({ error: 'Failed to fetch invitations' });
+    }
+  });
+
+  app.post('/api/super-admin/invitations', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const createSchema = z.object({
+        code: z.string().min(1).toUpperCase(),
+        codeType: z.enum(['invite', 'access', 'discount']),
+        description: z.string().optional(),
+        isActive: z.boolean().default(true),
+        isPlatform: z.boolean().default(true),
+        ageGroup: z.string().optional(),
+        gender: z.string().optional(),
+        location: z.string().optional(),
+        club: z.string().optional(),
+        discountType: z.string().optional(),
+        discountValue: z.number().optional(),
+        maxUses: z.number().optional().nullable(),
+        validFrom: z.string().optional(),
+        validUntil: z.string().optional(),
+        metadata: z.record(z.any()).optional(),
+        tenantId: z.string().optional(),
+        category: z.enum(['partner', 'promotion', 'beta', 'vip']).optional()
+      });
+
+      const validated = createSchema.parse(req.body);
+      const userId = (req as any).user?.id || 'super-admin';
+      
+      const inviteCode = await storage.createInviteCode({
+        ...validated,
+        isPlatform: true,
+        createdBy: userId,
+        tenantId: validated.tenantId || '',
+        validFrom: validated.validFrom ? new Date(validated.validFrom) : undefined,
+        validUntil: validated.validUntil ? new Date(validated.validUntil) : undefined,
+      });
+      
+      res.json(inviteCode);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid data', details: error.errors });
+      }
+      console.error('Error creating invitation:', error);
+      res.status(500).json({ error: 'Failed to create invitation' });
+    }
+  });
+
+  app.put('/api/super-admin/invitations/:id', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updateSchema = z.object({
+        code: z.string().min(1).toUpperCase().optional(),
+        codeType: z.enum(['invite', 'access', 'discount']).optional(),
+        description: z.string().optional(),
+        isActive: z.boolean().optional(),
+        ageGroup: z.string().optional(),
+        gender: z.string().optional(),
+        location: z.string().optional(),
+        club: z.string().optional(),
+        discountType: z.string().optional(),
+        discountValue: z.number().optional(),
+        maxUses: z.number().optional().nullable(),
+        validFrom: z.string().optional(),
+        validUntil: z.string().optional(),
+        metadata: z.record(z.any()).optional()
+      });
+
+      const validated = updateSchema.parse(req.body);
+      
+      // Convert date strings to Date objects
+      const updateData: any = { ...validated };
+      if (validated.validFrom) updateData.validFrom = new Date(validated.validFrom);
+      if (validated.validUntil) updateData.validUntil = new Date(validated.validUntil);
+      
+      const updated = await storage.updateInviteCode(id, updateData);
+      res.json(updated);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid data', details: error.errors });
+      }
+      console.error('Error updating invitation:', error);
+      res.status(500).json({ error: 'Failed to update invitation' });
+    }
+  });
+
+  app.delete('/api/super-admin/invitations/:id', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      await storage.deleteInviteCode(id);
+      res.json({ message: 'Invitation deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting invitation:', error);
+      res.status(500).json({ error: 'Failed to delete invitation' });
+    }
+  });
 }

@@ -1652,6 +1652,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Process payment with credits integration
+  app.post('/api/process-payment', isAuthenticated, async (req: any, res) => {
+    try {
+      const { signupId, paymentMethodId, useCredits = true } = req.body;
+      const userId = req.user.id;
+      
+      // Get signup details
+      const signup = await storage.getSignupWithDetails(signupId);
+      if (!signup) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+
+      if (signup.paid) {
+        return res.status(400).json({ message: "Payment already processed" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User or tenant not found" });
+      }
+
+      // Calculate amount needed (convert cents to dollars for our credit system)
+      const amountDollars = signup.session.priceCents / 100;
+      let remainingAmount = amountDollars;
+      let creditsUsed = 0;
+
+      // Check and apply credits if requested
+      if (useCredits) {
+        const availableCredits = await storage.getUserCreditsBalance(user.tenantId, userId);
+        
+        if (availableCredits > 0) {
+          // Calculate how much credit to use
+          creditsUsed = Math.min(availableCredits, remainingAmount);
+          
+          // Apply credits
+          try {
+            await storage.applyCredits(
+              user.tenantId,
+              userId,
+              creditsUsed,
+              signup.sessionId
+            );
+            
+            remainingAmount -= creditsUsed;
+          } catch (error) {
+            console.error("Error applying credits:", error);
+            // Continue with full payment if credit application fails
+            remainingAmount = amountDollars;
+            creditsUsed = 0;
+          }
+        }
+      }
+
+      // If credits covered everything, mark as paid
+      if (remainingAmount <= 0) {
+        await storage.updateSignupPaymentStatus(signupId, true);
+        
+        // Create payment record
+        await storage.createPayment({
+          signupId,
+          amount: signup.session.priceCents,
+          creditsUsed: Math.round(creditsUsed * 100), // Convert to cents for consistency
+          paymentMethod: 'credits',
+          status: 'succeeded',
+          tenantId: user.tenantId,
+        });
+
+        return res.json({
+          success: true,
+          message: "Payment successful using credits",
+          creditsUsed,
+          amountCharged: 0,
+          signup
+        });
+      }
+
+      // Process remaining amount with Stripe
+      if (!paymentMethodId) {
+        return res.json({
+          success: false,
+          requiresPayment: true,
+          creditsAvailable: creditsUsed > 0 ? creditsUsed : 0,
+          remainingAmount,
+          message: `Payment required: $${remainingAmount.toFixed(2)}${creditsUsed > 0 ? ` (after $${creditsUsed.toFixed(2)} credits)` : ''}`
+        });
+      }
+
+      // Import Stripe if needed
+      let Stripe;
+      try {
+        Stripe = (await import('stripe')).default;
+      } catch (error) {
+        return res.status(500).json({ message: "Payment processing not available" });
+      }
+
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeSecretKey) {
+        return res.status(500).json({ message: "Payment processing not configured" });
+      }
+
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
+
+      // Create payment intent for remaining amount
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(remainingAmount * 100), // Convert to cents
+        currency: 'usd',
+        payment_method: paymentMethodId,
+        confirm: true,
+        description: `Session booking for ${signup.player.firstName} ${signup.player.lastName}`,
+        metadata: {
+          signupId,
+          sessionId: signup.sessionId,
+          playerId: signup.playerId,
+          creditsUsed: creditsUsed.toString(),
+        }
+      });
+
+      if (paymentIntent.status === 'succeeded') {
+        // Mark signup as paid
+        await storage.updateSignupPaymentStatus(signupId, true);
+        
+        // Create payment record
+        await storage.createPayment({
+          signupId,
+          amount: Math.round(remainingAmount * 100),
+          creditsUsed: Math.round(creditsUsed * 100),
+          paymentMethod: 'stripe',
+          paymentIntentId: paymentIntent.id,
+          status: 'succeeded',
+          tenantId: user.tenantId,
+        });
+
+        return res.json({
+          success: true,
+          message: "Payment successful",
+          creditsUsed,
+          amountCharged: remainingAmount,
+          paymentIntentId: paymentIntent.id,
+          signup
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Payment failed",
+          status: paymentIntent.status
+        });
+      }
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      res.status(500).json({ message: "Failed to process payment", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Admin payment refund route - DEPRECATED: Now using credit system instead of refunds
   // When sessions are cancelled, credits are automatically issued to affected users
   // app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {

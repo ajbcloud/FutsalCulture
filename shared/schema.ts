@@ -2954,6 +2954,94 @@ export const insertContactGroupMemberSchema = createInsertSchema(contactGroupMem
   addedAt: true,
 });
 
+// Credits system tables
+
+// Enum for credit transaction type
+export const creditTypeEnum = pgEnum("credit_type", ["user", "tenant"]);
+
+// User-level credits table
+export const credits = pgTable("credits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Amount in dollars
+  reason: text("reason").notNull(),
+  expiresAt: timestamp("expires_at"),
+  usedAmount: numeric("used_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("credits_tenant_idx").on(table.tenantId),
+  index("credits_user_idx").on(table.userId),
+  index("credits_expires_idx").on(table.expiresAt),
+  index("credits_active_idx").on(table.isActive),
+  index("credits_created_idx").on(table.createdAt),
+]);
+
+// Tenant-level credits table
+export const tenantCredits = pgTable("tenant_credits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Amount in dollars
+  reason: text("reason").notNull(),
+  expiresAt: timestamp("expires_at"),
+  usedAmount: numeric("used_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("tenant_credits_tenant_idx").on(table.tenantId),
+  index("tenant_credits_expires_idx").on(table.expiresAt),
+  index("tenant_credits_active_idx").on(table.isActive),
+  index("tenant_credits_created_idx").on(table.createdAt),
+]);
+
+// Credit transactions table to track usage
+export const creditTransactions = pgTable("credit_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditId: varchar("credit_id").notNull(), // References either credits.id or tenantCredits.id
+  creditType: creditTypeEnum("credit_type").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Amount used in dollars
+  sessionId: varchar("session_id").references(() => futsalSessions.id), // Optional session reference
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("credit_transactions_credit_idx").on(table.creditId),
+  index("credit_transactions_session_idx").on(table.sessionId),
+  index("credit_transactions_created_idx").on(table.createdAt),
+]);
+
+// Credits system schemas
+export const insertCreditSchema = createInsertSchema(credits).omit({
+  id: true,
+  usedAmount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantCreditSchema = createInsertSchema(tenantCredits).omit({
+  id: true,
+  usedAmount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Credits system types
+export type Credit = typeof credits.$inferSelect;
+export type InsertCredit = z.infer<typeof insertCreditSchema>;
+export type TenantCredit = typeof tenantCredits.$inferSelect;
+export type InsertTenantCredit = z.infer<typeof insertTenantCreditSchema>;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
 // Communication system types
 export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
 export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
