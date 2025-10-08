@@ -860,7 +860,8 @@ export default function SuperAdminInvitations() {
                     <FormControl>
                       <Input 
                         type="number" 
-                        {...field} 
+                        {...field}
+                        value={field.value ?? ''}
                         onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                         placeholder="Leave empty for unlimited"
                         data-testid="input-max-uses"
