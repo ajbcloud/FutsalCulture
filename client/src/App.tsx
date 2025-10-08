@@ -61,6 +61,8 @@ import Terms from "./pages/Terms";
 import Status from "./pages/Status";
 import PersonalSettings from "./pages/personal-settings";
 import HouseholdManagement from "./pages/household-management";
+import CreditHistory from "./pages/credit-history";
+import AdminCredits from "./pages/admin/credits";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -107,6 +109,7 @@ function Router() {
         <Route path="/help" component={Help} />
         <Route path="/my-help-requests" component={MyHelpRequests} />
         <Route path="/household" component={HouseholdManagement} />
+        <Route path="/credits/history" component={CreditHistory} />
         {(user?.isAdmin || user?.isAssistant) && (
           <>
             <Route path="/admin" component={AdminDashboard} />
@@ -128,7 +131,7 @@ function Router() {
             <Route path="/admin/help-requests" component={AdminHelpRequests} />
             <Route path="/admin/settings" component={AdminSettings} />
             <Route path="/admin/integrations" component={AdminIntegrations} />
-
+            <Route path="/admin/credits" component={AdminCredits} />
             <Route path="/admin/payment" component={AdminPayment} />
           </>
         )}

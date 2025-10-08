@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2 } from "lucide-react";
+import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User } from "lucide-react";
+import { Link } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
 
 type HouseholdMember = HouseholdMemberSelect & {
@@ -37,6 +38,14 @@ type Player = {
   id: string;
   firstName: string;
   lastName: string;
+};
+
+type CreditHistoryItem = {
+  id: string;
+  userId: string | null;
+  householdId: string | null;
+  amountCents: number;
+  isUsed: boolean;
 };
 
 export default function HouseholdManagement() {
@@ -73,11 +82,22 @@ export default function HouseholdManagement() {
     !userHousehold?.members.some(m => m.playerId === player.id)
   );
 
-  // Fetch household credits (if user has a household)
-  const { data: creditsData } = useQuery<{ balance: number; balanceDollars: string }>({
-    queryKey: ["/api/credits/balance"],
-    enabled: isAuthenticated && !!userHousehold,
+  // Fetch credit history to calculate breakdown
+  const { data: creditsHistoryData } = useQuery<{ credits: CreditHistoryItem[] }>({
+    queryKey: ["/api/credits/history"],
+    enabled: isAuthenticated,
   });
+
+  // Calculate personal and household credit breakdown
+  const personalCredits = (creditsHistoryData?.credits || [])
+    .filter(c => !c.isUsed && c.userId && !c.householdId)
+    .reduce((sum, c) => sum + c.amountCents, 0);
+
+  const householdCredits = (creditsHistoryData?.credits || [])
+    .filter(c => !c.isUsed && c.householdId)
+    .reduce((sum, c) => sum + c.amountCents, 0);
+
+  const totalCredits = personalCredits + householdCredits;
 
   // Create household mutation
   const createHouseholdMutation = useMutation({
@@ -275,21 +295,58 @@ export default function HouseholdManagement() {
           </p>
         </div>
 
-        {/* Household Credits Display */}
-        {userHousehold && creditsData && creditsData.balance > 0 && (
+        {/* Credit Balance Display with Breakdown */}
+        {totalCredits > 0 && (
           <Card className="bg-card border-border mb-6">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Household Credits
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Available Credits
+                </CardTitle>
+                <Link href="/credits/history">
+                  <Button variant="outline" size="sm" data-testid="button-view-history">
+                    View History
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="text-3xl font-bold text-green-600" data-testid="text-household-credits">
-                  ${creditsData.balanceDollars}
+              <div className="space-y-4">
+                <div className="text-3xl font-bold text-green-600" data-testid="text-total-credits">
+                  ${(totalCredits / 100).toFixed(2)}
                 </div>
-                <Badge variant="secondary" data-testid="badge-shared">Shared with household</Badge>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border">
+                  {/* Personal Credits */}
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <div className="text-sm text-muted-foreground">Personal Credits</div>
+                      <div className="text-xl font-semibold" data-testid="text-personal-credits">
+                        ${(personalCredits / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Household Credits - only show if user is in household */}
+                  {userHousehold && (
+                    <div className="flex items-center gap-3">
+                      <Users className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          Household Credits
+                          <Badge variant="secondary" className="text-xs" data-testid="badge-shared">
+                            Shared
+                          </Badge>
+                        </div>
+                        <div className="text-xl font-semibold" data-testid="text-household-credits">
+                          ${(householdCredits / 100).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

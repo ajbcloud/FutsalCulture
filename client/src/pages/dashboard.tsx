@@ -23,7 +23,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
-import { Player, Signup, FutsalSession, NotificationPreferences } from "@shared/schema";
+import { players, signups, futsalSessions, NotificationPreferences } from "@shared/schema";
+
+type Player = typeof players.$inferSelect;
+type Signup = typeof signups.$inferSelect;
+type FutsalSession = typeof futsalSessions.$inferSelect;
 import { calculateAgeGroup, isSessionEligibleForPlayer, isSessionBookingOpen, getSessionStatusColor, getSessionStatusText } from "@shared/utils";
 import { ReservationCountdown } from "@/components/reservation-countdown";
 import { AGE_GROUPS } from "@shared/constants";
