@@ -5,6 +5,8 @@ import RequireAdmin from "@/components/require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { KPICard } from '../../components/kpi-card';
 import { useHasFeature } from '@/hooks/use-feature-flags';
+import { useHasCapability } from '@/contexts/AuthContext';
+import { FINANCIAL_ANALYTICS } from '@/lib/capabilities';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TrendingUp, Users, DollarSign, Calendar, Activity, Download, Brain, Target, AlertTriangle, Lock, Sparkles, Info } from 'lucide-react';
@@ -53,6 +55,9 @@ export default function AdminAnalytics() {
   const hasBasicPlan = basicAnalytics?.hasFeature === true;
   const hasAdvancedPlan = advancedAnalytics?.hasFeature === true;
   const hasElitePlan = playerDevelopment?.hasFeature === true;
+  
+  // Check capability access for financial analytics
+  const hasFinancialAccess = useHasCapability(FINANCIAL_ANALYTICS);
   
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/admin/dashboard-metrics"],
@@ -289,71 +294,96 @@ export default function AdminAnalytics() {
             planColor="text-green-600 border-green-600"
             available={hasAdvancedPlan}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <KPICard
-                title="Total Revenue"
-                value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
-                tooltip="Sum of all payments received from session bookings across all time periods."
-                icon={DollarSign}
-                iconColor="text-green-500"
-                subtitle="All time revenue"
-              />
-              <KPICard
-                title="Monthly Revenue"
-                value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
-                tooltip="Sum of all payments received this month from session bookings."
-                icon={DollarSign}
-                iconColor="text-green-500"
-                subtitle="Current month"
-              />
-              <KPICard
-                title="YTD Revenue"
-                value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
-                tooltip="Total revenue from January 1 to today across all sessions."
-                icon={DollarSign}
-                iconColor="text-green-500"
-                subtitle="Year to date"
-              />
-            </div>
+            {hasFinancialAccess ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <KPICard
+                  title="Total Revenue"
+                  value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
+                  tooltip="Sum of all payments received from session bookings across all time periods."
+                  icon={DollarSign}
+                  iconColor="text-green-500"
+                  subtitle="All time revenue"
+                />
+                <KPICard
+                  title="Monthly Revenue"
+                  value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
+                  tooltip="Sum of all payments received this month from session bookings."
+                  icon={DollarSign}
+                  iconColor="text-green-500"
+                  subtitle="Current month"
+                />
+                <KPICard
+                  title="YTD Revenue"
+                  value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
+                  tooltip="Total revenue from January 1 to today across all sessions."
+                  icon={DollarSign}
+                  iconColor="text-green-500"
+                  subtitle="Year to date"
+                />
+              </div>
+            ) : (
+              <Card className="text-center py-8 mb-6" data-testid="card-financial-permission-required">
+                <CardContent className="pt-6">
+                  <Lock className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-500">Financial metrics require elevated permissions</p>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Advanced Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Revenue Chart</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    {chartData?.revenueData ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData.revenueData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis dataKey="month" stroke="#9CA3AF" />
-                          <YAxis stroke="#9CA3AF" />
-                          <RechartsTooltip 
-                            contentStyle={{ 
-                              backgroundColor: '#1F2937', 
-                              border: '1px solid #374151',
-                              borderRadius: '6px' 
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="revenue" 
-                            stroke="#3B82F6" 
-                            strokeWidth={2}
-                            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex items-center justify-center">
-                        <div className="animate-spin w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full" />
+              {hasFinancialAccess ? (
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground">Revenue Chart</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      {chartData?.revenueData ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData.revenueData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="month" stroke="#9CA3AF" />
+                            <YAxis stroke="#9CA3AF" />
+                            <RechartsTooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#1F2937', 
+                                border: '1px solid #374151',
+                                borderRadius: '6px' 
+                              }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="revenue" 
+                              stroke="#3B82F6" 
+                              strokeWidth={2}
+                              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center">
+                          <div className="animate-spin w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground">Revenue Chart</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 flex items-center justify-center">
+                      <div className="text-center space-y-3">
+                        <Lock className="w-10 h-10 mx-auto text-gray-400" />
+                        <p className="text-gray-500 text-sm">Financial metrics require elevated permissions</p>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card className="bg-card border-border">
                 <CardHeader>
@@ -474,74 +504,97 @@ export default function AdminAnalytics() {
             available={hasElitePlan}
           >
             <div className="space-y-6">
-              {/* AI-Powered Forecasting */}
-              <div className="border border-border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-                <div className="flex items-center gap-3 mb-4">
-                  <Brain className="w-6 h-6 text-purple-600" />
-                  <h3 className="text-lg font-semibold text-foreground">AI-Powered Forecasting & Budget Projections</h3>
-                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Premium
-                  </Badge>
+              {/* AI-Powered Forecasting - Only show with financial capability */}
+              {hasFinancialAccess ? (
+                <div className="border border-border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Brain className="w-6 h-6 text-purple-600" />
+                    <h3 className="text-lg font-semibold text-foreground">AI-Powered Forecasting & Budget Projections</h3>
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Premium
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mb-4">
+                    Advanced machine learning models analyze historical data to predict revenue trends and optimize budget allocation.
+                  </p>
+                  
+                  {/* Revenue Forecasting Chart */}
+                  <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
+                    <CardHeader>
+                      <CardTitle className="text-foreground flex items-center gap-2">
+                        6-Month Revenue Forecast
+                        <Badge variant="outline">
+                          85% Confidence
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={forecastData?.revenueForecasts || []}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="month" stroke="#9CA3AF" />
+                            <YAxis stroke="#9CA3AF" />
+                            <RechartsTooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#1F2937', 
+                                border: '1px solid #374151',
+                                borderRadius: '6px' 
+                              }}
+                              formatter={(value: any) => `$${value}`}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="optimistic" 
+                              stroke="#10B981" 
+                              strokeWidth={2}
+                              strokeDasharray="5 5"
+                              name="Optimistic"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="projected" 
+                              stroke="#3B82F6" 
+                              strokeWidth={3}
+                              name="Projected"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="conservative" 
+                              stroke="#F59E0B" 
+                              strokeWidth={2}
+                              strokeDasharray="5 5"
+                              name="Conservative"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-                <p className="text-muted-foreground mb-4">
-                  Advanced machine learning models analyze historical data to predict revenue trends and optimize budget allocation.
-                </p>
-                
-                {/* Revenue Forecasting Chart */}
-                <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
-                  <CardHeader>
-                    <CardTitle className="text-foreground flex items-center gap-2">
-                      6-Month Revenue Forecast
-                      <Badge variant="outline">
-                        85% Confidence
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={forecastData?.revenueForecasts || []}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis dataKey="month" stroke="#9CA3AF" />
-                          <YAxis stroke="#9CA3AF" />
-                          <RechartsTooltip 
-                            contentStyle={{ 
-                              backgroundColor: '#1F2937', 
-                              border: '1px solid #374151',
-                              borderRadius: '6px' 
-                            }}
-                            formatter={(value: any) => `$${value}`}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="optimistic" 
-                            stroke="#10B981" 
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
-                            name="Optimistic"
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="projected" 
-                            stroke="#3B82F6" 
-                            strokeWidth={3}
-                            name="Projected"
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="conservative" 
-                            stroke="#F59E0B" 
-                            strokeWidth={2}
-                            strokeDasharray="5 5"
-                            name="Conservative"
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              ) : (
+                <div className="border border-border rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Brain className="w-6 h-6 text-purple-600" />
+                    <h3 className="text-lg font-semibold text-foreground">AI-Powered Forecasting & Budget Projections</h3>
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Premium
+                    </Badge>
+                  </div>
+                  <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
+                    <CardContent>
+                      <div className="h-80 flex items-center justify-center">
+                        <div className="text-center space-y-3">
+                          <Lock className="w-12 h-12 mx-auto text-gray-400" />
+                          <p className="text-gray-500">Financial forecasting requires elevated permissions</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
               
               {/* Player Development Analytics */}
               <div className="border border-border rounded-lg p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">

@@ -14,6 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { useHasFeature } from "@/hooks/use-feature-flags";
+import { useHasCapability } from '@/contexts/AuthContext';
+import { FINANCIAL_ANALYTICS } from '@/lib/capabilities';
 import { 
   DollarSign, 
   Users, 
@@ -95,6 +97,9 @@ export default function AdminDashboard() {
   const hasBasicAnalytics = useHasFeature('analytics_basic');
   const hasAdvancedAnalytics = useHasFeature('analytics_advanced');
   const hasPayments = useHasFeature('payments_enabled');
+  
+  // Check capability access for financial analytics
+  const hasFinancialAccess = useHasCapability(FINANCIAL_ANALYTICS);
   
   // Automatically refresh data when navigating back to dashboard
   usePageRefresh([
@@ -282,8 +287,8 @@ export default function AdminDashboard() {
 
           {/* Primary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {/* Revenue analytics - only show if has payments enabled (Growth/Elite plans) */}
-            {hasPayments ? (
+            {/* Revenue analytics - only show if has payments enabled AND financial capability */}
+            {hasPayments && hasFinancialAccess ? (
               <KPICard
                 title="Total Revenue"
                 value={`$${((metrics?.monthlyRevenue || 0) / 100).toFixed(2)}`}
@@ -294,6 +299,19 @@ export default function AdminDashboard() {
                 growth={metrics?.revenueGrowth || 0}
                 showGrowth={hasAdvancedAnalytics.hasFeature}
               />
+            ) : hasPayments && !hasFinancialAccess ? (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Revenue Analytics</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Permission Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Financial analytics require higher permissions
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
               <Card className="border-2 border-dashed border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -396,8 +414,8 @@ export default function AdminDashboard() {
 
           {/* Secondary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* YTD Revenue - only show if has payments enabled */}
-            {hasPayments ? (
+            {/* YTD Revenue - only show if has payments enabled AND financial capability */}
+            {hasPayments && hasFinancialAccess ? (
               <KPICard
                 title="YTD Revenue"
                 value={`$${((metrics?.ytdRevenue || 0) / 100).toFixed(2)}`}
@@ -408,6 +426,19 @@ export default function AdminDashboard() {
                 growth={hasAdvancedAnalytics.hasFeature ? metrics?.ytdGrowth || 0 : undefined}
                 showGrowth={hasAdvancedAnalytics.hasFeature}
               />
+            ) : hasPayments && !hasFinancialAccess ? (
+              <Card className="border-2 border-dashed border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">YTD Revenue</CardTitle>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-bold text-muted-foreground">Permission Required</div>
+                  <p className="text-xs text-muted-foreground">
+                    Financial analytics require higher permissions
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
               <Card className="border-2 border-dashed border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
