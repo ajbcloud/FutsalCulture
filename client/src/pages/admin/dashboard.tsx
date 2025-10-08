@@ -531,7 +531,7 @@ export default function AdminDashboard() {
                     Review Payments
                   </a>
                   <a 
-                    href="/admin/players/import" 
+                    href="/admin/players" 
                     className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
                   >
                     Import Players
