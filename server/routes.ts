@@ -37,6 +37,7 @@ import { superAdminEmailRouter } from './routes/super-admin-email';
 import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
+import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -215,7 +216,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log user for debugging
       console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant, isSuperAdmin: user?.isSuperAdmin });
 
-      res.json(user);
+      // Calculate capabilities for the user based on their role
+      const capabilities = ALL_CAPABILITIES.filter(capability => 
+        userHasCapability(user, capability)
+      );
+
+      res.json({ ...user, capabilities });
     } catch (error) {
       // Even if database fails, provide failsafe admin access
       let userId = req.user?.id;
@@ -243,7 +249,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        return res.json(failsafeUser);
+        // Calculate capabilities for failsafe user
+        const capabilities = ALL_CAPABILITIES.filter(capability => 
+          userHasCapability(failsafeUser, capability)
+        );
+        return res.json({ ...failsafeUser, capabilities });
       }
 
       console.error("Error fetching user:", error);

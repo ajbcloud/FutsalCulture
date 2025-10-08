@@ -17,6 +17,7 @@ interface User {
   tenantId?: string;
   planId?: string;
   billingStatus?: string;
+  capabilities?: string[];
 }
 
 interface AuthContextType {
@@ -27,6 +28,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  hasCapability: (capability: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchUser();
   };
 
+  const hasCapability = (capability: string): boolean => {
+    return user?.capabilities?.includes(capability) ?? false;
+  };
+
   const value = {
     user,
     loading,
@@ -103,7 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: loading,
     login,
     logout,
-    refreshUser
+    refreshUser,
+    hasCapability
   };
 
   return (
@@ -119,4 +126,9 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+export function useHasCapability(capability: string): boolean {
+  const { user } = useAuth();
+  return user?.capabilities?.includes(capability) ?? false;
 }
