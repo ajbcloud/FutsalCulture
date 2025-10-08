@@ -1612,8 +1612,24 @@ export async function setupAdminRoutes(app: any) {
       const { id: playerId } = req.params;
       const { page = '1', limit = '20' } = req.query;
       const user = req.user as any;
+      const currentUser = (req as any).currentUser;
       
-      if (!user.tenantId) {
+      // For Super Admin without tenantId, get player's tenant first
+      let tenantId = user.tenantId;
+      
+      if (!tenantId && currentUser?.isSuperAdmin) {
+        // Super Admin: look up the player's tenantId
+        const [player] = await db.select({ tenantId: players.tenantId })
+          .from(players)
+          .where(eq(players.id, playerId))
+          .limit(1);
+        
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        
+        tenantId = player.tenantId;
+      } else if (!tenantId) {
         return res.status(403).json({ message: "Access denied: no tenant context" });
       }
 
@@ -1621,10 +1637,10 @@ export async function setupAdminRoutes(app: any) {
       const limitNum = parseInt(limit as string, 20);
       const offset = (pageNum - 1) * limitNum;
 
-      // Verify player belongs to this tenant
+      // Verify player belongs to the determined tenant
       const [player] = await db.select()
         .from(players)
-        .where(and(eq(players.id, playerId), eq(players.tenantId, user.tenantId)))
+        .where(and(eq(players.id, playerId), eq(players.tenantId, tenantId)))
         .limit(1);
 
       if (!player) {
@@ -1639,7 +1655,7 @@ export async function setupAdminRoutes(app: any) {
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .where(and(
         eq(signups.playerId, playerId),
-        eq(futsalSessions.tenantId, user.tenantId)
+        eq(futsalSessions.tenantId, tenantId)
       ));
 
       const total = totalResult?.count || 0;
@@ -1664,7 +1680,7 @@ export async function setupAdminRoutes(app: any) {
       .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
       .where(and(
         eq(signups.playerId, playerId),
-        eq(futsalSessions.tenantId, user.tenantId)
+        eq(futsalSessions.tenantId, tenantId)
       ))
       .orderBy(desc(futsalSessions.startTime))
       .limit(limitNum)
