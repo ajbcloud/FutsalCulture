@@ -146,8 +146,8 @@ export default function SuperAdminHelpRequests() {
   // States for filters and search
   const [search, setSearch] = useState('');
   const [tenantFilter, setTenantFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -185,9 +185,9 @@ export default function SuperAdminHelpRequests() {
     queryKey: ['/api/super-admin/help-requests', {
       page: currentPage,
       pageSize,
-      tenant: tenantFilter,
-      status: statusFilter,
-      priority: priorityFilter,
+      tenant: tenantFilter !== 'all' ? tenantFilter : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      priority: priorityFilter !== 'all' ? priorityFilter : undefined,
       source: sourceFilter,
       search,
       dateFrom,
@@ -290,9 +290,9 @@ export default function SuperAdminHelpRequests() {
   // Export to CSV
   const handleExport = () => {
     const params = new URLSearchParams({
-      tenant: tenantFilter,
-      status: statusFilter,
-      priority: priorityFilter,
+      tenant: tenantFilter !== 'all' ? tenantFilter : '',
+      status: statusFilter !== 'all' ? statusFilter : '',
+      priority: priorityFilter !== 'all' ? priorityFilter : '',
       dateFrom,
       dateTo,
     });
@@ -589,7 +589,7 @@ export default function SuperAdminHelpRequests() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="resolved">Resolved</SelectItem>
@@ -605,7 +605,7 @@ export default function SuperAdminHelpRequests() {
                   <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Priorities</SelectItem>
+                  <SelectItem value="all">All Priorities</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="low">Low</SelectItem>

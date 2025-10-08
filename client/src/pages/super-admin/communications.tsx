@@ -233,9 +233,14 @@ export default function SuperAdminCommunications() {
   });
 
   // Queries
-  const { data: templates = [], isLoading: templatesLoading, refetch: refetchTemplates } = useQuery<CommunicationTemplate[]>({
+  const { data: templatesData, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery<{
+    templates: CommunicationTemplate[];
+    count: number;
+  }>({
     queryKey: ["/api/super-admin/communications/templates"],
   });
+
+  const templates = templatesData?.templates || [];
 
   const { data: campaignsData, isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery<{
     campaigns: CommunicationCampaign[];
