@@ -182,9 +182,12 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
                     Get Started
                   </a>
                 ) : isCurrent ? (
-                  <Badge variant="secondary" className="w-full justify-center py-2">
+                  <Button
+                    disabled
+                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-white"
+                  >
                     Current Plan
-                  </Badge>
+                  </Button>
                 ) : canUpgrade ? (
                   <Button
                     onClick={() => handleUpgrade(plan.id)}
@@ -195,7 +198,7 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
                     {isLoading ? 'Loading...' : 'Upgrade'}
                   </Button>
                 ) : (
-                  <Button variant="ghost" disabled className="w-full">
+                  <Button variant="secondary" disabled className="w-full">
                     Downgrade
                   </Button>
                 )}
