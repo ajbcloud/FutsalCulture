@@ -133,7 +133,7 @@ router.post('/credits/apply', async (req: any, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { targetUserId, amountCents, reason, expiresAt } = req.body;
+    const { targetUserId, amountCents, reason, expiresAt, applyToHousehold } = req.body;
 
     if (!targetUserId || !amountCents || !reason) {
       return res.status(400).json({ message: 'Target user ID, amount, and reason are required' });
@@ -153,9 +153,23 @@ router.post('/credits/apply', async (req: any, res) => {
       return res.status(403).json({ message: 'Cannot apply credit to user from different tenant' });
     }
 
+    // Check if user belongs to a household and if household credit is requested
+    let householdId = null;
+    let userId = targetUserId;
+
+    if (applyToHousehold) {
+      const household = await storage.getUserHousehold(targetUserId, currentUser.tenantId);
+      if (!household) {
+        return res.status(400).json({ message: 'User is not part of a household. Cannot apply household credit.' });
+      }
+      householdId = household.id;
+      userId = null;
+    }
+
     // Create credit record
     const credit = await storage.createCredit({
-      userId: targetUserId,
+      userId,
+      householdId,
       tenantId: currentUser.tenantId,
       amountCents,
       reason,

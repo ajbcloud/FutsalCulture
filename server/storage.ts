@@ -322,6 +322,7 @@ export interface IStorage {
   // Household operations
   getHouseholds(tenantId: string): Promise<Array<HouseholdSelect & { memberCount: number; members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }>>;
   getHousehold(id: string, tenantId: string): Promise<(HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }) | undefined>;
+  getUserHousehold(userId: string, tenantId: string): Promise<HouseholdSelect | null>;
   createHousehold(household: HouseholdInsert): Promise<HouseholdSelect>;
   updateHousehold(id: string, tenantId: string, data: Partial<HouseholdInsert>): Promise<HouseholdSelect>;
   deleteHousehold(id: string, tenantId: string): Promise<void>;
@@ -760,6 +761,18 @@ export class DatabaseStorage implements IStorage {
 
   // Credit operations
   async createCredit(credit: UserCreditInsert): Promise<UserCreditSelect> {
+    // Validate that exactly one of userId or householdId is set
+    const hasUserId = !!credit.userId;
+    const hasHouseholdId = !!credit.householdId;
+
+    if (hasUserId && hasHouseholdId) {
+      throw new Error('Cannot create credit with both userId and householdId. Only one must be set.');
+    }
+
+    if (!hasUserId && !hasHouseholdId) {
+      throw new Error('Cannot create credit without userId or householdId. Exactly one must be set.');
+    }
+
     const [newCredit] = await db.insert(userCredits).values(credit).returning();
     return newCredit;
   }
@@ -3891,6 +3904,22 @@ export class DatabaseStorage implements IStorage {
       ...household,
       members: enrichedMembers,
     };
+  }
+
+  async getUserHousehold(userId: string, tenantId: string): Promise<HouseholdSelect | null> {
+    const [membership] = await db
+      .select({
+        household: households,
+      })
+      .from(householdMembers)
+      .innerJoin(households, eq(householdMembers.householdId, households.id))
+      .where(and(
+        eq(householdMembers.userId, userId),
+        eq(householdMembers.tenantId, tenantId)
+      ))
+      .limit(1);
+
+    return membership?.household || null;
   }
 
   async createHousehold(household: HouseholdInsert): Promise<HouseholdSelect> {

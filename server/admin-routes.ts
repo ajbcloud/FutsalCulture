@@ -1178,8 +1178,12 @@ export async function setupAdminRoutes(app: any) {
 
         // Use actual payment amount if available, otherwise log warning and skip
         if (signup.actualAmountCents) {
+          // Check if user belongs to a household
+          const household = await storage.getUserHousehold(signup.parentId, currentUser.tenantId);
+          
           const credit = await storage.createCredit({
-            userId: signup.parentId,
+            userId: household ? null : signup.parentId,
+            householdId: household?.id || null,
             tenantId: currentUser.tenantId,
             amountCents: signup.actualAmountCents, // Use ACTUAL payment amount
             reason: `Credit for cancelled session: ${session.title}`,
