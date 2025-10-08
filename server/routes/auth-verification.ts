@@ -167,6 +167,14 @@ authVerificationRouter.post("/signup", async (req, res) => {
   }
 
   try {
+    // Check platform policies for tenant approval
+    const { getCurrentPolicies } = await import('../controllers/superAdmin/platformSettings');
+    const policies = await getCurrentPolicies();
+    
+    // Determine if auto-approval is enabled
+    const autoApprove = policies?.autoApproveTenants ?? true;
+    const requireApproval = policies?.requireTenantApproval ?? false;
+    
     // Generate base subdomain from organization name
     const baseSubdomain = org_name
       .toLowerCase()
@@ -186,8 +194,18 @@ authVerificationRouter.post("/signup", async (req, res) => {
     // Generate tenant invite code  
     const { generateInviteCode } = await import('../utils/invite-helpers');
     const inviteCode = generateInviteCode();
+    
+    // Determine initial tenant status based on policies
+    const tenantStatus = autoApprove ? 'active' : 'pending';
+    const billingStatus = autoApprove ? 'trial' : 'pending_approval';
+    
+    // Set trial dates if auto-approved
+    const now = new Date();
+    const trialStartedAt = autoApprove ? now : null;
+    const trialEndsAt = autoApprove ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) : null; // 14-day trial
+    const trialPlan = autoApprove ? 'core' : null; // Use 'core' as trial plan
 
-    // Create tenant
+    // Create tenant with appropriate status
     const [tenant] = await db.insert(tenants).values({
       name: org_name,
       subdomain: subdomain,
@@ -197,7 +215,12 @@ authVerificationRouter.post("/signup", async (req, res) => {
       contactName: contact_name,
       contactEmail: contact_email.toLowerCase(),
       inviteCode,
-      planLevel: "free", // Always start new tenants on free plan
+      planLevel: "free", // Base plan level
+      status: tenantStatus,
+      billingStatus: billingStatus,
+      trialStartedAt: trialStartedAt,
+      trialEndsAt: trialEndsAt,
+      trialPlan: trialPlan as any,
     }).returning();
 
     // Create user with pending verification status
@@ -294,10 +317,49 @@ The PlayHQ Team`;
     });
 
     console.log(`✅ Created tenant ${tenant.name} and sent verification email to ${user.email}`);
+    
+    // Send notification to Super Admins if manual approval is required
+    if (!autoApprove && requireApproval) {
+      const superAdmins = await db.select()
+        .from(users)
+        .where(eq(users.isSuperAdmin, true));
+      
+      for (const admin of superAdmins) {
+        await sendEmail({
+          to: admin.email!,
+          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          subject: "New Tenant Requires Approval",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2563eb;">New Tenant Pending Approval</h2>
+              <p>A new organization has signed up and requires approval:</p>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Organization:</strong> ${org_name}</p>
+                <p><strong>Subdomain:</strong> ${subdomain}</p>
+                <p><strong>Contact Name:</strong> ${contact_name}</p>
+                <p><strong>Contact Email:</strong> ${contact_email}</p>
+                <p><strong>Location:</strong> ${city || 'Not specified'}, ${state || ''} ${country || ''}</p>
+              </div>
+              <p style="margin-top: 20px;">
+                <a href="${app_url}/super-admin/tenants?search=${encodeURIComponent(org_name)}" 
+                   style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Review Application
+                </a>
+              </p>
+            </div>
+          `,
+          text: `New tenant ${org_name} requires approval. Visit the Super Admin dashboard to review.`,
+        }).catch(err => console.error('Failed to notify super admin:', err));
+      }
+    }
+
+    const message = autoApprove 
+      ? "Organization created successfully. Please check your email to verify and set your password."
+      : "Organization registration received. Your application is pending approval. We'll notify you once approved.";
 
     return res.json({ 
       ok: true,
-      message: "Organization created successfully. Please check your email to verify and set your password."
+      message
     });
 
   } catch (error) {

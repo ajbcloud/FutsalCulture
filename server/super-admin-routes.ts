@@ -57,25 +57,121 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
-  // Create new tenant
+  // Create new tenant with automatic admin user
   app.post('/api/super-admin/tenants', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
-      const validatedData = createTenantSchema.parse(req.body);
+      const { name, subdomain, adminEmail, adminName, plan = 'free', sendWelcomeEmail = true, autoApprove = true } = req.body;
+      
+      if (!name || !subdomain || !adminEmail) {
+        return res.status(400).json({ message: "Name, subdomain, and admin email are required" });
+      }
       
       // Check if subdomain already exists
-      const existingTenant = await storage.getTenantBySubdomain(validatedData.subdomain);
+      const existingTenant = await storage.getTenantBySubdomain(subdomain);
       if (existingTenant) {
         return res.status(400).json({ message: "Subdomain already exists" });
       }
+      
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmail(adminEmail);
+      if (existingUser) {
+        return res.status(400).json({ message: "Admin email already exists" });
+      }
 
-      const tenant = await storage.createTenant(validatedData);
-      res.json(tenant);
+      // Import necessary modules
+      const { db } = await import('./db');
+      const { emailVerificationTokens, users } = await import('@shared/schema');
+      const { sendEmail } = await import('./emailService');
+      const { nanoid } = await import('nanoid');
+
+      // Create tenant with appropriate status
+      const now = new Date();
+      const tenantData: any = {
+        name,
+        subdomain,
+        status: autoApprove ? 'active' : 'pending',
+        billingStatus: autoApprove ? 'trial' : 'pending_approval',
+        trialStartedAt: autoApprove ? now : null,
+        trialEndsAt: autoApprove ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) : null,
+        trialPlan: autoApprove ? 'core' : null,
+        planLevel: plan as any,
+        contactName: adminName || name,
+        contactEmail: adminEmail,
+      };
+      
+      const tenant = await storage.createTenant(tenantData);
+      
+      // Create admin user for the tenant
+      const firstName = adminName ? adminName.split(' ')[0] : name;
+      const lastName = adminName ? adminName.split(' ').slice(1).join(' ') : '';
+      
+      const adminUser = await storage.upsertUser({
+        email: adminEmail.toLowerCase(),
+        firstName,
+        lastName,
+        role: 'tenant_admin',
+        isAdmin: true,
+        tenantId: tenant.id,
+        verificationStatus: 'pending_verify',
+        authProvider: 'local',
+      });
+      
+      // Generate verification token for password setup
+      const raw = crypto.randomBytes(32).toString("base64url");
+      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+      const expires = new Date(Date.now() + 1000 * 60 * 60 * 48); // 48 hours
+      
+      await db.insert(emailVerificationTokens).values({
+        userId: adminUser.id,
+        tokenHash: hash,
+        expiresAt: expires,
+      });
+      
+      // Send welcome email if requested
+      if (sendWelcomeEmail) {
+        const app_url = process.env.NODE_ENV === 'production' 
+          ? 'https://playhq.app' 
+          : (process.env.REPLIT_APP_URL || 'http://localhost:3000');
+        const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
+        
+        await sendEmail({
+          to: adminEmail,
+          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          subject: "Welcome to PlayHQ - Your Organization is Ready",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+              <p>Hi ${firstName},</p>
+              <p>Your organization <strong>${name}</strong> has been created on PlayHQ by a Super Admin.</p>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Your Organization Details:</h3>
+                <p><strong>Organization Name:</strong> ${name}</p>
+                <p><strong>URL:</strong> https://${subdomain}.playhq.app</p>
+                <p><strong>Plan:</strong> ${plan === 'free' ? 'Free' : plan === 'core' ? 'Core (14-day Trial)' : plan}</p>
+                ${autoApprove ? '<p><strong>Status:</strong> Active</p>' : '<p><strong>Status:</strong> Pending Approval</p>'}
+              </div>
+              <p>Click the button below to set your password and get started:</p>
+              <p style="margin: 30px 0;">
+                <a href="${link}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Set Password & Get Started
+                </a>
+              </p>
+              <p>This link will expire in 48 hours.</p>
+              <p>Best regards,<br>The PlayHQ Team</p>
+            </div>
+          `,
+          text: `Welcome to PlayHQ! Your organization ${name} has been created. Set your password: ${link}`,
+        }).catch(err => console.error('Failed to send welcome email:', err));
+      }
+      
+      res.json({
+        tenant,
+        adminUser: { id: adminUser.id, email: adminUser.email },
+        message: sendWelcomeEmail ? "Tenant created and welcome email sent" : "Tenant created successfully",
+      });
     } catch (error) {
       console.error("Error creating tenant:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create tenant" });
+      res.status(500).json({ message: "Failed to create tenant", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -125,6 +221,180 @@ export function setupSuperAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting tenant:", error);
       res.status(500).json({ message: "Failed to delete tenant" });
+    }
+  });
+  
+  // Approve pending tenant
+  app.post('/api/super-admin/tenants/:id/approve', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tenant = await storage.getTenant(id);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      if (tenant.status === 'active') {
+        return res.status(400).json({ message: "Tenant is already active" });
+      }
+      
+      // Import necessary modules
+      const { sendEmail } = await import('./emailService');
+      const { db } = await import('./db');
+      const { users } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Update tenant status to active and start trial
+      const now = new Date();
+      const updatedTenant = await storage.updateTenant(id, {
+        status: 'active',
+        billingStatus: 'trial',
+        trialStartedAt: now,
+        trialEndsAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
+        trialPlan: 'core' as any,
+      });
+      
+      // Get the admin user for this tenant
+      const [adminUser] = await db.select()
+        .from(users)
+        .where(eq(users.tenantId, id))
+        .limit(1);
+      
+      if (adminUser && adminUser.email) {
+        // Send approval notification email
+        await sendEmail({
+          to: adminUser.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          subject: "Your PlayHQ Organization Has Been Approved!",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #2563eb;">Great News - You're Approved!</h1>
+              <p>Hi ${adminUser.firstName || 'there'},</p>
+              <p>Your organization <strong>${tenant.name}</strong> has been approved and is now active on PlayHQ!</p>
+              <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #22c55e; margin-top: 0;">✓ Application Approved</h3>
+                <p>Your 14-day trial has started. You now have full access to all PlayHQ features.</p>
+              </div>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Your Organization Details:</h3>
+                <p><strong>Organization:</strong> ${tenant.name}</p>
+                <p><strong>URL:</strong> https://${tenant.subdomain}.playhq.app</p>
+                <p><strong>Trial Ends:</strong> ${new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+              </div>
+              <h3>Get Started:</h3>
+              <ol style="line-height: 2;">
+                <li>Add your team members and players</li>
+                <li>Create your first training session</li>
+                <li>Configure payment settings</li>
+                <li>Customize your organization settings</li>
+              </ol>
+              <p style="margin-top: 30px;">
+                <a href="https://playhq.app/login" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Go to Dashboard →
+                </a>
+              </p>
+              <p>If you have any questions, we're here to help at <a href="mailto:support@playhq.app">support@playhq.app</a></p>
+              <p>Welcome aboard!</p>
+              <p>The PlayHQ Team</p>
+            </div>
+          `,
+          text: `Your organization ${tenant.name} has been approved! Your 14-day trial has started. Login at https://playhq.app to get started.`,
+        }).catch(err => console.error('Failed to send approval email:', err));
+      }
+      
+      res.json({
+        tenant: updatedTenant,
+        message: "Tenant approved successfully",
+      });
+    } catch (error) {
+      console.error("Error approving tenant:", error);
+      res.status(500).json({ message: "Failed to approve tenant" });
+    }
+  });
+  
+  // Reject pending tenant
+  app.post('/api/super-admin/tenants/:id/reject', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason = "Your application did not meet our requirements at this time." } = req.body;
+      
+      const tenant = await storage.getTenant(id);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      if (tenant.status !== 'pending') {
+        return res.status(400).json({ message: "Only pending tenants can be rejected" });
+      }
+      
+      // Import necessary modules
+      const { sendEmail } = await import('./emailService');
+      const { db } = await import('./db');
+      const { users } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Update tenant status to rejected
+      const updatedTenant = await storage.updateTenant(id, {
+        status: 'rejected',
+        billingStatus: 'rejected',
+      });
+      
+      // Get the admin user for this tenant
+      const [adminUser] = await db.select()
+        .from(users)
+        .where(eq(users.tenantId, id))
+        .limit(1);
+      
+      if (adminUser && adminUser.email) {
+        // Send rejection notification email
+        await sendEmail({
+          to: adminUser.email,
+          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          subject: "Update on Your PlayHQ Application",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #2563eb;">Application Update</h1>
+              <p>Hi ${adminUser.firstName || 'there'},</p>
+              <p>Thank you for your interest in PlayHQ.</p>
+              <p>After reviewing your application for <strong>${tenant.name}</strong>, we regret to inform you that we're unable to approve it at this time.</p>
+              <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Reason:</strong> ${reason}</p>
+              </div>
+              <p>If you believe this decision was made in error or if you'd like to discuss your application, please don't hesitate to contact us at <a href="mailto:support@playhq.app">support@playhq.app</a>.</p>
+              <p>We appreciate your understanding and wish you the best in finding a solution that meets your needs.</p>
+              <p>Best regards,<br>The PlayHQ Team</p>
+            </div>
+          `,
+          text: `Your PlayHQ application for ${tenant.name} was not approved. Reason: ${reason}. Contact support@playhq.app if you have questions.`,
+        }).catch(err => console.error('Failed to send rejection email:', err));
+      }
+      
+      res.json({
+        tenant: updatedTenant,
+        message: "Tenant rejected",
+      });
+    } catch (error) {
+      console.error("Error rejecting tenant:", error);
+      res.status(500).json({ message: "Failed to reject tenant" });
+    }
+  });
+  
+  // Update tenant status (for manual status changes)
+  app.patch('/api/super-admin/tenants/:id/status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!['active', 'suspended', 'trial', 'pending', 'inactive'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const tenant = await storage.updateTenant(id, { status });
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error updating tenant status:", error);
+      res.status(500).json({ message: "Failed to update tenant status" });
     }
   });
 

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, AlertTriangle, Sparkles, Building2, CreditCard, HelpCircle, MessageSquare, Clock } from 'lucide-react';
+import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, AlertTriangle, Sparkles, Building2, CreditCard, HelpCircle, MessageSquare, Clock, CheckCircle, XCircle, Timer } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -44,6 +44,17 @@ export default function SuperAdminOverview() {
     queryKey: ['/api/super-admin/tenants'],
     enabled: true,
     staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+  
+  // Process tenant data for pending approvals and trials
+  const pendingApprovals = (tenantsData || []).filter((t: any) => t.status === 'pending');
+  const trialTenants = (tenantsData || []).filter((t: any) => 
+    t.status === 'trial' || (t.billingStatus === 'trial' && t.trialEndsAt)
+  );
+  const expiringTrials = trialTenants.filter((t: any) => {
+    if (!t.trialEndsAt) return false;
+    const daysUntilExpiry = Math.ceil((new Date(t.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
   });
 
   // Query analytics data for client commerce
@@ -162,6 +173,151 @@ export default function SuperAdminOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Approvals Widget */}
+      {pendingApprovals.length > 0 && (
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg">Pending Tenant Approvals</CardTitle>
+              </div>
+              <Badge variant="outline" className="text-orange-600">
+                {pendingApprovals.length} Pending
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingApprovals.slice(0, 5).map((tenant: any) => (
+                <div key={tenant.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                  <div>
+                    <div className="font-medium">{tenant.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {tenant.contactName || 'No contact'} • {tenant.contactEmail}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Applied: {new Date(tenant.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="text-green-600 hover:text-green-700"
+                      onClick={() => window.location.href = `/super-admin/tenants?search=${encodeURIComponent(tenant.name)}`}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Review
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {pendingApprovals.length > 5 && (
+                <div className="text-center pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/super-admin/tenants?status=pending'}
+                  >
+                    View All {pendingApprovals.length} Pending Approvals
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expiring Trials Widget */}
+      {expiringTrials.length > 0 && (
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-lg">Expiring Trials</CardTitle>
+              </div>
+              <Badge variant="outline" className="text-yellow-600">
+                {expiringTrials.length} Expiring Soon
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {expiringTrials.slice(0, 5).map((tenant: any) => {
+                const daysLeft = Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={tenant.id} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                    <div>
+                      <div className="font-medium">{tenant.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {tenant.planLevel || tenant.plan} Plan • {tenant.userCount || 0} users
+                      </div>
+                      <div className="text-xs font-semibold text-yellow-600 mt-1">
+                        {daysLeft === 1 ? 'Expires tomorrow' : `Expires in ${daysLeft} days`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => window.location.href = `/super-admin/tenants?search=${encodeURIComponent(tenant.name)}`}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              {expiringTrials.length > 5 && (
+                <div className="text-center pt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/super-admin/tenants?status=trial'}
+                  >
+                    View All {expiringTrials.length} Expiring Trials
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trial Conversion Metrics */}
+      {trialTenants.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-500" />
+              <CardTitle className="text-lg">Trial Conversion Metrics</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <div className="text-2xl font-bold">{trialTenants.length}</div>
+                <div className="text-sm text-muted-foreground">Active Trials</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-green-600">
+                  {Math.round((tenantsData || []).filter((t: any) => 
+                    t.status === 'active' && !t.trialEndsAt && t.hasPaymentMethod
+                  ).length / Math.max(1, trialTenants.length) * 100)}%
+                </div>
+                <div className="text-sm text-muted-foreground">Conversion Rate</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-yellow-600">{expiringTrials.length}</div>
+                <div className="text-sm text-muted-foreground">Expiring This Week</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Help Requests Quick View */}
       {helpRequestStats && (

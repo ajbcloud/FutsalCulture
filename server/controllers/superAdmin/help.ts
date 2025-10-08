@@ -3,10 +3,7 @@ import { pageParams } from '../../lib/pagination';
 import { db } from '../../db';
 import { helpRequests, tenants, users } from '../../../shared/schema';
 import { eq, desc, asc, and, or, sql, like, gte, lte, isNull, not } from 'drizzle-orm';
-import { sendEmail } from '../../services/emailService';
-import { createReadStream } from 'fs';
-import { format } from 'fast-csv';
-import { pipeline } from 'stream/promises';
+import { sendEmail } from '../../emailService';
 
 // GET /api/super-admin/help-requests - List all help requests across tenants with filters
 export async function list(req: Request, res: Response) {

@@ -27,7 +27,13 @@ import {
   Power,
   PowerOff,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  CreditCard,
+  Mail,
+  Calendar
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -41,8 +47,13 @@ interface Tenant {
   id: string;
   name: string;
   subdomain: string;
-  status: 'active' | 'suspended' | 'trial';
-  plan: 'starter' | 'pro' | 'enterprise';
+  status: 'active' | 'suspended' | 'trial' | 'pending' | 'inactive' | 'rejected';
+  billingStatus?: 'trial' | 'active' | 'pending_approval' | 'suspended' | 'rejected';
+  plan: 'free' | 'core' | 'growth' | 'elite';
+  planLevel?: string;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  trialPlan?: string;
   userCount: number;
   playerCount: number;
   sessionCount: number;
@@ -50,6 +61,12 @@ interface Tenant {
   lastActive: string;
   createdAt: string;
   adminEmail?: string;
+  contactEmail?: string;
+  contactName?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  hasPaymentMethod?: boolean;
 }
 
 interface TenantDetails {
@@ -188,6 +205,83 @@ export default function SuperAdminTenants() {
   const handleToggleStatus = (tenantId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     toggleStatusMutation.mutate({ tenantId, status: newStatus });
+  };
+  
+  // Approve tenant mutation
+  const approveTenantMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const response = await fetch(`/api/super-admin/tenants/${tenantId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to approve tenant');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants'] });
+      toast({ 
+        title: 'Tenant approved successfully', 
+        description: 'Welcome email has been sent to the admin.' 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to approve tenant', description: error.message, variant: 'destructive' });
+    }
+  });
+  
+  // Reject tenant mutation
+  const rejectTenantMutation = useMutation({
+    mutationFn: async ({ tenantId, reason }: { tenantId: string; reason?: string }) => {
+      const response = await fetch(`/api/super-admin/tenants/${tenantId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      if (!response.ok) throw new Error('Failed to reject tenant');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants'] });
+      toast({ title: 'Tenant rejected', description: 'Rejection notification has been sent.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to reject tenant', description: error.message, variant: 'destructive' });
+    }
+  });
+  
+  // Resend welcome email mutation
+  const resendWelcomeEmailMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const response = await fetch(`/api/super-admin/tenants/${tenantId}/resend-welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to resend welcome email');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Welcome email sent', description: 'The welcome email has been resent successfully.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to resend email', description: error.message, variant: 'destructive' });
+    }
+  });
+  
+  const handleApproveTenant = (tenantId: string) => {
+    if (confirm('Are you sure you want to approve this tenant? This will activate their account and start their trial.')) {
+      approveTenantMutation.mutate(tenantId);
+    }
+  };
+  
+  const handleRejectTenant = (tenantId: string) => {
+    const reason = prompt('Please provide a reason for rejection (optional):');
+    if (reason !== null) { // User didn't cancel
+      rejectTenantMutation.mutate({ tenantId, reason: reason || undefined });
+    }
+  };
+  
+  const handleResendWelcomeEmail = (tenantId: string) => {
+    resendWelcomeEmailMutation.mutate(tenantId);
   };
 
   // Impersonation mutation
@@ -370,8 +464,11 @@ export default function SuperAdminTenants() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="pending">Pending Approval</SelectItem>
                 <SelectItem value="trial">Trial</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
             <Select value={planFilter} onValueChange={setPlanFilter}>
@@ -380,9 +477,10 @@ export default function SuperAdminTenants() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="core">Core</SelectItem>
+                <SelectItem value="growth">Growth</SelectItem>
+                <SelectItem value="elite">Elite</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -419,13 +517,38 @@ export default function SuperAdminTenants() {
                   <div className="font-mono text-sm text-muted-foreground">{tenant.id}</div>
                 </div>
                 <div className="col-span-2">
-                  <Badge variant={
-                    tenant.status === 'active' ? 'default' :
-                    tenant.status === 'suspended' ? 'destructive' : 'secondary'
-                  }>
-                    {tenant.status}
-                  </Badge>
-                  <div className="text-xs text-muted-foreground mt-1">{tenant.plan}</div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={
+                      tenant.status === 'active' ? 'default' :
+                      tenant.status === 'pending' ? 'outline' :
+                      tenant.status === 'trial' ? 'secondary' :
+                      tenant.status === 'suspended' ? 'destructive' :
+                      tenant.status === 'rejected' ? 'destructive' : 'secondary'
+                    }>
+                      {tenant.status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
+                      {tenant.status === 'trial' && <Calendar className="w-3 h-3 mr-1" />}
+                      {tenant.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                      {tenant.status}
+                    </Badge>
+                    {!tenant.hasPaymentMethod && tenant.status === 'active' && (
+                      <CreditCard className="w-3 h-3 text-orange-500" title="No payment method" />
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tenant.planLevel || tenant.plan}
+                    {tenant.trialEndsAt && (
+                      <>
+                        {' • '}
+                        <span className={
+                          new Date(tenant.trialEndsAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+                            ? 'text-orange-600 font-semibold' 
+                            : ''
+                        }>
+                          Trial ends {new Date(tenant.trialEndsAt).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="col-span-1">
                   <div className="font-medium">{tenant.userCount}</div>
@@ -448,6 +571,19 @@ export default function SuperAdminTenants() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {tenant.status === 'pending' && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleApproveTenant(tenant.id)} className="text-green-600">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Approve Tenant
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRejectTenant(tenant.id)} className="text-red-600">
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Reject Tenant
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
                       <DropdownMenuItem onClick={() => setSelectedTenant(tenant.id)}>
                         <BarChart3 className="w-4 h-4 mr-2" />
                         View Details
@@ -459,6 +595,10 @@ export default function SuperAdminTenants() {
                       <DropdownMenuItem onClick={() => handleImpersonateLogin(tenant)}>
                         <Eye className="w-4 h-4 mr-2" />
                         Impersonate Admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleResendWelcomeEmail(tenant.id)}>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Resend Welcome Email
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleToggleStatus(tenant.id, tenant.status)}>
