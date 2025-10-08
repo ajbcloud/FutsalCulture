@@ -167,6 +167,12 @@ export default function AdminDashboard() {
     if (activity.navigationUrl) {
       // Navigate to the URL with search parameters if available
       let url = activity.navigationUrl;
+      
+      // Fix: Ensure admin/parent registration activities go to /admin/parents, not /admin/settings
+      if (url === '/admin/settings' && activity.type === 'registration' && activity.searchTerm) {
+        url = '/admin/parents';
+      }
+      
       if (activity.searchTerm) {
         url += `?search=${encodeURIComponent(activity.searchTerm)}`;
       }
