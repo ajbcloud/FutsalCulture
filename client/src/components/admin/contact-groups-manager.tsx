@@ -58,6 +58,9 @@ interface User {
   email: string;
   role?: string;
   birthYear?: number;
+  ageGroup?: string;
+  gender?: string;
+  club?: string;
 }
 
 interface GroupWithMembers extends ContactGroup {
@@ -264,7 +267,10 @@ export default function ContactGroupsManager() {
       firstName: p.firstName,
       lastName: p.lastName,
       email: p.email || '',
-      role: 'player'
+      role: 'player',
+      ageGroup: p.ageGroup || '',
+      gender: p.gender || '',
+      club: p.club || ''
     }));
     
     return [...parentUsers, ...eligiblePlayers];
@@ -283,7 +289,13 @@ export default function ContactGroupsManager() {
   const filteredAvailableUsers = availableUsers.filter(u => {
     const searchLower = memberSearchQuery.toLowerCase();
     const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
-    return fullName.includes(searchLower) || u.email.toLowerCase().includes(searchLower);
+    const ageGroup = (u.ageGroup || '').toLowerCase();
+    const club = (u.club || '').toLowerCase();
+    
+    return fullName.includes(searchLower) || 
+           u.email.toLowerCase().includes(searchLower) ||
+           ageGroup.includes(searchLower) ||
+           club.includes(searchLower);
   });
 
   const getUserById = (userId: string) => {
@@ -456,7 +468,7 @@ export default function ContactGroupsManager() {
                   <PopoverContent className="w-[400px] p-0" align="start">
                     <Command>
                       <CommandInput
-                        placeholder="Search users..."
+                        placeholder="Search by name, email, age group, or club..."
                         value={memberSearchQuery}
                         onValueChange={setMemberSearchQuery}
                         data-testid="input-search-members"
@@ -474,7 +486,11 @@ export default function ContactGroupsManager() {
                           >
                             <div className="flex-1">
                               <div className="font-medium">{user.firstName} {user.lastName}</div>
-                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {user.email}
+                                {user.ageGroup && <span className="ml-2">• {user.ageGroup}</span>}
+                                {user.club && <span className="ml-2">• {user.club}</span>}
+                              </div>
                             </div>
                             <Badge variant="outline" className="ml-2">
                               {user.role === 'player' ? 'Player' : 'Adult'}
@@ -563,7 +579,7 @@ export default function ContactGroupsManager() {
                 <PopoverContent className="w-[400px] p-0" align="end">
                   <Command>
                     <CommandInput
-                      placeholder="Search users..."
+                      placeholder="Search by name, email, age group, or club..."
                       value={memberSearchQuery}
                       onValueChange={setMemberSearchQuery}
                       data-testid="input-search-add-member"
@@ -586,7 +602,11 @@ export default function ContactGroupsManager() {
                         >
                           <div className="flex-1">
                             <div className="font-medium">{user.firstName} {user.lastName}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {user.email}
+                              {user.ageGroup && <span className="ml-2">• {user.ageGroup}</span>}
+                              {user.club && <span className="ml-2">• {user.club}</span>}
+                            </div>
                           </div>
                           <Badge variant="outline" className="ml-2">
                             {user.role === 'player' ? 'Player' : 'Parent'}

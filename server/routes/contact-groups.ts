@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { insertContactGroupSchema } from "@shared/schema";
+import { insertContactGroupSchema, players, users } from "@shared/schema";
 import { z } from "zod";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -259,6 +261,100 @@ router.post('/contact-groups/:id/members/bulk', async (req: any, res) => {
   } catch (error) {
     console.error('Error bulk adding group members:', error);
     res.status(500).json({ message: 'Failed to bulk add group members' });
+  }
+});
+
+// GET /api/users - Get all parents/users for contact group selection
+router.get('/users', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!user.isAdmin && !user.isSuperAdmin && !user.isAssistant) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Get all users (parents) for the tenant
+    const allUsers = await storage.getUsersByTenant(user.tenantId);
+    
+    const users = allUsers.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      role: 'parent'
+    }));
+
+    res.json({ users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
+});
+
+// GET /api/players - Get all players for contact group selection
+router.get('/players', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!user.isAdmin && !user.isSuperAdmin && !user.isAssistant) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Get all players for the tenant
+    const allPlayers = await db
+      .select()
+      .from(players)
+      .where(eq(players.tenantId, user.tenantId));
+    
+    // Filter for players 13+ and include age group and club info
+    const currentYear = new Date().getFullYear();
+    const eligiblePlayers = allPlayers
+      .filter((p: any) => {
+        const age = currentYear - (p.birthYear || 0);
+        return age >= 13;
+      })
+      .map((p: any) => {
+        const age = currentYear - (p.birthYear || 0);
+        let ageGroup = '';
+        
+        // Calculate age group
+        if (age >= 13 && age <= 15) ageGroup = 'U13-U15';
+        else if (age >= 16 && age <= 17) ageGroup = 'U16-U17';
+        else if (age >= 18) ageGroup = 'Adult';
+        
+        return {
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          email: p.email || '',
+          birthYear: p.birthYear,
+          ageGroup,
+          gender: p.gender,
+          club: p.soccerClub || '',
+          role: 'player'
+        };
+      });
+
+    res.json(eligiblePlayers);
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    res.status(500).json({ message: 'Failed to fetch players' });
   }
 });
 
