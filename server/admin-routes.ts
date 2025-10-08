@@ -774,7 +774,6 @@ export async function setupAdminRoutes(app: any) {
         const isAdmin = user.isAdmin || user.isSuperAdmin;
         const userType = isAdmin ? 'admin' : 'parent';
         const userIcon = isAdmin ? '👨‍💼' : '👨‍👩‍👧‍👦';
-        const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
         
         activities.push({
           id: `${userType}-reg-${user.id}`,
@@ -784,7 +783,7 @@ export async function setupAdminRoutes(app: any) {
           timestamp: user.createdAt!,
           timeAgo: getTimeAgo(user.createdAt!),
           // Navigation metadata  
-          navigationUrl: navigationUrl,
+          navigationUrl: '/admin/parents',
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
         });
@@ -806,7 +805,6 @@ export async function setupAdminRoutes(app: any) {
       recentParentApprovals.forEach(user => {
         const isAdmin = user.isAdmin || user.isSuperAdmin;
         const userType = isAdmin ? 'admin' : 'parent';
-        const navigationUrl = isAdmin ? '/admin/settings' : '/admin/parents';
         
         activities.push({
           id: `${userType}-approval-${user.id}`,
@@ -816,7 +814,7 @@ export async function setupAdminRoutes(app: any) {
           timestamp: user.approvedAt!,
           timeAgo: getTimeAgo(user.approvedAt!),
           // Navigation metadata  
-          navigationUrl: navigationUrl,
+          navigationUrl: '/admin/parents',
           searchTerm: `${user.firstName} ${user.lastName}`,
           parentId: user.id
         });

@@ -537,7 +537,7 @@ export default function AdminDashboard() {
                     Import Players
                   </a>
                   <a 
-                    href="/admin/help" 
+                    href="/admin/help-requests" 
                     className="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-center text-white text-sm font-medium transition-colors"
                   >
                     Help Requests
