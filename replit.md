@@ -33,6 +33,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Storage**: PostgreSQL-backed session store using `connect-pg-simple`.
 - **Failsafe Super Admin**: Hardcoded super admin user (username: ajosephfinch) that cannot be removed or modified, providing security failsafe against administrative lockout.
 - **Email Verification System**: New signup flow with email-first verification, preventing users from setting passwords until email is confirmed. Uses secure tokens with 48-hour expiration and SendGrid for email delivery.
+- **Capability-Based Access Control**: Fine-grained permission system for Assistant role with FINANCIAL_ANALYTICS capability. Assistants can manage all operational aspects (sessions, players, parents, bookings, help requests, settings) but cannot access aggregate financial analytics, revenue totals, or cumulative spending amounts. Individual payment status and credit balances remain visible. Backend middleware enforces capability checks with optimized query skipping for denied access. Frontend uses useHasCapability hook for conditional UI rendering with clear permission messaging.
 
 ### Payment Processing
 - **Stripe**: Payment processing for bookings.
