@@ -108,15 +108,15 @@ export default function SuperAdminSessions() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "open":
-        return <Badge variant="default" className="bg-green-500">Open</Badge>;
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Open</Badge>;
       case "full":
-        return <Badge variant="destructive">Full</Badge>;
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Full</Badge>;
       case "closed":
-        return <Badge variant="secondary">Closed</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Closed</Badge>;
       case "cancelled":
-        return <Badge variant="outline" className="text-red-500">Cancelled</Badge>;
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Cancelled</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">{status}</Badge>;
     }
   };
 
