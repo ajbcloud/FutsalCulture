@@ -380,13 +380,13 @@ export default function SuperAdminHelpRequests() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'open':
-        return <Badge variant="destructive">Open</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">Open</Badge>;
       case 'in_progress':
-        return <Badge variant="default">In Progress</Badge>;
+        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">In Progress</Badge>;
       case 'resolved':
-        return <Badge variant="outline" className="border-green-500 text-green-700">Resolved</Badge>;
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Resolved</Badge>;
       case 'closed':
-        return <Badge variant="secondary">Closed</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Closed</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -396,11 +396,11 @@ export default function SuperAdminHelpRequests() {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Badge variant="destructive"><ArrowUp className="h-3 w-3 mr-1" />High</Badge>;
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><ArrowUp className="h-4 w-4 mr-1" />High</Badge>;
       case 'medium':
-        return <Badge variant="default"><ArrowUpDown className="h-3 w-3 mr-1" />Medium</Badge>;
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100"><ArrowUpDown className="h-4 w-4 mr-1" />Medium</Badge>;
       case 'low':
-        return <Badge variant="secondary"><ArrowDown className="h-3 w-3 mr-1" />Low</Badge>;
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><ArrowDown className="h-4 w-4 mr-1" />Low</Badge>;
       default:
         return <Badge>{priority}</Badge>;
     }
@@ -458,6 +458,7 @@ export default function SuperAdminHelpRequests() {
           <Button
             variant="outline"
             onClick={() => setShowStats(!showStats)}
+            data-testid="button-toggle-stats"
           >
             <BarChart3 className="h-4 w-4 mr-2" />
             {showStats ? 'Hide' : 'Show'} Stats
@@ -466,11 +467,15 @@ export default function SuperAdminHelpRequests() {
             variant="outline"
             onClick={handleExport}
             disabled={!helpRequestsData?.rows?.length}
+            data-testid="button-export-csv"
           >
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          <Button onClick={() => refetch()}>
+          <Button 
+            onClick={() => refetch()}
+            data-testid="button-refresh"
+          >
             <Activity className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -480,64 +485,54 @@ export default function SuperAdminHelpRequests() {
       {/* Stats Dashboard (if visible) */}
       {showStats && stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+              <Ticket className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.overview.totalRequests}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 {stats.overview.openRequests} open, {stats.overview.inProgressRequests} in progress
               </p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Priority Distribution</CardTitle>
+          <Card className="border-l-4 border-l-yellow-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Requests</CardTitle>
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-red-600">High</span>
-                  <span className="font-medium">{stats.overview.highPriority}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-yellow-600">Medium</span>
-                  <span className="font-medium">{stats.overview.mediumPriority}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Low</span>
-                  <span className="font-medium">{stats.overview.lowPriority}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatDuration(stats.overview.avgResponseTime)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                First response
+              <div className="text-2xl font-bold">{stats.overview.openRequests}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Needs attention
               </p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Avg Resolution Time</CardTitle>
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+              <Clock className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatDuration(stats.overview.avgResolutionTime)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                To closure
+              <div className="text-2xl font-bold">{stats.overview.inProgressRequests}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Being handled
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.overview.resolvedRequests}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Successfully closed
               </p>
             </CardContent>
           </Card>
@@ -665,12 +660,14 @@ export default function SuperAdminHelpRequests() {
                   <Button
                     onClick={handleBulkUpdate}
                     disabled={!bulkStatus && !bulkPriority}
+                    data-testid="button-bulk-apply"
                   >
                     Apply Changes
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setSelectedIds([])}
+                    data-testid="button-bulk-clear"
                   >
                     Clear Selection
                   </Button>
@@ -774,7 +771,7 @@ export default function SuperAdminHelpRequests() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" data-testid={`button-actions-${request.id}`}>
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -844,6 +841,7 @@ export default function SuperAdminHelpRequests() {
               size="sm"
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
+              data-testid="button-page-first"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -852,6 +850,7 @@ export default function SuperAdminHelpRequests() {
               size="sm"
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
+              data-testid="button-page-prev"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -863,6 +862,7 @@ export default function SuperAdminHelpRequests() {
               size="sm"
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === helpRequestsData.totalPages}
+              data-testid="button-page-next"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -871,6 +871,7 @@ export default function SuperAdminHelpRequests() {
               size="sm"
               onClick={() => setCurrentPage(helpRequestsData.totalPages)}
               disabled={currentPage === helpRequestsData.totalPages}
+              data-testid="button-page-last"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
@@ -1074,12 +1075,14 @@ export default function SuperAdminHelpRequests() {
                     variant="outline"
                     onClick={() => setReplyMessage('')}
                     disabled={!replyMessage}
+                    data-testid="button-clear-reply"
                   >
                     Clear
                   </Button>
                   <Button
                     onClick={handleReplySubmit}
                     disabled={!replyMessage.trim() || replyMutation.isPending}
+                    data-testid="button-send-reply"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Send Reply
@@ -1152,12 +1155,14 @@ export default function SuperAdminHelpRequests() {
                       setResolutionNote('');
                       setInternalNote('');
                     }}
+                    data-testid="button-reset-manage"
                   >
                     Reset
                   </Button>
                   <Button
                     onClick={handleUpdateSubmit}
                     disabled={(!updateStatus && !updatePriority && !internalNote) || updateMutation.isPending}
+                    data-testid="button-apply-changes"
                   >
                     Apply Changes
                   </Button>

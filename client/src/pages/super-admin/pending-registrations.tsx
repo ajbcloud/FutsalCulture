@@ -368,6 +368,7 @@ export default function SuperAdminPendingRegistrations() {
             variant="outline"
             onClick={handleExport}
             disabled={!registrations.length}
+            data-testid="button-export-csv"
           >
             <Download className="h-4 w-4 mr-2" />
             Export CSV
@@ -377,6 +378,7 @@ export default function SuperAdminPendingRegistrations() {
               <Button
                 onClick={() => bulkApproveMutation.mutate()}
                 className="bg-green-600 hover:bg-green-700"
+                data-testid="button-bulk-approve"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Approve ({selectedRegistrations.size})
@@ -384,6 +386,7 @@ export default function SuperAdminPendingRegistrations() {
               <Button
                 variant="destructive"
                 onClick={() => setShowBulkRejectModal(true)}
+                data-testid="button-bulk-reject"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject ({selectedRegistrations.size})
@@ -396,45 +399,49 @@ export default function SuperAdminPendingRegistrations() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Pending</CardTitle>
+              <Clock className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalPending}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 Awaiting approval
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Parents</CardTitle>
+              <User className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendingByType?.parents || 0}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 Parent registrations
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-l-4 border-l-orange-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Players</CardTitle>
+              <Users className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendingByType?.players || 0}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 Player registrations
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Top Tenant</CardTitle>
+              <Building2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               {stats.pendingByTenant[0] ? (
@@ -442,7 +449,7 @@ export default function SuperAdminPendingRegistrations() {
                   <div className="text-2xl font-bold">
                     {stats.pendingByTenant[0].pendingCount}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {stats.pendingByTenant[0].tenantName}
                   </p>
                 </>
@@ -582,7 +589,12 @@ export default function SuperAdminPendingRegistrations() {
                           />
                         </TableCell>
                         <TableCell>
-                          <Badge variant={registration.type === 'parent' ? 'default' : 'secondary'}>
+                          <Badge 
+                            className={registration.type === 'parent' 
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' 
+                              : 'bg-orange-100 text-orange-700 hover:bg-orange-100'
+                            }
+                          >
                             {registration.type === 'parent' ? (
                               <User className="w-3 h-3 mr-1" />
                             ) : (
@@ -614,12 +626,12 @@ export default function SuperAdminPendingRegistrations() {
                         </TableCell>
                         <TableCell>
                           <Badge 
-                            variant={
+                            className={
                               registration.registrationStatus === 'approved' 
-                                ? 'default' 
+                                ? 'bg-green-100 text-green-700 hover:bg-green-100' 
                                 : registration.registrationStatus === 'rejected'
-                                ? 'destructive'
-                                : 'secondary'
+                                ? 'bg-red-100 text-red-700 hover:bg-red-100'
+                                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100'
                             }
                           >
                             {registration.registrationStatus}
@@ -635,6 +647,7 @@ export default function SuperAdminPendingRegistrations() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() => handleViewDetails(registration)}
+                                data-testid={`button-view-details-${registration.id}`}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
@@ -645,6 +658,7 @@ export default function SuperAdminPendingRegistrations() {
                                   <DropdownMenuItem
                                     onClick={() => approveMutation.mutate(registration.id)}
                                     className="text-green-600"
+                                    data-testid={`button-approve-${registration.id}`}
                                   >
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Approve
@@ -655,6 +669,7 @@ export default function SuperAdminPendingRegistrations() {
                                       setShowRejectModal(true);
                                     }}
                                     className="text-red-600"
+                                    data-testid={`button-reject-${registration.id}`}
                                   >
                                     <XCircle className="w-4 h-4 mr-2" />
                                     Reject
@@ -739,7 +754,12 @@ export default function SuperAdminPendingRegistrations() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Type</Label>
-                  <Badge variant={selectedRegistration.type === 'parent' ? 'default' : 'secondary'}>
+                  <Badge 
+                    className={selectedRegistration.type === 'parent' 
+                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' 
+                      : 'bg-orange-100 text-orange-700 hover:bg-orange-100'
+                    }
+                  >
                     {selectedRegistration.type}
                   </Badge>
                 </div>
@@ -783,14 +803,13 @@ export default function SuperAdminPendingRegistrations() {
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Status</Label>
                 <Badge 
-                  variant={
+                  className={
                     selectedRegistration.registrationStatus === 'approved' 
-                      ? 'default' 
+                      ? 'bg-green-100 text-green-700 hover:bg-green-100 mt-1' 
                       : selectedRegistration.registrationStatus === 'rejected'
-                      ? 'destructive'
-                      : 'secondary'
+                      ? 'bg-red-100 text-red-700 hover:bg-red-100 mt-1'
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 mt-1'
                   }
-                  className="mt-1"
                 >
                   {selectedRegistration.registrationStatus}
                 </Badge>
@@ -802,6 +821,7 @@ export default function SuperAdminPendingRegistrations() {
               <Button
                 variant="outline"
                 onClick={() => setShowDetailsModal(false)}
+                data-testid="button-cancel-details"
               >
                 Cancel
               </Button>
@@ -810,6 +830,7 @@ export default function SuperAdminPendingRegistrations() {
                 onClick={() => {
                   setShowRejectModal(true);
                 }}
+                data-testid="button-reject-details"
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Reject
@@ -817,6 +838,7 @@ export default function SuperAdminPendingRegistrations() {
               <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => approveMutation.mutate(selectedRegistration.id)}
+                data-testid="button-approve-details"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Approve
@@ -868,6 +890,7 @@ export default function SuperAdminPendingRegistrations() {
                 setShowRejectModal(false);
                 setRejectReason('');
               }}
+              data-testid="button-cancel-reject"
             >
               Cancel
             </Button>
@@ -882,6 +905,7 @@ export default function SuperAdminPendingRegistrations() {
                 }
               }}
               disabled={!rejectReason}
+              data-testid="button-confirm-reject"
             >
               Reject Registration
             </Button>
@@ -917,6 +941,7 @@ export default function SuperAdminPendingRegistrations() {
                 setShowBulkRejectModal(false);
                 setBulkRejectReason('');
               }}
+              data-testid="button-cancel-bulk-reject"
             >
               Cancel
             </Button>
@@ -924,6 +949,7 @@ export default function SuperAdminPendingRegistrations() {
               variant="destructive"
               onClick={() => bulkRejectMutation.mutate()}
               disabled={!bulkRejectReason}
+              data-testid="button-confirm-bulk-reject"
             >
               Reject All Selected
             </Button>

@@ -543,6 +543,66 @@ export default function SuperAdminCommunications() {
 
           {/* Templates Tab */}
           <TabsContent value="templates" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card className="border-l-4 border-l-purple-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Templates</CardTitle>
+                  <FileText className="h-4 w-4 text-purple-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{templates.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    All communication templates
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {templates.filter(t => t.active).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Active templates
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-blue-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Email</CardTitle>
+                  <Mail className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {templates.filter(t => t.type === "email" || t.type === "both").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Email templates
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">SMS</CardTitle>
+                  <Smartphone className="h-4 w-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {templates.filter(t => t.type === "sms" || t.type === "both").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    SMS templates
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -584,15 +644,21 @@ export default function SuperAdminCommunications() {
                         onClick={() => openTemplateDialog(template)}
                         data-testid={`card-template-${template.id}`}
                       >
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-2">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-lg">{template.name}</CardTitle>
-                            <Badge variant={template.active ? "default" : "secondary"}>
+                            <Badge className={template.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
                               {template.active ? "Active" : "Inactive"}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline">
+                            <Badge className={
+                              template.type === "email" 
+                                ? "bg-blue-100 text-blue-700"
+                                : template.type === "sms"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-purple-100 text-purple-700"
+                            }>
                               {template.type === "email" ? (
                                 <Mail className="w-3 h-3 mr-1" />
                               ) : template.type === "sms" ? (
@@ -1001,6 +1067,7 @@ export default function SuperAdminCommunications() {
                             size="sm"
                             className="p-0 h-auto"
                             onClick={() => setRecipientPreviewOpen(true)}
+                            data-testid="button-preview-recipients"
                           >
                             Preview Recipients
                           </Button>
@@ -1096,7 +1163,13 @@ export default function SuperAdminCommunications() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
+                              <Badge className={
+                                campaign.type === "email" 
+                                  ? "bg-blue-100 text-blue-700"
+                                  : campaign.type === "sms"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : "bg-purple-100 text-purple-700"
+                              }>
                                 {campaign.type === "email" ? (
                                   <Mail className="w-3 h-3 mr-1" />
                                 ) : campaign.type === "sms" ? (
@@ -1117,21 +1190,21 @@ export default function SuperAdminCommunications() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={
+                                className={
                                   campaign.status === "sent"
-                                    ? "default"
+                                    ? "bg-green-100 text-green-700"
                                     : campaign.status === "failed"
-                                    ? "destructive"
+                                    ? "bg-red-100 text-red-700"
                                     : campaign.status === "scheduled"
-                                    ? "secondary"
-                                    : "outline"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-gray-100 text-gray-700"
                                 }
                                 data-testid={`badge-status-${campaign.id}`}
                               >
                                 {campaign.status}
                               </Badge>
                               {campaign.schedule === "recurring" && (
-                                <Badge variant="outline" className="ml-2">
+                                <Badge className="ml-2 bg-purple-100 text-purple-700">
                                   <Repeat className="w-3 h-3 mr-1" />
                                   Recurring
                                 </Badge>
@@ -1167,7 +1240,7 @@ export default function SuperAdminCommunications() {
                                 </div>
                               ) : campaign.scheduledFor ? (
                                 <div className="text-sm">
-                                  <Badge variant="outline">
+                                  <Badge className="bg-blue-100 text-blue-700">
                                     <Clock className="w-3 h-3 mr-1" />
                                     {format(new Date(campaign.scheduledFor), "MMM d, h:mm a")}
                                   </Badge>
@@ -1218,55 +1291,55 @@ export default function SuperAdminCommunications() {
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="border-l-4 border-l-purple-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Messages Sent</CardTitle>
-                  <Send className="h-4 w-4 text-muted-foreground" />
+                  <Send className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {campaigns.campaigns?.reduce((acc: number, c: CommunicationCampaign) => acc + c.sentCount, 0) || 0}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Total messages sent this month
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-green-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                  <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">98.5%</div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Successfully delivered
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <Eye className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">45.2%</div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Average open rate
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-orange-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
-                  <MousePointer className="h-4 w-4 text-muted-foreground" />
+                  <MousePointer className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">12.8%</div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Average click-through rate
                   </p>
                 </CardContent>
@@ -1448,6 +1521,7 @@ export default function SuperAdminCommunications() {
                       setSelectedTemplate(null);
                       templateForm.reset();
                     }}
+                    data-testid="button-cancel-template"
                   >
                     Cancel
                   </Button>
@@ -1487,35 +1561,35 @@ export default function SuperAdminCommunications() {
             ) : campaignAnalytics ? (
               <div className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
+                  <Card className="border-l-4 border-l-green-500">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm">Delivery</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{campaignAnalytics.metrics?.delivered || 0}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {campaignAnalytics.metrics?.deliveryRate || 0}% delivery rate
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-blue-500">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm">Opens</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{campaignAnalytics.metrics?.opened || 0}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {campaignAnalytics.metrics?.openRate || 0}% open rate
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="border-l-4 border-l-purple-500">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm">Clicks</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{campaignAnalytics.metrics?.clicked || 0}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {campaignAnalytics.metrics?.clickRate || 0}% click rate
                       </div>
                     </CardContent>
@@ -1548,7 +1622,7 @@ export default function SuperAdminCommunications() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAnalyticsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setAnalyticsDialogOpen(false)} data-testid="button-close-analytics">
                 Close
               </Button>
             </DialogFooter>
@@ -1581,7 +1655,17 @@ export default function SuperAdminCommunications() {
                       <TableCell>{recipient.email}</TableCell>
                       <TableCell>{recipient.tenantName || "-"}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{recipient.plan || "Unknown"}</Badge>
+                        <Badge className={
+                          recipient.plan?.toLowerCase() === "core" 
+                            ? "bg-blue-100 text-blue-700"
+                            : recipient.plan?.toLowerCase() === "growth"
+                            ? "bg-purple-100 text-purple-700"
+                            : recipient.plan?.toLowerCase() === "elite"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-gray-100 text-gray-700"
+                        }>
+                          {recipient.plan || "Unknown"}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1594,7 +1678,7 @@ export default function SuperAdminCommunications() {
               )}
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRecipientPreviewOpen(false)}>
+              <Button variant="outline" onClick={() => setRecipientPreviewOpen(false)} data-testid="button-close-recipients">
                 Close
               </Button>
             </DialogFooter>

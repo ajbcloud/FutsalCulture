@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, AlertTriangle, Sparkles, Building2, CreditCard, HelpCircle, MessageSquare, Clock, CheckCircle, XCircle, Timer } from 'lucide-react';
+import { Calendar, DollarSign, Users, Activity, Brain, TrendingUp, TrendingDown, Minus, AlertTriangle, Sparkles, Building2, CreditCard, HelpCircle, MessageSquare, Clock, CheckCircle, XCircle, Timer } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -115,59 +115,63 @@ export default function SuperAdminOverview() {
             </SelectContent>
           </Select>
           
-          <Button className="w-full sm:w-auto">Add New Tenant</Button>
+          <Button className="w-full sm:w-auto" data-testid="button-add-tenant">Add New Tenant</Button>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 lg:gap-6">
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <Card className="border-l-4 border-l-green-500" data-testid="card-total-revenue">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">${metrics.totalRevenue.toLocaleString()}</div>
-            <p className="text-sm text-green-600 font-medium">
-              +{metrics.monthlyGrowth}% from last month
-            </p>
+            <div className="text-2xl font-bold">${metrics.totalRevenue.toLocaleString()}</div>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">This month</p>
+              <div className="flex items-center text-xs text-green-500">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                {metrics.monthlyGrowth}%
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <Card className="border-l-4 border-l-blue-500" data-testid="card-total-players">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Players</CardTitle>
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{metrics.totalPlayers}</div>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-2xl font-bold">{metrics.totalPlayers}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Across all organizations
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <Card className="border-l-4 border-l-purple-500" data-testid="card-active-tenants">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
-            <Activity className="h-5 w-5 text-purple-600" />
+            <Activity className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{metrics.activeTenants}</div>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-2xl font-bold">{metrics.activeTenants}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Organizations using platform
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <Card className="border-l-4 border-l-orange-500" data-testid="card-total-sessions">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-            <Calendar className="h-5 w-5 text-orange-600" />
+            <Calendar className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{metrics.totalSessions}</div>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-2xl font-bold">{metrics.totalSessions}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               This month across all tenants
             </p>
           </CardContent>
@@ -183,7 +187,7 @@ export default function SuperAdminOverview() {
                 <Clock className="h-5 w-5 text-orange-500" />
                 <CardTitle className="text-lg">Pending Tenant Approvals</CardTitle>
               </div>
-              <Badge variant="outline" className="text-orange-600">
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
                 {pendingApprovals.length} Pending
               </Badge>
             </div>
@@ -207,6 +211,7 @@ export default function SuperAdminOverview() {
                       variant="outline"
                       className="text-green-600 hover:text-green-700"
                       onClick={() => window.location.href = `/super-admin/tenants?search=${encodeURIComponent(tenant.name)}`}
+                      data-testid={`button-review-${tenant.id}`}
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
                       Review
@@ -239,7 +244,7 @@ export default function SuperAdminOverview() {
                 <Timer className="h-5 w-5 text-yellow-500" />
                 <CardTitle className="text-lg">Expiring Trials</CardTitle>
               </div>
-              <Badge variant="outline" className="text-yellow-600">
+              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
                 {expiringTrials.length} Expiring Soon
               </Badge>
             </div>
@@ -562,13 +567,15 @@ export default function SuperAdminOverview() {
                         </td>
                         <td className="p-4 text-center font-medium">{tenant.playerCount || 23}</td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            tenant.status === 'active' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                          }`}>
+                          <Badge 
+                            variant={tenant.status === 'active' ? 'default' : 'secondary'}
+                            className={tenant.status === 'active' 
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                              : ''
+                            }
+                          >
                             {tenant.status === 'active' ? 'Active' : 'Inactive'}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="p-4 text-muted-foreground">
                           {new Date(tenant.createdAt).toLocaleDateString()}
@@ -591,61 +598,61 @@ export default function SuperAdminOverview() {
         <TabsContent value="commerce" className="space-y-6">
           {/* Client Commerce Analytics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Commerce Revenue</CardTitle>
-                <DollarSign className="h-5 w-5 text-blue-600" />
+                <DollarSign className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-2xl font-bold">
                   ${(tenantAnalytics?.totalRevenue || 45320).toLocaleString()}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-1">
                   From all tenant transactions
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Commerce Tenants</CardTitle>
-                <Building2 className="h-5 w-5 text-green-600" />
+                <Building2 className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-2xl font-bold">
                   {tenants.filter((t: any) => t.status === 'active' && t.hasCommerce).length || 5}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-1">
                   Processing payments
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-purple-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Failed Payments</CardTitle>
-                <CreditCard className="h-5 w-5 text-purple-600" />
+                <CreditCard className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-600">
+                <div className="text-2xl font-bold">
                   {tenantAnalytics?.failedPayments || 12}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-1">
                   Require attention
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-orange-500">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                <TrendingUp className="h-5 w-5 text-orange-600" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+                <TrendingUp className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-600">
+                <div className="text-2xl font-bold">
                   ${(tenantAnalytics?.monthlyRevenue || 8240).toLocaleString()}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-1">
                   Revenue this month
                 </p>
               </CardContent>
@@ -716,13 +723,15 @@ export default function SuperAdminOverview() {
                             </span>
                           </td>
                           <td className="p-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              tenant.status === 'active' 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                            }`}>
+                            <Badge 
+                              variant={tenant.status === 'active' ? 'default' : 'secondary'}
+                              className={tenant.status === 'active' 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                                : ''
+                              }
+                            >
                               {tenant.status === 'active' ? 'Active' : 'Inactive'}
-                            </span>
+                            </Badge>
                           </td>
                           <td className="p-4 text-center text-muted-foreground text-sm">
                             {new Date().toLocaleDateString()}

@@ -364,6 +364,12 @@ export default function SuperAdminTenants() {
     );
   }
 
+  // Calculate stats for KPI cards
+  const totalTenants = tenants.length;
+  const activeTenants = tenants.filter(t => t.status === 'active').length;
+  const trialTenants = tenants.filter(t => t.status === 'trial').length;
+  const pendingTenants = tenants.filter(t => t.status === 'pending').length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -374,7 +380,7 @@ export default function SuperAdminTenants() {
         
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-testid="button-add-tenant">
               <Plus className="w-4 h-4 mr-2" />
               Add Tenant
             </Button>
@@ -394,6 +400,7 @@ export default function SuperAdminTenants() {
                   value={newTenant.name}
                   onChange={(e) => setNewTenant({ ...newTenant, name: e.target.value })}
                   placeholder="Elite Soccer Academy"
+                  data-testid="input-tenant-name"
                 />
               </div>
               <div>
@@ -403,6 +410,7 @@ export default function SuperAdminTenants() {
                   value={newTenant.subdomain}
                   onChange={(e) => setNewTenant({ ...newTenant, subdomain: e.target.value.toLowerCase() })}
                   placeholder="elite-soccer"
+                  data-testid="input-tenant-subdomain"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Will be accessible at: {newTenant.subdomain || 'subdomain'}.playhq.app
@@ -416,12 +424,13 @@ export default function SuperAdminTenants() {
                   value={newTenant.adminEmail}
                   onChange={(e) => setNewTenant({ ...newTenant, adminEmail: e.target.value })}
                   placeholder="admin@elitesoccer.com"
+                  data-testid="input-tenant-email"
                 />
               </div>
               <div>
                 <Label htmlFor="plan">Plan</Label>
                 <Select value={newTenant.plan} onValueChange={(value) => setNewTenant({ ...newTenant, plan: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="select-tenant-plan">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -432,16 +441,79 @@ export default function SuperAdminTenants() {
                 </Select>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCreateDialog(false)}
+                  data-testid="button-cancel-tenant"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateTenant} disabled={createTenantMutation.isPending}>
+                <Button 
+                  onClick={handleCreateTenant} 
+                  disabled={createTenantMutation.isPending}
+                  data-testid="button-create-tenant"
+                >
                   {createTenantMutation.isPending ? 'Creating...' : 'Create Tenant'}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+            <Users className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalTenants}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              All organizations
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeTenants}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Fully operational
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Trial</CardTitle>
+            <Calendar className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{trialTenants}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              In trial period
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingTenants}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Awaiting approval
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -455,10 +527,11 @@ export default function SuperAdminTenants() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
+                data-testid="input-search-tenants"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40" data-testid="select-status-filter">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -472,7 +545,7 @@ export default function SuperAdminTenants() {
               </SelectContent>
             </Select>
             <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40" data-testid="select-plan-filter">
                 <SelectValue placeholder="Plan" />
               </SelectTrigger>
               <SelectContent>
@@ -518,13 +591,16 @@ export default function SuperAdminTenants() {
                 </div>
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
-                    <Badge variant={
-                      tenant.status === 'active' ? 'default' :
-                      tenant.status === 'pending' ? 'outline' :
-                      tenant.status === 'trial' ? 'secondary' :
-                      tenant.status === 'suspended' ? 'destructive' :
-                      tenant.status === 'rejected' ? 'destructive' : 'secondary'
-                    }>
+                    <Badge 
+                      className={
+                        tenant.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
+                        tenant.status === 'pending' ? 'bg-orange-100 text-orange-700 hover:bg-orange-100' :
+                        tenant.status === 'trial' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100' :
+                        tenant.status === 'suspended' || tenant.status === 'rejected' ? 'bg-red-100 text-red-700 hover:bg-red-100' :
+                        'bg-red-100 text-red-700 hover:bg-red-100'
+                      }
+                      data-testid={`badge-status-${tenant.id}`}
+                    >
                       {tenant.status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
                       {tenant.status === 'trial' && <Calendar className="w-3 h-3 mr-1" />}
                       {tenant.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
@@ -535,7 +611,12 @@ export default function SuperAdminTenants() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {tenant.planLevel || tenant.plan}
+                    <Badge 
+                      className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-xs"
+                      data-testid={`badge-plan-${tenant.id}`}
+                    >
+                      {tenant.planLevel || tenant.plan}
+                    </Badge>
                     {tenant.trialEndsAt && (
                       <>
                         {' • '}
@@ -566,54 +647,84 @@ export default function SuperAdminTenants() {
                 <div className="col-span-1">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        data-testid={`button-actions-${tenant.id}`}
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {tenant.status === 'pending' && (
                         <>
-                          <DropdownMenuItem onClick={() => handleApproveTenant(tenant.id)} className="text-green-600">
+                          <DropdownMenuItem 
+                            onClick={() => handleApproveTenant(tenant.id)} 
+                            className="text-green-600"
+                            data-testid={`menu-approve-${tenant.id}`}
+                          >
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Approve Tenant
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRejectTenant(tenant.id)} className="text-red-600">
+                          <DropdownMenuItem 
+                            onClick={() => handleRejectTenant(tenant.id)} 
+                            className="text-red-600"
+                            data-testid={`menu-reject-${tenant.id}`}
+                          >
                             <XCircle className="w-4 h-4 mr-2" />
                             Reject Tenant
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                         </>
                       )}
-                      <DropdownMenuItem onClick={() => setSelectedTenant(tenant.id)}>
+                      <DropdownMenuItem 
+                        onClick={() => setSelectedTenant(tenant.id)}
+                        data-testid={`menu-view-details-${tenant.id}`}
+                      >
                         <BarChart3 className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setProfileDrawerTenant({ id: tenant.id, name: tenant.name })}>
+                      <DropdownMenuItem 
+                        onClick={() => setProfileDrawerTenant({ id: tenant.id, name: tenant.name })}
+                        data-testid={`menu-health-profile-${tenant.id}`}
+                      >
                         <UserCheck className="w-4 h-4 mr-2" />
                         Health Profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleImpersonateLogin(tenant)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleImpersonateLogin(tenant)}
+                        data-testid={`menu-impersonate-${tenant.id}`}
+                      >
                         <Eye className="w-4 h-4 mr-2" />
                         Impersonate Admin
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleResendWelcomeEmail(tenant.id)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleResendWelcomeEmail(tenant.id)}
+                        data-testid={`menu-resend-welcome-${tenant.id}`}
+                      >
                         <Mail className="w-4 h-4 mr-2" />
                         Resend Welcome Email
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleToggleStatus(tenant.id, tenant.status)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleToggleStatus(tenant.id, tenant.status)}
+                        data-testid={`menu-toggle-status-${tenant.id}`}
+                      >
                         {tenant.status === 'active' ? (
                           <><PowerOff className="w-4 h-4 mr-2" />Suspend</>
                         ) : (
                           <><Power className="w-4 h-4 mr-2" />Activate</>
                         )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem data-testid={`menu-edit-${tenant.id}`}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        data-testid={`menu-delete-${tenant.id}`}
+                      >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
@@ -768,13 +879,19 @@ export default function SuperAdminTenants() {
                         <div>{user.firstName} {user.lastName}</div>
                         <div className="text-sm text-muted-foreground">{user.email}</div>
                         <div>
-                          <Badge variant={user.isAdmin ? 'default' : 'secondary'}>
+                          <Badge 
+                            className={user.isAdmin ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' : 'bg-gray-100 text-gray-700 hover:bg-gray-100'}
+                            data-testid={`badge-role-${user.id}`}
+                          >
                             {user.isAdmin ? 'Admin' : 'User'}
                           </Badge>
                         </div>
                         <div className="text-sm">{new Date(user.lastLogin).toLocaleDateString()}</div>
                         <div>
-                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                          <Badge 
+                            className={user.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100' : 'bg-red-100 text-red-700 hover:bg-red-100'}
+                            data-testid={`badge-user-status-${user.id}`}
+                          >
                             {user.status}
                           </Badge>
                         </div>
