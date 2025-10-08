@@ -3022,6 +3022,115 @@ export const insertCreditSchema = createInsertSchema(credits).omit({
   updatedAt: true,
 });
 
+// Wearables integration enums
+export const wearableProviderEnum = pgEnum("wearable_provider", [
+  "fitbit", "garmin", "strava", "apple_health", "google_fit", "whoop", "polar"
+]);
+
+export const wearableDataTypeEnum = pgEnum("wearable_data_type", [
+  "heart_rate", "steps", "distance", "calories", "sleep", "activity", "workout", "recovery"
+]);
+
+// Wearable integrations table - stores OAuth tokens and integration settings
+export const wearableIntegrations = pgTable("wearable_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: wearableProviderEnum("provider").notNull(),
+  accessToken: text("access_token"), // Will be encrypted in service layer
+  refreshToken: text("refresh_token"), // Will be encrypted in service layer
+  expiresAt: timestamp("expires_at"),
+  scope: text("scope"), // Permissions granted by OAuth
+  isActive: boolean("is_active").notNull().default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: integer("sync_frequency").default(60), // Minutes between syncs
+  webhookUrl: text("webhook_url"), // For real-time updates
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Provider-specific data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("wearable_integrations_tenant_idx").on(table.tenantId),
+  index("wearable_integrations_player_idx").on(table.playerId),
+  index("wearable_integrations_provider_idx").on(table.provider),
+  index("wearable_integrations_active_idx").on(table.isActive),
+  uniqueIndex("wearable_integrations_unique_idx").on(table.tenantId, table.playerId, table.provider),
+]);
+
+// Wearable data table - stores raw data from wearables
+export const wearableData = pgTable("wearable_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => wearableIntegrations.id, { onDelete: "cascade" }),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  dataType: wearableDataTypeEnum("data_type").notNull(),
+  recordedAt: timestamp("recorded_at").notNull(),
+  value: jsonb("value").notNull(), // Flexible data structure for different metrics
+  unit: varchar("unit"), // e.g., "bpm", "steps", "meters", "calories"
+  source: varchar("source"), // Device name/model
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("wearable_data_integration_idx").on(table.integrationId),
+  index("wearable_data_player_idx").on(table.playerId),
+  index("wearable_data_tenant_idx").on(table.tenantId),
+  index("wearable_data_type_idx").on(table.dataType),
+  index("wearable_data_recorded_idx").on(table.recordedAt),
+  index("wearable_data_created_idx").on(table.createdAt),
+]);
+
+// Player metrics table - aggregated daily metrics
+export const playerMetrics = pgTable("player_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  avgHeartRate: integer("avg_heart_rate"),
+  maxHeartRate: integer("max_heart_rate"),
+  restingHeartRate: integer("resting_heart_rate"),
+  steps: integer("steps"),
+  distance: numeric("distance", { precision: 10, scale: 2 }), // meters
+  caloriesBurned: integer("calories_burned"),
+  activeMinutes: integer("active_minutes"),
+  sleepDuration: integer("sleep_duration"), // minutes
+  sleepQuality: numeric("sleep_quality", { precision: 5, scale: 2 }), // 0-100 score
+  recoveryScore: numeric("recovery_score", { precision: 5, scale: 2 }), // 0-100 score
+  trainingLoad: numeric("training_load", { precision: 8, scale: 2 }),
+  vo2Max: numeric("vo2_max", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("player_metrics_player_idx").on(table.playerId),
+  index("player_metrics_tenant_idx").on(table.tenantId),
+  index("player_metrics_date_idx").on(table.date),
+  uniqueIndex("player_metrics_unique_idx").on(table.playerId, table.date),
+]);
+
+// Wearables schemas
+export const insertWearableIntegrationSchema = createInsertSchema(wearableIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWearableDataSchema = createInsertSchema(wearableData).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlayerMetricsSchema = createInsertSchema(playerMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Wearables types
+export type WearableIntegration = typeof wearableIntegrations.$inferSelect;
+export type InsertWearableIntegration = z.infer<typeof insertWearableIntegrationSchema>;
+export type WearableData = typeof wearableData.$inferSelect;
+export type InsertWearableData = z.infer<typeof insertWearableDataSchema>;
+export type PlayerMetrics = typeof playerMetrics.$inferSelect;
+export type InsertPlayerMetrics = z.infer<typeof insertPlayerMetricsSchema>;
+
 export const insertTenantCreditSchema = createInsertSchema(tenantCredits).omit({
   id: true,
   usedAmount: true,

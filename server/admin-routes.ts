@@ -5572,6 +5572,215 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
     }
   });
 
+  // Wearables API Routes
+  const { wearablesService } = await import('./wearables-service.js');
+  
+  // Get connected wearable integrations
+  app.get('/api/admin/player-development/wearables', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { playerId } = req.query;
+      
+      const integrations = await storage.getWearableIntegrations(
+        tenantId,
+        playerId as string | undefined
+      );
+      
+      res.json(integrations);
+    } catch (error) {
+      console.error('Error fetching wearable integrations:', error);
+      res.status(500).json({ error: 'Failed to fetch wearable integrations' });
+    }
+  });
+  
+  // Initiate OAuth connection for a wearable provider
+  app.post('/api/admin/player-development/wearables/connect', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { provider, playerId, redirectUri } = req.body;
+      
+      if (!provider || !playerId) {
+        return res.status(400).json({ error: 'Provider and playerId are required' });
+      }
+      
+      const result = await wearablesService.initiateOAuth(
+        provider,
+        tenantId,
+        playerId,
+        redirectUri || `${req.protocol}://${req.get('host')}/api/admin/player-development/wearables/callback`
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error initiating OAuth:', error);
+      res.status(500).json({ error: 'Failed to initiate OAuth connection' });
+    }
+  });
+  
+  // OAuth callback handler
+  app.get('/api/admin/player-development/wearables/callback', async (req: Request, res: Response) => {
+    try {
+      const { code, state, provider } = req.query;
+      
+      if (!code || !state || !provider) {
+        return res.status(400).json({ error: 'Missing OAuth callback parameters' });
+      }
+      
+      // In production, retrieve tenantId and playerId from state
+      // For now, using mock values
+      const tenantId = (req as any).session?.tenantId || 'mock-tenant';
+      const playerId = (req as any).session?.playerId || 'mock-player';
+      
+      const integration = await wearablesService.handleOAuthCallback(
+        provider as string,
+        code as string,
+        state as string,
+        tenantId,
+        playerId
+      );
+      
+      // Redirect to wearables page with success message
+      res.redirect('/admin/player-development?tab=wearables&status=connected');
+    } catch (error) {
+      console.error('Error handling OAuth callback:', error);
+      res.redirect('/admin/player-development?tab=wearables&error=connection_failed');
+    }
+  });
+  
+  // Disconnect a wearable integration
+  app.post('/api/admin/player-development/wearables/disconnect', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { integrationId } = req.body;
+      
+      if (!integrationId) {
+        return res.status(400).json({ error: 'Integration ID is required' });
+      }
+      
+      await storage.deleteWearableIntegration(integrationId, tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error disconnecting wearable:', error);
+      res.status(500).json({ error: 'Failed to disconnect wearable' });
+    }
+  });
+  
+  // Manual sync trigger
+  app.post('/api/admin/player-development/wearables/sync', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { integrationId } = req.body;
+      
+      if (!integrationId) {
+        return res.status(400).json({ error: 'Integration ID is required' });
+      }
+      
+      const integration = await storage.getWearableIntegration(integrationId, tenantId);
+      if (!integration) {
+        return res.status(404).json({ error: 'Integration not found' });
+      }
+      
+      await wearablesService.syncWearableData(integration);
+      res.json({ success: true, lastSyncAt: new Date() });
+    } catch (error) {
+      console.error('Error syncing wearable data:', error);
+      res.status(500).json({ error: 'Failed to sync wearable data' });
+    }
+  });
+  
+  // Get player metrics
+  app.get('/api/admin/player-development/metrics/:playerId', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { playerId } = req.params;
+      const { startDate, endDate } = req.query;
+      
+      const filters: any = {};
+      if (startDate) filters.startDate = new Date(startDate as string);
+      if (endDate) filters.endDate = new Date(endDate as string);
+      
+      const metrics = await storage.getPlayerMetrics(tenantId, playerId, filters);
+      const latestMetrics = await storage.getLatestPlayerMetrics(tenantId, playerId);
+      
+      // Generate recommendations if we have latest metrics
+      let recommendations: string[] = [];
+      let anomalies: string[] = [];
+      
+      if (latestMetrics) {
+        recommendations = wearablesService.generateRecoveryRecommendations(latestMetrics);
+        anomalies = wearablesService.detectAnomalies(metrics, latestMetrics);
+      }
+      
+      res.json({
+        metrics,
+        latest: latestMetrics,
+        recommendations,
+        anomalies,
+      });
+    } catch (error) {
+      console.error('Error fetching player metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch player metrics' });
+    }
+  });
+  
+  // Webhook endpoints for providers
+  app.post('/api/admin/player-development/webhooks/:provider', async (req: Request, res: Response) => {
+    try {
+      const { provider } = req.params;
+      const data = req.body;
+      
+      // Verify webhook signature based on provider
+      // For now, just log and process
+      await wearablesService.handleWebhook(provider, data);
+      
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Error handling webhook:', error);
+      res.status(500).json({ error: 'Failed to process webhook' });
+    }
+  });
+  
+  // Export player metrics as CSV
+  app.get('/api/admin/player-development/metrics/:playerId/export', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      const { playerId } = req.params;
+      const { startDate, endDate } = req.query;
+      
+      const csv = await wearablesService.exportPlayerMetrics(
+        tenantId,
+        playerId,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="player-metrics-${playerId}.csv"`);
+      res.send(csv);
+    } catch (error) {
+      console.error('Error exporting player metrics:', error);
+      res.status(500).json({ error: 'Failed to export player metrics' });
+    }
+  });
+  
+  // Update integration settings
+  app.patch('/api/admin/player-development/wearables/:integrationId', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { integrationId } = req.params;
+      const { syncFrequency, isActive } = req.body;
+      
+      const updates: any = {};
+      if (syncFrequency !== undefined) updates.syncFrequency = syncFrequency;
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      const updated = await storage.updateWearableIntegration(integrationId, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating integration:', error);
+      res.status(500).json({ error: 'Failed to update integration' });
+    }
+  });
+
   // Get consent form completion status for a player
   app.get('/api/admin/players/:playerId/consent-status', requireAdmin, async (req: Request, res: Response) => {
     try {

@@ -17,9 +17,17 @@ import {
   Award,
   Plus,
   Search,
-  Filter
+  Filter,
+  Activity,
+  Watch,
+  Heart,
+  Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Wearables from './player-development/wearables';
+import MetricsDashboard from './player-development/metrics-dashboard';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts';
 
 // Mock data structure for development - will be replaced with real API calls
 const mockSkillCategories = [
@@ -84,6 +92,9 @@ export default function PlayerDevelopment() {
   const { hasFeature, isLoading: featuresLoading } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const [activeTab, setActiveTab] = useState('assessments');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [selectedPlayerName, setSelectedPlayerName] = useState<string>('');
+  const [metricsDateRange, setMetricsDateRange] = useState('7d');
   const queryClient = useQueryClient();
 
   // API queries for real data
@@ -226,7 +237,7 @@ export default function PlayerDevelopment() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 md:space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto">
           <TabsTrigger value="assessments" data-testid="tab-assessments" className="text-xs sm:text-sm p-2">
             Assessments
           </TabsTrigger>
@@ -244,6 +255,12 @@ export default function PlayerDevelopment() {
           </TabsTrigger>
           <TabsTrigger value="achievements" data-testid="tab-achievements" className="text-xs sm:text-sm p-2">
             Achievements
+          </TabsTrigger>
+          <TabsTrigger value="wearables" data-testid="tab-wearables" className="text-xs sm:text-sm p-2">
+            Wearables
+          </TabsTrigger>
+          <TabsTrigger value="metrics" data-testid="tab-metrics" className="text-xs sm:text-sm p-2">
+            Metrics
           </TabsTrigger>
         </TabsList>
 
@@ -446,6 +463,92 @@ export default function PlayerDevelopment() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Wearables Tab */}
+        <TabsContent value="wearables" className="space-y-3 md:space-y-4">
+          {/* Player Selection */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex-1">
+              <Select 
+                value={selectedPlayerId} 
+                onValueChange={(value) => {
+                  setSelectedPlayerId(value);
+                  const player = mockPlayerGoals.find(p => p.playerId === value);
+                  setSelectedPlayerName(player?.playerName || '');
+                }}
+              >
+                <SelectTrigger data-testid="select-player-wearables">
+                  <SelectValue placeholder="Select a player to manage wearables" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="player1">Alex Smith</SelectItem>
+                  <SelectItem value="player2">Emma Davis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Wearables Component */}
+          <Wearables playerId={selectedPlayerId} playerName={selectedPlayerName} />
+        </TabsContent>
+
+        {/* Metrics Tab */}
+        <TabsContent value="metrics" className="space-y-3 md:space-y-4">
+          {/* Player and Date Range Selection */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex-1 max-w-sm">
+              <Select 
+                value={selectedPlayerId} 
+                onValueChange={(value) => {
+                  setSelectedPlayerId(value);
+                  const player = mockPlayerGoals.find(p => p.playerId === value);
+                  setSelectedPlayerName(player?.playerName || '');
+                }}
+              >
+                <SelectTrigger data-testid="select-player-metrics">
+                  <SelectValue placeholder="Select a player to view metrics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="player1">Alex Smith</SelectItem>
+                  <SelectItem value="player2">Emma Davis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={metricsDateRange} onValueChange={setMetricsDateRange}>
+                <SelectTrigger className="w-32" data-testid="select-date-range">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="14d">Last 14 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" data-testid="button-export-metrics">
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {selectedPlayerId ? (
+            <MetricsDashboard 
+              playerId={selectedPlayerId} 
+              playerName={selectedPlayerName}
+              dateRange={metricsDateRange}
+            />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center text-muted-foreground">
+                  <Activity className="h-12 w-12 mx-auto mb-4" />
+                  <p>Please select a player to view health and performance metrics.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
       </div>

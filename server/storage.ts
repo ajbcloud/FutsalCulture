@@ -36,6 +36,9 @@ import {
   contactGroupMembers,
   households,
   householdMembers,
+  wearableIntegrations,
+  wearableData,
+  playerMetrics,
   type TenantSelect,
   type TenantInsert,
   type User,
@@ -102,6 +105,12 @@ import {
   type HouseholdInsert,
   type HouseholdMemberSelect,
   type HouseholdMemberInsert,
+  type WearableIntegration,
+  type InsertWearableIntegration,
+  type WearableData,
+  type InsertWearableData,
+  type PlayerMetrics,
+  type InsertPlayerMetrics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -382,6 +391,39 @@ export interface IStorage {
   deleteHousehold(id: string, tenantId: string): Promise<void>;
   addHouseholdMember(householdId: string, tenantId: string, member: Omit<HouseholdMemberInsert, 'id' | 'householdId' | 'tenantId' | 'addedAt'>): Promise<HouseholdSelect & { members: Array<HouseholdMemberSelect & { user?: User; player?: Player }> }>;
   removeHouseholdMember(memberId: string, tenantId: string): Promise<void>;
+
+  // Wearables operations
+  getWearableIntegrations(tenantId: string, playerId?: string): Promise<WearableIntegration[]>;
+  getWearableIntegration(id: string, tenantId: string): Promise<WearableIntegration | undefined>;
+  createWearableIntegration(integration: InsertWearableIntegration): Promise<WearableIntegration>;
+  updateWearableIntegration(id: string, data: Partial<InsertWearableIntegration>): Promise<WearableIntegration>;
+  deleteWearableIntegration(id: string, tenantId: string): Promise<void>;
+
+  // Wearable data operations
+  createWearableData(data: InsertWearableData): Promise<WearableData>;
+  getWearableData(
+    tenantId: string, 
+    playerId: string, 
+    filters?: { 
+      dataType?: string; 
+      startDate?: Date; 
+      endDate?: Date; 
+      limit?: number 
+    }
+  ): Promise<WearableData[]>;
+  
+  // Player metrics operations
+  getPlayerMetrics(
+    tenantId: string,
+    playerId: string,
+    filters?: {
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<PlayerMetrics[]>;
+  getLatestPlayerMetrics(tenantId: string, playerId: string): Promise<PlayerMetrics | undefined>;
+  upsertPlayerMetrics(metrics: InsertPlayerMetrics): Promise<PlayerMetrics>;
+  aggregatePlayerMetrics(tenantId: string, playerId: string, date: Date): Promise<PlayerMetrics>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4958,6 +5000,199 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(householdMembers)
       .where(and(eq(householdMembers.id, memberId), eq(householdMembers.tenantId, tenantId)));
+  }
+
+  // Wearables operations implementation
+  async getWearableIntegrations(tenantId: string, playerId?: string): Promise<WearableIntegration[]> {
+    let query = db.select().from(wearableIntegrations).where(eq(wearableIntegrations.tenantId, tenantId));
+    
+    if (playerId) {
+      query = query.where(and(
+        eq(wearableIntegrations.tenantId, tenantId),
+        eq(wearableIntegrations.playerId, playerId)
+      ));
+    }
+    
+    return await query.orderBy(desc(wearableIntegrations.createdAt));
+  }
+
+  async getWearableIntegration(id: string, tenantId: string): Promise<WearableIntegration | undefined> {
+    const [integration] = await db
+      .select()
+      .from(wearableIntegrations)
+      .where(and(
+        eq(wearableIntegrations.id, id),
+        eq(wearableIntegrations.tenantId, tenantId)
+      ));
+    return integration;
+  }
+
+  async createWearableIntegration(integration: InsertWearableIntegration): Promise<WearableIntegration> {
+    const [newIntegration] = await db
+      .insert(wearableIntegrations)
+      .values(integration)
+      .returning();
+    return newIntegration;
+  }
+
+  async updateWearableIntegration(id: string, data: Partial<InsertWearableIntegration>): Promise<WearableIntegration> {
+    const [updated] = await db
+      .update(wearableIntegrations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(wearableIntegrations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteWearableIntegration(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(wearableIntegrations)
+      .where(and(
+        eq(wearableIntegrations.id, id),
+        eq(wearableIntegrations.tenantId, tenantId)
+      ));
+  }
+
+  // Wearable data operations
+  async createWearableData(data: InsertWearableData): Promise<WearableData> {
+    const [newData] = await db
+      .insert(wearableData)
+      .values(data)
+      .returning();
+    return newData;
+  }
+
+  async getWearableData(
+    tenantId: string,
+    playerId: string,
+    filters?: {
+      dataType?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }
+  ): Promise<WearableData[]> {
+    let query = db
+      .select()
+      .from(wearableData)
+      .where(and(
+        eq(wearableData.tenantId, tenantId),
+        eq(wearableData.playerId, playerId)
+      ));
+
+    if (filters?.dataType) {
+      query = query.where(eq(wearableData.dataType, filters.dataType as any));
+    }
+
+    if (filters?.startDate) {
+      query = query.where(gte(wearableData.recordedAt, filters.startDate));
+    }
+
+    if (filters?.endDate) {
+      query = query.where(lte(wearableData.recordedAt, filters.endDate));
+    }
+
+    query = query.orderBy(desc(wearableData.recordedAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    return await query;
+  }
+
+  // Player metrics operations
+  async getPlayerMetrics(
+    tenantId: string,
+    playerId: string,
+    filters?: {
+      startDate?: Date;
+      endDate?: Date;
+    }
+  ): Promise<PlayerMetrics[]> {
+    let query = db
+      .select()
+      .from(playerMetrics)
+      .where(and(
+        eq(playerMetrics.tenantId, tenantId),
+        eq(playerMetrics.playerId, playerId)
+      ));
+
+    if (filters?.startDate) {
+      query = query.where(gte(playerMetrics.date, filters.startDate.toISOString().split('T')[0]));
+    }
+
+    if (filters?.endDate) {
+      query = query.where(lte(playerMetrics.date, filters.endDate.toISOString().split('T')[0]));
+    }
+
+    return await query.orderBy(desc(playerMetrics.date));
+  }
+
+  async getLatestPlayerMetrics(tenantId: string, playerId: string): Promise<PlayerMetrics | undefined> {
+    const [latest] = await db
+      .select()
+      .from(playerMetrics)
+      .where(and(
+        eq(playerMetrics.tenantId, tenantId),
+        eq(playerMetrics.playerId, playerId)
+      ))
+      .orderBy(desc(playerMetrics.date))
+      .limit(1);
+    return latest;
+  }
+
+  async upsertPlayerMetrics(metrics: InsertPlayerMetrics): Promise<PlayerMetrics> {
+    const existing = await db
+      .select()
+      .from(playerMetrics)
+      .where(and(
+        eq(playerMetrics.playerId, metrics.playerId),
+        eq(playerMetrics.date, metrics.date)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(playerMetrics)
+        .set({ ...metrics, updatedAt: new Date() })
+        .where(eq(playerMetrics.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(playerMetrics)
+        .values(metrics)
+        .returning();
+      return created;
+    }
+  }
+
+  async aggregatePlayerMetrics(tenantId: string, playerId: string, date: Date): Promise<PlayerMetrics> {
+    // This method would aggregate raw wearable data for a specific date
+    // For now, returning a placeholder implementation
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // In a real implementation, we would aggregate data from wearableData table
+    const metrics: InsertPlayerMetrics = {
+      tenantId,
+      playerId,
+      date: dateStr,
+      avgHeartRate: null,
+      maxHeartRate: null,
+      restingHeartRate: null,
+      steps: null,
+      distance: null,
+      caloriesBurned: null,
+      activeMinutes: null,
+      sleepDuration: null,
+      sleepQuality: null,
+      recoveryScore: null,
+      trainingLoad: null,
+      vo2Max: null,
+    };
+    
+    return await this.upsertPlayerMetrics(metrics);
   }
 }
 
