@@ -413,7 +413,7 @@ export default function SuperAdminPendingRegistrations() {
               <CardTitle className="text-sm font-medium">Parents</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingByType.parents}</div>
+              <div className="text-2xl font-bold">{stats.pendingByType?.parents || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Parent registrations
               </p>
@@ -425,7 +425,7 @@ export default function SuperAdminPendingRegistrations() {
               <CardTitle className="text-sm font-medium">Players</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingByType.players}</div>
+              <div className="text-2xl font-bold">{stats.pendingByType?.players || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Player registrations
               </p>
