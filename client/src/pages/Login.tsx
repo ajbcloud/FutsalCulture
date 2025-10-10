@@ -84,17 +84,6 @@ export default function Login() {
         <a className="underline" href="/forgot">Forgot password?</a>
       </div>
 
-      <div className="pt-6 border-t">
-        <div className="flex flex-col gap-3">
-          <a href="/api/auth/google" className="border rounded-xl p-3 text-center">
-            Continue with Google
-          </a>
-          <a href="/api/auth/microsoft" className="border rounded-xl p-3 text-center">
-            Continue with Microsoft
-          </a>
-        </div>
-      </div>
-
       <div className="text-center text-sm">
         New here? <a className="underline" href="/get-started">Create your club</a>
       </div>
