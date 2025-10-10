@@ -444,6 +444,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return checkCapability(req, res);
   });
 
+  // Tenant info route - single source of truth for tenant data
+  app.get('/api/tenant/info', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      // Get user to find tenant ID
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+
+      // Get tenant data
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+
+      // Map plan level to plan code
+      const planLevelMap: Record<string, string> = {
+        'free': 'free',
+        'core': 'core', 
+        'growth': 'growth',
+        'elite': 'elite'
+      };
+
+      const planCode = planLevelMap[tenant.planLevel || 'free'] || 'free';
+      const planLevelNum = { free: 0, core: 1, growth: 2, elite: 3 }[planCode] || 0;
+
+      // Return tenant info in expected format
+      res.json({
+        id: tenant.id,
+        name: tenant.name || 'Your Organization',
+        contactName: tenant.contactName || '',
+        contactEmail: tenant.contactEmail || '',
+        location: {
+          city: tenant.city || null,
+          state: tenant.state || null,
+          country: tenant.country || null
+        },
+        planCode: planCode,
+        planLevel: planLevelNum,
+        planId: planCode, // Alias for backward compatibility
+        billingStatus: tenant.billingStatus || 'none',
+        renewalDate: tenant.trialEndsAt ? new Date(tenant.trialEndsAt).toISOString() : null,
+        stripeCustomerId: tenant.stripeCustomerId || null,
+        stripeSubscriptionId: tenant.stripeSubscriptionId || null,
+        trialStartedAt: tenant.trialStartedAt ? new Date(tenant.trialStartedAt).toISOString() : null,
+        trialEndsAt: tenant.trialEndsAt ? new Date(tenant.trialEndsAt).toISOString() : null,
+        featureOverrides: {}
+      });
+    } catch (error) {
+      console.error('Error fetching tenant info:', error);
+      res.status(500).json({ error: 'Failed to fetch tenant information' });
+    }
+  });
+
   // Session routes
   app.get('/api/sessions', async (req: any, res) => {
     try {
