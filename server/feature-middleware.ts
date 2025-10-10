@@ -202,7 +202,7 @@ export function handleFeatureError(error: any, req: Request, res: Response, next
       error: 'Feature upgrade required',
       currentPlan: req.planLevel,
       featureRequired: error.feature,
-      upgradeUrl: '/admin/billing',
+      upgradeUrl: '/admin/settings?tab=plans-features',
     });
   }
   

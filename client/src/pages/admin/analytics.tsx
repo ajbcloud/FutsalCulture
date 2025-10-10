@@ -226,9 +226,16 @@ export default function AdminAnalytics() {
       </div>
       {available ? children : (
         <div className="p-6 rounded-lg border border-dashed border-border bg-muted/30">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-4">
             <Lock className="w-8 h-8 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground">Upgrade to {planLevel} plan to unlock these analytics</p>
+            <a 
+              href="/admin/settings?tab=plans-features"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+              data-testid={`button-upgrade-${planLevel.toLowerCase()}`}
+            >
+              Upgrade Now
+            </a>
           </div>
         </div>
       )}

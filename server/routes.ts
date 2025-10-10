@@ -2750,28 +2750,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get extension information
       const extensionInfo = await trialManager.getExtensionStatus(tenantId);
 
-      // Generate upgrade URL based on trial plan
+      // Generate upgrade URL - redirect to settings page with plans tab
       const currentDomain = req.protocol + '://' + req.get('host');
-      let upgradeUrl = `${currentDomain}/admin/settings`;
-      
-      if (tenant.trialPlan) {
-        // Use the PlanUpgradeButtons logic for consistent URLs
-        const paymentLinks = {
-          core: 'https://buy.stripe.com/test_4gM14ob50dVidREeo22Fa04',
-          growth: 'https://buy.stripe.com/test_fZu8wQa0W5oM3d00xc2Fa05', 
-          elite: 'https://buy.stripe.com/test_14A6oI6OK4kI8xkfs62Fa06'
-        };
-        
-        const baseLink = paymentLinks[tenant.trialPlan as 'core' | 'growth' | 'elite'];
-        if (baseLink) {
-          const params = new URLSearchParams({
-            client_reference_id: tenantId,
-            success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${tenant.trialPlan}`,
-            cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
-          });
-          upgradeUrl = `${baseLink}?${params.toString()}`;
-        }
-      }
+      const upgradeUrl = `${currentDomain}/admin/settings?tab=plans-features`;
 
       res.json({
         status: trialStatus.status,
