@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { startWaitlistProcessor } from "./jobs/waitlist-processor";
 import superAdminRoutes from './routes/superAdmin'; // Import superAdminRoutes
 import adminCampaignsRoutes from './admin-campaigns-routes'; // Import admin campaigns routes
+import { ensureAdminUser } from './init-admin'; // Import admin initialization
 // Lazy load background jobs to reduce startup time
 let jobsInitialized = false;
 const initializeBackgroundJobs = async () => {
@@ -120,6 +121,9 @@ app.use((req, res, next) => {
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);
   app.use('/api', companySignupRouter);
+  
+  // Ensure admin user exists for testing
+  await ensureAdminUser();
   
   const server = await registerRoutes(app);
   

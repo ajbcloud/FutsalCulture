@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2025-07-30.basil' });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2024-10-28.acacia' });
 
 async function getStripeCustomerIdForTenant(tenantId: string): Promise<string | null> {
   // TODO: Implement lookup from tenant_payment_profiles or similar table

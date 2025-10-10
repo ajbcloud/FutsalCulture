@@ -6,7 +6,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 // Initialize Stripe with the latest API version
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-07-30.basil',
+  apiVersion: '2024-10-28.acacia',
 });
 
 // Helper function to map price IDs to plan levels

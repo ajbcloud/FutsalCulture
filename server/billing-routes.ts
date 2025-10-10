@@ -43,7 +43,7 @@ router.get('/billing/check-subscription', async (req: any, res) => {
       if (provider === 'stripe') {
         try {
           const Stripe = require('stripe');
-          const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+          const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
           const subscription = await stripe.subscriptions.retrieve(tenantData.stripeSubscriptionId);
           
           subscriptionDetails = {
@@ -148,7 +148,7 @@ router.post('/billing/portal', async (req: any, res) => {
       }
 
       const Stripe = require('stripe');
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
       
       const session = await stripe.billingPortal.sessions.create({
         customer: tenant[0].stripeCustomerId,
@@ -207,7 +207,7 @@ router.post('/billing/checkout', async (req: any, res) => {
     }
 
     const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // If tenant already has an active subscription, use the change-plan logic instead
     if (tenant[0].stripeSubscriptionId) {
@@ -402,7 +402,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
     }
 
     const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -538,7 +538,7 @@ router.post('/billing/upgrade', async (req: any, res) => {
     }
 
     const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -637,7 +637,7 @@ router.post('/billing/downgrade', async (req: any, res) => {
     }
 
     const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the subscription
     const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
