@@ -1,0 +1,56 @@
+import Stripe from 'stripe';
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+}
+
+// Initialize Stripe with the latest API version
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2025-07-30.basil',
+});
+
+// Helper function to map price IDs to plan levels
+export function getPlanLevelFromPriceId(priceId: string | null | undefined): 'free' | 'core' | 'growth' | 'elite' | null {
+  if (!priceId) return null;
+  
+  const priceMappings: Record<string, 'core' | 'growth' | 'elite'> = {
+    [process.env.STRIPE_PRICE_CORE || '']: 'core',
+    [process.env.STRIPE_PRICE_GROWTH || '']: 'growth',
+    [process.env.STRIPE_PRICE_ELITE || '']: 'elite',
+  };
+  
+  return priceMappings[priceId] || null;
+}
+
+// Helper function to get price ID from plan level
+export function getPriceIdFromPlanLevel(planLevel: 'core' | 'growth' | 'elite'): string | null {
+  const planMappings: Record<'core' | 'growth' | 'elite', string | undefined> = {
+    'core': process.env.STRIPE_PRICE_CORE,
+    'growth': process.env.STRIPE_PRICE_GROWTH,
+    'elite': process.env.STRIPE_PRICE_ELITE,
+  };
+  
+  return planMappings[planLevel] || null;
+}
+
+// Helper function to determine plan level from subscription amount (fallback)
+export function getPlanLevelFromAmount(amountInCents: number): 'core' | 'growth' | 'elite' | null {
+  const amountMappings: Record<number, 'core' | 'growth' | 'elite'> = {
+    9900: 'core',    // $99
+    19900: 'growth',  // $199
+    49900: 'elite',   // $499
+  };
+  
+  return amountMappings[amountInCents] || null;
+}
+
+// Helper function to get the app base URL
+export function getAppBaseUrl(): string {
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5000';
+  }
+  
+  const replSlug = process.env.REPL_SLUG || 'your-app';
+  const replOwner = process.env.REPL_OWNER || 'replit';
+  return `https://${replSlug}.${replOwner}.replit.app`;
+}

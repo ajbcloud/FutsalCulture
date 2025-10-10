@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { db } from './db';
 import { tenants, integrations } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import Stripe from 'stripe';
+import { stripe, getPriceIdFromPlanLevel, getAppBaseUrl } from '../lib/stripe';
+import { clearCapabilitiesCache } from './middleware/featureAccess';
 
 const router = Router();
 
@@ -73,7 +74,8 @@ router.post('/billing/portal', async (req: any, res) => {
         return res.status(400).json({ message: 'No billing information found' });
       }
 
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY);
+      const Stripe = require('stripe');
+      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
       
       const session = await stripe.billingPortal.sessions.create({
         customer: tenant[0].stripeCustomerId,
@@ -95,101 +97,354 @@ router.post('/billing/portal', async (req: any, res) => {
   }
 });
 
-// Create checkout session
+// Create checkout session for first-time upgrades
 router.post('/billing/checkout', async (req: any, res) => {
   try {
-    const { planId } = req.query;
+    const { plan } = req.body;
     const currentUser = req.currentUser;
     
     if (!currentUser?.tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    if (!planId || !['core', 'growth', 'elite'].includes(planId)) {
-      return res.status(400).json({ message: 'Invalid plan ID' });
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    // Check for abuse prevention - limit plan changes
+    const tenant = await db.select({
+      stripeCustomerId: tenants.stripeCustomerId,
+      lastPlanChangeAt: tenants.lastPlanChangeAt,
+      planLevel: tenants.planLevel
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    if (!tenant.length) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    // Check if plan change is too recent (within 30 days)
+    if (tenant[0].lastPlanChangeAt) {
+      const daysSinceLastChange = Math.floor((Date.now() - new Date(tenant[0].lastPlanChangeAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLastChange < 30) {
+        return res.status(400).json({ 
+          message: `Plan changes are limited to once per billing cycle. You can change your plan again in ${30 - daysSinceLastChange} days.` 
+        });
+      }
     }
 
     // Get active payment processor
     const { provider, credentials } = await getActivePaymentProcessor();
     
-    if (!provider) {
-      return res.status(400).json({ message: 'No payment processor configured' });
+    if (!provider || provider !== 'stripe') {
+      return res.status(400).json({ message: 'Stripe payment processor required' });
     }
 
-    if (provider === 'stripe') {
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY);
-      
-      // Get or create Stripe customer
-      const tenant = await db.select({
-        stripeCustomerId: tenants.stripeCustomerId
-      })
-      .from(tenants)
-      .where(eq(tenants.id, currentUser.tenantId))
-      .limit(1);
+    const Stripe = require('stripe');
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+    
+    let customerId = tenant[0].stripeCustomerId;
 
-      let customerId = tenant[0]?.stripeCustomerId;
-
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: currentUser.email,
-          name: `${currentUser.firstName} ${currentUser.lastName}`,
-          metadata: {
-            tenantId: currentUser.tenantId,
-            planId
-          }
-        });
-        customerId = customer.id;
-        
-        // Update tenant with customer ID
-        await db.update(tenants)
-          .set({ stripeCustomerId: customerId })
-          .where(eq(tenants.id, currentUser.tenantId));
-      }
-
-      // Create checkout session
-      const priceIds = {
-        'core': process.env.STRIPE_CORE_PRICE_ID || 'price_core',
-        'growth': process.env.STRIPE_GROWTH_PRICE_ID || 'price_growth', 
-        'elite': process.env.STRIPE_ELITE_PRICE_ID || 'price_elite'
-      };
-
-      const session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: priceIds[planId as keyof typeof priceIds],
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        client_reference_id: currentUser.tenantId, // Primary tenant identifier
-        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/dashboard?payment=success&plan=${planId}`,
-        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features&checkout=cancelled`,
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: currentUser.email,
+        name: `${currentUser.firstName} ${currentUser.lastName}`,
         metadata: {
-          tenantId: currentUser.tenantId, // Backup identifier
-          planId: planId,
-          userEmail: currentUser.email,
-        },
+          tenantId: currentUser.tenantId,
+          plan
+        }
       });
-
-      res.json({ 
-        url: session.url,
-        provider: 'stripe',
-        sessionId: session.id
-      });
-    } else if (provider === 'braintree') {
-      // For Braintree, we would implement their Drop-in UI or Hosted Fields
-      // This is a simplified response that indicates Braintree is configured
-      res.json({
-        provider: 'braintree',
-        clientToken: 'braintree_client_token_placeholder',
-        message: 'Braintree checkout not fully implemented yet'
-      });
+      customerId = customer.id;
+      
+      // Update tenant with customer ID
+      await db.update(tenants)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(tenants.id, currentUser.tenantId));
     }
+
+    // Map plan to price ID using environment variables
+    const priceIds: Record<string, string | undefined> = {
+      'core': process.env.STRIPE_PRICE_CORE,
+      'growth': process.env.STRIPE_PRICE_GROWTH,
+      'elite': process.env.STRIPE_PRICE_ELITE
+    };
+
+    const priceId = priceIds[plan];
+    if (!priceId) {
+      return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
+    }
+
+    const appUrl = getAppBaseUrl();
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      client_reference_id: currentUser.tenantId,
+      subscription_data: {
+        proration_behavior: 'none',
+        metadata: {
+          tenantId: currentUser.tenantId,
+          plan
+        }
+      },
+      success_url: `${appUrl}/admin/settings?success=true&plan=${plan}`,
+      cancel_url: `${appUrl}/admin/settings?canceled=true`,
+      metadata: {
+        tenantId: currentUser.tenantId,
+        plan,
+        userEmail: currentUser.email,
+      },
+    });
+
+    res.json({ 
+      url: session.url,
+      sessionId: session.id
+    });
   } catch (error) {
     console.error('Error creating checkout session:', error);
     res.status(500).json({ message: 'Failed to create checkout session' });
+  }
+});
+
+// Upgrade route for existing subscribers
+router.post('/billing/upgrade', async (req: any, res) => {
+  try {
+    const { plan } = req.body;
+    const currentUser = req.currentUser;
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    // Get tenant information
+    const tenant = await db.select({
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      planLevel: tenants.planLevel,
+      lastPlanChangeAt: tenants.lastPlanChangeAt
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    if (!tenant.length || !tenant[0].stripeSubscriptionId) {
+      return res.status(400).json({ message: 'No active subscription found' });
+    }
+
+    // Check if this is actually an upgrade
+    const currentPlanLevel = tenant[0].planLevel;
+    const planOrder = { 'free': 0, 'core': 1, 'growth': 2, 'elite': 3 };
+    if (planOrder[plan as keyof typeof planOrder] <= planOrder[currentPlanLevel as keyof typeof planOrder]) {
+      return res.status(400).json({ message: 'Can only upgrade to a higher plan' });
+    }
+
+    // Check for abuse prevention
+    if (tenant[0].lastPlanChangeAt) {
+      const daysSinceLastChange = Math.floor((Date.now() - new Date(tenant[0].lastPlanChangeAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLastChange < 30) {
+        return res.status(400).json({ 
+          message: `Plan changes are limited. You can change your plan again in ${30 - daysSinceLastChange} days.` 
+        });
+      }
+    }
+
+    const { provider, credentials } = await getActivePaymentProcessor();
+    if (!provider || provider !== 'stripe') {
+      return res.status(400).json({ message: 'Stripe payment processor required' });
+    }
+
+    const Stripe = require('stripe');
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+
+    // Get the new price ID
+    const priceIds: Record<string, string | undefined> = {
+      'core': process.env.STRIPE_PRICE_CORE,
+      'growth': process.env.STRIPE_PRICE_GROWTH,
+      'elite': process.env.STRIPE_PRICE_ELITE
+    };
+
+    const newPriceId = priceIds[plan];
+    if (!newPriceId) {
+      return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
+    }
+
+    // Get the subscription
+    const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+
+    // Update subscription with new price
+    const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+      items: [{
+        id: subscription.items.data[0].id,
+        price: newPriceId,
+      }],
+      proration_behavior: 'none',
+      billing_cycle_anchor: 'unchanged',
+      metadata: {
+        tenantId: currentUser.tenantId,
+        plan
+      }
+    });
+
+    // Update tenant plan immediately
+    await db.update(tenants)
+      .set({ 
+        planLevel: plan as any,
+        lastPlanChangeAt: new Date(),
+        planChangeReason: 'upgrade'
+      })
+      .where(eq(tenants.id, currentUser.tenantId));
+
+    // Clear feature flag cache
+    await clearCapabilitiesCache(currentUser.tenantId);
+
+    res.json({ 
+      success: true,
+      message: 'Plan upgraded successfully',
+      subscription: {
+        id: updatedSubscription.id,
+        status: updatedSubscription.status,
+        plan
+      }
+    });
+  } catch (error) {
+    console.error('Error upgrading subscription:', error);
+    res.status(500).json({ message: 'Failed to upgrade subscription' });
+  }
+});
+
+// Downgrade route - schedule for next renewal
+router.post('/billing/downgrade', async (req: any, res) => {
+  try {
+    const { plan } = req.body;
+    const currentUser = req.currentUser;
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['free', 'core', 'growth'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    // Get tenant information
+    const tenant = await db.select({
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      planLevel: tenants.planLevel,
+      lastPlanChangeAt: tenants.lastPlanChangeAt
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    if (!tenant.length || !tenant[0].stripeSubscriptionId) {
+      return res.status(400).json({ message: 'No active subscription found' });
+    }
+
+    // Check if this is actually a downgrade
+    const currentPlanLevel = tenant[0].planLevel;
+    const planOrder = { 'free': 0, 'core': 1, 'growth': 2, 'elite': 3 };
+    if (planOrder[plan as keyof typeof planOrder] >= planOrder[currentPlanLevel as keyof typeof planOrder]) {
+      return res.status(400).json({ message: 'Can only downgrade to a lower plan' });
+    }
+
+    const { provider, credentials } = await getActivePaymentProcessor();
+    if (!provider || provider !== 'stripe') {
+      return res.status(400).json({ message: 'Stripe payment processor required' });
+    }
+
+    const Stripe = require('stripe');
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+
+    // Get the subscription
+    const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+    
+    if (plan === 'free') {
+      // Cancel subscription at period end
+      await stripe.subscriptions.update(subscription.id, {
+        cancel_at_period_end: true,
+        metadata: {
+          tenantId: currentUser.tenantId,
+          pendingPlan: 'free'
+        }
+      });
+
+      // Save pending downgrade info
+      await db.update(tenants)
+        .set({ 
+          pendingPlanCode: 'free',
+          pendingPlanEffectiveDate: new Date(subscription.current_period_end * 1000),
+          billingStatus: 'pending_downgrade'
+        })
+        .where(eq(tenants.id, currentUser.tenantId));
+    } else {
+      // Schedule downgrade to lower paid plan
+      const priceIds: Record<string, string | undefined> = {
+        'core': process.env.STRIPE_PRICE_CORE,
+        'growth': process.env.STRIPE_PRICE_GROWTH,
+      };
+
+      const newPriceId = priceIds[plan];
+      if (!newPriceId) {
+        return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
+      }
+
+      // Create subscription schedule to change at period end
+      const schedule = await stripe.subscriptionSchedules.create({
+        from_subscription: subscription.id
+      });
+
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        end_behavior: 'release',
+        phases: [
+          {
+            start_date: subscription.current_period_start,
+            end_date: subscription.current_period_end,
+            items: subscription.items.data.map(item => ({
+              price: item.price.id,
+              quantity: item.quantity
+            }))
+          },
+          {
+            start_date: subscription.current_period_end,
+            items: [{
+              price: newPriceId,
+              quantity: 1
+            }],
+            proration_behavior: 'none'
+          }
+        ]
+      });
+
+      // Save pending downgrade info
+      await db.update(tenants)
+        .set({ 
+          pendingPlanCode: plan,
+          pendingPlanEffectiveDate: new Date(subscription.current_period_end * 1000),
+          billingStatus: 'pending_downgrade'
+        })
+        .where(eq(tenants.id, currentUser.tenantId));
+    }
+
+    res.json({ 
+      success: true,
+      message: 'Downgrade scheduled for the end of the current billing period',
+      effectiveDate: new Date(subscription.current_period_end * 1000).toISOString()
+    });
+  } catch (error) {
+    console.error('Error downgrading subscription:', error);
+    res.status(500).json({ message: 'Failed to downgrade subscription' });
   }
 });
 

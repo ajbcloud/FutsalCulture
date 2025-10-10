@@ -138,6 +138,9 @@ export const tenants = pgTable("tenants", {
   // Plan Transition Management
   pendingPlanChange: planLevelEnum("pending_plan_change"),
   pendingPlanChangeAt: timestamp("pending_plan_change_at"),
+  pendingPlanCode: varchar("pending_plan_code"), // for deferred downgrades
+  pendingPlanEffectiveDate: timestamp("pending_plan_effective_date"), // when downgrade takes effect
+  lastPlanChangeAt: timestamp("last_plan_change_at"), // to prevent abuse
   lastPlanLevel: planLevelEnum("last_plan_level"),
   planChangeReason: varchar("plan_change_reason"), // trial_end, upgrade, downgrade, payment_failed
 

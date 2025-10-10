@@ -5,6 +5,7 @@ import { tenants, subscriptions, tenantPlanAssignments } from '../shared/schema'
 import { eq } from 'drizzle-orm';
 import { clearCapabilitiesCache } from './middleware/featureAccess';
 import { logPlanChange, determinePlanChangeType, calculateMRR, calculateAnnualValue } from './services/planHistoryService';
+import { getPlanLevelFromPriceId, getPlanLevelFromAmount } from '../lib/stripe';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
@@ -17,6 +18,12 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-07-30.basil',
 });
+
+// Helper function to map price IDs to plan levels
+function getPlanLevelFromPrice(priceId: string | null | undefined): string | null {
+  if (!priceId) return null;
+  return getPlanLevelFromPriceId(priceId);
+}
 
 const router = express.Router();
 
@@ -209,6 +216,43 @@ router.post('/webhook', async (req, res) => {
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
+        
+        // Check if there's a pending downgrade to apply
+        const tenant = await db.select({
+          id: tenants.id,
+          pendingPlanCode: tenants.pendingPlanCode,
+          pendingPlanEffectiveDate: tenants.pendingPlanEffectiveDate,
+        })
+        .from(tenants)
+        .where(eq(tenants.stripeCustomerId, customerId))
+        .limit(1);
+
+        if (tenant.length > 0 && tenant[0].pendingPlanCode && tenant[0].pendingPlanEffectiveDate) {
+          // Check if it's time to apply the downgrade
+          const effectiveDate = new Date(tenant[0].pendingPlanEffectiveDate);
+          if (effectiveDate <= new Date()) {
+            console.log(`Applying pending downgrade for tenant ${tenant[0].id} to plan: ${tenant[0].pendingPlanCode}`);
+            
+            // Apply the downgrade
+            await db.update(tenants)
+              .set({
+                planLevel: tenant[0].pendingPlanCode as any,
+                pendingPlanCode: null,
+                pendingPlanEffectiveDate: null,
+                billingStatus: tenant[0].pendingPlanCode === 'free' ? 'cancelled' : 'active',
+                lastPlanChangeAt: new Date(),
+                planChangeReason: 'downgrade',
+              })
+              .where(eq(tenants.id, tenant[0].id));
+
+            // Clear capabilities cache
+            clearCapabilitiesCache(tenant[0].id);
+            
+            console.log(`✅ Downgrade applied successfully for tenant ${tenant[0].id}`);
+          }
+        }
+        
         // Log payment success for monitoring
         console.log('Payment succeeded for invoice:', invoice.id);
         break;

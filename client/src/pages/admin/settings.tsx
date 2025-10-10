@@ -25,6 +25,7 @@ import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
 import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
 import { FeatureGrid } from '../../components/billing/FeatureGrid';
 import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
+import { PlanUpgradeCard } from '../../components/billing/PlanUpgradeCard';
 import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
@@ -557,7 +558,24 @@ function PlanAndFeaturesContent() {
           </p>
         </CardHeader>
         <CardContent>
-          <PlanComparisonCards currentPlan={currentPlan as any} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <PlanUpgradeCard 
+              planKey="free" 
+              isCurrentPlan={currentPlan === 'free'} 
+            />
+            <PlanUpgradeCard 
+              planKey="core" 
+              isCurrentPlan={currentPlan === 'core'} 
+            />
+            <PlanUpgradeCard 
+              planKey="growth" 
+              isCurrentPlan={currentPlan === 'growth'} 
+            />
+            <PlanUpgradeCard 
+              planKey="elite" 
+              isCurrentPlan={currentPlan === 'elite'} 
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -575,24 +593,26 @@ export default function AdminSettings() {
   
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const checkoutStatus = urlParams.get('checkout');
-    const upgradeStatus = urlParams.get('upgrade');
+    const success = urlParams.get('success');
+    const canceled = urlParams.get('canceled');
+    const plan = urlParams.get('plan');
     
-    if (checkoutStatus === 'success' || upgradeStatus === 'success') {
+    if (success === 'true') {
       // Invalidate plan cache to show updated plan immediately
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan-features'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/subscription-info'] });
       
+      const planName = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : '';
       toast({
         title: "🎉 Payment Successful!",
-        description: "Your plan has been upgraded successfully. Enjoy your new features!",
+        description: `Your subscription to ${planName} plan has been activated. Enjoy your new features!`,
         duration: 5000,
       });
       // Clean up URL
-      const newUrl = window.location.pathname + window.location.search.replace(/[?&](checkout|upgrade)=success/, '');
+      const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
-    } else if (checkoutStatus === 'cancelled' || upgradeStatus === 'cancelled') {
+    } else if (canceled === 'true') {
       toast({
         title: "Payment Cancelled",
         description: "Your payment was cancelled. No charges were made.",
@@ -600,7 +620,7 @@ export default function AdminSettings() {
         duration: 5000,
       });
       // Clean up URL
-      const newUrl = window.location.pathname + window.location.search.replace(/[?&](checkout|upgrade)=cancelled/, '');
+      const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
   }, [toast, queryClient]);
