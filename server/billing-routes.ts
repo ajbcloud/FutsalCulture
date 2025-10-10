@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from './db';
 import { tenants, integrations } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import Stripe from 'stripe';
 import { stripe, getPriceIdFromPlanLevel, getAppBaseUrl } from '../lib/stripe';
 import { clearCapabilitiesCache } from './middleware/featureAccess';
 
@@ -42,9 +43,8 @@ router.get('/billing/check-subscription', async (req: any, res) => {
       
       if (provider === 'stripe') {
         try {
-          const Stripe = require('stripe');
-          const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
-          const subscription = await stripe.subscriptions.retrieve(tenantData.stripeSubscriptionId);
+          const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+          const subscription = await stripeClient.subscriptions.retrieve(tenantData.stripeSubscriptionId);
           
           subscriptionDetails = {
             id: subscription.id,
@@ -171,10 +171,9 @@ router.post('/billing/portal', async (req: any, res) => {
         return res.status(400).json({ message: 'No billing information found' });
       }
 
-      const Stripe = require('stripe');
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+      const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
       
-      const session = await stripe.billingPortal.sessions.create({
+      const session = await stripeClient.billingPortal.sessions.create({
         customer: tenant[0].stripeCustomerId,
         return_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.replit.app`}/admin/settings?tab=plans-features`,
       });
@@ -250,14 +249,13 @@ router.post('/billing/checkout', async (req: any, res) => {
       return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
     }
 
-    const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // If tenant already has an active subscription, use the change-plan logic instead
     if (tenant[0].stripeSubscriptionId) {
       try {
         // Retrieve existing subscription
-        const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+        const subscription = await stripeClient.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
         
         if (subscription && subscription.status === 'active') {
           // Redirect to change-plan endpoint logic
@@ -273,7 +271,7 @@ router.post('/billing/checkout', async (req: any, res) => {
           }
 
           // Update subscription directly
-          const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+          const updatedSubscription = await stripeClient.subscriptions.update(subscription.id, {
             items: [{
               id: subscription.items.data[0].id,
               price: newPriceId,
@@ -329,7 +327,7 @@ router.post('/billing/checkout', async (req: any, res) => {
     let customerId = tenant[0].stripeCustomerId;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await stripeClient.customers.create({
         email: currentUser.email,
         name: `${currentUser.firstName} ${currentUser.lastName}`,
         metadata: {
@@ -359,7 +357,7 @@ router.post('/billing/checkout', async (req: any, res) => {
 
     const appUrl = getAppBaseUrl();
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeClient.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
@@ -445,8 +443,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
       return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
     }
 
-    const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -462,7 +459,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
 
     try {
       // Get the subscription
-      const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+      const subscription = await stripeClient.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
 
       if (!subscription || subscription.status !== 'active') {
         return res.status(400).json({ 
@@ -471,7 +468,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
       }
 
       // Update subscription with new price - no proration, keep same billing cycle
-      const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+      const updatedSubscription = await stripeClient.subscriptions.update(subscription.id, {
         items: [{
           id: subscription.items.data[0].id,
           price: newPriceId,
@@ -581,8 +578,7 @@ router.post('/billing/upgrade', async (req: any, res) => {
       return res.status(400).json({ message: 'Stripe payment processor required' });
     }
 
-    const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -597,10 +593,10 @@ router.post('/billing/upgrade', async (req: any, res) => {
     }
 
     // Get the subscription
-    const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+    const subscription = await stripeClient.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
 
     // Update subscription with new price
-    const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+    const updatedSubscription = await stripeClient.subscriptions.update(subscription.id, {
       items: [{
         id: subscription.items.data[0].id,
         price: newPriceId,
@@ -680,15 +676,14 @@ router.post('/billing/downgrade', async (req: any, res) => {
       return res.status(400).json({ message: 'Stripe payment processor required' });
     }
 
-    const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
 
     // Get the subscription
-    const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+    const subscription = await stripeClient.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
     
     if (plan === 'free') {
       // Cancel subscription at period end
-      await stripe.subscriptions.update(subscription.id, {
+      await stripeClient.subscriptions.update(subscription.id, {
         cancel_at_period_end: true,
         metadata: {
           tenantId: currentUser.tenantId,
@@ -717,11 +712,11 @@ router.post('/billing/downgrade', async (req: any, res) => {
       }
 
       // Create subscription schedule to change at period end
-      const schedule = await stripe.subscriptionSchedules.create({
+      const schedule = await stripeClient.subscriptionSchedules.create({
         from_subscription: subscription.id
       });
 
-      await stripe.subscriptionSchedules.update(schedule.id, {
+      await stripeClient.subscriptionSchedules.update(schedule.id, {
         end_behavior: 'release',
         phases: [
           {
