@@ -351,11 +351,22 @@ router.post('/billing/checkout', async (req: any, res) => {
     };
 
     const priceId = priceIds[plan];
+    console.log(`🔍 DEBUG: Creating checkout for plan: ${plan}, priceId: ${priceId}`);
+    console.log(`🔍 DEBUG: All price IDs:`, priceIds);
+    
     if (!priceId) {
+      console.log(`❌ ERROR: Price ID not found for plan ${plan}`);
       return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
     }
 
     const appUrl = getAppBaseUrl();
+
+    console.log(`🔍 DEBUG: About to create Stripe checkout session with:`, {
+      customer: customerId,
+      mode: 'subscription',
+      priceId,
+      plan
+    });
 
     const session = await stripeClient.checkout.sessions.create({
       customer: customerId,
@@ -369,7 +380,6 @@ router.post('/billing/checkout', async (req: any, res) => {
       mode: 'subscription',
       client_reference_id: currentUser.tenantId,
       subscription_data: {
-        proration_behavior: 'none',
         metadata: {
           tenantId: currentUser.tenantId,
           plan
