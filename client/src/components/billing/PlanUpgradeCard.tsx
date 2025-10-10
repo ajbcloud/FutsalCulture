@@ -1,14 +1,14 @@
-import { Check, X, Crown, Rocket, Sparkles } from 'lucide-react';
+import { Check, X, Crown, Rocket, Sparkles, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useTenantPlan } from '@/hooks/useTenantPlan';
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { createStripePaymentLink, PlanKey } from '@shared/stripe-payment-links';
+import { useLocation } from 'wouter';
 
 interface PlanDetails {
   name: string;
@@ -128,17 +128,101 @@ export function PlanUpgradeCard({
 }: PlanUpgradeCardProps) {
   const plan = plans[planKey];
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const { data: tenantPlanData } = useTenantPlan();
-  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [showDiscountInput, setShowDiscountInput] = useState(false);
 
   const currentPlan = tenantPlanData?.planId || 'free';
+  const hasActiveSubscription = tenantPlanData?.billingStatus === 'active';
 
   const planOrder: Record<string, number> = { free: 0, core: 1, growth: 2, elite: 3 };
   const isUpgrade = planOrder[planKey] > planOrder[currentPlan];
   const isDowngrade = planOrder[planKey] < planOrder[currentPlan];
 
-  // Downgrade mutation for scheduling downgrades
+  // Query to check subscription status
+  const { data: subscriptionStatus } = useQuery({
+    queryKey: ['/api/billing/check-subscription'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/billing/check-subscription');
+      return res.json();
+    },
+    enabled: false, // We'll refetch manually when needed
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      const body: any = { plan: planKey };
+      if (discountCode) {
+        body.discountCode = discountCode;
+      }
+      const res = await apiRequest('POST', '/api/billing/checkout', body);
+      const data = await res.json();
+      
+      // If checkout returns success:true with no URL, it means the plan was updated directly
+      if (data.success && !data.url) {
+        return data;
+      }
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        // Redirect to embedded checkout page with session URL
+        const encodedUrl = encodeURIComponent(data.url);
+        const discountParam = discountCode ? `&discount_code=${encodeURIComponent(discountCode)}` : '';
+        navigate(`/checkout?session_url=${encodedUrl}${discountParam}`);
+      } else if (data.success) {
+        // Plan was updated directly (for existing subscriptions)
+        toast({
+          title: 'Success',
+          description: data.message || 'Your plan has been updated successfully',
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
+        if (onUpgrade) onUpgrade();
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to process plan change',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const changePlanMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/billing/change-plan', { plan: planKey });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Success',
+        description: data.message || 'Your plan has been changed successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
+      if (onUpgrade) onUpgrade();
+    },
+    onError: (error: any) => {
+      // If error is about no subscription, fall back to checkout
+      if (error.message?.includes('No active subscription')) {
+        checkoutMutation.mutate();
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to change plan',
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
   const downgradeMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/billing/downgrade', { plan: planKey });
@@ -151,6 +235,7 @@ export function PlanUpgradeCard({
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
       if (onDowngrade) onDowngrade();
     },
     onError: (error: any) => {
@@ -162,41 +247,32 @@ export function PlanUpgradeCard({
     },
   });
 
-  const handleAction = () => {
+  const handleAction = async () => {
     setIsLoading(true);
     
     try {
-      if (isDowngrade) {
-        // For downgrades, schedule the change for end of billing period
-        downgradeMutation.mutate();
-        setIsLoading(false);
-      } else {
-        // For upgrades and new subscriptions, use Stripe payment links
-        const tenantId = user?.tenantId;
-        
-        if (!tenantId) {
-          toast({
-            title: 'Error',
-            description: 'Unable to process upgrade. Please refresh the page and try again.',
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-          return;
+      // First check subscription status
+      const res = await apiRequest('GET', '/api/billing/check-subscription');
+      const status = await res.json();
+      
+      if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
+        if (status?.hasSubscription) {
+          // For existing subscriptions, use change-plan endpoint
+          await changePlanMutation.mutateAsync();
+        } else {
+          // For new subscriptions, use checkout which handles both cases
+          await checkoutMutation.mutateAsync();
         }
-        
-        const currentDomain = window.location.origin;
-        const paymentLink = createStripePaymentLink(planKey as PlanKey, tenantId, currentDomain);
-        
-        // Navigate to Stripe's hosted checkout (prevents duplicate subscriptions)
-        window.location.href = paymentLink;
+      } else if (isDowngrade) {
+        await downgradeMutation.mutateAsync();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error handling plan action:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to process plan change',
-        variant: 'destructive',
-      });
+      // If checking subscription fails, default to checkout which handles both cases
+      if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
+        await checkoutMutation.mutateAsync();
+      }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -236,15 +312,40 @@ export function PlanUpgradeCard({
             ))}
           </div>
 
+          {!isCurrentPlan && isUpgrade && (
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscountInput(!showDiscountInput)}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                data-testid="button-toggle-discount-code"
+              >
+                <Tag className="h-3 w-3" />
+                Have a discount code?
+              </button>
+              
+              {showDiscountInput && (
+                <Input
+                  type="text"
+                  placeholder="Enter discount code"
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                  className="w-full"
+                  data-testid="input-discount-code"
+                />
+              )}
+            </div>
+          )}
+
           {!isCurrentPlan && (
             <Button
               className="w-full mt-4"
               variant={isUpgrade ? 'default' : 'outline'}
               onClick={handleAction}
-              disabled={isLoading || downgradeMutation.isPending}
+              disabled={isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending}
               data-testid={`button-${isUpgrade ? 'upgrade' : 'downgrade'}-${planKey}`}
             >
-              {isLoading || downgradeMutation.isPending
+              {isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending
                 ? 'Processing...'
                 : isUpgrade
                 ? `Upgrade to ${plan.name}`
