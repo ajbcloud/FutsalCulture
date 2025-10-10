@@ -1,0 +1,88 @@
+When a user is already subscribed, you don’t use Checkout again.
+Instead, you update their existing subscription like this:
+
+await stripe.subscriptions.update(subscriptionId, {
+  items: [
+    {
+      id: currentItemId, // the existing subscription_item ID
+      price: newPriceId, // the new plan's price ID
+    },
+  ],
+  proration_behavior: "none",
+  billing_cycle_anchor: "unchanged",
+});
+
+
+That single API call tells Stripe:
+
+“Replace this customer’s current subscription item with a new one that points to a different price.”
+
+Stripe then:
+
+Automatically retains the same subscription ID (no new record).
+
+Generates an event: customer.subscription.updated.
+
+Sends that event to your webhook endpoint.
+
+Your webhook handler receives the payload:
+
+{
+  "type": "customer.subscription.updated",
+  "data": {
+    "object": {
+      "id": "sub_ABC123",
+      "items": {
+        "data": [
+          {
+            "id": "si_DEF456",
+            "price": { "id": "price_1RphU6KA9oSeqOY8hpMXTrOh" }
+          }
+        ]
+      },
+      "customer": "cus_789",
+      "status": "active"
+    }
+  }
+}
+
+
+From that, your backend knows:
+
+Which tenant (customer)
+
+Which plan they’re now on (price.id)
+
+And updates your DB accordingly.
+
+So Stripe itself detects the change — you just mirror it in your system.
+
+🧱 4. How to Enforce One Plan per Tenant
+
+To make this airtight:
+
+In your database, store only one stripe_subscription_id per tenant.
+
+Always retrieve or update that subscription when changing plans.
+
+If you use Checkout, make sure the subscription_data is created using that same stripe_customer_id (so Stripe ties all future updates to that customer).
+
+That way, even if a user tries to visit another plan URL or pay again, Stripe recognizes the existing customer and merges the new plan into the same subscription — not a new one.
+
+🔒 5. Preventing Cart Abuse or Duplicate Subscriptions
+
+To prevent people from opening multiple Checkout sessions or “stacking” subscriptions:
+
+Disable multiple line items in Checkout sessions.
+
+Use the tenant’s stripe_customer_id every time.
+
+Before creating a new Checkout session, check if they already have an active subscription.
+
+If yes, redirect them to your own “Change Plan” UI that calls subscriptions.update() instead of checkout.sessions.create().
+
+✅ 6. Summary
+Action	What Happens	How Stripe Knows
+Free → Paid (first time)	checkout.sessions.create() creates a new subscription with 1 item.	checkout.session.completed → customer.subscription.created
+Upgrade/Downgrade later	subscriptions.update() replaces the current item’s price.	customer.subscription.updated webhook
+Cancel	subscriptions.cancel() or delete.	customer.subscription.deleted webhook

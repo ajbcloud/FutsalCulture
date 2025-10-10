@@ -1,0 +1,82 @@
+Implement clean plan-change logic so that each tenant can only ever have one active Stripe subscription at a time.
+Users cannot “add” plans or have multiple subscriptions; instead, when changing plans, the existing subscription is updated to reference a new price.
+
+Key Requirements
+
+Check for an existing subscription before creating a new Checkout session.
+
+When a user clicks “Upgrade” from the free plan, first verify whether the tenant already has a stripe_subscription_id.
+
+If they do, skip Checkout and instead call stripe.subscriptions.update().
+
+If they don’t, create the initial Checkout session as normal.
+
+Upgrade / Downgrade flow using Subscriptions API
+
+Retrieve the tenant’s active subscription from Stripe using stripe.subscriptions.retrieve(subscriptionId).
+
+Find the subscription item (subscription.items.data[0].id).
+
+Call stripe.subscriptions.update(subscriptionId, { items: [{ id: itemId, price: newPriceId }], proration_behavior: "none", billing_cycle_anchor: "unchanged" }).
+
+This ensures the same subscription is reused, and Stripe emits customer.subscription.updated.
+
+Prevent multiple active plans (“cart” behavior)
+
+Always create Checkout sessions with a single line item (line_items: [{ price: priceId, quantity: 1 }]).
+
+Do not allow multiple prices or quantities.
+
+Never expose generic Stripe Payment Links; always use dynamically generated sessions via the API.
+
+Webhook synchronization
+
+Listen for:
+
+checkout.session.completed → create new subscription record in DB.
+
+customer.subscription.updated → update the tenant’s plan_code and plan_level.
+
+customer.subscription.deleted → revert the tenant’s plan to free.
+
+Use the price.id from the webhook payload to determine which plan the user switched to.
+
+Database alignment
+
+Store only one stripe_subscription_id per tenant.
+
+Update that record whenever the subscription changes.
+
+Never create a new subscription row unless the customer truly doesn’t have one.
+
+Abuse prevention
+
+Add a last_plan_change_at timestamp to the tenant table.
+
+Disallow new upgrades or downgrades if less than one billing cycle has passed since the last change.
+
+UI behavior
+
+When a user clicks “Change Plan,” disable other upgrade buttons until the plan change completes.
+
+After receiving confirmation from your /api/billing/upgrade or webhook event, call mutate("/api/me") to refresh plan state instantly.
+
+Show a success toast like “Your plan has been updated to Grow.”
+
+Expected Stripe Event Flow
+
+Free → Paid: checkout.session.completed → customer.subscription.created
+
+Upgrade/Downgrade: customer.subscription.updated
+
+Cancel: customer.subscription.deleted
+
+Validation
+
+Test with Stripe CLI:
+
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.updated
+
+
+Confirm the tenant record updates to the correct plan_code and plan_level in the database.
