@@ -126,19 +126,20 @@ export function PlanUpgradeCard({
 }: PlanUpgradeCardProps) {
   const plan = plans[planKey];
   const { toast } = useToast();
-  const { currentPlan, hasActiveSubscription } = useTenantPlan();
+  const { data: tenantPlanData } = useTenantPlan();
   const [isLoading, setIsLoading] = useState(false);
 
-  const planOrder = { free: 0, core: 1, growth: 2, elite: 3 };
-  const isUpgrade = currentPlan ? planOrder[planKey] > planOrder[currentPlan] : false;
-  const isDowngrade = currentPlan ? planOrder[planKey] < planOrder[currentPlan] : false;
+  const currentPlan = tenantPlanData?.planId || 'free';
+  const hasActiveSubscription = tenantPlanData?.billingStatus === 'active';
+
+  const planOrder: Record<string, number> = { free: 0, core: 1, growth: 2, elite: 3 };
+  const isUpgrade = planOrder[planKey] > planOrder[currentPlan];
+  const isDowngrade = planOrder[planKey] < planOrder[currentPlan];
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/billing/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ plan: planKey }),
-      });
+      const res = await apiRequest('POST', '/api/billing/checkout', { plan: planKey });
+      return res.json();
     },
     onSuccess: (data) => {
       if (data.url) {
@@ -156,10 +157,8 @@ export function PlanUpgradeCard({
 
   const upgradeMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/billing/upgrade', {
-        method: 'POST',
-        body: JSON.stringify({ plan: planKey }),
-      });
+      const res = await apiRequest('POST', '/api/billing/upgrade', { plan: planKey });
+      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -181,10 +180,8 @@ export function PlanUpgradeCard({
 
   const downgradeMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/billing/downgrade', {
-        method: 'POST',
-        body: JSON.stringify({ plan: planKey }),
-      });
+      const res = await apiRequest('POST', '/api/billing/downgrade', { plan: planKey });
+      return res.json();
     },
     onSuccess: (data) => {
       toast({
