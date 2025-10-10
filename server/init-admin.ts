@@ -1,11 +1,37 @@
 import { db } from "./db";
-import { users } from "@shared/schema";
+import { users, tenants } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { nanoid } from "nanoid";
 
 // Ensure admin user exists for testing/development
 export async function ensureAdminUser() {
   try {
+    // First, ensure a test tenant exists
+    const [existingTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.subdomain, "test-club"))
+      .limit(1);
+
+    let tenantId: string;
+
+    if (!existingTenant) {
+      console.log("Creating test tenant for admin user...");
+      const [newTenant] = await db.insert(tenants).values({
+        name: "This is a test Club",
+        subdomain: "test-club",
+        planLevel: "free",
+        inviteCode: nanoid(10),
+        contactEmail: "admin@example.com",
+        contactName: "Admin User"
+      }).returning();
+      tenantId = newTenant.id;
+      console.log("✅ Test tenant created");
+    } else {
+      tenantId = existingTenant.id;
+    }
+
     // Check if admin@example.com exists
     const [existingAdmin] = await db
       .select()
@@ -19,7 +45,7 @@ export async function ensureAdminUser() {
       // Hash the password
       const passwordHash = await bcrypt.hash("admin123", 12);
       
-      // Create the admin user
+      // Create the admin user with tenant association
       await db.insert(users).values({
         email: "admin@example.com",
         passwordHash,
@@ -31,7 +57,8 @@ export async function ensureAdminUser() {
         registrationStatus: "approved",
         authProvider: "local",
         emailVerifiedAt: new Date(),
-        verificationStatus: "verified"
+        verificationStatus: "verified",
+        tenantId // Associate with tenant
       });
 
       console.log("✅ Default admin user created successfully");
@@ -49,23 +76,25 @@ export async function ensureAdminUser() {
             isAdmin: true,
             isApproved: true,
             registrationStatus: "approved",
-            verificationStatus: "verified"
+            verificationStatus: "verified",
+            tenantId // Ensure tenant association
           })
           .where(eq(users.id, existingAdmin.id));
         console.log("✅ Admin user password updated");
       } else {
-        // Ensure admin privileges are set
-        if (!existingAdmin.isAdmin || !existingAdmin.isApproved) {
+        // Ensure admin privileges and tenant association are set
+        if (!existingAdmin.isAdmin || !existingAdmin.isApproved || !existingAdmin.tenantId) {
           await db
             .update(users)
             .set({ 
               isAdmin: true,
               isApproved: true,
               registrationStatus: "approved",
-              verificationStatus: "verified"
+              verificationStatus: "verified",
+              tenantId // Ensure tenant association
             })
             .where(eq(users.id, existingAdmin.id));
-          console.log("✅ Admin user privileges updated");
+          console.log("✅ Admin user privileges and tenant association updated");
         }
       }
     }
