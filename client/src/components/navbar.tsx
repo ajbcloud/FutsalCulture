@@ -160,8 +160,17 @@ export default function Navbar() {
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => {
-                      window.location.href = "/api/logout";
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/auth/logout', {
+                          method: 'POST',
+                          credentials: 'include'
+                        });
+                        window.location.href = '/';
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                        window.location.href = '/';
+                      }
                     }}
                     className="cursor-pointer"
                   >
@@ -242,12 +251,23 @@ export default function Navbar() {
                       Super Admin
                     </Link>
                   )}
-                  <a 
-                    href="/api/logout" 
-                    className="block px-4 py-4 text-red-500 hover:text-red-400 hover:bg-accent rounded-md transition-colors"
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/auth/logout', {
+                          method: 'POST',
+                          credentials: 'include'
+                        });
+                        window.location.href = '/';
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                        window.location.href = '/';
+                      }
+                    }}
+                    className="block px-4 py-4 text-red-500 hover:text-red-400 hover:bg-accent rounded-md transition-colors w-full text-left"
                   >
                     Logout
-                  </a>
+                  </button>
                   
                   {/* Theme Toggle in Mobile Menu */}
                   <button

@@ -237,11 +237,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 
                 <DropdownMenuSeparator />
                 
-                <DropdownMenuItem asChild>
-                  <a href="/api/logout" className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </a>
+                <DropdownMenuItem 
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                      });
+                      window.location.href = '/';
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                      window.location.href = '/';
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

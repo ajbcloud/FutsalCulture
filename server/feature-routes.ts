@@ -52,33 +52,29 @@ router.get('/tenant/plan-features', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    // Also check subscriptions table for the most current status
-    const { subscriptions } = await import('../shared/schema');
-    const subscription = await db.select()
-      .from(subscriptions)
-      .where(eq(subscriptions.tenantId, tenantId))
-      .orderBy(sql`${subscriptions.createdAt} DESC`)
-      .limit(1);
-
-    // Use subscription plan if active, otherwise fall back to tenant plan level
+    // Determine effective plan level based on tenant's planLevel
+    // If no planLevel is set or it's explicitly 'free', use 'free'
+    // Valid plan levels are: 'free', 'core', 'growth', 'elite'
     let effectivePlanLevel = tenant[0].planLevel || 'free';
-
-    if (subscription.length > 0 && subscription[0].status === 'active') {
-      effectivePlanLevel = subscription[0].planKey || effectivePlanLevel;
+    
+    // Validate the plan level - if it's not one of the valid values, default to 'free'
+    const validPlanLevels = ['free', 'core', 'growth', 'elite'];
+    if (!validPlanLevels.includes(effectivePlanLevel)) {
+      console.warn(`Invalid plan level '${effectivePlanLevel}' for tenant ${tenantId}, defaulting to 'free'`);
+      effectivePlanLevel = 'free';
     }
 
-    // Final fallback to tenant planLevel if subscription exists but is not elite/growth/core
-    const actualPlanLevel = effectivePlanLevel;
-
-
-    // Use actual plan level for paid plans, free for non-subscribed users
-    const effectivePlanLevelForFeatures = actualPlanLevel;
+    // For extra safety, if tenant has no active subscription, ensure they're on free plan
+    if (!tenant[0].stripeSubscriptionId && effectivePlanLevel !== 'free') {
+      console.warn(`Tenant ${tenantId} has plan level '${effectivePlanLevel}' but no active subscription, defaulting to 'free'`);
+      effectivePlanLevel = 'free';
+    }
 
     // Import PLAN_FEATURES from shared
     const { PLAN_FEATURES } = await import('../shared/feature-flags');
-    const features = PLAN_FEATURES[effectivePlanLevelForFeatures as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
+    const features = PLAN_FEATURES[effectivePlanLevel as keyof typeof PLAN_FEATURES] || PLAN_FEATURES.free;
 
-    const limits = PLAN_LIMITS[effectivePlanLevelForFeatures as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
+    const limits = PLAN_LIMITS[effectivePlanLevel as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
 
     // Get current player count for this tenant (only players, not parents)
     const { players } = await import('../shared/schema');
@@ -92,7 +88,7 @@ router.get('/tenant/plan-features', async (req, res) => {
     const displayCount = playerCount;
 
     res.json({
-      planLevel: effectivePlanLevelForFeatures,
+      planLevel: effectivePlanLevel,
       features,
       limits,
       playerCount: displayCount,
