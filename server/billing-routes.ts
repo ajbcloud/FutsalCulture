@@ -83,7 +83,20 @@ router.get('/billing/check-subscription', async (req: any, res) => {
 // Helper function to get active payment processor
 async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
   try {
-    // Check for enabled payment processors (Stripe or Braintree)
+    // First, check for environment-based Stripe configuration
+    // This ensures that if Stripe env vars are set, they take priority
+    if (process.env.STRIPE_SECRET_KEY) {
+      console.log('Using Stripe configuration from environment variables');
+      return {
+        provider: 'stripe',
+        credentials: {
+          secretKey: process.env.STRIPE_SECRET_KEY,
+          publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || process.env.STRIPE_PUBLISHABLE_KEY
+        }
+      };
+    }
+
+    // If no environment variables, check for enabled payment processors in database (Stripe or Braintree)
     const activeProcessor = await db.select()
       .from(integrations)
       .where(and(
@@ -94,26 +107,28 @@ async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'brai
       .limit(1);
 
     if (activeProcessor.length > 0) {
+      console.log(`Using ${activeProcessor[0].provider} configuration from database integrations`);
       return {
         provider: activeProcessor[0].provider as 'stripe' | 'braintree',
         credentials: activeProcessor[0].credentials
       };
     }
 
-    // Fallback to environment-based Stripe if available
+    console.warn('No payment processor configured - neither environment variables nor database integrations found');
+    return { provider: null, credentials: null };
+  } catch (error) {
+    console.error('Error getting active payment processor:', error);
+    // Even if there's a database error, still check for environment variables
     if (process.env.STRIPE_SECRET_KEY) {
+      console.log('Database error occurred, falling back to Stripe environment variables');
       return {
         provider: 'stripe',
         credentials: {
           secretKey: process.env.STRIPE_SECRET_KEY,
-          publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
+          publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || process.env.STRIPE_PUBLISHABLE_KEY
         }
       };
     }
-
-    return { provider: null, credentials: null };
-  } catch (error) {
-    console.error('Error getting active payment processor:', error);
     return { provider: null, credentials: null };
   }
 }
