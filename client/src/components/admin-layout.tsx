@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
+import { useTenantPlan } from "@/hooks/useTenantPlan";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -60,8 +61,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { data: tenantPlan } = useTenantPlan();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
+  
+  const planName = tenantPlan?.planId ? tenantPlan.planId.charAt(0).toUpperCase() + tenantPlan.planId.slice(1) : 'Free';
 
   // Filter navigation items based on feature access
   const visibleNavItems = adminNavItems.filter(item => {
@@ -167,12 +171,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         {user.email}
                       </p>
                     )}
+                    {!user?.isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {planName} Plan
+                      </p>
+                    )}
                     {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground truncate">
                         Super Admin
                       </p>
                     )}
-                    {user?.role === 'tenant_admin' && (
+                    {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground truncate">
                         Owner
                       </p>
@@ -189,12 +198,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         {user.email}
                       </p>
                     )}
+                    {!user?.isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground">
+                        {planName} Plan
+                      </p>
+                    )}
                     {user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground">
                         Super Admin
                       </p>
                     )}
-                    {user?.role === 'tenant_admin' && (
+                    {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground">
                         Owner
                       </p>
