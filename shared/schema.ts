@@ -548,6 +548,9 @@ export const discountCodes = pgTable("discount_codes", {
   // User restrictions
   lockedToPlayerId: varchar("locked_to_player_id").references(() => players.id), // null = not locked to specific player
   lockedToParentId: varchar("locked_to_parent_id").references(() => users.id), // null = not locked to specific parent
+  // Stripe integration
+  stripeCouponId: varchar("stripe_coupon_id"), // Stripe coupon ID for this discount
+  stripePromotionCodeId: varchar("stripe_promotion_code_id"), // Stripe promotion code ID
   createdBy: varchar("created_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
