@@ -63,6 +63,8 @@ import HouseholdManagement from "./pages/household-management";
 import CreditHistory from "./pages/credit-history";
 import PaymentHistory from "./pages/payment-history";
 import AdminCredits from "./pages/admin/credits";
+import Checkout from "./pages/checkout";
+import CheckoutSuccess from "./pages/checkout-success";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -108,6 +110,8 @@ function Router() {
         <Route path="/household" component={HouseholdManagement} />
         <Route path="/credits/history" component={CreditHistory} />
         <Route path="/payments/history" component={PaymentHistory} />
+        <Route path="/checkout" component={Checkout} />
+        <Route path="/checkout/success" component={CheckoutSuccess} />
         {(user?.isAdmin || user?.isAssistant) && (
           <>
             <Route path="/admin" component={AdminDashboard} />

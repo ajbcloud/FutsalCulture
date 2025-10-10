@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from 'wouter';
 
 interface PlanDetails {
   name: string;
@@ -126,6 +127,7 @@ export function PlanUpgradeCard({
 }: PlanUpgradeCardProps) {
   const plan = plans[planKey];
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const { data: tenantPlanData } = useTenantPlan();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -160,8 +162,9 @@ export function PlanUpgradeCard({
     },
     onSuccess: (data) => {
       if (data.url) {
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
+        // Redirect to embedded checkout page with session URL
+        const encodedUrl = encodeURIComponent(data.url);
+        navigate(`/checkout?session_url=${encodedUrl}`);
       } else if (data.success) {
         // Plan was updated directly (for existing subscriptions)
         toast({

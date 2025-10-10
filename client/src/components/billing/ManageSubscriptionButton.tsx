@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface ManageSubscriptionButtonProps {
   planId: 'free' | 'core' | 'growth' | 'elite';
@@ -17,33 +18,24 @@ export function ManageSubscriptionButton({
 }: ManageSubscriptionButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
 
   const handleClick = async () => {
     try {
       setIsLoading(true);
 
       if (planId === 'free' || billingStatus === 'none') {
-        // Open Stripe checkout for Core plan upgrade
-        const tenantId = (window as any).currentUser?.tenantId || 'test-tenant';
-        const currentDomain = window.location.origin;
-        
-        const paymentLink = 'https://buy.stripe.com/test_8x23cwdd84kIaFsgwa2Fa07'; // All subscription options
-        const params = new URLSearchParams({
-          client_reference_id: tenantId,
-          success_url: `${currentDomain}/admin/settings?upgrade=success&plan=core`,
-          cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
-        });
-        
-        window.location.href = `${paymentLink}?${params.toString()}`;
+        // Redirect to embedded checkout for Core plan upgrade
+        navigate('/checkout?plan=core');
       } else {
-        // Fallback to direct Stripe billing portal since API isn't working
-        window.open('https://billing.stripe.com/p/login/test_aEU5ky8WS5p6hk428a', '_blank');
+        // Redirect to embedded checkout with portal parameter for existing subscriptions
+        navigate('/checkout?portal=true');
       }
     } catch (error: any) {
       console.error('Error managing subscription:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to manage subscription. Please try again.",
+        description: error.message || "Failed to manage payment method. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -52,10 +44,7 @@ export function ManageSubscriptionButton({
   };
 
   const getButtonText = () => {
-    if (planId === 'free' || billingStatus === 'none') {
-      return 'Manage Subscription';
-    }
-    return 'Manage Subscription';
+    return 'Manage Payment Method';
   };
 
   const getButtonIcon = () => {
