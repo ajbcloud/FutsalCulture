@@ -1,7 +1,6 @@
 import { Router } from 'express';
+import { sql } from 'drizzle-orm';
 import { db } from './db';
-import { tenants } from '../shared/schema';
-import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -13,22 +12,21 @@ router.get('/tenant/plan', async (req: any, res) => {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 
-    const tenant = await db.select({
-      planLevel: tenants.plan_level,
-      stripeSubscriptionId: tenants.stripe_subscription_id,
-      stripeCustomerId: tenants.stripe_customer_id
-    })
-    .from(tenants)
-    .where(eq(tenants.id, currentUser.tenantId))
-    .limit(1);
+    // Use raw SQL to avoid Drizzle ORM schema issues
+    const result = await db.execute(
+      sql`SELECT plan_level, stripe_subscription_id, stripe_customer_id 
+          FROM tenants 
+          WHERE id = ${currentUser.tenantId} 
+          LIMIT 1`
+    );
 
-    if (!tenant.length) {
+    if (!result.rows.length) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
-    const tenantData = tenant[0];
-    const planId = tenantData.planLevel || 'core';
-    const hasActiveSubscription = !!(tenantData.stripeSubscriptionId && planId !== 'free');
+    const tenantData: any = result.rows[0];
+    const planId = tenantData.plan_level || 'core';
+    const hasActiveSubscription = !!(tenantData.stripe_subscription_id && planId !== 'free');
 
     res.json({
       planId,
