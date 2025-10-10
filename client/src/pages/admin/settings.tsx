@@ -459,14 +459,34 @@ function DefaultInviteCodeSection() {
 
 // Plan & Features Component
 function PlanAndFeaturesContent() {
-  const { data: tenantPlan, isLoading: tenantPlanLoading } = useTenantPlan();
-  const { data: subscriptionInfo, isLoading: subscriptionLoading } = useSubscriptionInfo();
+  const { data: tenantPlan, isLoading: tenantPlanLoading, isError: tenantPlanError } = useTenantPlan();
+  const { data: subscriptionInfo, isLoading: subscriptionLoading, isError: subscriptionError } = useSubscriptionInfo();
   const { data: planFeatures } = usePlanFeatures();
 
   if (tenantPlanLoading || subscriptionLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-muted-foreground">Loading plan information...</div>
+      </div>
+    );
+  }
+
+  // Handle error states gracefully
+  if (tenantPlanError || subscriptionError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64 space-y-4">
+        <AlertCircle className="w-12 h-12 text-yellow-500" />
+        <div className="text-center">
+          <div className="text-foreground font-semibold mb-2">Unable to load plan information</div>
+          <div className="text-muted-foreground text-sm">
+            {tenantPlanError ? 'Error loading tenant data. ' : ''}
+            {subscriptionError ? 'Error loading subscription data. ' : ''}
+            Please refresh the page or contact support if the issue persists.
+          </div>
+        </div>
+        <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-reload-plan">
+          Reload Page
+        </Button>
       </div>
     );
   }
