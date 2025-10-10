@@ -1,0 +1,194 @@
+We are working in the PlayHQ app built with Next.js, Drizzle ORM, PostgreSQL, and Replit Auth. Stripe has already been configured in the dashboard with four plans (Free, Core, Grow, Elite). We need to integrate Stripe subscriptions into the app to handle user upgrades, downgrades, and webhooks.
+
+🧾 2. Environment Variables
+
+(Tell the agent exactly what variables it should use and where)
+
+Add the following environment variables in .env:
+
+STRIPE_SECRET_KEY=sk_test_xxxxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_PRICE_FREE=price_1RudsDKA9oSeqOY8ZZsf5Eai
+STRIPE_PRICE_CORE=price_1RpidwKA9oSeqOY8IlagbQCJ
+STRIPE_PRICE_GROW=price_1RphTpKA9oSeqOY8a9vZkt39
+STRIPE_PRICE_ELITE=price_1RphU6KA9oSeqOY8hpMXTrOh
+APP_URL=https://playhq.app
+
+🧩 3. Stripe Utility
+
+(Tell the agent to create a Stripe helper file)
+
+Create /lib/stripe.ts:
+
+Import Stripe and initialize with STRIPE_SECRET_KEY
+
+Set API version 2024-06-20
+
+Export a stripe instance for use in API routes
+
+🚀 4. Checkout Flow (Free → Paid)
+
+(Tell it to create the API route for first-time upgrades)
+
+Create /api/billing/checkout.ts:
+
+Accept POST with plan in request body (core, grow, or elite)
+
+Retrieve tenant via session or Replit Auth
+
+Get Stripe Customer ID from DB
+
+Use correct Price ID based on plan
+
+Create a stripe.checkout.sessions.create call with:
+
+mode: "subscription"
+
+proration_behavior: "none"
+
+billing_cycle_anchor: "now"
+
+Metadata: { tenant_id, plan }
+
+success_url and cancel_url pointing to /account
+
+Return { url: session.url }
+
+🪝 5. Webhook Handler
+
+(Tell the agent how to sync Stripe → database)
+
+Create /api/webhooks/stripe.ts:
+
+Disable body parsing (export const config = { api: { bodyParser: false } })
+
+Verify signature using STRIPE_WEBHOOK_SECRET
+
+Handle:
+
+checkout.session.completed
+
+Retrieve subscription
+
+Match price.id to plan (core, grow, elite)
+
+Update tenant record in DB (plan_code, stripe_subscription_id, billing_status: active)
+
+customer.subscription.updated
+
+Sync new plan (upgrade or downgrade)
+
+customer.subscription.deleted
+
+Set plan to free, clear stripe_subscription_id, billing_status: canceled
+
+Return 200 JSON response
+
+🔁 6. In-App Upgrade / Downgrade (after first checkout)
+
+(Tell the agent how to handle subsequent plan changes)
+
+Create two routes:
+
+/api/billing/upgrade.ts
+
+/api/billing/downgrade.ts
+
+Upgrade
+
+Use stripe.subscriptions.update(subscription_id, { items: [{ id: item_id, price: new_price_id }], proration_behavior: "none", billing_cycle_anchor: "unchanged" })
+
+Immediately update tenant plan in DB to new plan
+
+Downgrade
+
+Same API call, but schedule plan change at next renewal
+
+Save pending_plan_code and pending_plan_date in DB
+
+When webhook event fires for invoice.payment_succeeded, finalize downgrade
+
+💾 7. Database Updates (Drizzle ORM)
+
+(Tell it what to modify in the tenants table)
+
+Ensure tenants table includes:
+
+stripe_customer_id
+
+stripe_subscription_id
+
+plan_code (enum: free, core, grow, elite)
+
+plan_level (integer)
+
+billing_status (active, canceled, pending_downgrade)
+
+pending_plan_code (nullable)
+
+pending_plan_effective_date (nullable)
+
+Update these fields whenever a webhook or plan change event occurs.
+
+🔄 8. Frontend Integration (React / Next.js)
+
+(Tell it what to expose to the UI)
+
+Add upgrade buttons: “Upgrade to Core”, “Upgrade to Grow”, “Upgrade to Elite”.
+
+On click, call /api/billing/checkout for first-time upgrades or /api/billing/upgrade for existing subscribers.
+
+Redirect to Stripe Checkout if new user.
+
+For logged-in paying users, change plan instantly (no redirect).
+
+Use SWR or Realtime API to re-fetch /api/me and update plan UI without reload.
+
+🔔 9. Real-Time Updates (optional)
+
+Use mutate("/api/me") after upgrade or downgrade.
+
+Optionally integrate WebSocket or Pusher to broadcast plan-updated events.
+
+On receipt, re-render dashboard and enable/disable features based on plan_code.
+
+🧩 10. Webhook Verification Test
+
+(Tell the agent to verify it works in sandbox)
+
+Test using Stripe CLI:
+
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.updated
+
+
+Confirm tenant records update correctly in the database.
+
+🧩 11. No Proration Policy
+
+All upgrades and downgrades use proration_behavior: "none".
+
+Billing cycle anchor remains unchanged (billing_cycle_anchor: "unchanged").
+
+Downgrades only apply at next renewal.
+
+Webhooks handle final transitions automatically.
+
+🧾 12. Abuse Prevention
+
+Add logic to limit one plan change per billing cycle by checking last_plan_change_at.
+Deny additional changes until the next billing cycle resets.
+
+✅ Expected Result
+
+Users can upgrade from free using Stripe Checkout once.
+
+Future upgrades/downgrades happen in-app via API.
+
+Tenant’s plan changes instantly in UI (no reload or re-login).
+
+Webhooks keep Stripe and DB fully synchronized.
+
+Downgrades are deferred to next renewal (no early cancel exploitation).
