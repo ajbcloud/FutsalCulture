@@ -66,6 +66,8 @@ router.post('/webhook', async (req, res) => {
 
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`💳 Processing checkout.session.completed - Session: ${session.id}, Mode: ${session.mode}`);
+        
         if (session.mode === 'subscription') {
           const subscriptionId = session.subscription as string;
           const customerId = session.customer as string;
@@ -73,12 +75,14 @@ router.post('/webhook', async (req, res) => {
           try {
             // Try to find tenant by client_reference_id first (most reliable)
             let tenantId = session.client_reference_id;
-            console.log(`Checkout session tenant identification - client_reference_id: ${tenantId}, metadata: ${JSON.stringify(session.metadata)}`);
+            console.log(`🔍 Tenant identification - client_reference_id: ${tenantId}, metadata: ${JSON.stringify(session.metadata)}, customer: ${customerId}`);
 
             // If no client_reference_id, try metadata as backup
             if (!tenantId || tenantId === 'unknown') {
               tenantId = session.metadata?.tenantId || null;
-              console.log(`Using metadata tenantId: ${tenantId}`);
+              if (tenantId) {
+                console.log(`📌 Using metadata.tenantId: ${tenantId}`);
+              }
             }
 
             // If still no tenant ID, try to find by existing customer ID
@@ -90,39 +94,64 @@ router.post('/webhook', async (req, res) => {
 
               if (existingTenant.length > 0) {
                 tenantId = existingTenant[0].id;
-                console.log(`Found tenant by customer ID: ${tenantId}`);
+                console.log(`🔍 Found tenant by existing customer ID: ${tenantId}`);
               } else {
-                console.log(`⚠️ Could not identify tenant for customer ${customerId} - no client_reference_id, metadata, or existing customer match`);
+                console.error(`❌ CRITICAL: Could not identify tenant for customer ${customerId} - no client_reference_id, metadata, or existing customer match`);
+                console.error(`❌ Session data: ${JSON.stringify({
+                  id: session.id,
+                  customer: customerId,
+                  subscription: subscriptionId,
+                  client_reference_id: session.client_reference_id,
+                  metadata: session.metadata,
+                })}`);
               }
             }
 
-            // Determine plan from success URL or amount
+            // Determine plan level from subscription
             let planLevel: string | null = null;
-            if (session.success_url && session.success_url.includes('plan=')) {
-              const urlParams = new URL(session.success_url);
-              planLevel = urlParams.searchParams.get('plan');
-              console.log(`Plan level from success URL: ${planLevel}`);
-            } else if (session.amount_total) {
-              // Fallback: determine plan from amount
-              const amountInCents = session.amount_total;
-              if (amountInCents === 9900) planLevel = 'core';      // $99
-              else if (amountInCents === 19900) planLevel = 'growth';   // $199
-              else if (amountInCents === 49900) planLevel = 'elite';    // $499
-              console.log(`Plan level from amount ${amountInCents}: ${planLevel}`);
-            }
-
-            // Try to get subscription details for additional validation (but don't fail if it doesn't exist)
             let subscriptionStatus = 'active';
+            
             try {
+              // Primary method: Get plan from subscription price ID (most reliable)
               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-              const stripePlanLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
-              if (stripePlanLevel) {
-                planLevel = stripePlanLevel; // Use Stripe plan level if available
-                console.log(`Plan level from Stripe subscription: ${planLevel}`);
-              }
+              const priceId = subscription.items.data[0]?.price?.id;
+              planLevel = getPlanLevelFromPrice(priceId);
               subscriptionStatus = subscription.status === 'active' ? 'active' : 'inactive';
+              
+              if (planLevel) {
+                console.log(`✅ Plan level from subscription price ID: ${planLevel} (price: ${priceId})`);
+              } else {
+                console.log(`⚠️ Could not determine plan level from price ID: ${priceId}`);
+                
+                // Fallback 1: Try to get from success URL
+                if (session.success_url && session.success_url.includes('plan=')) {
+                  const urlParams = new URL(session.success_url);
+                  const urlPlan = urlParams.searchParams.get('plan');
+                  if (urlPlan && ['free', 'core', 'growth', 'elite'].includes(urlPlan)) {
+                    planLevel = urlPlan;
+                    console.log(`📎 Plan level from success URL: ${planLevel}`);
+                  }
+                }
+                
+                // Fallback 2: Try to get from amount
+                if (!planLevel && session.amount_total) {
+                  const amountPlan = getPlanLevelFromAmount(session.amount_total);
+                  if (amountPlan) {
+                    planLevel = amountPlan;
+                    console.log(`💰 Plan level from amount (${session.amount_total} cents): ${planLevel}`);
+                  }
+                }
+              }
             } catch (subscriptionError) {
-              console.log(`Note: Could not retrieve subscription ${subscriptionId} from Stripe, using URL/amount fallback`);
+              console.error(`⚠️ Could not retrieve subscription ${subscriptionId} from Stripe:`, subscriptionError);
+              
+              // Fallback: Try amount-based detection
+              if (session.amount_total) {
+                planLevel = getPlanLevelFromAmount(session.amount_total);
+                if (planLevel) {
+                  console.log(`💰 Using fallback - plan level from amount: ${planLevel}`);
+                }
+              }
             }
 
             // Update tenant plan if we have both tenant ID and plan level
@@ -275,12 +304,13 @@ router.post('/webhook', async (req, res) => {
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
-  const planLevel = getPlanLevelFromPrice(subscription.items.data[0]?.price?.id);
+  const priceId = subscription.items.data[0]?.price?.id;
+  const planLevel = getPlanLevelFromPrice(priceId);
   
-  console.log(`🔄 Processing subscription update - Customer: ${customerId}, Price: ${subscription.items.data[0]?.price?.id}, Plan: ${planLevel}`);
+  console.log(`🔄 Processing subscription update - Customer: ${customerId}, Subscription: ${subscription.id}, Price: ${priceId}, Plan: ${planLevel}, Status: ${subscription.status}`);
 
   if (!planLevel) {
-    console.log(`⚠️ No plan level found for price ID: ${subscription.items.data[0]?.price?.id}`);
+    console.log(`⚠️ No plan level found for price ID: ${priceId}. Ensure STRIPE_PRICE_FREE, STRIPE_PRICE_CORE, STRIPE_PRICE_GROWTH, STRIPE_PRICE_ELITE env vars are set.`);
     return;
   }
 
@@ -291,8 +321,19 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .limit(1);
 
   if (tenant.length === 0) {
-    console.log(`⚠️ No tenant found for customer ID: ${customerId}`);
-    return;
+    // Try to find by subscription ID as backup
+    const tenantBySubscription = await db.select()
+      .from(tenants)
+      .where(eq(tenants.stripeSubscriptionId, subscription.id))
+      .limit(1);
+    
+    if (tenantBySubscription.length > 0) {
+      console.log(`✅ Found tenant by subscription ID: ${tenantBySubscription[0].id}`);
+      tenant.push(tenantBySubscription[0]);
+    } else {
+      console.log(`⚠️ No tenant found for customer ID: ${customerId} or subscription ID: ${subscription.id}`);
+      return;
+    }
   }
   
   console.log(`✅ Found tenant: ${tenant[0].id} for customer: ${customerId}`);
@@ -307,6 +348,13 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       .set({
         planLevel: planLevel as any,
         stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customerId,
+        // Clear any pending plan change data since plan has been updated
+        pendingPlanCode: null,
+        pendingPlanEffectiveDate: null,
+        // Update lastPlanChangeAt if plan changed
+        lastPlanChangeAt: oldPlan !== newPlan ? new Date() : tenant[0].lastPlanChangeAt,
+        billingStatus: status === 'active' ? 'active' : 'inactive',
       })
       .where(eq(tenants.id, tenant[0].id));
 
@@ -360,15 +408,20 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
         subscriptionStatus: status,
       },
     });
+    
+    console.log(`✅ Plan changed for tenant ${tenant[0].id}: ${oldPlan} → ${newPlan} (${changeType})`);
+  } else {
+    console.log(`✅ Subscription updated for tenant ${tenant[0].id}, plan remains ${planLevel}`);
   }
 
   // Clear capabilities cache
   clearCapabilitiesCache(tenant[0].id);
-
 }
 
 async function handleSubscriptionCancellation(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
+  
+  console.log(`🔴 Processing subscription cancellation - Customer: ${customerId}, Subscription: ${subscription.id}`);
 
   // Find tenant by Stripe customer ID
   const tenant = await db.select()
@@ -377,25 +430,44 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     .limit(1);
 
   if (tenant.length === 0) {
-    return;
+    // Try to find by subscription ID as backup
+    const tenantBySubscription = await db.select()
+      .from(tenants)
+      .where(eq(tenants.stripeSubscriptionId, subscription.id))
+      .limit(1);
+    
+    if (tenantBySubscription.length > 0) {
+      console.log(`✅ Found tenant by subscription ID: ${tenantBySubscription[0].id}`);
+      tenant.push(tenantBySubscription[0]);
+    } else {
+      console.log(`⚠️ No tenant found for customer ID: ${customerId} or subscription ID: ${subscription.id}`);
+      return;
+    }
   }
+  
+  console.log(`✅ Found tenant: ${tenant[0].id} for customer: ${customerId}`);
 
   const oldPlan = tenant[0].planLevel as any;
-  const newPlan = 'core' as const;
+  const newPlan = 'free' as const; // Revert to free plan when subscription is deleted
 
-  // Reset tenant to core plan and mark subscription canceled
+  // Reset tenant to free plan and mark subscription canceled
   await db.transaction(async (tx) => {
     await tx.update(tenants)
       .set({
-        planLevel: 'core', // Default back to core instead of free for cancellations
-        stripeSubscriptionId: null,
+        planLevel: 'free', // Revert to free plan when subscription is cancelled
+        stripeSubscriptionId: null, // Clear subscription ID
+        billingStatus: 'cancelled',
+        lastPlanChangeAt: new Date(),
+        // Clear any pending plan change data
+        pendingPlanCode: null,
+        pendingPlanEffectiveDate: null,
       })
       .where(eq(tenants.id, tenant[0].id));
 
     await tx.update(subscriptions)
       .set({
         status: 'canceled',
-        planKey: 'core',
+        planKey: 'free',
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.tenantId, tenant[0].id));
@@ -410,7 +482,7 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
     await tx.insert(tenantPlanAssignments)
       .values({
         tenantId: tenant[0].id,
-        planCode: 'core',
+        planCode: 'free',
         since: new Date(),
       });
   });
@@ -431,11 +503,12 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
         cancelledAt: new Date().toISOString(),
       },
     });
+    
+    console.log(`✅ Tenant ${tenant[0].id} reverted to free plan after subscription cancellation`);
   }
 
   // Clear capabilities cache
   clearCapabilitiesCache(tenant[0].id);
-
 }
 
 export { router as stripeWebhookRouter };

@@ -13,7 +13,8 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export function getPlanLevelFromPriceId(priceId: string | null | undefined): 'free' | 'core' | 'growth' | 'elite' | null {
   if (!priceId) return null;
   
-  const priceMappings: Record<string, 'core' | 'growth' | 'elite'> = {
+  const priceMappings: Record<string, 'free' | 'core' | 'growth' | 'elite'> = {
+    [process.env.STRIPE_PRICE_FREE || '']: 'free',
     [process.env.STRIPE_PRICE_CORE || '']: 'core',
     [process.env.STRIPE_PRICE_GROWTH || '']: 'growth',
     [process.env.STRIPE_PRICE_ELITE || '']: 'elite',
@@ -23,8 +24,9 @@ export function getPlanLevelFromPriceId(priceId: string | null | undefined): 'fr
 }
 
 // Helper function to get price ID from plan level
-export function getPriceIdFromPlanLevel(planLevel: 'core' | 'growth' | 'elite'): string | null {
-  const planMappings: Record<'core' | 'growth' | 'elite', string | undefined> = {
+export function getPriceIdFromPlanLevel(planLevel: 'free' | 'core' | 'growth' | 'elite'): string | null {
+  const planMappings: Record<'free' | 'core' | 'growth' | 'elite', string | undefined> = {
+    'free': process.env.STRIPE_PRICE_FREE,
     'core': process.env.STRIPE_PRICE_CORE,
     'growth': process.env.STRIPE_PRICE_GROWTH,
     'elite': process.env.STRIPE_PRICE_ELITE,
