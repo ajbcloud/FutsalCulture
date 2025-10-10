@@ -25,8 +25,8 @@ export function createStripePaymentLink(
   const baseLink = STRIPE_PAYMENT_LINKS[plan];
   const params = new URLSearchParams({
     client_reference_id: tenantId,
-    success_url: `${currentDomain}/admin/settings?upgrade=success&plan=${plan}`,
-    cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`,
+    success_url: `${currentDomain}/admin/settings?success=true&plan=${plan}`,
+    cancel_url: `${currentDomain}/admin/settings?canceled=true`,
   });
   
   return `${baseLink}?${params.toString()}`;

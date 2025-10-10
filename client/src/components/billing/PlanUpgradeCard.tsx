@@ -172,7 +172,18 @@ export function PlanUpgradeCard({
         setIsLoading(false);
       } else {
         // For upgrades and new subscriptions, use Stripe payment links
-        const tenantId = user?.tenantId || '';
+        const tenantId = user?.tenantId;
+        
+        if (!tenantId) {
+          toast({
+            title: 'Error',
+            description: 'Unable to process upgrade. Please refresh the page and try again.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
+        
         const currentDomain = window.location.origin;
         const paymentLink = createStripePaymentLink(planKey as PlanKey, tenantId, currentDomain);
         
