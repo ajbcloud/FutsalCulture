@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTenantPlan } from '@/hooks/useTenantPlan';
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -136,45 +136,79 @@ export function PlanUpgradeCard({
   const isUpgrade = planOrder[planKey] > planOrder[currentPlan];
   const isDowngrade = planOrder[planKey] < planOrder[currentPlan];
 
+  // Query to check subscription status
+  const { data: subscriptionStatus } = useQuery({
+    queryKey: ['/api/billing/check-subscription'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/billing/check-subscription');
+      return res.json();
+    },
+    enabled: false, // We'll refetch manually when needed
+  });
+
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/billing/checkout', { plan: planKey });
-      return res.json();
+      const data = await res.json();
+      
+      // If checkout returns success:true with no URL, it means the plan was updated directly
+      if (data.success && !data.url) {
+        return data;
+      }
+      
+      return data;
     },
     onSuccess: (data) => {
       if (data.url) {
+        // Redirect to Stripe checkout
         window.location.href = data.url;
+      } else if (data.success) {
+        // Plan was updated directly (for existing subscriptions)
+        toast({
+          title: 'Success',
+          description: data.message || 'Your plan has been updated successfully',
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
+        if (onUpgrade) onUpgrade();
       }
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to start checkout process',
+        description: error.message || 'Failed to process plan change',
         variant: 'destructive',
       });
     },
   });
 
-  const upgradeMutation = useMutation({
+  const changePlanMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/billing/upgrade', { plan: planKey });
+      const res = await apiRequest('POST', '/api/billing/change-plan', { plan: planKey });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: 'Success',
-        description: 'Your plan has been upgraded successfully',
+        description: data.message || 'Your plan has been changed successfully',
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
       if (onUpgrade) onUpgrade();
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to upgrade plan',
-        variant: 'destructive',
-      });
+      // If error is about no subscription, fall back to checkout
+      if (error.message?.includes('No active subscription')) {
+        checkoutMutation.mutate();
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to change plan',
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -190,6 +224,7 @@ export function PlanUpgradeCard({
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
       if (onDowngrade) onDowngrade();
     },
     onError: (error: any) => {
@@ -203,15 +238,28 @@ export function PlanUpgradeCard({
 
   const handleAction = async () => {
     setIsLoading(true);
+    
     try {
-      if (isUpgrade) {
-        if (hasActiveSubscription) {
-          await upgradeMutation.mutateAsync();
+      // First check subscription status
+      const res = await apiRequest('GET', '/api/billing/check-subscription');
+      const status = await res.json();
+      
+      if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
+        if (status?.hasSubscription) {
+          // For existing subscriptions, use change-plan endpoint
+          await changePlanMutation.mutateAsync();
         } else {
+          // For new subscriptions, use checkout which handles both cases
           await checkoutMutation.mutateAsync();
         }
       } else if (isDowngrade) {
         await downgradeMutation.mutateAsync();
+      }
+    } catch (error) {
+      console.error('Error handling plan action:', error);
+      // If checking subscription fails, default to checkout which handles both cases
+      if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
+        await checkoutMutation.mutateAsync();
       }
     } finally {
       setIsLoading(false);
@@ -258,10 +306,10 @@ export function PlanUpgradeCard({
               className="w-full mt-4"
               variant={isUpgrade ? 'default' : 'outline'}
               onClick={handleAction}
-              disabled={isLoading || checkoutMutation.isPending || upgradeMutation.isPending || downgradeMutation.isPending}
+              disabled={isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending}
               data-testid={`button-${isUpgrade ? 'upgrade' : 'downgrade'}-${planKey}`}
             >
-              {isLoading || checkoutMutation.isPending || upgradeMutation.isPending || downgradeMutation.isPending
+              {isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending
                 ? 'Processing...'
                 : isUpgrade
                 ? `Upgrade to ${plan.name}`

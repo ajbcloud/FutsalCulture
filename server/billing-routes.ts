@@ -7,6 +7,79 @@ import { clearCapabilitiesCache } from './middleware/featureAccess';
 
 const router = Router();
 
+// Check subscription status endpoint
+router.get('/billing/check-subscription', async (req: any, res) => {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    // Get tenant's subscription information
+    const tenant = await db.select({
+      stripeCustomerId: tenants.stripeCustomerId,
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      planLevel: tenants.planLevel,
+      billingStatus: tenants.billingStatus,
+      lastPlanChangeAt: tenants.lastPlanChangeAt,
+      pendingPlanCode: tenants.pendingPlanCode,
+      pendingPlanEffectiveDate: tenants.pendingPlanEffectiveDate
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    if (!tenant.length) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    const tenantData = tenant[0];
+    
+    // Check if there's an active subscription
+    let subscriptionDetails = null;
+    if (tenantData.stripeSubscriptionId) {
+      const { provider, credentials } = await getActivePaymentProcessor();
+      
+      if (provider === 'stripe') {
+        try {
+          const Stripe = require('stripe');
+          const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+          const subscription = await stripe.subscriptions.retrieve(tenantData.stripeSubscriptionId);
+          
+          subscriptionDetails = {
+            id: subscription.id,
+            status: subscription.status,
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            priceId: subscription.items.data[0]?.price?.id,
+            amount: subscription.items.data[0]?.price?.unit_amount
+          };
+        } catch (error) {
+          console.error('Error fetching Stripe subscription:', error);
+        }
+      }
+    }
+
+    res.json({
+      hasSubscription: !!tenantData.stripeSubscriptionId,
+      hasCustomer: !!tenantData.stripeCustomerId,
+      currentPlan: tenantData.planLevel,
+      billingStatus: tenantData.billingStatus,
+      subscription: subscriptionDetails,
+      pendingPlanChange: tenantData.pendingPlanCode ? {
+        plan: tenantData.pendingPlanCode,
+        effectiveDate: tenantData.pendingPlanEffectiveDate
+      } : null,
+      canChangePlan: tenantData.lastPlanChangeAt ? 
+        (Date.now() - new Date(tenantData.lastPlanChangeAt).getTime()) > (30 * 24 * 60 * 60 * 1000) : 
+        true
+    });
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    res.status(500).json({ message: 'Failed to check subscription status' });
+  }
+});
+
 // Helper function to get active payment processor
 async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
   try {
@@ -97,7 +170,7 @@ router.post('/billing/portal', async (req: any, res) => {
   }
 });
 
-// Create checkout session for first-time upgrades
+// Create checkout session - handles both new and existing customers
 router.post('/billing/checkout', async (req: any, res) => {
   try {
     const { plan } = req.body;
@@ -111,9 +184,10 @@ router.post('/billing/checkout', async (req: any, res) => {
       return res.status(400).json({ message: 'Invalid plan' });
     }
 
-    // Check for abuse prevention - limit plan changes
+    // Get tenant information
     const tenant = await db.select({
       stripeCustomerId: tenants.stripeCustomerId,
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
       lastPlanChangeAt: tenants.lastPlanChangeAt,
       planLevel: tenants.planLevel
     })
@@ -125,7 +199,80 @@ router.post('/billing/checkout', async (req: any, res) => {
       return res.status(404).json({ message: 'Tenant not found' });
     }
 
-    // Check if plan change is too recent (within 30 days)
+    // Get active payment processor
+    const { provider, credentials } = await getActivePaymentProcessor();
+    
+    if (!provider || provider !== 'stripe') {
+      return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
+    }
+
+    const Stripe = require('stripe');
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+
+    // If tenant already has an active subscription, use the change-plan logic instead
+    if (tenant[0].stripeSubscriptionId) {
+      try {
+        // Retrieve existing subscription
+        const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+        
+        if (subscription && subscription.status === 'active') {
+          // Redirect to change-plan endpoint logic
+          const priceIds: Record<string, string | undefined> = {
+            'core': process.env.STRIPE_PRICE_CORE,
+            'growth': process.env.STRIPE_PRICE_GROWTH,
+            'elite': process.env.STRIPE_PRICE_ELITE
+          };
+
+          const newPriceId = priceIds[plan];
+          if (!newPriceId) {
+            return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
+          }
+
+          // Update subscription directly
+          const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+            items: [{
+              id: subscription.items.data[0].id,
+              price: newPriceId,
+            }],
+            proration_behavior: 'none',
+            billing_cycle_anchor: 'unchanged',
+            metadata: {
+              tenantId: currentUser.tenantId,
+              plan
+            }
+          });
+
+          // Update tenant plan immediately
+          await db.update(tenants)
+            .set({ 
+              planLevel: plan as any,
+              lastPlanChangeAt: new Date(),
+              planChangeReason: 'upgrade'
+            })
+            .where(eq(tenants.id, currentUser.tenantId));
+
+          // Clear feature flag cache
+          await clearCapabilitiesCache(currentUser.tenantId);
+
+          return res.json({ 
+            success: true,
+            message: 'Plan updated successfully',
+            subscription: {
+              id: updatedSubscription.id,
+              status: updatedSubscription.status,
+              plan
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error checking existing subscription:', error);
+        // Fall through to create new checkout session
+      }
+    }
+    
+    // For new subscriptions or if existing subscription check failed, create checkout session
+    
+    // Check if plan change is too recent (within 30 days) for new subscriptions
     if (tenant[0].lastPlanChangeAt) {
       const daysSinceLastChange = Math.floor((Date.now() - new Date(tenant[0].lastPlanChangeAt).getTime()) / (1000 * 60 * 60 * 24));
       if (daysSinceLastChange < 30) {
@@ -134,16 +281,6 @@ router.post('/billing/checkout', async (req: any, res) => {
         });
       }
     }
-
-    // Get active payment processor
-    const { provider, credentials } = await getActivePaymentProcessor();
-    
-    if (!provider || provider !== 'stripe') {
-      return res.status(400).json({ message: 'Stripe payment processor required' });
-    }
-
-    const Stripe = require('stripe');
-    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
     
     let customerId = tenant[0].stripeCustomerId;
 
@@ -212,6 +349,141 @@ router.post('/billing/checkout', async (req: any, res) => {
   } catch (error) {
     console.error('Error creating checkout session:', error);
     res.status(500).json({ message: 'Failed to create checkout session' });
+  }
+});
+
+// Change plan for existing subscribers (upgrade or change)
+router.post('/billing/change-plan', async (req: any, res) => {
+  try {
+    const { plan } = req.body;
+    const currentUser = req.currentUser;
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    // Get tenant information
+    const tenant = await db.select({
+      stripeSubscriptionId: tenants.stripeSubscriptionId,
+      planLevel: tenants.planLevel,
+      lastPlanChangeAt: tenants.lastPlanChangeAt
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    if (!tenant.length) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    if (!tenant[0].stripeSubscriptionId) {
+      return res.status(400).json({ 
+        message: 'No active subscription found. Please use the checkout flow to create a new subscription.' 
+      });
+    }
+
+    // Check if plan change is too recent (within 30 days)
+    if (tenant[0].lastPlanChangeAt) {
+      const daysSinceLastChange = Math.floor((Date.now() - new Date(tenant[0].lastPlanChangeAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceLastChange < 30) {
+        return res.status(400).json({ 
+          message: `Plan changes are limited to once per billing cycle. You can change your plan again in ${30 - daysSinceLastChange} days.` 
+        });
+      }
+    }
+
+    const { provider, credentials } = await getActivePaymentProcessor();
+    if (!provider || provider !== 'stripe') {
+      return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
+    }
+
+    const Stripe = require('stripe');
+    const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' });
+
+    // Get the new price ID
+    const priceIds: Record<string, string | undefined> = {
+      'core': process.env.STRIPE_PRICE_CORE,
+      'growth': process.env.STRIPE_PRICE_GROWTH,
+      'elite': process.env.STRIPE_PRICE_ELITE
+    };
+
+    const newPriceId = priceIds[plan];
+    if (!newPriceId) {
+      return res.status(400).json({ message: `Price ID not configured for plan: ${plan}` });
+    }
+
+    try {
+      // Get the subscription
+      const subscription = await stripe.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
+
+      if (!subscription || subscription.status !== 'active') {
+        return res.status(400).json({ 
+          message: 'Subscription is not active. Please contact support.' 
+        });
+      }
+
+      // Update subscription with new price - no proration, keep same billing cycle
+      const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+        items: [{
+          id: subscription.items.data[0].id,
+          price: newPriceId,
+        }],
+        proration_behavior: 'none',
+        billing_cycle_anchor: 'unchanged',
+        metadata: {
+          tenantId: currentUser.tenantId,
+          plan
+        }
+      });
+
+      // Update tenant plan immediately
+      await db.update(tenants)
+        .set({ 
+          planLevel: plan as any,
+          lastPlanChangeAt: new Date(),
+          planChangeReason: tenant[0].planLevel < plan ? 'upgrade' : 'change'
+        })
+        .where(eq(tenants.id, currentUser.tenantId));
+
+      // Clear feature flag cache
+      await clearCapabilitiesCache(currentUser.tenantId);
+
+      res.json({ 
+        success: true,
+        message: `Plan ${tenant[0].planLevel < plan ? 'upgraded' : 'changed'} successfully`,
+        subscription: {
+          id: updatedSubscription.id,
+          status: updatedSubscription.status,
+          plan,
+          currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString()
+        }
+      });
+    } catch (error: any) {
+      console.error('Error updating subscription:', error);
+      
+      if (error.code === 'resource_missing') {
+        // Subscription doesn't exist in Stripe
+        await db.update(tenants)
+          .set({ 
+            stripeSubscriptionId: null,
+            billingStatus: 'none'
+          })
+          .where(eq(tenants.id, currentUser.tenantId));
+        
+        return res.status(400).json({ 
+          message: 'Subscription not found. Please create a new subscription.' 
+        });
+      }
+      
+      res.status(500).json({ message: 'Failed to update subscription plan' });
+    }
+  } catch (error) {
+    console.error('Error changing subscription plan:', error);
+    res.status(500).json({ message: 'Failed to change subscription plan' });
   }
 });
 

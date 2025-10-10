@@ -38,6 +38,7 @@ import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
+import billingRouter from './billing-routes';
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
