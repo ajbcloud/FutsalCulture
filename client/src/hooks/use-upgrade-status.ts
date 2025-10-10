@@ -78,7 +78,8 @@ export function useUpgradeStatus() {
       pollCount++;
       
       try {
-        // Invalidate and refetch subscription info
+        // Invalidate and refetch subscription info - INCLUDE SINGLE SOURCE OF TRUTH
+        await queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] }); // Single source of truth
         await queryClient.invalidateQueries({ queryKey: ['/api/admin/subscription-info'] });
         await queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan-features'] });
         await queryClient.invalidateQueries({ queryKey: ['/api/tenant/capabilities'] });

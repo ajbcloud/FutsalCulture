@@ -471,7 +471,8 @@ function PlanAndFeaturesContent() {
     );
   }
 
-  const currentPlan = tenantPlan?.planId || planFeatures?.planLevel || 'free';
+  // SINGLE SOURCE OF TRUTH: Use only tenantPlan from /api/tenant/info
+  const currentPlan = tenantPlan?.planId || 'free';
   const plan = getPlan(currentPlan) || getPlan('free')!;
   const planDisplayName = plan.name;
   const planPrice = plan.price;
@@ -598,7 +599,8 @@ export default function AdminSettings() {
     const plan = urlParams.get('plan');
     
     if (success === 'true') {
-      // Invalidate plan cache to show updated plan immediately
+      // Invalidate plan cache to show updated plan immediately - INCLUDE SINGLE SOURCE OF TRUTH
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] }); // Single source of truth
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/plan-features'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/subscription-info'] });
