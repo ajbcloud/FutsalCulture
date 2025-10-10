@@ -26,8 +26,8 @@ export default function Checkout() {
 
   // Create checkout session mutation for new sessions
   const createCheckoutMutation = useMutation({
-    mutationFn: async (plan: string) => {
-      const res = await apiRequest('POST', '/api/billing/checkout', { plan });
+    mutationFn: async ({ plan, discountCode }: { plan: string; discountCode?: string }) => {
+      const res = await apiRequest('POST', '/api/billing/checkout', { plan, discountCode });
       return res.json();
     },
     onSuccess: (data) => {
@@ -89,7 +89,9 @@ export default function Checkout() {
     }
     // If plan specified, create new checkout session
     else if (planKey) {
-      createCheckoutMutation.mutate(planKey);
+      // Get discount code from URL if present
+      const discountCode = searchParams.get('discount_code') || undefined;
+      createCheckoutMutation.mutate({ plan: planKey, discountCode });
     }
     // If session_id provided, reconstruct the URL
     else if (sessionId) {

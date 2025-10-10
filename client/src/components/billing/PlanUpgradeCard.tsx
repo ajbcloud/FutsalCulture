@@ -1,7 +1,8 @@
-import { Check, X, Crown, Rocket, Sparkles } from 'lucide-react';
+import { Check, X, Crown, Rocket, Sparkles, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useTenantPlan } from '@/hooks/useTenantPlan';
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -130,6 +131,8 @@ export function PlanUpgradeCard({
   const [location, navigate] = useLocation();
   const { data: tenantPlanData } = useTenantPlan();
   const [isLoading, setIsLoading] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [showDiscountInput, setShowDiscountInput] = useState(false);
 
   const currentPlan = tenantPlanData?.planId || 'free';
   const hasActiveSubscription = tenantPlanData?.billingStatus === 'active';
@@ -150,7 +153,11 @@ export function PlanUpgradeCard({
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/billing/checkout', { plan: planKey });
+      const body: any = { plan: planKey };
+      if (discountCode) {
+        body.discountCode = discountCode;
+      }
+      const res = await apiRequest('POST', '/api/billing/checkout', body);
       const data = await res.json();
       
       // If checkout returns success:true with no URL, it means the plan was updated directly
@@ -164,7 +171,8 @@ export function PlanUpgradeCard({
       if (data.url) {
         // Redirect to embedded checkout page with session URL
         const encodedUrl = encodeURIComponent(data.url);
-        navigate(`/checkout?session_url=${encodedUrl}`);
+        const discountParam = discountCode ? `&discount_code=${encodeURIComponent(discountCode)}` : '';
+        navigate(`/checkout?session_url=${encodedUrl}${discountParam}`);
       } else if (data.success) {
         // Plan was updated directly (for existing subscriptions)
         toast({
@@ -303,6 +311,31 @@ export function PlanUpgradeCard({
               </div>
             ))}
           </div>
+
+          {!isCurrentPlan && isUpgrade && (
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscountInput(!showDiscountInput)}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                data-testid="button-toggle-discount-code"
+              >
+                <Tag className="h-3 w-3" />
+                Have a discount code?
+              </button>
+              
+              {showDiscountInput && (
+                <Input
+                  type="text"
+                  placeholder="Enter discount code"
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                  className="w-full"
+                  data-testid="input-discount-code"
+                />
+              )}
+            </div>
+          )}
 
           {!isCurrentPlan && (
             <Button

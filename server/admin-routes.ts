@@ -2852,7 +2852,64 @@ export async function setupAdminRoutes(app: any) {
         ...req.body,
         createdBy: adminUserId,
       };
-      const code = await storage.createDiscountCode(discountData);
+      
+      // Create Stripe coupon if Stripe is configured
+      let stripeCouponId: string | undefined;
+      let stripePromotionCodeId: string | undefined;
+      
+      if (process.env.STRIPE_SECRET_KEY) {
+        try {
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+          
+          // Create Stripe coupon based on discount type
+          const couponParams: Stripe.CouponCreateParams = {
+            name: discountData.code,
+            duration: 'forever',
+          };
+          
+          if (discountData.discountType === 'percentage') {
+            couponParams.percent_off = discountData.discountValue;
+          } else if (discountData.discountType === 'fixed') {
+            couponParams.amount_off = discountData.discountValue;
+            couponParams.currency = 'usd';
+          } else if (discountData.discountType === 'full') {
+            couponParams.percent_off = 100;
+          }
+          
+          if (discountData.validUntil) {
+            couponParams.redeem_by = Math.floor(new Date(discountData.validUntil).getTime() / 1000);
+          }
+          
+          if (discountData.maxUses) {
+            couponParams.max_redemptions = discountData.maxUses;
+          }
+          
+          const coupon = await stripe.coupons.create(couponParams);
+          stripeCouponId = coupon.id;
+          
+          // Create promotion code
+          const promotionCode = await stripe.promotionCodes.create({
+            coupon: coupon.id,
+            code: discountData.code,
+            active: discountData.isActive ?? true,
+          });
+          stripePromotionCodeId = promotionCode.id;
+          
+          console.log(`✅ Created Stripe coupon ${stripeCouponId} and promotion code ${stripePromotionCodeId}`);
+        } catch (stripeError) {
+          console.error('Error creating Stripe coupon:', stripeError);
+          // Continue without Stripe integration if it fails
+        }
+      }
+      
+      // Add Stripe IDs to discount data
+      const fullDiscountData = {
+        ...discountData,
+        stripeCouponId,
+        stripePromotionCodeId,
+      };
+      
+      const code = await storage.createDiscountCode(fullDiscountData);
       res.json(code);
     } catch (error) {
       console.error("Error creating discount code:", error);
@@ -2863,7 +2920,96 @@ export async function setupAdminRoutes(app: any) {
   app.put('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const code = await storage.updateDiscountCode(id, req.body);
+      
+      // Get existing discount code
+      const existingCode = await storage.getDiscountCode(id);
+      
+      if (!existingCode) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+      
+      // Check if discount parameters changed (requires recreating Stripe coupon)
+      const discountParamsChanged = 
+        ('discountType' in req.body && req.body.discountType !== existingCode.discountType) ||
+        ('discountValue' in req.body && req.body.discountValue !== existingCode.discountValue) ||
+        ('code' in req.body && req.body.code !== existingCode.code) ||
+        ('validUntil' in req.body && req.body.validUntil !== existingCode.validUntil?.toISOString()) ||
+        ('maxUses' in req.body && req.body.maxUses !== existingCode.maxUses);
+      
+      let updateData = { ...req.body };
+      
+      if (process.env.STRIPE_SECRET_KEY) {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+        
+        try {
+          // If discount parameters changed, recreate the Stripe coupon and promotion code
+          if (discountParamsChanged && existingCode.stripeCouponId) {
+            console.log('⚠️ Discount parameters changed, recreating Stripe coupon...');
+            
+            // Delete old coupon (which also deletes associated promotion codes)
+            await stripe.coupons.del(existingCode.stripeCouponId);
+            console.log(`✅ Deleted old Stripe coupon ${existingCode.stripeCouponId}`);
+            
+            // Create new coupon with updated parameters
+            const newCode = req.body.code || existingCode.code;
+            const newDiscountType = req.body.discountType || existingCode.discountType;
+            const newDiscountValue = req.body.discountValue ?? existingCode.discountValue;
+            const newValidUntil = req.body.validUntil || existingCode.validUntil;
+            const newMaxUses = req.body.maxUses ?? existingCode.maxUses;
+            const newIsActive = req.body.isActive ?? existingCode.isActive;
+            
+            const couponParams: Stripe.CouponCreateParams = {
+              name: newCode,
+              duration: 'forever',
+            };
+            
+            if (newDiscountType === 'percentage') {
+              couponParams.percent_off = newDiscountValue;
+            } else if (newDiscountType === 'fixed') {
+              couponParams.amount_off = newDiscountValue;
+              couponParams.currency = 'usd';
+            } else if (newDiscountType === 'full') {
+              couponParams.percent_off = 100;
+            }
+            
+            if (newValidUntil) {
+              couponParams.redeem_by = Math.floor(new Date(newValidUntil).getTime() / 1000);
+            }
+            
+            if (newMaxUses) {
+              couponParams.max_redemptions = newMaxUses;
+            }
+            
+            const coupon = await stripe.coupons.create(couponParams);
+            
+            // Create new promotion code
+            const promotionCode = await stripe.promotionCodes.create({
+              coupon: coupon.id,
+              code: newCode,
+              active: newIsActive,
+            });
+            
+            // Update with new Stripe IDs
+            updateData.stripeCouponId = coupon.id;
+            updateData.stripePromotionCodeId = promotionCode.id;
+            
+            console.log(`✅ Created new Stripe coupon ${coupon.id} and promotion code ${promotionCode.id}`);
+          } 
+          // If only active status changed, just update the promotion code
+          else if ('isActive' in req.body && existingCode.stripePromotionCodeId) {
+            await stripe.promotionCodes.update(existingCode.stripePromotionCodeId, {
+              active: req.body.isActive,
+            });
+            console.log(`✅ Updated Stripe promotion code ${existingCode.stripePromotionCodeId} active status to ${req.body.isActive}`);
+          }
+        } catch (stripeError) {
+          console.error('Error updating Stripe coupon/promotion code:', stripeError);
+          // Continue with update even if Stripe fails
+          // TODO: Consider notifying admin of sync failure
+        }
+      }
+      
+      const code = await storage.updateDiscountCode(id, updateData);
       res.json(code);
     } catch (error) {
       console.error("Error updating discount code:", error);
@@ -2874,6 +3020,24 @@ export async function setupAdminRoutes(app: any) {
   app.delete('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      
+      // Get the discount code to retrieve Stripe IDs
+      const discountCode = await storage.getDiscountCode(id);
+      
+      if (discountCode && process.env.STRIPE_SECRET_KEY) {
+        // Delete Stripe coupon if it exists
+        if (discountCode.stripeCouponId) {
+          try {
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+            await stripe.coupons.del(discountCode.stripeCouponId);
+            console.log(`✅ Deleted Stripe coupon ${discountCode.stripeCouponId}`);
+          } catch (stripeError) {
+            console.error('Error deleting Stripe coupon:', stripeError);
+            // Continue with deletion even if Stripe fails
+          }
+        }
+      }
+      
       await storage.deleteDiscountCode(id);
       res.json({ message: "Discount code deleted successfully" });
     } catch (error) {

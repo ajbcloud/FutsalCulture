@@ -203,7 +203,7 @@ router.post('/billing/checkout', async (req: any, res) => {
     console.log('VITE_STRIPE_PUBLIC_KEY exists:', !!process.env.VITE_STRIPE_PUBLIC_KEY);
     console.log('STRIPE_PUBLISHABLE_KEY exists:', !!process.env.STRIPE_PUBLISHABLE_KEY);
     
-    const { plan } = req.body;
+    const { plan, discountCode } = req.body;
     const currentUser = req.currentUser;
     
     if (!currentUser?.tenantId) {
@@ -368,7 +368,8 @@ router.post('/billing/checkout', async (req: any, res) => {
       plan
     });
 
-    const session = await stripeClient.checkout.sessions.create({
+    // Build session parameters
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
@@ -392,7 +393,30 @@ router.post('/billing/checkout', async (req: any, res) => {
         plan,
         userEmail: currentUser.email,
       },
-    });
+    };
+
+    // Apply discount code if provided
+    if (discountCode) {
+      try {
+        const promotionCodes = await stripeClient.promotionCodes.list({
+          code: discountCode,
+          active: true,
+          limit: 1,
+        });
+
+        if (promotionCodes.data.length > 0) {
+          sessionParams.discounts = [{ promotion_code: promotionCodes.data[0].id }];
+          console.log(`✅ Applied promotion code: ${discountCode} (${promotionCodes.data[0].id})`);
+        } else {
+          console.log(`⚠️ Promotion code ${discountCode} not found or inactive`);
+        }
+      } catch (error) {
+        console.error('Error applying promotion code:', error);
+        // Continue checkout without discount if code lookup fails
+      }
+    }
+
+    const session = await stripeClient.checkout.sessions.create(sessionParams);
 
     res.json({ 
       url: session.url,
