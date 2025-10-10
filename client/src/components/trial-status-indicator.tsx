@@ -4,10 +4,10 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, ChevronRight, Zap } from 'lucide-react';
+import { Clock, ChevronRight, Zap, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrialExtensionModal } from '@/components/trial-extension-modal';
-import { formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from 'date-fns';
+import { formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes, isToday, startOfDay } from 'date-fns';
 import { PlanUpgradeButtons } from './plan-upgrade-buttons';
 
 interface TrialStatus {
@@ -23,10 +23,14 @@ interface TrialStatus {
   billingStatus: string;
 }
 
+const DISMISS_KEY = 'trial-indicator-dismissed';
+const DISMISS_DATE_KEY = 'trial-indicator-dismiss-date';
+
 export function TrialStatusIndicator() {
   const { user } = useAuth();
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [countdownKey, setCountdownKey] = useState(0);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   // Fetch trial status
   const { data: trialStatus, isLoading, error } = useQuery<TrialStatus>({
@@ -34,6 +38,38 @@ export function TrialStatusIndicator() {
     enabled: !!user?.tenantId,
     refetchInterval: 60000, // Refetch every minute to update countdown
   });
+
+  // Check if indicator should be shown based on dismiss state
+  useEffect(() => {
+    const dismissedAt = localStorage.getItem(DISMISS_KEY);
+    const dismissedDate = localStorage.getItem(DISMISS_DATE_KEY);
+
+    if (!dismissedAt || !dismissedDate) {
+      setIsDismissed(false);
+      return;
+    }
+
+    const dismissTime = new Date(dismissedAt);
+    const dismissDateObj = new Date(dismissedDate);
+    const now = new Date();
+
+    // Calculate hours since dismiss
+    const hoursSinceDismiss = (now.getTime() - dismissTime.getTime()) / (1000 * 60 * 60);
+
+    // Show if:
+    // 1. It's been 12+ hours since dismiss
+    // 2. OR it's a new day (not the same calendar day as when dismissed)
+    const shouldShow = hoursSinceDismiss >= 12 || !isToday(dismissDateObj);
+
+    if (shouldShow) {
+      // Clear dismiss state and show indicator
+      localStorage.removeItem(DISMISS_KEY);
+      localStorage.removeItem(DISMISS_DATE_KEY);
+      setIsDismissed(false);
+    } else {
+      setIsDismissed(true);
+    }
+  }, [countdownKey]); // Re-check on countdown updates
 
   // Force re-render every minute for countdown updates
   useEffect(() => {
@@ -44,8 +80,15 @@ export function TrialStatusIndicator() {
     return () => clearInterval(interval);
   }, []);
 
-  // Don't show if not in trial or loading
-  if (isLoading || !trialStatus || 
+  const handleDismiss = () => {
+    const now = new Date();
+    localStorage.setItem(DISMISS_KEY, now.toISOString());
+    localStorage.setItem(DISMISS_DATE_KEY, startOfDay(now).toISOString());
+    setIsDismissed(true);
+  };
+
+  // Don't show if dismissed, not in trial, or loading
+  if (isLoading || isDismissed || !trialStatus || 
       (trialStatus.billingStatus !== 'trialing' && 
        trialStatus.billingStatus !== 'trial' && 
        trialStatus.status !== 'grace')) {
@@ -88,7 +131,7 @@ export function TrialStatusIndicator() {
     }
   };
 
-  const getBadgeVariant = () => {
+  const getBadgeVariant = (): "default" | "destructive" | "outline" | "secondary" | "disabled" | "success" | "warning" | "info" => {
     // Always use default variant to maintain brand blue consistency
     return 'default';
   };
@@ -112,8 +155,17 @@ export function TrialStatusIndicator() {
   return (
     <>
       <div className="space-y-2" data-testid="trial-status-indicator">
-        <div className={`rounded-lg border p-3 ${getColorClasses()}`}>
-          <div className="flex items-center gap-2 mb-2">
+        <div className={`rounded-lg border p-3 relative ${getColorClasses()}`}>
+          <button
+            onClick={handleDismiss}
+            className="absolute top-2 right-2 p-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+            aria-label="Close trial indicator"
+            data-testid="button-close-trial-indicator"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-2 mb-2 pr-6">
             <Clock className="w-4 h-4" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 mb-1">
