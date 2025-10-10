@@ -83,18 +83,27 @@ router.get('/billing/check-subscription', async (req: any, res) => {
 // Helper function to get active payment processor
 async function getActivePaymentProcessor(): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
   try {
+    // DEBUG: Function entry
+    console.log('=== getActivePaymentProcessor DEBUG ===');
+    console.log('Checking environment variables...');
+    console.log('process.env.STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
+    console.log('process.env.STRIPE_SECRET_KEY value (first 10 chars):', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 10) + '...' : 'undefined');
+    
     // First, check for environment-based Stripe configuration
     // This ensures that if Stripe env vars are set, they take priority
     if (process.env.STRIPE_SECRET_KEY) {
       console.log('Using Stripe configuration from environment variables');
-      return {
-        provider: 'stripe',
+      const result = {
+        provider: 'stripe' as const,
         credentials: {
           secretKey: process.env.STRIPE_SECRET_KEY,
           publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY || process.env.STRIPE_PUBLISHABLE_KEY
         }
       };
+      console.log('Returning from getActivePaymentProcessor with provider:', result.provider);
+      return result;
     }
+    console.log('No STRIPE_SECRET_KEY found in environment, checking database...');
 
     // If no environment variables, check for enabled payment processors in database (Stripe or Braintree)
     const activeProcessor = await db.select()
@@ -188,6 +197,13 @@ router.post('/billing/portal', async (req: any, res) => {
 // Create checkout session - handles both new and existing customers
 router.post('/billing/checkout', async (req: any, res) => {
   try {
+    // DEBUG: Check if environment variables are available
+    console.log('=== CHECKOUT ENDPOINT DEBUG START ===');
+    console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY);
+    console.log('STRIPE_SECRET_KEY value (first 10 chars):', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 10) + '...' : 'undefined');
+    console.log('VITE_STRIPE_PUBLIC_KEY exists:', !!process.env.VITE_STRIPE_PUBLIC_KEY);
+    console.log('STRIPE_PUBLISHABLE_KEY exists:', !!process.env.STRIPE_PUBLISHABLE_KEY);
+    
     const { plan } = req.body;
     const currentUser = req.currentUser;
     
@@ -214,10 +230,23 @@ router.post('/billing/checkout', async (req: any, res) => {
       return res.status(404).json({ message: 'Tenant not found' });
     }
 
+    // DEBUG: Before calling getActivePaymentProcessor
+    console.log('About to call getActivePaymentProcessor...');
+    
     // Get active payment processor
     const { provider, credentials } = await getActivePaymentProcessor();
     
+    // DEBUG: After calling getActivePaymentProcessor
+    console.log('getActivePaymentProcessor returned:');
+    console.log('- provider:', provider);
+    console.log('- credentials.secretKey exists:', !!credentials?.secretKey);
+    console.log('- credentials.publishableKey exists:', !!credentials?.publishableKey);
+    
     if (!provider || provider !== 'stripe') {
+      console.log('ERROR: Payment processor check failed!');
+      console.log('- provider value:', provider);
+      console.log('- provider !== "stripe":', provider !== 'stripe');
+      console.log('=== CHECKOUT ENDPOINT DEBUG END (ERROR) ===');
       return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
     }
 
