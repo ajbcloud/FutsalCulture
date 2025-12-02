@@ -2752,7 +2752,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const household = await storage.createHousehold(validatedData);
-      res.status(201).json(household);
+      
+      // Automatically add the creating user as a primary member
+      await storage.addHouseholdMember(household.id, tenantId, {
+        userId: req.user.id,
+        playerId: null,
+        role: 'primary',
+        addedBy: req.user.id,
+      });
+      
+      // Return the household with members included
+      const householdWithMembers = await storage.getHousehold(household.id, tenantId);
+      res.status(201).json(householdWithMembers);
     } catch (error) {
       console.error("Error creating household:", error);
       if (error instanceof z.ZodError) {
