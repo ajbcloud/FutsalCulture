@@ -522,6 +522,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant age policy endpoint - accessible by any authenticated user
+  app.get('/api/tenant/age-policy', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+
+      const { systemSettings } = await import('@shared/schema');
+      const { and, eq } = await import('drizzle-orm');
+
+      // Get age policy settings from system settings
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(and(
+          eq(systemSettings.tenantId, tenantId),
+          sql`${systemSettings.key} IN ('audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent')`
+        ));
+
+      const policyData = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse boolean values explicitly for requireConsent and enforceAgeGating
+        if (setting.key === 'requireConsent' || setting.key === 'enforceAgeGating') {
+          value = value === 'true' || value === true || value === '1' || value === 1;
+        } else if (value === 'true' || value === '1') {
+          value = true;
+        } else if (value === 'false' || value === '0') {
+          value = false;
+        } else if (!isNaN(Number(value)) && setting.key !== 'audience') {
+          value = Number(value);
+        }
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Set defaults if no settings exist - consent forms enabled by default
+      const defaultPolicy = {
+        audience: "youth",
+        minAge: 5,
+        maxAge: 18,
+        requireParent: 13,
+        teenSelfMin: 13,
+        teenPayMin: 16,
+        enforceAgeGating: true,
+        requireConsent: true,
+        ...policyData
+      };
+
+      res.json(defaultPolicy);
+    } catch (error) {
+      console.error('Error fetching age policy:', error);
+      res.status(500).json({ error: 'Failed to fetch age policy' });
+    }
+  });
+
   // Session routes
   app.get('/api/sessions', async (req: any, res) => {
     try {
@@ -1086,7 +1142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/parent2-invite/accept/:token', async (req, res) => {
     try {
       const { token } = req.params;
-      const { firstName, lastName, email, phone } = req.body;
+      const { firstName, lastName, email, phone, consentSignatures } = req.body;
 
       // Decode token (simplified - in production use JWT verification)
       let parent1Id: string;
@@ -1111,10 +1167,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         phone,
+        tenantId: parent1.tenantId, // Inherit tenant from parent1
       });
 
       // Update all players belonging to parent 1 to include parent 2
       await storage.updatePlayersParent2(parent1Id, parent2.id);
+
+      // Process consent signatures if provided
+      if (consentSignatures && Array.isArray(consentSignatures) && consentSignatures.length > 0) {
+        try {
+          const { signedConsentDocuments, consentTemplates } = await import('@shared/schema');
+          const { db } = await import('./db');
+          
+          // Get players for this household to associate consent
+          const players = await storage.getPlayersByParent(parent1Id);
+          
+          for (const sig of consentSignatures) {
+            // For each consent signature, record it for the parent
+            await db.insert(signedConsentDocuments).values({
+              id: `consent_${parent2.id}_${sig.templateType}_${Date.now()}`,
+              tenantId: parent1.tenantId || 'default',
+              playerId: players[0]?.id || null, // Associate with first player if available
+              parentId: parent2.id,
+              templateId: sig.templateId,
+              templateType: sig.templateType,
+              version: 1,
+              signatureData: JSON.stringify(sig.signatureData),
+              signedAt: new Date(sig.signedAt || Date.now()),
+            }).onConflictDoNothing();
+          }
+        } catch (consentError) {
+          console.error('Error recording consent signatures:', consentError);
+          // Don't fail the entire request if consent recording fails
+        }
+      }
 
       res.json({ 
         success: true, 

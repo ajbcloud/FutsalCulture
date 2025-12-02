@@ -13,9 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User } from "lucide-react";
+import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck } from "lucide-react";
 import { Link } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
+import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
+
+type AgePolicy = {
+  requireConsent: boolean | string | number;
+};
 
 type HouseholdMember = HouseholdMemberSelect & {
   user?: {
@@ -58,6 +63,8 @@ export default function HouseholdManagement() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<{ memberId: string; memberName: string } | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [pendingPlayerToAdd, setPendingPlayerToAdd] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
 
   // Fetch all households and find user's household
   const { data: households = [], isLoading: householdsLoading } = useQuery<HouseholdWithMembers[]>({
@@ -89,6 +96,19 @@ export default function HouseholdManagement() {
     queryKey: ["/api/credits/history"],
     enabled: isAuthenticated,
   });
+
+  // Fetch age policy to check if consent forms are required (uses tenant endpoint, not admin)
+  const { data: agePolicyData } = useQuery<AgePolicy>({
+    queryKey: ["/api/tenant/age-policy"],
+    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
+    enabled: isAuthenticated,
+  });
+
+  // Check if consent forms are required (handle all possible truthy values)
+  const isConsentRequired = agePolicyData?.requireConsent === true || 
+                            agePolicyData?.requireConsent === 'true' || 
+                            agePolicyData?.requireConsent === 1 || 
+                            agePolicyData?.requireConsent === '1';
 
   // Calculate personal and household credit breakdown
   const personalCredits = (creditsHistoryData?.credits || [])
@@ -211,6 +231,31 @@ export default function HouseholdManagement() {
     },
   });
 
+  // Invite parent mutation
+  const inviteParentMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", "/api/parent2/invite", {
+        method: "email",
+        email,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      setInviteEmail("");
+      toast({
+        title: "Invitation Sent",
+        description: "An invitation has been sent to the email address provided.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateHousehold = () => {
     if (!householdName.trim()) {
       toast({
@@ -232,10 +277,74 @@ export default function HouseholdManagement() {
       });
       return;
     }
+    
+    // Find the selected player details for consent form
+    const selectedPlayer = userPlayers.find(p => p.id === selectedPlayerId);
+    if (!selectedPlayer) return;
+    
+    // If consent forms are required, show consent modal first
+    if (isConsentRequired) {
+      setPendingPlayerToAdd(selectedPlayer);
+      setShowConsentModal(true);
+      return;
+    }
+    
+    // Otherwise, add player directly
     addMemberMutation.mutate({ 
       householdId: userHousehold.id, 
       playerId: selectedPlayerId 
     });
+  };
+
+  const handleConsentComplete = (signedDocuments: any[]) => {
+    // Consent forms signed, now add the player to household
+    if (!pendingPlayerToAdd || !userHousehold) {
+      toast({
+        title: "Error",
+        description: "No player selected to add",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    addMemberMutation.mutate({ 
+      householdId: userHousehold.id, 
+      playerId: pendingPlayerToAdd.id 
+    });
+    
+    // Close modal and clear pending player
+    setShowConsentModal(false);
+    setPendingPlayerToAdd(null);
+    setSelectedPlayerId("");
+  };
+
+  const handleConsentClose = () => {
+    setShowConsentModal(false);
+    setPendingPlayerToAdd(null);
+  };
+
+  const handleInviteParent = () => {
+    if (!inviteEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    inviteParentMutation.mutate(inviteEmail);
   };
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
@@ -486,9 +595,45 @@ export default function HouseholdManagement() {
                 )}
 
                 <div className="pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Note: Inviting other adults is coming soon!
-                  </p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4" />
+                      <h4 className="font-medium">Invite Another Adult</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Invite a spouse, partner, or co-parent to help manage household activities.
+                      {isConsentRequired && (
+                        <span className="flex items-center gap-1 mt-1 text-amber-600 dark:text-amber-400">
+                          <FileCheck className="w-3 h-3" />
+                          They will need to sign consent forms when they join.
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex-1">
+                        <Label htmlFor="invite-email">Email Address</Label>
+                        <Input
+                          id="invite-email"
+                          type="email"
+                          placeholder="partner@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          data-testid="input-invite-email"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          onClick={handleInviteParent}
+                          disabled={!inviteEmail.trim() || inviteParentMutation.isPending}
+                          variant="outline"
+                          data-testid="button-invite-parent"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          {inviteParentMutation.isPending ? "Sending..." : "Send Invite"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -588,6 +733,27 @@ export default function HouseholdManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Consent Form Modal for adding players to household */}
+        {showConsentModal && pendingPlayerToAdd && (
+          <ConsentDocumentModal
+            isOpen={showConsentModal}
+            onClose={handleConsentClose}
+            onComplete={handleConsentComplete}
+            isParentSigning={true}
+            playerData={{
+              id: pendingPlayerToAdd.id,
+              firstName: pendingPlayerToAdd.firstName,
+              lastName: pendingPlayerToAdd.lastName,
+              birthDate: '',
+            }}
+            parentData={user ? {
+              id: user.id,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+            } : undefined}
+          />
+        )}
       </div>
     </div>
   );

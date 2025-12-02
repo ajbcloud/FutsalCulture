@@ -2389,7 +2389,7 @@ export async function setupAdminRoutes(app: any) {
         return acc;
       }, {} as any);
 
-      // Set defaults if no settings exist
+      // Set defaults if no settings exist - consent forms enabled by default
       const defaultPolicy = {
         audience: "youth",
         minAge: 5,
@@ -2398,7 +2398,7 @@ export async function setupAdminRoutes(app: any) {
         teenSelfMin: 13,
         teenPayMin: 16,
         enforceAgeGating: true,
-        requireConsent: false,
+        requireConsent: true,
         ...policyData
       };
 

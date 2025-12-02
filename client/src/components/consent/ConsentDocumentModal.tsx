@@ -47,6 +47,7 @@ interface ConsentDocumentModalProps {
     lastName: string;
   };
   isParentSigning: boolean;
+  skipApiSubmit?: boolean; // When true, just collect signatures and return them without API call
 }
 
 interface SignatureData {
@@ -61,7 +62,8 @@ export default function ConsentDocumentModal({
   onComplete,
   playerData,
   parentData,
-  isParentSigning
+  isParentSigning,
+  skipApiSubmit = false
 }: ConsentDocumentModalProps) {
   const [templates, setTemplates] = useState<ConsentTemplate[]>([]);
   const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
@@ -72,6 +74,7 @@ export default function ConsentDocumentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSigning, setIsSigning] = useState(false);
   const [signedDocuments, setSignedDocuments] = useState<string[]>([]);
+  const [collectedSignatures, setCollectedSignatures] = useState<any[]>([]); // For skipApiSubmit mode
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -105,10 +108,12 @@ export default function ConsentDocumentModal({
       setIsLoading(true);
       setError(null);
       
-      const response = await apiRequest('/api/admin/consent-templates', {
-        method: 'GET'
-      });
-      const activeTemplates = response.filter((template: ConsentTemplate) => template.isRequired);
+      const response = await apiRequest('GET', '/api/admin/consent-templates');
+      if (!response.ok) {
+        throw new Error('Failed to fetch consent templates');
+      }
+      const data = await response.json();
+      const activeTemplates = data.filter((template: ConsentTemplate) => template.isRequired);
       
       if (activeTemplates.length === 0) {
         setError('No active consent templates found. Please contact support.');
@@ -239,7 +244,9 @@ export default function ConsentDocumentModal({
       const signaturePayload = {
         playerId: playerData.id,
         parentId: isParentSigning ? parentData?.id : undefined,
-        templateTypes: [currentTemplate.templateType],
+        templateType: currentTemplate.templateType,
+        templateId: currentTemplate.id,
+        templateTitle: currentTemplate.title,
         signatureData: {
           signedName: signatureData.signedName,
           signatureMethod: signatureData.signatureMethod,
@@ -249,30 +256,64 @@ export default function ConsentDocumentModal({
         signedAt: completionTimestamp
       };
 
-      const response = await apiRequest('POST', '/api/consent/sign', signaturePayload);
+      // In skipApiSubmit mode, just collect the signature without API call
+      if (skipApiSubmit) {
+        const newCollectedSignatures = [...collectedSignatures, signaturePayload];
+        setCollectedSignatures(newCollectedSignatures);
+        setSignedDocuments(prev => [...prev, currentTemplate.id]);
+        
+        toast({
+          title: 'Document signed',
+          description: `${currentTemplate.title} has been successfully signed.`
+        });
 
-      // Response is successful if no error is thrown
-      setSignedDocuments(prev => [...prev, currentTemplate.id]);
-      
-      toast({
-        title: 'Document signed',
-        description: `${currentTemplate.title} has been successfully signed.`
-      });
-
-      // Move to next document or complete
-      if (currentTemplateIndex < templates.length - 1) {
-        setCurrentTemplateIndex(prev => prev + 1);
-        // Reset signature for next document
-        setSignatureData(prev => ({
-          ...prev,
-          drawnSignature: undefined
-        }));
-        if (canvasRef.current) {
-          clearSignature();
+        // Move to next document or complete
+        if (currentTemplateIndex < templates.length - 1) {
+          setCurrentTemplateIndex(prev => prev + 1);
+          setSignatureData(prev => ({
+            ...prev,
+            drawnSignature: undefined
+          }));
+          if (canvasRef.current) {
+            clearSignature();
+          }
+        } else {
+          // All documents signed - return collected signatures
+          onComplete(newCollectedSignatures);
         }
       } else {
-        // All documents signed
-        onComplete(response || []);
+        // Normal mode - submit to API
+        const response = await apiRequest('POST', '/api/consent/sign', {
+          ...signaturePayload,
+          templateTypes: [currentTemplate.templateType]
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to sign document');
+        }
+        const responseData = await response.json();
+
+        setSignedDocuments(prev => [...prev, currentTemplate.id]);
+        
+        toast({
+          title: 'Document signed',
+          description: `${currentTemplate.title} has been successfully signed.`
+        });
+
+        // Move to next document or complete
+        if (currentTemplateIndex < templates.length - 1) {
+          setCurrentTemplateIndex(prev => prev + 1);
+          setSignatureData(prev => ({
+            ...prev,
+            drawnSignature: undefined
+          }));
+          if (canvasRef.current) {
+            clearSignature();
+          }
+        } else {
+          // All documents signed
+          onComplete(responseData || []);
+        }
       }
     } catch (error) {
       console.error('Error signing document:', error);
