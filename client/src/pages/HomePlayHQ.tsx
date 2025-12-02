@@ -2,6 +2,7 @@ import { PlanComparisonCards } from "@/components/billing/PlanComparisonCards";
 import { FeatureGrid } from "@/components/billing/FeatureGrid";
 import { BusinessBranding } from "@/components/business-branding";
 import { BusinessProvider } from "@/contexts/BusinessContext";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
 export default function HomePlayHQ() {
@@ -202,47 +203,91 @@ export default function HomePlayHQ() {
         <section className="bg-gray-50 dark:bg-gray-900 py-16">
           <div className="mx-auto max-w-4xl px-6">
             <h2 className="text-3xl font-bold text-center mb-12">Frequently asked questions</h2>
-            <div className="grid md:grid-cols-2 gap-8">
-              <FAQItem
-                question="How quickly can I get my club set up?"
-                answer="Most clubs are up and running within 15 minutes. Create your club, invite your first members, and start scheduling immediately. Our setup wizard guides you through every step."
-              />
-              <FAQItem
-                question="Does PlayHQ support all ages?"
-                answer="Absolutely! PlayHQ supports youth programs, adult leagues, and mixed-age clubs. Configure age groups, set age-appropriate permissions, and manage players from tots to seniors—all from one platform."
-              />
-              <FAQItem
-                question="How do I connect my Braintree account for payments?"
-                answer="In your Admin Settings, navigate to Integrations and select Payment Processing. Enter your Braintree Merchant ID, Public Key, and Private Key. Once connected, you can start accepting payments immediately with no additional setup required."
-              />
-              <FAQItem
-                question="Do you support other payment processors besides Braintree?"
-                answer="Currently, Braintree is our primary payment processor for its robust features and competitive rates. We're always expanding our integrations—submit a feature request through your dashboard and we'll prioritize based on demand."
-              />
-              <FAQItem
-                question="Is PlayHQ PCI compliant?"
-                answer="Yes! PlayHQ is fully PCI DSS compliant. We never store credit card numbers on our servers. All payment data is processed securely through Braintree's PCI Level 1 certified infrastructure, the highest level of payment security available."
-              />
-              <FAQItem
-                question="How does billing and pricing work?"
-                answer="Start free with up to 50 players. Upgrade anytime to Core ($99/mo), Growth ($199/mo), or Elite ($399/mo) to unlock more players, advanced features, and priority support. No long-term contracts—cancel anytime."
-              />
-              <FAQItem
-                question="Can parents and players access the system?"
-                answer="Absolutely. Invite parents and players with role-based permissions. Parents can view schedules, manage their children's bookings, and make payments. Players 13+ can have their own portal access with age-appropriate features."
-              />
-              <FAQItem
-                question="Is my data secure?"
-                answer="Security is built into everything we do. We use 256-bit SSL/TLS encryption for all data in transit, encrypted database storage, automated backups, and comply with GDPR and CCPA data protection standards. Your club's data is always protected."
-              />
-              <FAQItem
-                question="Can I migrate data from my current system?"
-                answer="Yes! Our Growth and Elite plans include CSV import tools to bring in your existing players, parents, and historical data. Need help with a complex migration? Our support team is here to assist."
-              />
-              <FAQItem
-                question="Do you support multiple sports?"
-                answer="Yes! PlayHQ works for soccer, futsal, basketball, volleyball, tennis, swimming, and many other sports. Configure team sizes, session types, seasons, and age groups for your specific sport's needs."
-              />
+            <div className="grid md:grid-cols-2 gap-6">
+              <Accordion type="single" collapsible className="space-y-2">
+                <AccordionItem value="setup" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    How quickly can I get my club set up?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Most clubs are up and running within 15 minutes. Create your club, invite your first members, and start scheduling immediately. Our setup wizard guides you through every step.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="braintree" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    How do I connect my Braintree account?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    In your Admin Settings, navigate to Integrations and select Payment Processing. Enter your Braintree Merchant ID, Public Key, and Private Key. Once connected, you can start accepting payments immediately with no additional setup required.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="pci" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Is PlayHQ PCI compliant?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Yes! PlayHQ is fully PCI DSS compliant. We never store credit card numbers on our servers. All payment data is processed securely through Braintree's PCI Level 1 certified infrastructure, the highest level of payment security available.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="parents" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Can parents and players access the system?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Absolutely. Invite parents and players with role-based permissions. Parents can view schedules, manage their children's bookings, and make payments. Players 13+ can have their own portal access with age-appropriate features.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="migration" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Can I migrate data from my current system?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Yes! Our Growth and Elite plans include CSV import tools to bring in your existing players, parents, and historical data. Need help with a complex migration? Our support team is here to assist.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+              <Accordion type="single" collapsible className="space-y-2">
+                <AccordionItem value="ages" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Does PlayHQ support all ages?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Absolutely! PlayHQ supports youth programs, adult leagues, and mixed-age clubs. Configure age groups, set age-appropriate permissions, and manage players from tots to seniors—all from one platform.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="processors" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Do you support other payment processors?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Currently, Braintree is our primary payment processor for its robust features and competitive rates. We're always expanding our integrations—submit a feature request through your dashboard and we'll prioritize based on demand.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="billing" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    How does billing and pricing work?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Start free with up to 50 players. Upgrade anytime to Core ($99/mo), Growth ($199/mo), or Elite ($399/mo) to unlock more players, advanced features, and priority support. No long-term contracts—cancel anytime.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="security" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Is my data secure?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Security is built into everything we do. We use 256-bit SSL/TLS encryption for all data in transit, encrypted database storage, automated backups, and comply with GDPR and CCPA data protection standards. Your club's data is always protected.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="sports" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
+                  <AccordionTrigger className="text-left font-semibold">
+                    Do you support multiple sports?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-gray-600 dark:text-gray-300">
+                    Yes! PlayHQ works for soccer, futsal, basketball, volleyball, tennis, swimming, and many other sports. Configure team sizes, session types, seasons, and age groups for your specific sport's needs.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </div>
         </section>
@@ -285,16 +330,6 @@ function FeatureCard({ title, description }: { title: string; description: strin
     <div className="p-6 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
       <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{title}</h3>
       <p className="text-gray-600 dark:text-gray-300">{description}</p>
-    </div>
-  );
-}
-
-
-function FAQItem({ question, answer }: { question: string; answer: string }) {
-  return (
-    <div>
-      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{question}</h3>
-      <p className="text-gray-600 dark:text-gray-300">{answer}</p>
     </div>
   );
 }
