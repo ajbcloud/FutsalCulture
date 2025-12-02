@@ -2310,14 +2310,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSuperAdminSettings(): Promise<any> {
-    // Mock platform settings for now
+    // Default: auto-approve tenants, Super Admin can toggle this
     return {
-      autoApproveTenants: false,
+      autoApproveTenants: true,
       enableMfaByDefault: true,
       defaultBookingWindowHours: 24,
       maxTenantsPerAdmin: 5,
       enableTenantSubdomains: true,
-      requireTenantApproval: true,
+      requireTenantApproval: false,
       defaultSessionCapacity: 15,
       platformMaintenanceMode: false,
     };

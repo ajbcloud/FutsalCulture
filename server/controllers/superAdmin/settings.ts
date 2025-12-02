@@ -13,8 +13,8 @@ const SettingsSchema = z.object({
 export async function get(req: Request, res: Response) {
   console.log(`Super Admin: settings retrieved by ${(req as any).user?.id || 'unknown'}`);
   res.json({
-    autoApproveTenants: false,
-    requireTenantApproval: true,
+    autoApproveTenants: true,
+    requireTenantApproval: false,
     defaultBookingWindowHours: 0,
     maxTenantsPerAdmin: 10,
     defaultSessionCapacity: 16,
