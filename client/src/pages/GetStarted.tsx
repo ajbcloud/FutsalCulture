@@ -326,20 +326,6 @@ export default function GetStarted() {
                 I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a> *
               </Label>
             </div>
-
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Prefer Google/Microsoft?
-              </p>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" asChild className="flex-1">
-                  <a href="/api/auth/google?intent=owner">Google</a>
-                </Button>
-                <Button type="button" variant="outline" size="sm" asChild className="flex-1">
-                  <a href="/api/auth/microsoft?intent=owner">Microsoft</a>
-                </Button>
-              </div>
-            </div>
           </form>
 
           <div className="mt-6 pt-4 border-t text-center">
