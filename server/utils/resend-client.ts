@@ -49,3 +49,7 @@ export async function isResendConfigured(): Promise<boolean> {
     return false;
   }
 }
+
+export function getResendFromEmail(): string {
+  return connectionSettings?.settings?.from_email || 'noreply@playhq.app';
+}

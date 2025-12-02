@@ -36,6 +36,7 @@ import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import unifiedInvitationRoutes from './routes/unified-invitations';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
+import { resendWebhookRouter } from './routes/resend-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
@@ -2910,8 +2911,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe webhook routes moved to top of function
+  // Webhook routes (SendGrid for SMS only, Resend for email)
   app.use('/api/webhooks', sendgridWebhookRouter);
+  app.use('/api/webhooks', resendWebhookRouter);
   app.use('/api/communications', communicationTestRouter);
 
   const httpServer = createServer(app);

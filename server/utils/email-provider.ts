@@ -174,3 +174,37 @@ export async function isEmailConfigured(): Promise<boolean> {
   const provider = await getEmailProvider();
   return provider.isConfigured();
 }
+
+export async function verifyEmailConfig(): Promise<{
+  configured: boolean;
+  provider: string;
+  fromEmail: string;
+  error?: string;
+}> {
+  try {
+    const { getResendClient, isResendConfigured, getResendFromEmail } = await import('./resend-client');
+    
+    if (await isResendConfigured()) {
+      const fromEmail = getResendFromEmail();
+      return {
+        configured: true,
+        provider: 'Resend',
+        fromEmail
+      };
+    }
+
+    return {
+      configured: false,
+      provider: 'none',
+      fromEmail: 'noreply@playhq.app',
+      error: 'No email provider configured'
+    };
+  } catch (error: any) {
+    return {
+      configured: false,
+      provider: 'none',
+      fromEmail: 'noreply@playhq.app',
+      error: error.message || 'Failed to verify email configuration'
+    };
+  }
+}

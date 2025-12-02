@@ -3,7 +3,9 @@ import { db } from '../../db';
 import { users, players, tenants } from '@shared/schema';
 import { eq, and, or, desc, asc, sql, ilike, gte, lte, inArray } from 'drizzle-orm';
 import { pageParams, wrapRows } from '../../lib/pagination';
-import * as sgMail from '@sendgrid/mail';
+import { sendEmail } from '../../utils/email-provider';
+
+const FROM_EMAIL = 'noreply@playhq.app';
 
 // Get all pending registrations across tenants
 export async function list(req: Request, res: Response) {
@@ -350,9 +352,9 @@ export async function approve(req: Request, res: Response) {
       // Send approval email
       if (updatedUser.email) {
         try {
-          await sgMail.send({
+          await sendEmail({
             to: updatedUser.email,
-            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.com',
+            from: FROM_EMAIL,
             subject: 'Registration Approved',
             text: `Hi ${updatedUser.firstName},\n\nYour registration has been approved. You can now log in to your account.\n\nBest regards,\nPlayHQ Team`,
             html: `<p>Hi ${updatedUser.firstName},</p><p>Your registration has been approved. You can now log in to your account.</p><p>Best regards,<br>PlayHQ Team</p>`
@@ -390,9 +392,9 @@ export async function approve(req: Request, res: Response) {
 
         if (parent?.email) {
           try {
-            await sgMail.send({
+            await sendEmail({
               to: parent.email,
-              from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.com',
+              from: FROM_EMAIL,
               subject: 'Player Registration Approved',
               text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.\n\nBest regards,\nPlayHQ Team`,
               html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.</p><p>Best regards,<br>PlayHQ Team</p>`
@@ -444,9 +446,9 @@ export async function reject(req: Request, res: Response) {
       // Send rejection email
       if (updatedUser.email) {
         try {
-          await sgMail.send({
+          await sendEmail({
             to: updatedUser.email,
-            from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.com',
+            from: FROM_EMAIL,
             subject: 'Registration Status Update',
             text: `Hi ${updatedUser.firstName},\n\nWe regret to inform you that your registration could not be approved at this time.\n\nReason: ${reason}\n\nIf you have questions, please contact support.\n\nBest regards,\nPlayHQ Team`,
             html: `<p>Hi ${updatedUser.firstName},</p><p>We regret to inform you that your registration could not be approved at this time.</p><p><strong>Reason:</strong> ${reason}</p><p>If you have questions, please contact support.</p><p>Best regards,<br>PlayHQ Team</p>`
@@ -482,9 +484,9 @@ export async function reject(req: Request, res: Response) {
 
         if (parent?.email) {
           try {
-            await sgMail.send({
+            await sendEmail({
               to: parent.email,
-              from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.com',
+              from: FROM_EMAIL,
               subject: 'Player Registration Status Update',
               text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.\n\nReason: ${reason}\n\nPlease contact support if you have questions.\n\nBest regards,\nPlayHQ Team`,
               html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.</p><p><strong>Reason:</strong> ${reason}</p><p>Please contact support if you have questions.</p><p>Best regards,<br>PlayHQ Team</p>`

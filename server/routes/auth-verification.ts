@@ -6,6 +6,8 @@ import { tenants, users, emailVerificationTokens } from "@shared/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { sendEmail, initEmail } from "../emailService";
 
+const FROM_EMAIL = 'noreply@playhq.app';
+
 export const authVerificationRouter = Router();
 
 // Auth verification routes are now working correctly
@@ -131,7 +133,7 @@ The PlayHQ Team`;
 
     await sendEmail({
       to: user.email!,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      from: FROM_EMAIL,
       subject: "Verify your PlayHQ account",
       html,
       text,
@@ -310,7 +312,7 @@ The PlayHQ Team`;
 
     await sendEmail({
       to: user.email!,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      from: FROM_EMAIL,
       subject: "Verify your PlayHQ account",
       html,
       text,
@@ -327,7 +329,7 @@ The PlayHQ Team`;
       for (const admin of superAdmins) {
         await sendEmail({
           to: admin.email!,
-          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          from: FROM_EMAIL,
           subject: "New Tenant Requires Approval",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -586,7 +588,7 @@ authVerificationRouter.post("/forgot-password", async (req, res) => {
 
     await sendEmail({
       to: user.email!,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      from: FROM_EMAIL,
       subject: "Reset your PlayHQ password",
       html,
       text: `Reset your password: ${link}`,

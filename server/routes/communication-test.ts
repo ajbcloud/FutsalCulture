@@ -2,13 +2,13 @@
 import { Router } from 'express';
 import { sendInvitationEmail } from '../utils/email-service';
 import { sendInvitationSMS } from '../smsService';
-import { verifySendGridConfig } from '../utils/sendgrid-helper';
+import { verifyEmailConfig } from '../utils/email-provider';
 import { getCommunicationStats, getCommunicationHealth } from '../utils/communication-analytics';
 
 const router = Router();
 
 /**
- * Test SendGrid email integration
+ * Test email integration (now using Resend)
  */
 router.post('/test/email', async (req, res) => {
   try {
@@ -18,7 +18,7 @@ router.post('/test/email', async (req, res) => {
       return res.status(400).json({ error: 'Email address required' });
     }
 
-    const config = await verifySendGridConfig();
+    const config = await verifyEmailConfig();
     if (!config.configured) {
       return res.status(400).json({ error: config.error });
     }
@@ -39,6 +39,7 @@ router.post('/test/email', async (req, res) => {
       success: true, 
       message: `Test ${testType} email sent to ${to}`,
       config: {
+        provider: config.provider,
         fromEmail: config.fromEmail,
         configured: config.configured
       }

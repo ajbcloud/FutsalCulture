@@ -11,6 +11,9 @@ import * as communicationsController from './controllers/superAdmin/communicatio
 // Super admin email for authentication
 const SUPER_ADMIN_EMAIL = "admin@playhq.app";
 
+// Email from address (used across all email sending)
+const FROM_EMAIL = 'noreply@playhq.app';
+
 // Store active impersonation sessions in memory (in production, use Redis or DB)
 const impersonationSessions = new Map<string, {
   superAdminId: string;
@@ -137,7 +140,7 @@ export function setupSuperAdminRoutes(app: Express) {
         
         await sendEmail({
           to: adminEmail,
-          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          from: FROM_EMAIL,
           subject: "Welcome to PlayHQ - Your Organization is Ready",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -265,7 +268,7 @@ export function setupSuperAdminRoutes(app: Express) {
         // Send approval notification email
         await sendEmail({
           to: adminUser.email,
-          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          from: FROM_EMAIL,
           subject: "Your PlayHQ Organization Has Been Approved!",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -351,7 +354,7 @@ export function setupSuperAdminRoutes(app: Express) {
         // Send rejection notification email
         await sendEmail({
           to: adminUser.email,
-          from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+          from: FROM_EMAIL,
           subject: "Update on Your PlayHQ Application",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1044,10 +1047,14 @@ export function setupSuperAdminRoutes(app: Express) {
   app.get('/api/super-admin/integrations', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
       // Return current integration configurations
+      const { isEmailConfigured } = await import('./utils/email-provider');
+      const emailConfigured = await isEmailConfigured();
+      
       const integrations = {
         email: {
-          apiKey: process.env.SENDGRID_API_KEY ? '••••••••' : '',
-          senderEmail: 'notifications@playhq.app',
+          provider: 'Resend',
+          configured: emailConfigured,
+          senderEmail: 'noreply@playhq.app',
           senderName: 'PlayHQ',
           replyTo: 'support@playhq.app',
           templates: {

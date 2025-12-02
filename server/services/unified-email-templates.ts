@@ -14,14 +14,9 @@ import { sendInvitationEmail as legacySendInvitationEmail } from '../utils/email
 import { db } from '../db';
 import { tenants, invitationAnalytics } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import sgMail from '@sendgrid/mail';
+import { sendEmail as sendViaProvider, isEmailConfigured } from '../utils/email-provider';
 
-// Initialize SendGrid if API key is available
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app';
+const FROM_EMAIL = 'noreply@playhq.app';
 
 export interface UnifiedEmailTemplate {
   type: 'invitation' | 'welcome' | 'reminder' | 'parent2' | 'announcement' | 'maintenance';
@@ -82,46 +77,47 @@ export class EmailTemplateService {
   }
 
   /**
-   * Send email using unified template system
+   * Send email using unified template system (now using Resend via email-provider)
    */
   async sendEmail(options: EmailDeliveryOptions): Promise<{ messageId: string; success: boolean }> {
     try {
-      if (!process.env.SENDGRID_API_KEY) {
-        console.warn('SENDGRID_API_KEY not configured - email not sent');
-        return { messageId: 'no-api-key', success: false };
+      const configured = await isEmailConfigured();
+      if (!configured) {
+        console.warn('Email provider not configured - email not sent');
+        return { messageId: 'no-provider', success: false };
       }
 
-      const { template, to, trackingId, customHeaders = {} } = options;
+      const { template, to, trackingId } = options;
       const htmlContent = this.generateTemplate({ ...template, variant: 'html' });
       const textContent = this.generateTemplate({ ...template, variant: 'text' });
       const subject = this.generateSubject(template);
 
-      // Prepare SendGrid message
-      const msg = {
+      const result = await sendViaProvider({
         to,
         from: FROM_EMAIL,
         subject,
         html: htmlContent,
         text: textContent,
-        headers: {
-          ...customHeaders,
-          'X-Tenant-ID': template.data.tenantId,
-          'X-Template-Type': template.type,
-          ...(trackingId && { 'X-Tracking-ID': trackingId }),
+        categories: [
+          `template_${template.type}`,
+          `tenant_${template.data.tenantId}`,
+          ...(trackingId ? [`tracking_${trackingId}`] : [])
+        ],
+        metadata: {
+          tenantId: template.data.tenantId,
+          templateType: template.type,
+          templateKey: `unified_${template.type}`,
+          ...(trackingId && { trackingId }),
         },
-        customArgs: {
-          tenant_id: template.data.tenantId,
-          template_type: template.type,
-          template_key: `unified_${template.type}`,
-          ...(trackingId && { tracking_id: trackingId }),
-        },
-      };
+      });
 
-      const [response] = await sgMail.send(msg);
-      const messageId = response.headers['x-message-id'] || 'unknown';
-
-      console.log(`✅ Unified email sent: ${template.type} to ${to} (${messageId})`);
-      return { messageId, success: true };
+      if (result.success) {
+        console.log(`✅ Unified email sent: ${template.type} to ${to} (${result.messageId})`);
+        return { messageId: result.messageId || 'sent', success: true };
+      } else {
+        console.error(`❌ Failed to send unified email: ${result.error}`);
+        return { messageId: 'error', success: false };
+      }
 
     } catch (error) {
       console.error('❌ Failed to send unified email:', error);
