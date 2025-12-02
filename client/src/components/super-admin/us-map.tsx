@@ -46,12 +46,12 @@ export default function USMap({ data, title = "Tenant Distribution by State", cl
   };
 
   return (
-    <div className={`w-full ${className}`}>
-      <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
+    <div className={`${className}`}>
+      <h3 className="text-sm font-semibold mb-2 text-center">{title}</h3>
       <ComposableMap
         projection="geoAlbersUsa"
-        width={800}
-        height={500}
+        width={600}
+        height={350}
         className="w-full h-auto border rounded-lg bg-gray-50 dark:bg-gray-900"
       >
         <ZoomableGroup>
@@ -98,18 +98,18 @@ export default function USMap({ data, title = "Tenant Distribution by State", cl
       </ComposableMap>
       
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center space-x-4 text-sm">
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-gray-200 border rounded"></div>
-          <span className="text-muted-foreground">No tenants</span>
+      <div className="mt-2 flex items-center justify-center space-x-3 text-xs">
+        <div className="flex items-center space-x-1">
+          <div className="w-3 h-3 bg-gray-200 border rounded"></div>
+          <span className="text-muted-foreground">None</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colorScale(1) }}></div>
-          <span className="text-muted-foreground">Low density</span>
+        <div className="flex items-center space-x-1">
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colorScale(1) }}></div>
+          <span className="text-muted-foreground">Low</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colorScale(maxValue) }}></div>
-          <span className="text-muted-foreground">High density ({maxValue}+ tenants)</span>
+        <div className="flex items-center space-x-1">
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colorScale(maxValue) }}></div>
+          <span className="text-muted-foreground">High</span>
         </div>
       </div>
     </div>

@@ -46,19 +46,19 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
+      <Card className="max-w-2xl">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MapPin className="h-4 w-4" />
             Geographic Distribution
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Tenant distribution across US states (US-only for compliance)
           </p>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-96">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardContent className="pt-2">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </CardContent>
       </Card>
@@ -66,27 +66,27 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
+    <Card className="max-w-2xl">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MapPin className="h-4 w-4" />
           Geographic Distribution
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Tenant distribution across US states (US-only for compliance)
         </p>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+      <CardContent className="pt-2">
+        <div className="space-y-3">
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-foreground">{activeStates}</p>
-              <p className="text-sm text-muted-foreground">Active States</p>
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="space-y-0.5">
+              <p className="text-xl font-bold text-foreground">{activeStates}</p>
+              <p className="text-xs text-muted-foreground">Active States</p>
             </div>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-foreground">{totalTenants}</p>
-              <p className="text-sm text-muted-foreground">Total Tenants</p>
+            <div className="space-y-0.5">
+              <p className="text-xl font-bold text-foreground">{totalTenants}</p>
+              <p className="text-xs text-muted-foreground">Total Tenants</p>
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export default function GeographicDistribution({ selectedTenant = "all" }: Geogr
           <USMap 
             data={mapData} 
             title="Tenant Distribution by State"
-            className="w-full"
+            className="max-w-lg mx-auto"
           />
         </div>
       </CardContent>

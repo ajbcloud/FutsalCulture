@@ -357,8 +357,8 @@ export default function SuperAdminOverview() {
       {/* Downgrade Alerts Widget */}
       <DowngradeAlertsWidget />
 
-      {/* Geographic Distribution - Full Width */}
-      <div className="w-full">
+      {/* Geographic Distribution - Compact Size */}
+      <div className="max-w-2xl">
         <GeographicDistribution selectedTenant={selectedTenant} />
       </div>
 
