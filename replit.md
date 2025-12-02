@@ -128,6 +128,17 @@ Preferred communication style: Simple, everyday language.
 #### Scheduled Jobs
 - Daily pending downgrade processing at 4 AM UTC
 
+### Consent Form System (Recently Updated)
+- **Default Behavior**: Consent forms are now required by default (`requireConsent: true` in age policy)
+- **Tenant Age Policy Endpoint**: `/api/tenant/age-policy` - accessible by any authenticated user (not just admins)
+- **Household Player Additions**: When adding a player to a household, consent modal appears if `requireConsent` is enabled. Player and parent IDs exist, so consent is submitted directly to `/api/consent/sign`.
+- **Parent2 Invite Flow**: Uses `skipApiSubmit` mode in ConsentDocumentModal to collect signatures without API submission. Signatures are passed to account creation endpoint which persists them after creating the parent2 user.
+- **ConsentDocumentModal**: Enhanced with `skipApiSubmit` prop for deferred signature collection when IDs don't exist yet.
+- **Key Files**:
+  - `client/src/components/consent/ConsentDocumentModal.tsx` - Modal with skipApiSubmit support
+  - `client/src/pages/household-management.tsx` - Household management with consent integration
+  - `client/src/pages/parent2-invite.tsx` - Parent2 invite with deferred consent
+
 ## Required Environment Variables
 
 ### Braintree
