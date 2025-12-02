@@ -48,7 +48,7 @@ import {
   Loader2,
   Grid
 } from 'lucide-react';
-import { FEATURE_KEYS } from '@shared/schema';
+// FEATURE_KEYS removed - not exported from schema
 
 // Category icons
 const categoryIcons: Record<string, any> = {
