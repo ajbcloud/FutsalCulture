@@ -28,7 +28,7 @@ export default function LoginBusiness() {
         <SignIn 
           routing="path" 
           path="/login-business"
-          signUpUrl="/signup"
+          signUpUrl="/signup-business"
           afterSignInUrl="/login-business"
           appearance={{
             variables: {
