@@ -334,6 +334,38 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   index("email_verification_tokens_token_hash_idx").on(table.tokenHash),
 ]);
 
+// Business signup token status enum
+export const businessSignupTokenStatusEnum = pgEnum("business_signup_token_status", ["pending", "attached", "expired"]);
+
+// Business signup tokens table - links pre-created tenant/user to Clerk signup
+export const businessSignupTokens = pgTable("business_signup_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: text("token").unique().notNull(),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: varchar("email").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  orgName: varchar("org_name").notNull(),
+  status: businessSignupTokenStatusEnum("status").default("pending"),
+  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '24 hours'`),
+  attachedAt: timestamp("attached_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("business_signup_tokens_token_idx").on(table.token),
+  index("business_signup_tokens_email_idx").on(table.email),
+  index("business_signup_tokens_tenant_idx").on(table.tenantId),
+  index("business_signup_tokens_user_idx").on(table.userId),
+  index("business_signup_tokens_status_idx").on(table.status),
+]);
+
+export const insertBusinessSignupTokenSchema = createInsertSchema(businessSignupTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBusinessSignupToken = z.infer<typeof insertBusinessSignupTokenSchema>;
+export type BusinessSignupToken = typeof businessSignupTokens.$inferSelect;
+
 // Gender enum for players and sessions
 export const genderEnum = pgEnum("gender", ["boys", "girls"]);
 export const ageBandEnum = pgEnum("age_band", ["child", "teen", "adult"]);
