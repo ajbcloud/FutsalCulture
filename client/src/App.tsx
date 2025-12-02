@@ -93,7 +93,7 @@ function Router() {
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
-        <Route path="/login/:rest*" component={Login} />
+        <Route path="/login/*" component={Login} />
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/verify-email-sent" component={VerifyEmailSent} />
         <Route path="/set-password" component={SetPassword} />
