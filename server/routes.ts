@@ -177,15 +177,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let userId;
 
-      // Check for local session first (password-based users)
-      if (req.session?.userId) {
-        userId = req.session.userId;
-      }
-      // Fall back to Replit Auth user
-      else if (req.user?.id) {
+      // Priority 1: Check if user was already set by syncClerkUser middleware (Clerk auth)
+      if (req.user?.id) {
         userId = req.user.id;
+        console.log("✓ Using Clerk-synced user:", userId);
       }
-      // In development, allow the hardcoded super admin user to bypass auth
+      // Priority 2: Check for local session (password-based users)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+        console.log("✓ Using session user:", userId);
+      }
+      // Priority 3: In development, allow the hardcoded super admin user to bypass auth
       else if (process.env.NODE_ENV === 'development') {
         userId = FAILSAFE_SUPER_ADMIN_ID;
         // IMPORTANT: Set the session so subsequent requests work
