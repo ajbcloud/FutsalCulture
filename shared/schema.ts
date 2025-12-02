@@ -1412,8 +1412,8 @@ export const auditLogs = pgTable("audit_logs", {
 export const platformSettings = pgTable("platform_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   policies: jsonb("policies").notNull().default(sql`'{
-    "autoApproveTenants": false,
-    "requireTenantApproval": true,
+    "autoApproveTenants": true,
+    "requireTenantApproval": false,
     "mfa": {
       "requireSuperAdmins": true,
       "requireTenantAdmins": false
