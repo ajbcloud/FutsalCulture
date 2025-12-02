@@ -45,6 +45,7 @@ import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
 import quickbooksRoutes from './routes/quickbooks';
 import businessSignupRouter from './routes/business-signup';
+import { publicSessionsRouter } from './routes/public-sessions';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -52,6 +53,9 @@ const isAuthenticated = requireClerkAuth;
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public ingestion endpoints (BEFORE auth middleware since they're public)
   app.use('/api/public', publicIngestionRoutes);
+
+  // Public sessions browse endpoints (BEFORE auth middleware since they're public)
+  app.use('/api/public', publicSessionsRouter);
 
   // Business signup endpoint (public - before auth middleware)
   app.use('/api/auth', businessSignupRouter);

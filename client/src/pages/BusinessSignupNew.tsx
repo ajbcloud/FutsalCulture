@@ -7,7 +7,6 @@ import { useLocation } from "wouter";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -23,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, User, Mail, Lock, Phone, MapPin, Loader2, CheckCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Building2, User, Mail, Phone, MapPin, Loader2, ArrowRight } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 const US_STATES = [
@@ -84,38 +83,32 @@ const businessSignupSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
   phone: z.string().optional(),
-  orgName: z.string().min(2, "Organization name is required"),
+  orgName: z.string().min(2, "Club name is required"),
   city: z.string().optional(),
   state: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
 });
 
 type BusinessSignupForm = z.infer<typeof businessSignupSchema>;
 
-interface SignupResponse {
+interface InitResponse {
   success: boolean;
-  message: string;
-  userId?: string;
+  message?: string;
+  token?: string;
+  prefill?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    orgName: string;
+  };
   tenantId?: string;
-  tenantCode?: string;
-  requiresEmailVerification: boolean;
-  emailVerificationFailed?: boolean;
+  userId?: string;
 }
 
 export default function BusinessSignupNew() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const [, setLocation] = useLocation();
-  const [signupSuccess, setSignupSuccess] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [emailVerificationFailed, setEmailVerificationFailed] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-  const [resending, setResending] = useState(false);
 
   const form = useForm<BusinessSignupForm>({
     resolver: zodResolver(businessSignupSchema),
@@ -123,8 +116,6 @@ export default function BusinessSignupNew() {
       firstName: "",
       lastName: "",
       email: "",
-      password: "",
-      confirmPassword: "",
       phone: "",
       orgName: "",
       city: "",
@@ -132,137 +123,40 @@ export default function BusinessSignupNew() {
     },
   });
 
-  const signupMutation = useMutation({
+  const initMutation = useMutation({
     mutationFn: async (data: BusinessSignupForm) => {
-      const response = await apiRequest("POST", "/api/auth/business-signup", {
+      const response = await apiRequest("POST", "/api/auth/business-signup/init", {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        password: data.password,
         phone: data.phone,
         orgName: data.orgName,
         city: data.city,
         state: data.state,
         country: "US",
-        sports: ["futsal"],
       });
-      return response.json() as Promise<SignupResponse>;
+      return response.json() as Promise<InitResponse>;
     },
     onSuccess: (data) => {
-      if (data.success) {
-        setUserEmail(form.getValues("email"));
-        setEmailVerificationFailed(data.emailVerificationFailed || false);
-        setSignupSuccess(true);
+      if (data.success && data.token) {
+        setLocation(`/signup/clerk?token=${data.token}`);
       }
     },
   });
 
-  const handleResendVerification = async () => {
-    setResending(true);
-    try {
-      const response = await apiRequest("POST", "/api/auth/resend-verification", { email: userEmail });
-      if (response.ok) {
-        setResendSuccess(true);
-        setEmailVerificationFailed(false);
-      }
-    } catch (error) {
-      console.error("Failed to resend verification:", error);
-    } finally {
-      setResending(false);
-    }
-  };
-
   const onSubmit = (data: BusinessSignupForm) => {
-    signupMutation.mutate(data);
+    initMutation.mutate(data);
   };
-
-  if (signupSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
-        <Card className={`w-full max-w-md ${isDarkMode ? "bg-slate-800 border-slate-700" : ""}`}>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle className={isDarkMode ? "text-white" : ""}>
-              {resendSuccess ? "Verification Email Sent!" : "Check Your Email"}
-            </CardTitle>
-            <CardDescription className={isDarkMode ? "text-slate-300" : ""}>
-              {resendSuccess 
-                ? `We've resent the verification link to ${userEmail}`
-                : <>We've sent a verification link to <strong>{userEmail}</strong></>
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {emailVerificationFailed && (
-              <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
-                <p className="text-sm text-amber-800 dark:text-amber-200 text-center">
-                  There was an issue sending the verification email. Please click below to resend.
-                </p>
-              </div>
-            )}
-            <p className={`text-sm text-center ${isDarkMode ? "text-slate-400" : "text-gray-600"}`}>
-              Click the link in your email to verify your account and complete setup.
-              While you verify, we're getting your club ready in the background.
-            </p>
-            {emailVerificationFailed && (
-              <div className="text-center">
-                <Button
-                  onClick={handleResendVerification}
-                  disabled={resending}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  data-testid="button-resend-primary"
-                >
-                  {resending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    "Resend Verification Email"
-                  )}
-                </Button>
-              </div>
-            )}
-            <div className="text-center">
-              <Button
-                variant="outline"
-                onClick={() => setLocation("/login-business")}
-                className={isDarkMode ? "border-slate-600 text-slate-200" : ""}
-                data-testid="button-go-to-login"
-              >
-                Go to Sign In
-              </Button>
-            </div>
-            {!emailVerificationFailed && (
-              <p className={`text-xs text-center ${isDarkMode ? "text-slate-500" : "text-gray-500"}`}>
-                Didn't receive the email? Check your spam folder or{" "}
-                <button 
-                  className="text-blue-600 dark:text-blue-400 underline"
-                  onClick={handleResendVerification}
-                  disabled={resending}
-                  data-testid="button-resend-verification"
-                >
-                  {resending ? "sending..." : "resend verification"}
-                </button>
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-6">
           <h1 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-            Create Your Club
+            Create Your Club on PlayHQ
           </h1>
           <p className={`text-sm mt-2 ${isDarkMode ? "text-slate-400" : "text-gray-600"}`}>
-            Set up your club account in one simple step
+            Step 1 of 2: Enter your club details
           </p>
         </div>
 
@@ -271,6 +165,95 @@ export default function BusinessSignupNew() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <Building2 className={`h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`} />
+                    <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-gray-700"}`}>
+                      Club Information
+                    </span>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="orgName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
+                          Club Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Central Futsal Academy"
+                            className={isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}
+                            data-testid="input-org-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
+                            City (Optional)
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-400"}`} />
+                              <Input
+                                {...field}
+                                placeholder="Chicago"
+                                className={`pl-10 ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}`}
+                                data-testid="input-city"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="state"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
+                            State (Optional)
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger 
+                                className={isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}
+                                data-testid="select-state"
+                              >
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className={isDarkMode ? "bg-slate-800 border-slate-700" : ""}>
+                              {US_STATES.map((state) => (
+                                <SelectItem 
+                                  key={state.value} 
+                                  value={state.value}
+                                  className={isDarkMode ? "text-white focus:bg-slate-700" : ""}
+                                >
+                                  {state.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <User className={`h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`} />
                     <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-gray-700"}`}>
@@ -370,152 +353,12 @@ export default function BusinessSignupNew() {
                       </FormItem>
                     )}
                   />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
-                            Password
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-400"}`} />
-                              <Input
-                                {...field}
-                                type="password"
-                                placeholder="••••••••"
-                                className={`pl-10 ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}`}
-                                data-testid="input-password"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
-                            Confirm Password
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-400"}`} />
-                              <Input
-                                {...field}
-                                type="password"
-                                placeholder="••••••••"
-                                className={`pl-10 ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}`}
-                                data-testid="input-confirm-password"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                 </div>
 
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-                    <Building2 className={`h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-500"}`} />
-                    <span className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-gray-700"}`}>
-                      Club Information
-                    </span>
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="orgName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
-                          Club Name
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Central Futsal Academy"
-                            className={isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}
-                            data-testid="input-org-name"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
-                            City (Optional)
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDarkMode ? "text-slate-400" : "text-gray-400"}`} />
-                              <Input
-                                {...field}
-                                placeholder="Chicago"
-                                className={`pl-10 ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}`}
-                                data-testid="input-city"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={isDarkMode ? "text-slate-300" : ""}>
-                            State (Optional)
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger 
-                                className={isDarkMode ? "bg-slate-700 border-slate-600 text-white" : ""}
-                                data-testid="select-state"
-                              >
-                                <SelectValue placeholder="Select state" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className={isDarkMode ? "bg-slate-800 border-slate-700" : ""}>
-                              {US_STATES.map((state) => (
-                                <SelectItem 
-                                  key={state.value} 
-                                  value={state.value}
-                                  className={isDarkMode ? "text-white focus:bg-slate-700" : ""}
-                                >
-                                  {state.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {signupMutation.error && (
+                {initMutation.error && (
                   <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
                     <p className="text-sm text-red-600 dark:text-red-400">
-                      {(signupMutation.error as any)?.message || "Something went wrong. Please try again."}
+                      {(initMutation.error as any)?.message || "Something went wrong. Please try again."}
                     </p>
                   </div>
                 )}
@@ -523,18 +366,25 @@ export default function BusinessSignupNew() {
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={signupMutation.isPending}
-                  data-testid="button-create-club"
+                  disabled={initMutation.isPending}
+                  data-testid="button-next-step"
                 >
-                  {signupMutation.isPending ? (
+                  {initMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Your Club...
+                      Setting up your club...
                     </>
                   ) : (
-                    "Create My Club"
+                    <>
+                      Next: Create Your Account
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
                   )}
                 </Button>
+
+                <p className={`text-xs text-center ${isDarkMode ? "text-slate-500" : "text-gray-500"}`}>
+                  You'll create your login credentials in the next step
+                </p>
               </form>
             </Form>
           </CardContent>

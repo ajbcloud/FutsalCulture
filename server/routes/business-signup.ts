@@ -1,97 +1,28 @@
 import { Router, Request, Response } from 'express';
-import { businessSignupSchema, type BusinessSignupResponse, type TenantInsert } from '@shared/schema';
+import { businessSignupTokens, tenants, users } from '@shared/schema';
 import { storage } from '../storage';
 import { nanoid } from 'nanoid';
+import { db } from '../db';
+import { eq, and, gt } from 'drizzle-orm';
+import { z } from 'zod';
 
 const router = Router();
 
-async function createClerkUser(data: {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}): Promise<{ id: string; emailAddress: string } | null> {
-  if (!process.env.CLERK_SECRET_KEY) {
-    throw new Error('CLERK_SECRET_KEY is not configured');
-  }
+const businessSignupInitSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().optional(),
+  orgName: z.string().min(2, "Organization name is required"),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().default("US"),
+});
 
-  const response = await fetch('https://api.clerk.com/v1/users', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email_address: [data.email],
-      password: data.password,
-      first_name: data.firstName,
-      last_name: data.lastName,
-      skip_password_checks: false,
-      skip_password_requirement: false,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Clerk user creation failed:', error);
-    
-    if (error.errors?.[0]?.code === 'form_identifier_exists') {
-      throw new Error('An account with this email already exists. Please sign in instead.');
-    }
-    
-    throw new Error(error.errors?.[0]?.long_message || 'Failed to create account');
-  }
-
-  const clerkUser = await response.json();
-  return {
-    id: clerkUser.id,
-    emailAddress: clerkUser.email_addresses?.[0]?.email_address || data.email,
-  };
-}
-
-async function sendEmailVerification(clerkUserId: string, emailAddressId?: string): Promise<void> {
-  if (!process.env.CLERK_SECRET_KEY) {
-    throw new Error('CLERK_SECRET_KEY is not configured');
-  }
-
-  if (!emailAddressId) {
-    const userResponse = await fetch(`https://api.clerk.com/v1/users/${clerkUserId}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
-      },
-    });
-
-    if (!userResponse.ok) {
-      throw new Error('Failed to fetch user for email verification');
-    }
-
-    const user = await userResponse.json();
-    emailAddressId = user.email_addresses?.[0]?.id;
-  }
-
-  if (!emailAddressId) {
-    throw new Error('No email address found for verification');
-  }
-
-  const response = await fetch(
-    `https://api.clerk.com/v1/email_addresses/${emailAddressId}/prepare_verification`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        strategy: 'email_code',
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Email verification preparation failed:', error);
-  }
-}
+const businessSignupAttachSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  clerkUserId: z.string().min(1, "Clerk user ID is required"),
+});
 
 function generateTenantCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -111,16 +42,15 @@ function generateSubdomain(orgName: string): string {
     .substring(0, 45);
 }
 
-router.post('/business-signup', async (req: Request, res: Response) => {
+router.post('/business-signup/init', async (req: Request, res: Response) => {
   try {
-    const parseResult = businessSignupSchema.safeParse(req.body);
+    const parseResult = businessSignupInitSchema.safeParse(req.body);
     
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
         message: parseResult.error.errors[0]?.message || 'Invalid input',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
+      });
     }
 
     const data = parseResult.data;
@@ -130,32 +60,7 @@ router.post('/business-signup', async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: 'An account with this email already exists. Please sign in instead.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
-    }
-
-    let clerkUser: { id: string; emailAddress: string } | null = null;
-    try {
-      clerkUser = await createClerkUser({
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
       });
-    } catch (clerkError: any) {
-      return res.status(400).json({
-        success: false,
-        message: clerkError.message || 'Failed to create account',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
-    }
-
-    if (!clerkUser) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create account. Please try again.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
     }
 
     let tenantCode = generateTenantCode();
@@ -201,44 +106,26 @@ router.post('/business-signup', async (req: Request, res: Response) => {
         billingStatus: 'none',
       });
     } catch (tenantError: any) {
-      console.error('Failed to create tenant, attempting Clerk user cleanup:', tenantError);
-      try {
-        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
-        });
-      } catch (cleanupError) {
-        console.error('Failed to cleanup Clerk user after tenant creation failure:', cleanupError);
-      }
+      console.error('Failed to create tenant:', tenantError);
       return res.status(500).json({
         success: false,
         message: 'Failed to create organization. Please try again.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
+      });
     }
 
     if (!tenant) {
       console.error('Failed to create tenant for:', data.orgName);
-      try {
-        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
-        });
-      } catch (cleanupError) {
-        console.error('Failed to cleanup Clerk user after tenant creation returned null:', cleanupError);
-      }
       return res.status(500).json({
         success: false,
         message: 'Failed to create organization. Please try again.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
+      });
     }
 
     let user;
     try {
       user = await storage.upsertUser({
         email: data.email,
-        clerkUserId: clerkUser.id,
+        clerkUserId: null,
         authProvider: 'clerk',
         firstName: data.firstName,
         lastName: data.lastName,
@@ -250,92 +137,232 @@ router.post('/business-signup', async (req: Request, res: Response) => {
         registrationStatus: 'approved',
       });
     } catch (userError: any) {
-      console.error('Failed to create user, attempting cleanup:', userError);
+      console.error('Failed to create user, cleaning up tenant:', userError);
       try {
-        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
-        });
+        await db.delete(tenants).where(eq(tenants.id, tenant.id));
       } catch (cleanupError) {
-        console.error('Failed to cleanup Clerk user after user creation failure:', cleanupError);
+        console.error('Failed to cleanup tenant after user creation failure:', cleanupError);
       }
       return res.status(500).json({
         success: false,
         message: 'Failed to create user account. Please try again.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
+      });
     }
 
     if (!user) {
       console.error('Failed to create user for:', data.email);
       try {
-        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
-        });
+        await db.delete(tenants).where(eq(tenants.id, tenant.id));
       } catch (cleanupError) {
-        console.error('Failed to cleanup Clerk user after user creation returned null:', cleanupError);
+        console.error('Failed to cleanup tenant after user creation returned null:', cleanupError);
       }
       return res.status(500).json({
         success: false,
         message: 'Failed to create user account. Please try again.',
-        requiresEmailVerification: false,
-      } as BusinessSignupResponse);
+      });
     }
 
-    let emailVerificationFailed = false;
+    const signupToken = nanoid(32);
+    
     try {
-      await sendEmailVerification(clerkUser.id);
-    } catch (verifyError) {
-      console.error('Email verification preparation failed:', verifyError);
-      emailVerificationFailed = true;
+      await db.insert(businessSignupTokens).values({
+        token: signupToken,
+        tenantId: tenant.id,
+        userId: user.id,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        orgName: data.orgName,
+        status: 'pending',
+      });
+    } catch (tokenError: any) {
+      console.error('Failed to create signup token:', tokenError);
+      try {
+        await db.delete(users).where(eq(users.id, user.id));
+        await db.delete(tenants).where(eq(tenants.id, tenant.id));
+      } catch (cleanupError) {
+        console.error('Failed to cleanup after token creation failure:', cleanupError);
+      }
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to initialize signup. Please try again.',
+      });
     }
 
-    console.log(`Business signup successful: ${data.email} -> Tenant: ${tenant.name} (${tenant.id})${emailVerificationFailed ? ' (email verification failed)' : ''}`);
-
-    const message = emailVerificationFailed 
-      ? 'Account created! There was an issue sending the verification email. Please use the resend option below.'
-      : 'Account created! Please check your email to verify your account.';
+    console.log(`Business signup init successful: ${data.email} -> Tenant: ${tenant.name} (${tenant.id}), Token: ${signupToken.substring(0, 8)}...`);
 
     return res.status(201).json({
       success: true,
-      message,
-      userId: user.id,
+      token: signupToken,
+      prefill: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        orgName: data.orgName,
+      },
       tenantId: tenant.id,
-      tenantCode: tenant.tenantCode,
-      requiresEmailVerification: true,
-      emailVerificationFailed,
-    } as BusinessSignupResponse);
+      userId: user.id,
+    });
 
   } catch (error: any) {
-    console.error('Business signup error:', error);
+    console.error('Business signup init error:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'An unexpected error occurred. Please try again.',
-      requiresEmailVerification: false,
-    } as BusinessSignupResponse);
+    });
   }
 });
 
-router.post('/resend-verification', async (req: Request, res: Response) => {
+router.get('/business-signup/token/:token', async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
+    const { token } = req.params;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token is required',
+      });
     }
 
-    const user = await storage.getUserByEmail(email);
-    if (!user || !user.clerkUserId) {
-      return res.status(400).json({ success: false, message: 'Account not found' });
+    const [signupToken] = await db.select()
+      .from(businessSignupTokens)
+      .where(
+        and(
+          eq(businessSignupTokens.token, token),
+          eq(businessSignupTokens.status, 'pending'),
+          gt(businessSignupTokens.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!signupToken) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired signup token. Please start the signup process again.',
+      });
     }
 
-    await sendEmailVerification(user.clerkUserId);
+    return res.json({
+      success: true,
+      prefill: {
+        firstName: signupToken.firstName,
+        lastName: signupToken.lastName,
+        email: signupToken.email,
+        orgName: signupToken.orgName,
+      },
+    });
 
-    return res.json({ success: true, message: 'Verification email sent' });
   } catch (error: any) {
-    console.error('Resend verification error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to send verification email' });
+    console.error('Get signup token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve signup information.',
+    });
+  }
+});
+
+router.post('/business-signup/attach', async (req: Request, res: Response) => {
+  try {
+    const parseResult = businessSignupAttachSchema.safeParse(req.body);
+    
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: parseResult.error.errors[0]?.message || 'Invalid input',
+      });
+    }
+
+    const { token, clerkUserId } = parseResult.data;
+
+    const existingClerkUser = await db.select()
+      .from(users)
+      .where(eq(users.clerkUserId, clerkUserId))
+      .limit(1);
+
+    if (existingClerkUser.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account is already linked. Please sign in instead.',
+      });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const tokenUpdateResult = await tx.update(businessSignupTokens)
+        .set({ 
+          status: 'attached',
+          attachedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(businessSignupTokens.token, token),
+            eq(businessSignupTokens.status, 'pending'),
+            gt(businessSignupTokens.expiresAt, new Date())
+          )
+        )
+        .returning();
+
+      if (tokenUpdateResult.length === 0) {
+        throw new Error('TOKEN_INVALID_OR_EXPIRED');
+      }
+
+      const signupToken = tokenUpdateResult[0];
+
+      await tx.update(users)
+        .set({ 
+          clerkUserId: clerkUserId,
+          emailVerifiedAt: new Date(),
+          verificationStatus: 'verified',
+        })
+        .where(eq(users.id, signupToken.userId));
+
+      const [user] = await tx.select()
+        .from(users)
+        .where(eq(users.id, signupToken.userId))
+        .limit(1);
+
+      const [tenant] = await tx.select()
+        .from(tenants)
+        .where(eq(tenants.id, signupToken.tenantId))
+        .limit(1);
+
+      return { signupToken, user, tenant };
+    });
+
+    const { signupToken, user, tenant } = result;
+
+    console.log(`Business signup attach successful: ${signupToken.email} -> ClerkUser: ${clerkUserId}`);
+
+    return res.json({
+      success: true,
+      message: 'Account setup complete! Welcome to PlayHQ.',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        tenantId: user.tenantId,
+      },
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('Business signup attach error:', error);
+    
+    if (error.message === 'TOKEN_INVALID_OR_EXPIRED') {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired signup token. Please start the signup process again.',
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to complete account setup. Please try again.',
+    });
   }
 });
 

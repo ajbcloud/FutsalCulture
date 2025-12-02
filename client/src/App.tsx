@@ -78,6 +78,8 @@ import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
 import PublicSessions from "./pages/PublicSessions";
 import PublicSessionDetail from "./pages/PublicSessionDetail";
+import ClerkBusinessSignup from "./pages/ClerkBusinessSignup";
+import ClerkBusinessSignupCallback from "./pages/ClerkBusinessSignupCallback";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -104,6 +106,8 @@ function Router() {
         <Route path="/signup-business" component={BusinessSignupNew} />
         <Route path="/signup-business/*" component={BusinessSignupNew} />
         <Route path="/signup-business-old" component={SignupBusiness} />
+        <Route path="/signup/clerk" component={ClerkBusinessSignup} />
+        <Route path="/signup/clerk/callback" component={ClerkBusinessSignupCallback} />
         <Route path="/signup-consumer" component={SignupConsumer} />
         <Route path="/signup-consumer/*" component={SignupConsumer} />
         <Route path="/login" component={Login} />
