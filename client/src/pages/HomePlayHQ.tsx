@@ -26,7 +26,10 @@ export default function HomePlayHQ() {
         <nav className="flex items-center gap-6 text-sm">
           <a href="#features" className="hover:opacity-80">Features</a>
           <a href="#pricing" className="hover:opacity-80">Pricing</a>
-          <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent">
+          <a href="/signup" className="rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700" data-testid="link-signup">
+            Sign up
+          </a>
+          <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent" data-testid="link-login">
             Log in
           </a>
         </nav>

@@ -48,6 +48,8 @@ import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
 import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
+import Signup from "@/pages/Signup";
+import SignupConsumer from "@/pages/SignupConsumer";
 import Login from "@/pages/Login";
 import LoginBusiness from "@/pages/LoginBusiness";
 import LoginConsumer from "@/pages/LoginConsumer";
@@ -94,8 +96,9 @@ function Router() {
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={GetStarted} />
         <Route path="/join" component={Join} />
-        <Route path="/signup" component={PersonalSignup} />
-        <Route path="/signup/:rest*" component={PersonalSignup} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/signup-consumer" component={SignupConsumer} />
+        <Route path="/signup-consumer/*" component={SignupConsumer} />
         <Route path="/login" component={Login} />
         <Route path="/login-business" component={LoginBusiness} />
         <Route path="/login-business/*" component={LoginBusiness} />
