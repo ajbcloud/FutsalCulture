@@ -1,14 +1,15 @@
-import { Check, X, Crown, Rocket, Sparkles, Tag } from 'lucide-react';
+import { Check, Crown, Rocket, Sparkles, Tag, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useTenantPlan } from '@/hooks/useTenantPlan';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useLocation } from 'wouter';
+import BraintreeHostedFields, { BraintreeHostedFieldsRef } from '@/components/billing/BraintreeHostedFields';
 
 interface PlanDetails {
   name: string;
@@ -128,11 +129,13 @@ export function PlanUpgradeCard({
 }: PlanUpgradeCardProps) {
   const plan = plans[planKey];
   const { toast } = useToast();
-  const [location, navigate] = useLocation();
   const { data: tenantPlanData } = useTenantPlan();
   const [isLoading, setIsLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [showDiscountInput, setShowDiscountInput] = useState(false);
+  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
+  const [clientToken, setClientToken] = useState<string | null>(null);
+  const hostedFieldsRef = useRef<BraintreeHostedFieldsRef>(null);
 
   const currentPlan = tenantPlanData?.planId || 'free';
   const hasActiveSubscription = tenantPlanData?.billingStatus === 'active';
@@ -141,17 +144,7 @@ export function PlanUpgradeCard({
   const isUpgrade = planOrder[planKey] > planOrder[currentPlan];
   const isDowngrade = planOrder[planKey] < planOrder[currentPlan];
 
-  // Query to check subscription status
-  const { data: subscriptionStatus } = useQuery({
-    queryKey: ['/api/billing/check-subscription'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', '/api/billing/check-subscription');
-      return res.json();
-    },
-    enabled: false, // We'll refetch manually when needed
-  });
-
-  // Braintree upgrade mutation - immediate plan upgrade
+  // Braintree upgrade mutation - immediate plan upgrade for existing subscriptions
   const upgradeMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/billing/braintree/upgrade', { plan: planKey });
@@ -168,16 +161,11 @@ export function PlanUpgradeCard({
       if (onUpgrade) onUpgrade();
     },
     onError: (error: any) => {
-      // If no subscription exists, redirect to billing page for new subscription
-      if (error.message?.includes('No active subscription') || error.message?.includes('not found')) {
-        navigate('/admin/billing');
-      } else {
-        toast({
-          title: 'Upgrade Failed',
-          description: error.message || 'Failed to upgrade plan',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Upgrade Failed',
+        description: error.message || 'Failed to upgrade plan',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -206,6 +194,36 @@ export function PlanUpgradeCard({
     },
   });
 
+  // New subscription mutation for users without existing subscription
+  const subscribeMutation = useMutation({
+    mutationFn: async (nonce: string) => {
+      const res = await apiRequest('POST', '/api/billing/braintree/subscribe', { 
+        paymentMethodNonce: nonce,
+        plan: planKey,
+        discountCode: discountCode || undefined
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setShowCheckoutDialog(false);
+      toast({
+        title: 'Subscription Created',
+        description: `You are now subscribed to the ${plan.name} plan!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/braintree/subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
+      if (onUpgrade) onUpgrade();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Subscription Failed',
+        description: error.message || 'Failed to create subscription',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleAction = async () => {
     setIsLoading(true);
     
@@ -219,106 +237,219 @@ export function PlanUpgradeCard({
           // For existing subscriptions, use upgrade endpoint
           await upgradeMutation.mutateAsync();
         } else {
-          // For new subscriptions, redirect to billing page to set up subscription
-          navigate('/admin/billing');
+          // For new subscriptions, fetch client token first then show checkout dialog
+          const tokenRes = await apiRequest('GET', '/api/billing/braintree/client-token');
+          const tokenData = await tokenRes.json();
+          if (tokenData?.clientToken) {
+            setClientToken(tokenData.clientToken);
+            setShowCheckoutDialog(true);
+          } else {
+            toast({
+              title: 'Error',
+              description: 'Failed to initialize payment form. Please try again.',
+              variant: 'destructive',
+            });
+          }
         }
       } else if (isDowngrade) {
         await downgradeMutation.mutateAsync();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error handling plan action:', error);
-      // If checking subscription fails, redirect to billing page
+      // If checking subscription fails, try to show checkout dialog for upgrades
       if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
-        navigate('/admin/billing');
+        try {
+          const tokenRes = await apiRequest('GET', '/api/billing/braintree/client-token');
+          const tokenData = await tokenRes.json();
+          if (tokenData?.clientToken) {
+            setClientToken(tokenData.clientToken);
+            setShowCheckoutDialog(true);
+          } else {
+            toast({
+              title: 'Payment Unavailable',
+              description: 'Unable to initialize payment form. Please try again later.',
+              variant: 'destructive',
+            });
+          }
+        } catch (e) {
+          toast({
+            title: 'Connection Error',
+            description: 'Unable to connect to payment service. Please check your connection and try again.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message || 'An error occurred. Please try again.',
+          variant: 'destructive',
+        });
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <Card className={`relative ${isCurrentPlan ? 'ring-2 ring-primary' : ''}`}>
-      {isCurrentPlan && (
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <Badge className="bg-primary text-white" data-testid="badge-current-plan">
-            Current Plan
-          </Badge>
-        </div>
-      )}
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className={`flex items-center gap-2 ${plan.color}`}>
-            {plan.icon}
-            {plan.name}
-          </CardTitle>
-          <div className="text-right">
-            <div className="text-2xl font-bold" data-testid={`text-price-${planKey}`}>
-              ${plan.price}
-            </div>
-            <div className="text-xs text-muted-foreground">per month</div>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="space-y-2">
-            {plan.features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm">
-                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
+  const handlePaymentSubmit = async () => {
+    if (!hostedFieldsRef.current) return;
 
-          {!isCurrentPlan && isUpgrade && (
-            <div className="mt-4 space-y-2">
-              <button
-                type="button"
-                onClick={() => setShowDiscountInput(!showDiscountInput)}
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-                data-testid="button-toggle-discount-code"
+    setIsLoading(true);
+    try {
+      const nonce = await hostedFieldsRef.current.tokenize();
+      await subscribeMutation.mutateAsync(nonce);
+    } catch (error: any) {
+      toast({
+        title: 'Payment Error',
+        description: error.message || 'Failed to process payment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Card className={`relative ${isCurrentPlan ? 'ring-2 ring-primary' : ''}`}>
+        {isCurrentPlan && (
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+            <Badge className="bg-primary text-white" data-testid="badge-current-plan">
+              Current Plan
+            </Badge>
+          </div>
+        )}
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className={`flex items-center gap-2 ${plan.color}`}>
+              {plan.icon}
+              {plan.name}
+            </CardTitle>
+            <div className="text-right">
+              <div className="text-2xl font-bold" data-testid={`text-price-${planKey}`}>
+                ${plan.price}
+              </div>
+              <div className="text-xs text-muted-foreground">per month</div>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {plan.features.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            {!isCurrentPlan && isUpgrade && (
+              <div className="mt-4 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDiscountInput(!showDiscountInput)}
+                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                  data-testid="button-toggle-discount-code"
+                >
+                  <Tag className="h-3 w-3" />
+                  Have a discount code?
+                </button>
+                
+                {showDiscountInput && (
+                  <Input
+                    type="text"
+                    placeholder="Enter discount code"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    className="w-full"
+                    data-testid="input-discount-code"
+                  />
+                )}
+              </div>
+            )}
+
+            {!isCurrentPlan && (
+              <Button
+                className="w-full mt-4"
+                variant={isUpgrade ? 'default' : 'outline'}
+                onClick={handleAction}
+                disabled={isLoading || upgradeMutation.isPending || downgradeMutation.isPending || subscribeMutation.isPending}
+                data-testid={`button-${isUpgrade ? 'upgrade' : 'downgrade'}-${planKey}`}
               >
-                <Tag className="h-3 w-3" />
-                Have a discount code?
-              </button>
-              
-              {showDiscountInput && (
-                <Input
-                  type="text"
-                  placeholder="Enter discount code"
-                  value={discountCode}
-                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                  className="w-full"
-                  data-testid="input-discount-code"
-                />
+                {isLoading || upgradeMutation.isPending || downgradeMutation.isPending || subscribeMutation.isPending
+                  ? 'Processing...'
+                  : isUpgrade
+                  ? `Upgrade to ${plan.name}`
+                  : `Downgrade to ${plan.name}`}
+              </Button>
+            )}
+
+            {isCurrentPlan && (
+              <Button className="w-full mt-4" variant="outline" disabled>
+                Current Plan
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Checkout Dialog for New Subscriptions */}
+      <Dialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Subscribe to {plan.name}
+            </DialogTitle>
+            <DialogDescription>
+              Enter your payment details to start your ${plan.price}/month subscription.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{plan.name} Plan</span>
+                <span className="text-xl font-bold">${plan.price}/mo</span>
+              </div>
+              {discountCode && (
+                <div className="mt-2 text-sm text-muted-foreground flex items-center gap-1">
+                  <Tag className="h-3 w-3" />
+                  Discount code: {discountCode}
+                </div>
               )}
             </div>
-          )}
 
-          {!isCurrentPlan && (
+            {clientToken ? (
+              <BraintreeHostedFields
+                ref={hostedFieldsRef}
+                clientToken={clientToken}
+                onError={(error) => {
+                  toast({
+                    title: 'Payment Error',
+                    description: error,
+                    variant: 'destructive',
+                  });
+                }}
+              />
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                Loading payment form...
+              </div>
+            )}
+
             <Button
-              className="w-full mt-4"
-              variant={isUpgrade ? 'default' : 'outline'}
-              onClick={handleAction}
-              disabled={isLoading || upgradeMutation.isPending || downgradeMutation.isPending}
-              data-testid={`button-${isUpgrade ? 'upgrade' : 'downgrade'}-${planKey}`}
+              className="w-full"
+              onClick={handlePaymentSubmit}
+              disabled={isLoading || subscribeMutation.isPending || !clientToken}
+              data-testid="button-confirm-subscription"
             >
-              {isLoading || upgradeMutation.isPending || downgradeMutation.isPending
-                ? 'Processing...'
-                : isUpgrade
-                ? `Upgrade to ${plan.name}`
-                : `Downgrade to ${plan.name}`}
+              {isLoading || subscribeMutation.isPending ? 'Processing...' : `Subscribe - $${plan.price}/month`}
             </Button>
-          )}
-
-          {isCurrentPlan && (
-            <Button className="w-full mt-4" variant="outline" disabled>
-              Current Plan
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
