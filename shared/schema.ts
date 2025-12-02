@@ -27,7 +27,7 @@ export const registrationStatusEnum = pgEnum("registration_status", ["pending", 
 
 // Integration provider enum
 export const integrationProviderEnum = pgEnum("integration_provider", [
-  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks", "braintree"
+  "twilio", "sendgrid", "google", "microsoft", "stripe", "zoom", "calendar", "mailchimp", "quickbooks", "braintree", "resend", "telnyx"
 ]);
 
 // Waitlist offer status enum

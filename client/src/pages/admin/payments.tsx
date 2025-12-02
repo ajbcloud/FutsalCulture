@@ -397,7 +397,7 @@ export default function AdminPayments() {
                 Payment Processing Available on Growth and Elite Plans
               </CardTitle>
               <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-                Accept payments through Stripe, manage refunds, and track payment analytics with our advanced payment processing system.
+                Accept payments through Braintree, manage refunds, and track payment analytics with our advanced payment processing system.
                 Upgrade to Growth or Elite plan to enable this feature.
               </p>
             </CardHeader>

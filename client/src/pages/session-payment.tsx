@@ -52,7 +52,7 @@ export default function SessionPayment() {
     mutationFn: async () => {
       if (!offerId) throw new Error("No offer ID");
       
-      // In a real implementation, this would integrate with Stripe or another payment processor
+      // In a real implementation, this would integrate with Braintree or another payment processor
       // For now, we'll simulate the payment process
       return await apiRequest("POST", `/api/signups`, {
         playerId: offer?.playerId,
@@ -332,7 +332,7 @@ export default function SessionPayment() {
                 </Button>
                 
                 <p className="text-xs text-muted-foreground text-center">
-                  In a production environment, this would integrate with Stripe for secure payment processing.
+                  In a production environment, this would integrate with Braintree for secure payment processing.
                 </p>
               </div>
             </CardContent>

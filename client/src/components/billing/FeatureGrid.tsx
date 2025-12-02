@@ -75,7 +75,7 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
         return 'Yes';
       case 'payments':
         if (status.description?.includes('Multiple')) return 'Multiple providers';
-        if (status.description?.includes('Stripe')) return 'Stripe only';
+        if (status.description?.includes('Braintree')) return 'Braintree';
         return 'Yes';
       case 'support':
         if (status.description?.includes('High priority')) return 'Priority + phone';

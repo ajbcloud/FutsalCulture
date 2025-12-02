@@ -73,35 +73,14 @@ export function PlanComparisonCards({ currentPlan, isHomepage = false }: PlanCom
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const createPaymentLink = (plan: 'core' | 'growth' | 'elite') => {
-    // Test mode Stripe payment links - replace with your actual links
-    const paymentLinks = {
-      core: 'https://buy.stripe.com/test_4gM14ob50dVidREeo22Fa04',
-      growth: 'https://buy.stripe.com/test_fZu8wQa0W5oM3d00xc2Fa05', 
-      elite: 'https://buy.stripe.com/test_14A6oI6OK4kI8xkfs62Fa06'
-    };
-    
-    const baseLink = paymentLinks[plan];
-    const currentDomain = window.location.origin;
-    const params = new URLSearchParams({
-      client_reference_id: user?.tenantId || '', // Pass the actual tenant ID from auth context
-      success_url: `${currentDomain}/admin/dashboard?upgrade=success&plan=${plan}`,
-      cancel_url: `${currentDomain}/admin/settings?upgrade=cancelled`
-    });
-    
-    return `${baseLink}?${params.toString()}`;
-  };
-
   const handleUpgrade = async (targetPlan: string) => {
     if (targetPlan === currentPlan || targetPlan === 'free') return;
 
     try {
       setUpgradeLoading(targetPlan);
       
-      // Use direct Stripe payment links like PlanUpgradeButtons
-      const link = createPaymentLink(targetPlan as 'core' | 'growth' | 'elite');
-      // Use _self to navigate in same tab so user returns to our app
-      window.open(link, '_self');
+      // Navigate to admin settings page for Braintree-based upgrade
+      window.location.href = '/admin/settings?tab=plan';
     } catch (error: any) {
       console.error('Error starting upgrade:', error);
       toast({

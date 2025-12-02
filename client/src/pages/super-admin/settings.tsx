@@ -129,7 +129,7 @@ export default function SuperAdminSettings() {
   });
   
   // UI visibility states
-  const [showSendGridKey, setShowSendGridKey] = useState(false);
+  const [showResendKey, setShowResendKey] = useState(false);
   const [showTwilioSid, setShowTwilioSid] = useState(false);
   const [showTwilioToken, setShowTwilioToken] = useState(false);
   
@@ -1233,7 +1233,7 @@ export default function SuperAdminSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Mail className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>Email Service (SendGrid)</CardTitle>
+                  <CardTitle>Email Service (Resend)</CardTitle>
                 </div>
                 <Badge variant={emailConfig?.apiKey ? "default" : "secondary"}>
                   {emailConfig?.apiKey ? "Configured" : "Not Configured"}
@@ -1245,29 +1245,29 @@ export default function SuperAdminSettings() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sendgrid-api-key">API Key</Label>
+                    <Label htmlFor="resend-api-key">API Key</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="sendgrid-api-key"
-                        type={showSendGridKey ? "text" : "password"}
-                        placeholder="SG.xxxxxxxxxxxxxxxxxxxxx"
+                        id="resend-api-key"
+                        type={showResendKey ? "text" : "password"}
+                        placeholder="re_xxxxxxxxxxxxxxxxxxxxx"
                         value={emailConfig?.apiKey || ''}
                         onChange={(e) => setEmailConfig({ ...emailConfig, apiKey: e.target.value })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowSendGridKey(!showSendGridKey)}
+                        onClick={() => setShowResendKey(!showResendKey)}
                       >
-                        {showSendGridKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showResendKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="sendgrid-sender">Default Sender Email</Label>
+                    <Label htmlFor="resend-sender">Default Sender Email</Label>
                     <Input
-                      id="sendgrid-sender"
+                      id="resend-sender"
                       type="email"
                       placeholder="notifications@yourdomain.com"
                       value={emailConfig?.senderEmail || ''}
@@ -1278,9 +1278,9 @@ export default function SuperAdminSettings() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sendgrid-sender-name">Sender Name</Label>
+                    <Label htmlFor="resend-sender-name">Sender Name</Label>
                     <Input
-                      id="sendgrid-sender-name"
+                      id="resend-sender-name"
                       placeholder="Futsal Culture"
                       value={emailConfig?.senderName || ''}
                       onChange={(e) => setEmailConfig({ ...emailConfig, senderName: e.target.value })}
@@ -1288,9 +1288,9 @@ export default function SuperAdminSettings() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="sendgrid-reply-to">Reply-To Email</Label>
+                    <Label htmlFor="resend-reply-to">Reply-To Email</Label>
                     <Input
-                      id="sendgrid-reply-to"
+                      id="resend-reply-to"
                       type="email"
                       placeholder="support@yourdomain.com"
                       value={emailConfig?.replyTo || ''}

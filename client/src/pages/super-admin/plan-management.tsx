@@ -337,7 +337,7 @@ export default function PlanManagement() {
           case 'payment_gateway':
           case 'payment_integrations':
           case 'pay.payment_integrations':
-            return 'stripe_only';
+            return 'braintree';
           case 'integrations.additional_integrations':
           case 'additional_integrations':
           case 'integrations.additional':
@@ -414,16 +414,16 @@ export default function PlanManagement() {
               return ['off', 'manual_only', 'auto_promote'];
             case 'comm.email_gateway':
             case 'email_gateway':
-              return ['sendgrid', 'mailgun', 'custom'];
+              return ['resend', 'mailgun', 'custom'];
             case 'integrations.payment_gateway':
             case 'payment_gateway':
             case 'payment_integrations':
             case 'pay.payment_integrations':
-              return ['stripe_only', 'multiple_providers'];
+              return ['braintree', 'multiple_providers'];
             case 'integrations.additional_integrations':
             case 'additional_integrations':
             case 'integrations.additional':
-              return ['none', 'sendgrid_mailchimp_quickbooks', 'sendgrid_mailchimp_quickbooks_braintree'];
+              return ['none', 'resend_mailchimp_quickbooks', 'resend_mailchimp_quickbooks_braintree'];
             case 'support.level':
             case 'support_level':
               return ['basic', 'standard', 'priority_phone'];
@@ -753,16 +753,16 @@ export default function PlanManagement() {
                                 return ['off', 'manual_only', 'auto_promote'];
                               case 'comm.email_gateway':
                               case 'email_gateway':
-                                return ['sendgrid', 'mailgun', 'custom'];
+                                return ['resend', 'mailgun', 'custom'];
                               case 'integrations.payment_gateway':
                               case 'payment_gateway':
                               case 'payment_integrations':
                               case 'pay.payment_integrations':
-                                return ['stripe_only', 'multiple_providers'];
+                                return ['braintree', 'multiple_providers'];
                               case 'integrations.additional_integrations':
                               case 'additional_integrations':
                               case 'integrations.additional':
-                                return ['none', 'sendgrid_mailchimp_quickbooks', 'sendgrid_mailchimp_quickbooks_braintree'];
+                                return ['none', 'resend_mailchimp_quickbooks', 'resend_mailchimp_quickbooks_braintree'];
                               case 'support.level':
                               case 'support_level':
                                 return ['basic', 'standard', 'priority_phone'];
@@ -806,7 +806,7 @@ export default function PlanManagement() {
                                 case 'payment_gateway':
                                 case 'payment_integrations':
                                 case 'pay.payment_integrations':
-                                  return 'stripe_only';
+                                  return 'braintree';
                                 case 'integrations.additional_integrations':
                                 case 'additional_integrations':
                                 case 'integrations.additional':

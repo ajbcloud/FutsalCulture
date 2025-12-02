@@ -342,7 +342,7 @@ export default function MultiCheckout() {
                 </div>
                 
                 <div className="text-xs text-zinc-500 pt-4">
-                  <p>Payment will be processed securely through Stripe.</p>
+                  <p>Payment will be processed securely through Braintree.</p>
                   <p className="mt-2">You will receive email confirmation after successful payment.</p>
                 </div>
               </CardContent>

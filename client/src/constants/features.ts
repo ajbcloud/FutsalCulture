@@ -27,7 +27,7 @@ export const FEATURE_LABELS: Record<FeatureKey, {label: string; description?: st
   },
   payments: { 
     label: 'Accept online payments', 
-    description: 'Collect payments for session bookings via Stripe' 
+    description: 'Collect payments for session bookings via Braintree' 
   },
   emailNotifications: { 
     label: 'Email notifications', 

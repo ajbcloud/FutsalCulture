@@ -792,25 +792,25 @@ export default function AdminSettings() {
   };
 
   const providerConfigs: Record<string, ProviderConfig> = {
-    twilio: {
-      name: 'Twilio',
+    resend: {
+      name: 'Resend',
+      icon: <Mail className="w-4 h-4" />,
+      description: 'Modern email delivery platform for transactional emails',
+      category: 'email',
+      fields: [
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 're_...', required: true },
+        { key: 'fromEmail', label: 'From Email', type: 'email', placeholder: 'noreply@yourdomain.com', required: true },
+      ],
+    },
+    telnyx: {
+      name: 'Telnyx',
       icon: <MessageSquare className="w-4 h-4" />,
       description: 'SMS messaging and phone verification',
       category: 'sms',
       fields: [
-        { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
-        { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
+        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'KEY...', required: true },
         { key: 'fromNumber', label: 'From Number', type: 'text', placeholder: '+1234567890', required: true },
-      ],
-    },
-    sendgrid: {
-      name: 'SendGrid',
-      icon: <Mail className="w-4 h-4" />,
-      description: 'Email delivery and marketing platform',
-      category: 'email',
-      fields: [
-        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
-        { key: 'verifiedSender', label: 'Verified Sender Email', type: 'email', required: true },
+        { key: 'messagingProfileId', label: 'Messaging Profile ID', type: 'text', placeholder: 'Optional', required: false },
       ],
     },
     google: {
@@ -835,15 +835,16 @@ export default function AdminSettings() {
         { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
       ],
     },
-    stripe: {
-      name: 'Stripe',
+    braintree: {
+      name: 'Braintree',
       icon: <CreditCard className="w-4 h-4" />,
-      description: 'Payment processing and subscription management',
+      description: 'Payment processing with advanced fraud protection and global support',
       category: 'payment',
       fields: [
-        { key: 'publishableKey', label: 'Publishable Key', type: 'text', placeholder: 'pk_test_...', required: true },
-        { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', required: true },
-        { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', required: false },
+        { key: 'merchantId', label: 'Merchant ID', type: 'text', placeholder: 'Your Braintree Merchant ID', required: true },
+        { key: 'publicKey', label: 'Public Key', type: 'text', placeholder: 'Your Braintree Public Key', required: true },
+        { key: 'privateKey', label: 'Private Key', type: 'password', placeholder: 'Your Braintree Private Key', required: true },
+        { key: 'environment', label: 'Environment', type: 'text', placeholder: 'sandbox or production', required: true },
       ],
     },
     mailchimp: {
@@ -868,18 +869,6 @@ export default function AdminSettings() {
         { key: 'redirectUri', label: 'Redirect URI', type: 'url', placeholder: 'https://yourapp.com/auth/quickbooks/callback', required: true },
         { key: 'companyId', label: 'Company ID', type: 'text', placeholder: 'QuickBooks Company ID (obtained after OAuth)', required: false },
         { key: 'sandbox', label: 'Sandbox Mode', type: 'text', placeholder: 'true or false', required: false },
-      ],
-    },
-    braintree: {
-      name: 'Braintree',
-      icon: <CreditCard className="w-4 h-4" />,
-      description: 'Alternative payment processing with advanced fraud protection and global support',
-      category: 'payment',
-      fields: [
-        { key: 'merchantId', label: 'Merchant ID', type: 'text', placeholder: 'Your Braintree Merchant ID', required: true },
-        { key: 'publicKey', label: 'Public Key', type: 'text', placeholder: 'Your Braintree Public Key', required: true },
-        { key: 'privateKey', label: 'Private Key', type: 'password', placeholder: 'Your Braintree Private Key', required: true },
-        { key: 'environment', label: 'Environment', type: 'text', placeholder: 'sandbox or production', required: true },
       ],
     },
   };
@@ -2184,69 +2173,15 @@ export default function AdminSettings() {
                   Payment Processing
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {/* Stripe */}
-                  <FeatureGuard feature={FEATURE_KEYS.PAYMENTS_ENABLED}>
-                    <div className="border border-border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center">
-                          <CreditCard className="w-5 h-5 mr-2 text-purple-500" />
-                          <div>
-                            <h4 className="font-medium text-foreground">Stripe</h4>
-                            <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
-                            <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {integrations.find(i => i.provider === 'stripe')?.enabled && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Active
-                            </Badge>
-                          )}
-                          {activeProcessor?.provider === 'stripe' && (
-                            <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                              Primary
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleConfigureIntegration('stripe')}
-                          className="flex-1"
-                        >
-                          <Settings2 className="w-4 h-4 mr-2" />
-                          Configure
-                        </Button>
-                        {integrations.find(i => i.provider === 'stripe')?.enabled && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleTestIntegration('stripe')}
-                            disabled={testingIntegration === 'stripe'}
-                            className="px-3"
-                          >
-                            {testingIntegration === 'stripe' ? (
-                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                            ) : (
-                              <TestTube className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </FeatureGuard>
-
                   {/* Braintree */}
-                  <FeatureGuard feature={FEATURE_KEYS.INTEGRATIONS_BRAINTREE}>
+                  <FeatureGuard feature={FEATURE_KEYS.PAYMENTS_ENABLED}>
                     <div className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
                           <CreditCard className="w-5 h-5 mr-2 text-blue-500" />
                           <div>
                             <h4 className="font-medium text-foreground">Braintree</h4>
-                            <p className="text-sm text-muted-foreground">Alternative payment processing</p>
+                            <p className="text-sm text-muted-foreground">Payment processing and subscriptions</p>
                             <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
@@ -2301,19 +2236,19 @@ export default function AdminSettings() {
                   Communications
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {/* SendGrid */}
+                  {/* Resend - Email */}
                   <FeatureGuard feature={FEATURE_KEYS.NOTIFICATIONS_EMAIL}>
                     <div className="border border-border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
                         <Mail className="w-5 h-5 mr-2 text-blue-500" />
                         <div>
-                          <h4 className="font-medium text-foreground">SendGrid</h4>
+                          <h4 className="font-medium text-foreground">Resend</h4>
                           <p className="text-sm text-muted-foreground">Email delivery platform</p>
                           <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
                         </div>
                       </div>
-                      {integrations.find(i => i.provider === 'sendgrid')?.enabled && (
+                      {integrations.find(i => i.provider === 'resend')?.enabled && (
                         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                           Active
                         </Badge>
@@ -2323,21 +2258,21 @@ export default function AdminSettings() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleConfigureIntegration('sendgrid')}
+                        onClick={() => handleConfigureIntegration('resend')}
                         className="flex-1"
                       >
                         <Settings2 className="w-4 h-4 mr-2" />
                         Configure
                       </Button>
-                      {integrations.find(i => i.provider === 'sendgrid')?.enabled && (
+                      {integrations.find(i => i.provider === 'resend')?.enabled && (
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => handleTestIntegration('sendgrid')}
-                          disabled={testingIntegration === 'sendgrid'}
+                          onClick={() => handleTestIntegration('resend')}
+                          disabled={testingIntegration === 'resend'}
                           className="px-3"
                         >
-                          {testingIntegration === 'sendgrid' ? (
+                          {testingIntegration === 'resend' ? (
                             <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                           ) : (
                             <TestTube className="w-4 h-4" />
@@ -2348,19 +2283,19 @@ export default function AdminSettings() {
                   </div>
                   </FeatureGuard>
 
-                  {/* Twilio */}
+                  {/* Telnyx - SMS */}
                   <FeatureGuard feature={FEATURE_KEYS.NOTIFICATIONS_SMS}>
                     <div className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center">
-                          <MessageSquare className="w-5 h-5 mr-2 text-red-500" />
+                          <MessageSquare className="w-5 h-5 mr-2 text-green-500" />
                           <div>
-                            <h4 className="font-medium text-foreground">Twilio</h4>
+                            <h4 className="font-medium text-foreground">Telnyx</h4>
                             <p className="text-sm text-muted-foreground">SMS messaging service</p>
                             <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
-                        {integrations.find(i => i.provider === 'twilio')?.enabled && (
+                        {integrations.find(i => i.provider === 'telnyx')?.enabled && (
                           <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                             Active
                           </Badge>
@@ -2370,21 +2305,21 @@ export default function AdminSettings() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleConfigureIntegration('twilio')}
+                          onClick={() => handleConfigureIntegration('telnyx')}
                           className="flex-1"
                         >
                           <Settings2 className="w-4 h-4 mr-2" />
                           Configure
                         </Button>
-                        {integrations.find(i => i.provider === 'twilio')?.enabled && (
+                        {integrations.find(i => i.provider === 'telnyx')?.enabled && (
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleTestIntegration('twilio')}
-                            disabled={testingIntegration === 'twilio'}
+                            onClick={() => handleTestIntegration('telnyx')}
+                            disabled={testingIntegration === 'telnyx'}
                             className="px-3"
                           >
-                            {testingIntegration === 'twilio' ? (
+                            {testingIntegration === 'telnyx' ? (
                               <div className="w-4 h-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                             ) : (
                               <TestTube className="w-4 h-4" />
@@ -2683,18 +2618,6 @@ export default function AdminSettings() {
                       />
                     </div>
                   ))}
-
-                  {configureDialog === 'stripe' && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-blue-500 mr-2 mt-0.5" />
-                        <div className="text-sm text-blue-700 dark:text-blue-300">
-                          <p className="font-medium mb-1">Payment Processor Notice</p>
-                          <p>Enabling Stripe will automatically disable other payment processors. Only one payment processor can be active at a time.</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {configureDialog === 'braintree' && (
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">

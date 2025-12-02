@@ -30,7 +30,7 @@ export default function Status() {
     {
       name: "Payment Processing",
       status: "operational",
-      description: "Stripe integration functioning normally",
+      description: "Braintree integration functioning normally",
       lastChecked: new Date().toISOString()
     },
     {

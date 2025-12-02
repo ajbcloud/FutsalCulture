@@ -4,13 +4,13 @@ export interface PlanFeature {
   name: string;
   description?: string;
   status: FeatureStatus;
-  upgradeLabel?: string; // Shown if status = upgraded
+  upgradeLabel?: string;
 }
 
 export interface PlanConfig {
   id: string;
   name: string;
-  price: number; // monthly in USD
+  price: number;
   playerLimit: number | 'unlimited';
   features: Record<string, PlanFeature>;
 }
@@ -40,7 +40,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'not_included' },
       paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
-      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'not_included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'Telnyx, Mailchimp, QuickBooks', status: 'not_included' },
       featureRequests: { name: 'Feature Request Queue', status: 'not_included' },
     }
   },
@@ -68,7 +68,7 @@ export const plans: PlanConfig[] = [
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
       paymentIntegrations: { name: 'Payment Integrations', status: 'not_included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'not_included' },
-      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'not_included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'Telnyx, Mailchimp, QuickBooks', status: 'not_included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Basic queue', status: 'included' },
     }
   },
@@ -80,7 +80,7 @@ export const plans: PlanConfig[] = [
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
       parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
-      payments: { name: 'Accept Online Payments', description: 'Stripe only', status: 'included' },
+      payments: { name: 'Accept Online Payments', description: 'Braintree', status: 'included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'included' },
       analytics: { name: 'Analytics', description: 'Advanced', status: 'included' },
@@ -94,21 +94,21 @@ export const plans: PlanConfig[] = [
       support: { name: 'Support Level', description: 'Standard', status: 'included' },
       playerDevelopment: { name: 'Advanced Player Development', status: 'not_included' },
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
-      paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe only', status: 'included' },
+      paymentIntegrations: { name: 'Payment Integrations', description: 'Braintree', status: 'included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
-      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks', status: 'included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'Resend, Telnyx, Mailchimp, QuickBooks', status: 'included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Standard queue', status: 'included' },
     }
   },
   {
     id: 'elite',
     name: 'Elite',
-    price: 499,
+    price: 399,
     playerLimit: 'unlimited',
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
       parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
-      payments: { name: 'Accept Online Payments', description: 'Multiple payment integrations (Stripe, QuickBooks, more)', status: 'included' },
+      payments: { name: 'Accept Online Payments', description: 'Multiple processors', status: 'included' },
       emailNotifications: { name: 'Email Notifications', status: 'included' },
       smsNotifications: { name: 'SMS Notifications', status: 'included' },
       analytics: { name: 'Analytics', description: 'AI-powered forecasting', status: 'included' },
@@ -122,9 +122,9 @@ export const plans: PlanConfig[] = [
       support: { name: 'Support Level', description: 'High priority + phone/email', status: 'included' },
       playerDevelopment: { name: 'Advanced Player Development', status: 'included' },
       calendarIntegration: { name: 'Calendar Integrations', status: 'included' },
-      paymentIntegrations: { name: 'Payment Integrations', description: 'Stripe + QuickBooks + more', status: 'included' },
+      paymentIntegrations: { name: 'Payment Integrations', description: 'Braintree + QuickBooks + more', status: 'included' },
       emailSmsGateway: { name: 'Email/SMS Gateway', status: 'included' },
-      additionalIntegrations: { name: 'Additional Integrations', description: 'SendGrid, Mailchimp, QuickBooks, Braintree', status: 'included' },
+      additionalIntegrations: { name: 'Additional Integrations', description: 'Resend, Telnyx, Mailchimp, QuickBooks, Braintree', status: 'included' },
       featureRequests: { name: 'Feature Request Queue', description: 'Priority queue', status: 'included' },
     }
   }

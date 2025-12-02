@@ -59,21 +59,27 @@ export default function Landing(){
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-3xl font-bold mb-6 text-center text-gray-900">Simple pricing</h2>
             <p className="text-center text-gray-600 mb-12">Choose the plan that fits your club</p>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-4 gap-6">
               <PriceCard 
                 name="Free" 
                 price="$0" 
-                features={["Up to 50 members","Email invites","Basic calendar"]} 
+                features={["Up to 50 players","Email notifications","Basic calendar"]} 
               />
               <PriceCard 
-                name="Starter" 
-                price="$49" 
-                features={["Unlimited members","CSV import","Priority support"]} 
-              />
-              <PriceCard 
-                name="Club" 
+                name="Core" 
                 price="$99" 
-                features={["Advanced analytics","SMS invites","Custom domains"]} 
+                features={["Up to 250 players","Recurring sessions","Online payments"]} 
+              />
+              <PriceCard 
+                name="Growth" 
+                price="$199" 
+                features={["Up to 1,000 players","SMS notifications","Advanced analytics"]} 
+                popular={true}
+              />
+              <PriceCard 
+                name="Elite" 
+                price="$399" 
+                features={["Unlimited players","White-label branding","Priority support"]} 
               />
             </div>
           </div>
@@ -109,9 +115,14 @@ function Feature({ title, text }: { title: string; text: string }){
   ); 
 }
 
-function PriceCard({ name, price, features }: { name: string; price: string; features: string[] }){ 
+function PriceCard({ name, price, features, popular = false }: { name: string; price: string; features: string[]; popular?: boolean }){ 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-200 relative">
+    <div className={`p-6 bg-white rounded-2xl shadow-sm relative ${popular ? 'border-2 border-blue-600 ring-2 ring-blue-100' : 'border border-gray-200'}`}>
+      {popular && (
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+          <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">Most Popular</span>
+        </div>
+      )}
       <div className="font-bold text-lg text-gray-900">{name}</div>
       <div className="text-4xl font-extrabold mt-2 text-gray-900">
         {price}
@@ -126,7 +137,7 @@ function PriceCard({ name, price, features }: { name: string; price: string; fea
         ))}
       </ul>
       <div className="mt-6">
-        <a href="/get-started" className="inline-flex items-center justify-center w-full rounded-2xl px-6 py-3 font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+        <a href="/get-started" className={`inline-flex items-center justify-center w-full rounded-2xl px-6 py-3 font-medium transition-colors ${popular ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
           Get started
         </a>
       </div>

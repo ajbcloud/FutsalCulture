@@ -553,7 +553,7 @@ export default function Help() {
                 
                 <div>
                   <h4 className="text-foreground font-medium mb-2">What payment methods are supported?</h4>
-                  <p className="text-muted-foreground text-sm">PlayHQ integrates with Stripe to support all major credit cards, digital wallets, and secure payment processing.</p>
+                  <p className="text-muted-foreground text-sm">PlayHQ integrates with Braintree to support all major credit cards, digital wallets, and secure payment processing.</p>
                 </div>
                 
                 <div>
