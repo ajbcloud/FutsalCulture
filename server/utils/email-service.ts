@@ -1,5 +1,5 @@
-import sgMail from '@sendgrid/mail';
-// Simple email templates inline to avoid missing file issues
+import { sendEmail } from './email-provider';
+
 interface InvitationEmailData {
   to: string;
   tenantName: string;
@@ -52,12 +52,7 @@ The PlayHQ Team
   `.trim();
 }
 
-// Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app';
+const FROM_EMAIL = 'noreply@playhq.app';
 
 export interface SendInvitationEmailOptions {
   to: string;
@@ -69,15 +64,7 @@ export interface SendInvitationEmailOptions {
   expiresAt: Date;
 }
 
-/**
- * Send invitation email using SendGrid
- */
 export async function sendInvitationEmail(options: SendInvitationEmailOptions): Promise<void> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn('SENDGRID_API_KEY not configured - invitation email not sent');
-    return;
-  }
-
   const emailData: InvitationEmailData = {
     ...options,
     expiresAt: options.expiresAt.toLocaleDateString('en-US', {
@@ -90,59 +77,33 @@ export async function sendInvitationEmail(options: SendInvitationEmailOptions): 
     }),
   };
 
-  const msg = {
+  const result = await sendEmail({
     to: options.to,
-    from: {
-      email: FROM_EMAIL,
-      name: 'PlayHQ Team'
-    },
+    from: FROM_EMAIL,
+    fromName: 'PlayHQ Team',
     subject: `🎯 You're invited to join ${options.tenantName} on PlayHQ`,
     text: getInvitationEmailText(emailData),
     html: getInvitationEmailTemplate(emailData),
-    // Track email engagement
-    trackingSettings: {
-      clickTracking: {
-        enable: false,  // Disable click tracking to prevent URL wrapping
-      },
-      openTracking: {
-        enable: true,
-      },
-    },
-    // Categories for SendGrid analytics
     categories: ['invitation', options.role, 'tenant-invite'],
-  };
+  });
 
-  try {
-    await sgMail.send(msg);
+  if (result.success) {
     console.log(`✅ Invitation email sent to ${options.to} for ${options.tenantName}`);
-  } catch (error) {
-    console.error('❌ Failed to send invitation email:', error);
+  } else {
+    console.error('❌ Failed to send invitation email:', result.error);
     throw new Error('Failed to send invitation email');
   }
 }
 
-/**
- * Send welcome email after invitation acceptance
- */
 export async function sendWelcomeEmail(options: {
   to: string;
   firstName: string;
   tenantName: string;
   role: 'parent' | 'player' | 'admin' | 'assistant';
 }): Promise<void> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn('SENDGRID_API_KEY not configured - welcome email not sent');
-    return;
-  }
-
-  const msg = {
-    to: options.to,
-    from: {
-      email: FROM_EMAIL,
-      name: 'PlayHQ Team'
-    },
-    subject: `🎉 Welcome to ${options.tenantName} on PlayHQ!`,
-    text: `
+  const appUrl = process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app');
+  
+  const text = `
 Hi ${options.firstName},
 
 Welcome to ${options.tenantName} on PlayHQ! Your account has been successfully created.
@@ -156,14 +117,15 @@ ${options.role === 'parent' ?
   'You can now assist with managing sessions, players, and help support your organization.'
 }
 
-Get started by logging into your account at: ${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app')}
+Get started by logging into your account at: ${appUrl}
 
 If you have any questions, our support team is here to help.
 
 Welcome to the futsal family!
 The PlayHQ Team
-`,
-    html: `
+`;
+
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -200,7 +162,7 @@ The PlayHQ Team
       }</p>
       
       <div style="text-align: center;">
-        <a href="${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app')}" class="button">Go to PlayHQ</a>
+        <a href="${appUrl}" class="button">Go to PlayHQ</a>
       </div>
       
       <p>If you have any questions, our support team is here to help.</p>
@@ -214,15 +176,21 @@ The PlayHQ Team
     </div>
   </div>
 </body>
-</html>`,
-    categories: ['welcome', options.role, 'onboarding'],
-  };
+</html>`;
 
-  try {
-    await sgMail.send(msg);
+  const result = await sendEmail({
+    to: options.to,
+    from: FROM_EMAIL,
+    fromName: 'PlayHQ Team',
+    subject: `🎉 Welcome to ${options.tenantName} on PlayHQ!`,
+    text,
+    html,
+    categories: ['welcome', options.role, 'onboarding'],
+  });
+
+  if (result.success) {
     console.log(`✅ Welcome email sent to ${options.to}`);
-  } catch (error) {
-    console.error('❌ Failed to send welcome email:', error);
-    // Don't throw error for welcome email - it's not critical
+  } else {
+    console.error('❌ Failed to send welcome email:', result.error);
   }
 }

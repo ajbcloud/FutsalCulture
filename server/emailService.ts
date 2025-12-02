@@ -1,23 +1,14 @@
-import { MailService } from '@sendgrid/mail';
+import { sendEmail as sendEmailViaProvider, sendBulkEmail as sendBulkViaProvider, isEmailConfigured, EmailMessage } from './utils/email-provider';
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const DEFAULT_FROM_EMAIL = 'noreply@playhq.app';
 
-let mailService: MailService | null = null;
-
-export function initEmail() {
-  const key = process.env.SENDGRID_API_KEY;
-  if (!key) {
-    console.warn('SENDGRID_API_KEY not configured - emails will not be sent');
-    return;
+export async function initEmail() {
+  const configured = await isEmailConfigured();
+  if (configured) {
+    console.log('✅ Email service initialized (Resend)');
+  } else {
+    console.warn('⚠️ Email service not configured - emails will not be sent');
   }
-  mailService = new MailService();
-  mailService.setApiKey(key);
-  console.log('✅ SendGrid initialized');
-}
-
-// Initialize on import if API key is available
-if (SENDGRID_API_KEY) {
-  initEmail();
 }
 
 interface EmailParams {
@@ -29,33 +20,19 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  if (!mailService) {
-    console.warn('SendGrid not configured - skipping email notification');
-    return { success: false, error: 'SendGrid not configured' };
-  }
-
-  try {
-    const result = await mailService.send({
-      to: params.to,
-      from: params.from,
-      subject: params.subject,
-      text: params.text,
-      html: params.html,
-    });
-    
+  const result = await sendEmailViaProvider({
+    to: params.to,
+    from: params.from || DEFAULT_FROM_EMAIL,
+    subject: params.subject,
+    text: params.text,
+    html: params.html,
+  });
+  
+  if (result.success) {
     console.log(`📧 Email sent successfully to ${params.to}`);
-    
-    return { 
-      success: true, 
-      messageId: result[0]?.headers?.['x-message-id'] || 'unknown'
-    };
-  } catch (error: any) {
-    console.error('❌ SendGrid email error:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Email sending failed'
-    };
   }
+  
+  return result;
 }
 
 export async function sendBulkEmail(recipients: Array<{ 
@@ -70,46 +47,23 @@ export async function sendBulkEmail(recipients: Array<{
   failed: number;
   results: Array<{ email: string; success: boolean; messageId?: string; error?: string }>;
 }> {
-  if (!mailService) {
-    console.warn('SendGrid not configured - skipping bulk email');
-    return { 
-      sent: 0, 
-      failed: recipients.length, 
-      results: recipients.map(r => ({ email: r.email, success: false, error: 'SendGrid not configured' }))
-    };
-  }
-
-  const results = [];
-  let sent = 0;
-  let failed = 0;
-
-  for (const recipient of recipients) {
-    const result = await sendEmail({
-      to: recipient.email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
-      subject: recipient.subject,
-      text: recipient.text || '',
-      html: recipient.html || ''
-    });
-
-    results.push({
-      email: recipient.email,
-      ...result
-    });
-
-    if (result.success) {
-      sent++;
-    } else {
-      failed++;
+  const messages: EmailMessage[] = recipients.map(r => ({
+    to: r.email,
+    from: DEFAULT_FROM_EMAIL,
+    subject: r.subject,
+    html: r.html,
+    text: r.text,
+    metadata: {
+      tenantId: r.tenantId,
+      campaignId: r.campaignId
     }
+  }));
 
-    // Add small delay between emails to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  console.log(`📧 Bulk email completed: ${sent} sent, ${failed} failed`);
+  const result = await sendBulkViaProvider(messages);
   
-  return { sent, failed, results };
+  console.log(`📧 Bulk email completed: ${result.sent} sent, ${result.failed} failed`);
+  
+  return result;
 }
 
 export async function sendCampaignEmail(
@@ -122,7 +76,6 @@ export async function sendCampaignEmail(
   const { replaceTemplateVariables } = await import('./utils/template-variables');
   
   const emailRecipients = recipients.map(recipient => {
-    // Build template variables with common fields
     const templateVars = {
       name: recipient.name || 'there',
       firstName: recipient.name?.split(' ')[0] || 'there',
@@ -130,7 +83,6 @@ export async function sendCampaignEmail(
       ...variables
     };
     
-    // Replace template variables using centralized utility
     const personalizedSubject = replaceTemplateVariables(subject, templateVars);
     const personalizedTemplate = replaceTemplateVariables(template, templateVars);
 
@@ -138,7 +90,7 @@ export async function sendCampaignEmail(
       email: recipient.email,
       subject: personalizedSubject,
       html: personalizedTemplate,
-      text: personalizedTemplate.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      text: personalizedTemplate.replace(/<[^>]*>/g, ''),
       tenantId: recipient.tenantId,
       campaignId
     };
@@ -181,7 +133,7 @@ Please respond to this request as soon as possible.
 
   const result = await sendEmail({
     to: supportEmail,
-    from: supportEmail, // Use same email for from/to for now
+    from: supportEmail,
     subject,
     text,
     html,

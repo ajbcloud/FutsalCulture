@@ -7,17 +7,17 @@ import { clearCapabilitiesCache } from './middleware/featureAccess';
 import { logPlanChange, determinePlanChangeType, calculateMRR, calculateAnnualValue } from './services/planHistoryService';
 import { getPlanLevelFromPriceId, getPlanLevelFromAmount } from '../lib/stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY environment variable is required');
-}
+// Stripe is now optional - transitioning to Braintree
+let stripe: Stripe | null = null;
+const stripeEnabled = !!process.env.STRIPE_SECRET_KEY;
 
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  // Stripe webhook verification disabled
+if (stripeEnabled) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2024-10-28.acacia',
+  });
+} else {
+  console.warn('⚠️ Stripe webhooks disabled - STRIPE_SECRET_KEY not configured');
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-10-28.acacia',
-});
 
 // Helper function to map price IDs to plan levels
 function getPlanLevelFromPrice(priceId: string | null | undefined): string | null {
@@ -34,6 +34,10 @@ router.get('/test', (req, res) => {
 
 // Webhook endpoint for Stripe events (raw body middleware is already applied in index.ts)
 router.post('/webhook', async (req, res) => {
+  if (!stripe || !stripeEnabled) {
+    return res.status(503).json({ error: 'Stripe not configured' });
+  }
+
   const sig = req.headers['stripe-signature'] as string;
   let event: Stripe.Event;
 

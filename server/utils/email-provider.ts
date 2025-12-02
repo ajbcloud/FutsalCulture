@@ -48,20 +48,33 @@ class ResendEmailProvider implements IEmailProvider {
         ? `${message.fromName} <${message.from || fromEmail}>`
         : message.from || fromEmail;
 
-      const result = await client.emails.send({
+      const emailOptions: any = {
         from,
         to: Array.isArray(message.to) ? message.to : [message.to],
         subject: message.subject,
-        text: message.text,
-        html: message.html,
-        replyTo: message.replyTo,
-        tags: message.categories?.map(cat => ({ name: 'category', value: cat })),
-        attachments: message.attachments?.map(att => ({
+      };
+
+      if (message.html) {
+        emailOptions.html = message.html;
+      }
+      if (message.text) {
+        emailOptions.text = message.text;
+      }
+      if (message.replyTo) {
+        emailOptions.replyTo = message.replyTo;
+      }
+      if (message.categories?.length) {
+        emailOptions.tags = message.categories.map(cat => ({ name: 'category', value: cat }));
+      }
+      if (message.attachments?.length) {
+        emailOptions.attachments = message.attachments.map(att => ({
           filename: att.filename,
           content: Buffer.from(att.content, 'base64'),
           content_type: att.type
-        }))
-      });
+        }));
+      }
+
+      const result = await client.emails.send(emailOptions);
 
       if (result.error) {
         return {

@@ -1,13 +1,17 @@
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+// Stripe initialization is now optional - the app is transitioning to Braintree
+let stripeInstance: Stripe | null = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-10-28.acacia',
+  });
+} else {
+  console.warn('⚠️ STRIPE_SECRET_KEY not configured - Stripe payments disabled (transitioning to Braintree)');
 }
 
-// Initialize Stripe with the latest API version
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-10-28.acacia',
-});
+export const stripe = stripeInstance;
 
 // Helper function to map price IDs to plan levels
 export function getPlanLevelFromPriceId(priceId: string | null | undefined): 'free' | 'core' | 'growth' | 'elite' | null {
