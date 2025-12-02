@@ -2671,12 +2671,20 @@ export const betaPlanFeatures = pgTable("beta_plan_features", {
 // Audit events for compliance
 export const auditEvents = pgTable("audit_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  userRole: varchar("user_role"),
+  action: varchar("action").notNull(),
+  resourceType: varchar("resource_type").notNull(),
+  resourceId: varchar("resource_id"),
+  details: jsonb("details"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   actorUserId: varchar("actor_user_id").references(() => users.id),
-  tenantId: varchar("tenant_id").references(() => tenants.id),
-  eventType: varchar("event_type").notNull(),
+  eventType: varchar("event_type"),
   targetId: varchar("target_id"),
   metadataJson: jsonb("metadata_json"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("audit_events_tenant_idx").on(table.tenantId),
   index("audit_events_actor_idx").on(table.actorUserId),

@@ -77,8 +77,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant.id,
-        eventType: "tenant_created",
-        metadataJson: { slug, org_name }
+        action: "create",
+        resourceType: "tenant",
+        resourceId: tenant.id,
+        details: { slug, org_name }
       });
 
       // Create Clerk organization for tenant
@@ -241,9 +243,11 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant.id,
-        actorUserId: currentUser.id,
-        eventType: "tenant_created",
-        metadataJson: { slug, org_name, clerkUserId: clerk_user_id }
+        userId: currentUser.id,
+        action: "create",
+        resourceType: "tenant",
+        resourceId: tenant.id,
+        details: { slug, org_name, clerkUserId: clerk_user_id }
       });
 
       // Create Clerk organization for tenant and add user as admin
@@ -300,9 +304,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant_id,
-        eventType: "invite_sent",
-        targetId: invite.id,
-        metadataJson: { email, role }
+        action: "create",
+        resourceType: "invite",
+        resourceId: invite.id,
+        details: { email, role }
       });
 
       res.json({ 
@@ -358,9 +363,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: invite.tenantId,
-        actorUserId: user_id,
-        eventType: "invite_accepted",
-        targetId: invite.id
+        userId: user_id,
+        action: "accept",
+        resourceType: "invite",
+        resourceId: invite.id
       });
 
       res.json({ success: true, tenantId: invite.tenantId });
@@ -478,9 +484,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
         // Record audit event
         await db.insert(auditEvents).values({
           tenantId: tenant.id,
-          actorUserId: user_id,
-          eventType: "join_request_pending",
-          metadataJson: { email, role, age, isMinor: true, guardianEmail: guardian_email || null }
+          userId: user_id,
+          action: "request",
+          resourceType: "membership",
+          details: { email, role, age, isMinor: true, guardianEmail: guardian_email || null }
         });
 
         res.json({ 
@@ -514,9 +521,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
         // Record audit event
         await db.insert(auditEvents).values({
           tenantId: tenant.id,
-          actorUserId: user_id,
-          eventType: "joined_by_code",
-          metadataJson: { email, role, age }
+          userId: user_id,
+          action: "join",
+          resourceType: "membership",
+          details: { email, role, age }
         });
 
         // Add user to tenant's Clerk organization if applicable
@@ -708,9 +716,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant.id,
-        actorUserId: currentUser.id,
-        eventType: "clerk_user_joined",
-        metadataJson: { email: userEmail, role, clerkUserId: clerk_user_id }
+        userId: currentUser.id,
+        action: "join",
+        resourceType: "membership",
+        details: { email: userEmail, role, clerkUserId: clerk_user_id }
       });
 
       res.json({ 
