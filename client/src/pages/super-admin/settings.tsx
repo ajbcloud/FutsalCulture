@@ -127,29 +127,11 @@ export default function SuperAdminSettings() {
       waitlist: true
     }
   });
-  const [paymentConfig, setPaymentConfig] = useState<any>({
-    mode: 'test',
-    secretKey: '',
-    publishableKey: '',
-    webhookSecret: '',
-    methods: {
-      card: true,
-      applePay: false,
-      bankTransfer: false
-    },
-    settings: {
-      autoCapture: true,
-      sendReceipts: true
-    }
-  });
-  const [authConfig, setAuthConfig] = useState<any>({});
   
   // UI visibility states
   const [showSendGridKey, setShowSendGridKey] = useState(false);
   const [showTwilioSid, setShowTwilioSid] = useState(false);
   const [showTwilioToken, setShowTwilioToken] = useState(false);
-  const [showStripeSecret, setShowStripeSecret] = useState(false);
-  const [showStripeWebhook, setShowStripeWebhook] = useState(false);
   
   // Loading states
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
@@ -296,20 +278,16 @@ export default function SuperAdminSettings() {
     debouncedSaveTenantDefaults(newDefaults);
   };
   
-  // Integration handler functions
-  const handleTestIntegration = async (type: string) => {
+  // Integration handler functions (email and sms only - payment is configured via environment variables)
+  const handleTestIntegration = async (type: 'email' | 'sms') => {
     setTestingIntegration(type);
     try {
+      const config = type === 'email' ? emailConfig : smsConfig;
       const response = await fetch(`/api/super-admin/integrations/${type}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(
-          type === 'email' ? emailConfig :
-          type === 'sms' ? smsConfig :
-          type === 'payment' ? paymentConfig :
-          authConfig
-        )
+        body: JSON.stringify(config)
       });
       
       const result = await response.json();
@@ -329,14 +307,10 @@ export default function SuperAdminSettings() {
     }
   };
   
-  const handleSaveIntegration = async (type: string) => {
+  const handleSaveIntegration = async (type: 'email' | 'sms') => {
     setSavingIntegration(type);
     try {
-      const config = 
-        type === 'email' ? emailConfig :
-        type === 'sms' ? smsConfig :
-        type === 'payment' ? paymentConfig :
-        authConfig;
+      const config = type === 'email' ? emailConfig : smsConfig;
         
       const response = await fetch(`/api/super-admin/integrations/${type}`, {
         method: 'PUT',
@@ -1589,222 +1563,90 @@ export default function SuperAdminSettings() {
             </CardContent>
           </Card>
 
-          {/* Payment Integration */}
+          {/* Payment Integration - Braintree */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>Payment Processing (Stripe)</CardTitle>
+                  <CardTitle>Payment Processing (Braintree)</CardTitle>
                 </div>
-                <Badge variant={paymentConfig?.secretKey ? "default" : "secondary"}>
-                  {paymentConfig?.mode === 'live' ? 'Live' : paymentConfig?.secretKey ? 'Test Mode' : 'Not Configured'}
-                </Badge>
+                <Badge variant="default">Configured</Badge>
               </div>
-              <CardDescription>Payment gateway configuration and processing settings</CardDescription>
+              <CardDescription>Braintree payment gateway for SaaS subscriptions and session bookings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <p className="text-sm font-medium">Environment Mode</p>
-                  </div>
-                  <Select
-                    value={paymentConfig?.mode || 'test'}
-                    onValueChange={(value: 'test' | 'live') => setPaymentConfig({ ...paymentConfig, mode: value })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="test">Test Mode</SelectItem>
-                      <SelectItem value="live">Live Mode</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="stripe-secret">Secret Key</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="stripe-secret"
-                        type={showStripeSecret ? "text" : "password"}
-                        placeholder={paymentConfig?.mode === 'live' ? "sk_live_..." : "sk_test_..."}
-                        value={paymentConfig?.secretKey || ''}
-                        onChange={(e) => setPaymentConfig({ ...paymentConfig, secretKey: e.target.value })}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowStripeSecret(!showStripeSecret)}
-                      >
-                        {showStripeSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <p className="text-sm font-medium">Merchant Account</p>
                     </div>
+                    <p className="text-xs text-muted-foreground">Connected via environment variables</p>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="stripe-publishable">Publishable Key</Label>
-                    <Input
-                      id="stripe-publishable"
-                      placeholder={paymentConfig?.mode === 'live' ? "pk_live_..." : "pk_test_..."}
-                      value={paymentConfig?.publishableKey || ''}
-                      onChange={(e) => setPaymentConfig({ ...paymentConfig, publishableKey: e.target.value })}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="stripe-webhook">Webhook Endpoint Secret</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="stripe-webhook"
-                        type={showStripeWebhook ? "text" : "password"}
-                        placeholder="whsec_..."
-                        value={paymentConfig?.webhookSecret || ''}
-                        onChange={(e) => setPaymentConfig({ ...paymentConfig, webhookSecret: e.target.value })}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowStripeWebhook(!showStripeWebhook)}
-                      >
-                        {showStripeWebhook ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <p className="text-sm font-medium">Webhooks</p>
                     </div>
+                    <p className="text-xs text-muted-foreground">/api/webhooks/braintree</p>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Webhook URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value="https://your-domain.com/api/webhooks/stripe"
-                        disabled
-                        className="bg-muted"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          navigator.clipboard.writeText('https://your-domain.com/api/webhooks/stripe');
-                          toast({ title: 'Webhook URL copied to clipboard' });
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Check className="h-4 w-4 text-green-600" />
+                      <p className="text-sm font-medium">Plans</p>
                     </div>
+                    <p className="text-xs text-muted-foreground">Core, Growth, Elite</p>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Payment Methods</Label>
+                  <Label>Supported Payment Methods</Label>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        <p className="text-sm font-medium">Card Payments</p>
-                      </div>
-                      <Switch 
-                        checked={paymentConfig?.methods?.card || false}
-                        onCheckedChange={(checked) => setPaymentConfig({ 
-                          ...paymentConfig, 
-                          methods: { ...paymentConfig?.methods, card: checked }
-                        })}
-                      />
+                    <div className="flex items-center gap-2 p-3 border rounded-lg">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm font-medium">Credit/Debit Cards</p>
                     </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Wallet className="h-4 w-4" />
-                        <p className="text-sm font-medium">Apple Pay</p>
-                      </div>
-                      <Switch 
-                        checked={paymentConfig?.methods?.applePay || false}
-                        onCheckedChange={(checked) => setPaymentConfig({ 
-                          ...paymentConfig, 
-                          methods: { ...paymentConfig?.methods, applePay: checked }
-                        })}
-                      />
+                    <div className="flex items-center gap-2 p-3 border rounded-lg">
+                      <Wallet className="h-4 w-4 text-purple-600" />
+                      <p className="text-sm font-medium">PayPal</p>
                     </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
-                        <p className="text-sm font-medium">Bank Transfer</p>
-                      </div>
-                      <Switch 
-                        checked={paymentConfig?.methods?.bankTransfer || false}
-                        onCheckedChange={(checked) => setPaymentConfig({ 
-                          ...paymentConfig, 
-                          methods: { ...paymentConfig?.methods, bankTransfer: checked }
-                        })}
-                      />
+                    <div className="flex items-center gap-2 p-3 border rounded-lg">
+                      <Building className="h-4 w-4 text-green-600" />
+                      <p className="text-sm font-medium">Venmo</p>
                     </div>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Additional Settings</Label>
+                  <Label>Subscription Features</Label>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium">Auto Capture Payments</p>
-                        <p className="text-xs text-muted-foreground">Capture immediately after authorization</p>
-                      </div>
-                      <Switch 
-                        checked={paymentConfig?.settings?.autoCapture || false}
-                        onCheckedChange={(checked) => setPaymentConfig({ 
-                          ...paymentConfig, 
-                          settings: { ...paymentConfig?.settings, autoCapture: checked }
-                        })}
-                      />
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-sm font-medium">Plan Change Cooldown</p>
+                      <p className="text-xs text-muted-foreground">24-hour cooldown between plan changes</p>
                     </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium">Send Receipt Emails</p>
-                        <p className="text-xs text-muted-foreground">Automatic receipts via Stripe</p>
-                      </div>
-                      <Switch 
-                        checked={paymentConfig?.settings?.sendReceipts || false}
-                        onCheckedChange={(checked) => setPaymentConfig({ 
-                          ...paymentConfig, 
-                          settings: { ...paymentConfig?.settings, sendReceipts: checked }
-                        })}
-                      />
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-sm font-medium">Downgrade Timing</p>
+                      <p className="text-xs text-muted-foreground">Effective at end of billing period</p>
+                    </div>
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-sm font-medium">Upgrade Timing</p>
+                      <p className="text-xs text-muted-foreground">Immediate with prorated billing</p>
+                    </div>
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-sm font-medium">Payment Retries</p>
+                      <p className="text-xs text-muted-foreground">Automatic retry on failed payments</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center pt-2">
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleTestIntegration('payment')}
-                      disabled={!paymentConfig?.secretKey || testingIntegration === 'payment'}
-                    >
-                      {testingIntegration === 'payment' ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</>
-                      ) : (
-                        <><TestTube className="h-4 w-4 mr-2" />Test Connection</>
-                      )}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => window.open('https://dashboard.stripe.com', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />Stripe Dashboard
-                    </Button>
-                  </div>
+                <div className="flex justify-end pt-2">
                   <Button 
-                    onClick={() => handleSaveIntegration('payment')}
-                    disabled={savingIntegration === 'payment'}
+                    variant="outline"
+                    onClick={() => window.open('https://sandbox.braintreegateway.com/login', '_blank')}
                   >
-                    {savingIntegration === 'payment' ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
-                    ) : (
-                      <>Save Configuration</>
-                    )}
+                    <ExternalLink className="h-4 w-4 mr-2" />Braintree Control Panel
                   </Button>
                 </div>
               </div>
