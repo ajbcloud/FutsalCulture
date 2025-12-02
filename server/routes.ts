@@ -18,7 +18,7 @@ import {
   insertHouseholdMemberSchema
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 // Lazy load background jobs - they're initialized after server starts
 // import "./jobs/capacity-monitor";
@@ -531,6 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { systemSettings } = await import('@shared/schema');
+      const { tenantPolicies } = await import('@shared/db/schema/tenantPolicy');
       const { and, eq } = await import('drizzle-orm');
 
       // Get age policy settings from system settings
@@ -540,6 +541,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(systemSettings.tenantId, tenantId),
           sql`${systemSettings.key} IN ('audience', 'minAge', 'maxAge', 'requireParent', 'teenSelfMin', 'teenPayMin', 'enforceAgeGating', 'requireConsent')`
         ));
+
+      // Get tenant policy for audienceMode
+      const [tenantPolicy] = await db.select()
+        .from(tenantPolicies)
+        .where(eq(tenantPolicies.tenantId, tenantId));
 
       const policyData = settings.reduce((acc, setting) => {
         let value: any = setting.value;
@@ -558,6 +564,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as any);
 
+      // Get audienceMode from tenant_policies table (primary source)
+      const audienceMode = tenantPolicy?.audienceMode || 'youth_only';
+      
+      // Determine household requirements based on audienceMode:
+      // - youth_only: household always required before creating any player
+      // - mixed: household required for players under 18
+      // - adult_only: household optional
+      const householdRules = {
+        youth_only: {
+          householdRequired: true,
+          requiresHouseholdForMinors: true,
+          adultCanSkipHousehold: false,
+          description: 'Household required for all players'
+        },
+        mixed: {
+          householdRequired: false, // Not always required
+          requiresHouseholdForMinors: true, // But required for under 18
+          adultCanSkipHousehold: true, // 18+ can skip
+          description: 'Household required for players under 18'
+        },
+        adult_only: {
+          householdRequired: false,
+          requiresHouseholdForMinors: false,
+          adultCanSkipHousehold: true,
+          description: 'Household optional'
+        }
+      };
+
+      const householdPolicy = householdRules[audienceMode as keyof typeof householdRules] || householdRules.youth_only;
+
       // Set defaults if no settings exist - consent forms enabled by default
       const defaultPolicy = {
         audience: "youth",
@@ -568,7 +604,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teenPayMin: 16,
         enforceAgeGating: true,
         requireConsent: true,
-        ...policyData
+        ...policyData,
+        // Add audienceMode and household policy
+        audienceMode,
+        adultAge: tenantPolicy?.adultAge || 18,
+        householdPolicy
       };
 
       res.json(defaultPolicy);
