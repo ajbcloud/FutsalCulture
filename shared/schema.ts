@@ -215,6 +215,9 @@ export const tenants = pgTable("tenants", {
   // Clerk Organization Integration
   clerkOrganizationId: varchar("clerk_organization_id").unique(), // Links to Clerk Organization
   clerkOrganizationSyncedAt: timestamp("clerk_organization_synced_at"), // Last sync timestamp
+
+  // Session Visibility Defaults
+  defaultSessionVisibility: varchar("default_session_visibility").default("private"), // 'public', 'private', or 'access_code_required'
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
@@ -377,6 +380,9 @@ export const players = pgTable("players", {
 // Sessions table
 export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed", "cancelled"]);
 
+// Session visibility enum for public/private sessions
+export const sessionVisibilityEnum = pgEnum("session_visibility", ["public", "private", "access_code_required"]);
+
 export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
@@ -405,7 +411,9 @@ export const futsalSessions = pgTable("futsal_sessions", {
   // Advanced booking constraints
   noTimeConstraints: boolean("no_time_constraints").default(false), // If true, can book anytime
   daysBeforeBooking: integer("days_before_booking"), // Number of days before session date when booking opens
-  // Access code protection
+  // Session visibility (public can be browsed by anyone, private only club members, access_code requires code)
+  visibility: sessionVisibilityEnum("visibility").default("private"),
+  // Access code protection (used when visibility is 'access_code_required')
   hasAccessCode: boolean("has_access_code").default(false),
   accessCode: varchar("access_code"), // The actual code needed to book
   // Waitlist settings
