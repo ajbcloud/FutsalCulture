@@ -1526,11 +1526,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Check if auto-approve is enabled
+      // Check age policy requirements for household
       const { db } = await import("./db");
-      const { systemSettings } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { systemSettings, households, householdMembers } = await import("@shared/schema");
+      const { tenantPolicies } = await import("@shared/db/schema/tenantPolicy");
+      const { eq, and } = await import("drizzle-orm");
 
+      // Get tenant policy for audienceMode
+      const [tenantPolicy] = await db.select()
+        .from(tenantPolicies)
+        .where(eq(tenantPolicies.tenantId, tenantId));
+
+      const audienceMode = tenantPolicy?.audienceMode || 'youth_only';
+      const adultAge = tenantPolicy?.adultAge || 18;
+
+      // Calculate player age from birth year
+      const birthYear = req.body.birthYear;
+      if (!birthYear) {
+        return res.status(400).json({ message: "Birth year is required" });
+      }
+      const currentYear = new Date().getFullYear();
+      const playerAge = currentYear - birthYear;
+      const isMinor = playerAge < adultAge;
+
+      // Check if user has a household
+      const userHouseholds = await db.select()
+        .from(householdMembers)
+        .where(eq(householdMembers.userId, userId));
+      const hasHousehold = userHouseholds.length > 0;
+
+      // Enforce household requirements based on age policy
+      if (audienceMode === 'youth_only' && !hasHousehold) {
+        return res.status(400).json({ 
+          message: "Household required. This organization requires you to create a household before adding players.",
+          code: "HOUSEHOLD_REQUIRED"
+        });
+      }
+
+      if (audienceMode === 'mixed' && isMinor && !hasHousehold) {
+        return res.status(400).json({ 
+          message: `Household required for minors. Players under ${adultAge} require a household. Please create a household first.`,
+          code: "HOUSEHOLD_REQUIRED_FOR_MINOR"
+        });
+      }
+
+      // Check if auto-approve is enabled
       const autoApproveSetting = await db.select()
         .from(systemSettings)
         .where(eq(systemSettings.key, 'autoApproveRegistrations'))

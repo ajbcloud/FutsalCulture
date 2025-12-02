@@ -1,15 +1,20 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Player } from "@shared/schema";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Home } from "lucide-react";
+import { players } from "@shared/schema";
+
+type Player = typeof players.$inferSelect;
 
 const playerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -28,8 +33,23 @@ interface PlayerFormProps {
   onSuccess?: () => void;
 }
 
+type AgePolicy = {
+  audienceMode?: 'youth_only' | 'mixed' | 'adult_only';
+  adultAge?: number;
+  householdPolicy?: {
+    householdRequired: boolean;
+    requiresHouseholdForMinors: boolean;
+    adultCanSkipHousehold: boolean;
+    description: string;
+  };
+};
+
+type HouseholdMember = { userId?: string | null };
+type Household = { members: HouseholdMember[] };
+
 export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   
   const form = useForm<PlayerForm>({
     resolver: zodResolver(playerSchema),
@@ -44,11 +64,37 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
     },
   });
   
+  // Fetch age policy to determine household requirements
+  const { data: agePolicy } = useQuery<AgePolicy>({
+    queryKey: ["/api/tenant/age-policy"],
+    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
+    enabled: isAuthenticated,
+  });
+
+  // Fetch households to check if user has a household
+  const { data: households = [] } = useQuery<Household[]>({
+    queryKey: ["/api/households"],
+    enabled: isAuthenticated && !!user?.tenantId,
+  });
+
+  const userHasHousehold = households.some(h => 
+    h.members?.some(m => m.userId === user?.id)
+  );
+
   // Watch birth year changes to show/hide contact fields dynamically
   const watchedBirthYear = form.watch('birthYear');
   const currentYear = new Date().getFullYear();
   const playerAge = currentYear - watchedBirthYear;
   const isEligibleForPortal = playerAge >= 13;
+
+  // Determine if this player needs a household based on age policy
+  const adultAge = agePolicy?.adultAge || 18;
+  const isMinor = playerAge < adultAge;
+  const isMixedMode = agePolicy?.audienceMode === 'mixed';
+  const requiresHouseholdForMinors = agePolicy?.householdPolicy?.requiresHouseholdForMinors === true;
+  
+  // In mixed mode, minors need household but adults don't
+  const minorNeedsHousehold = isMixedMode && requiresHouseholdForMinors && isMinor && !userHasHousehold;
 
   const createPlayerMutation = useMutation({
     mutationFn: async (data: PlayerForm) => {
@@ -118,6 +164,16 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   });
 
   const onSubmit = (data: PlayerForm) => {
+    // Block submission if minor needs household in mixed mode
+    if (minorNeedsHousehold && !player) {
+      toast({
+        title: "Household Required",
+        description: "Players under " + adultAge + " require a household. Please create a household first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (player) {
       updatePlayerMutation.mutate(data);
     } else {
@@ -130,6 +186,15 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Warning for minor players without household in mixed mode */}
+        {minorNeedsHousehold && !player && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Players under {adultAge} require a household. Please create a household first or change the birth year to add an adult player.
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}

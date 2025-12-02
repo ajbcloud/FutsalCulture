@@ -108,7 +108,9 @@ function Router() {
         <Route path="/parent2-invite/:token" component={Parent2Invite} />
         <Route path="/help" component={Help} />
         <Route path="/my-help-requests" component={MyHelpRequests} />
-        <Route path="/household" component={HouseholdManagement} />
+        <Route path="/household">
+          <Redirect to="/dashboard?tab=household" />
+        </Route>
         <Route path="/credits/history" component={CreditHistory} />
         <Route path="/payments/history" component={PaymentHistory} />
         <Route path="/checkout" component={Checkout} />

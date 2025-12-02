@@ -49,9 +49,6 @@ export default function Navbar() {
                     <Link href="/calendar" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Calendar
                     </Link>
-                    <Link href="/household" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
-                      Household
-                    </Link>
                     <Link href="/payments/history" className="px-4 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors">
                       Payments
                     </Link>
@@ -202,13 +199,6 @@ export default function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Calendar
-                  </Link>
-                  <Link 
-                    href="/household" 
-                    className="block px-4 py-4 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Household
                   </Link>
                   <Link 
                     href="/payments/history" 

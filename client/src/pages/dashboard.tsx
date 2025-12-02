@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -13,6 +13,7 @@ import EnhancedSessionCard from "@/components/enhanced-session-card";
 import WaitlistOffers from "@/components/waitlist-offers";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
 import { ParentSessionHistoryDropdown } from "@/components/parent-session-history-dropdown";
+import HouseholdSection from "@/components/household-section";
 
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus, Home } from "lucide-react";
 import { format } from "date-fns";
 import { players, signups, futsalSessions, NotificationPreferences } from "@shared/schema";
 
@@ -74,6 +76,44 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
+  // Fetch age policy to determine household requirements
+  type AgePolicy = {
+    audienceMode?: 'youth_only' | 'mixed' | 'adult_only';
+    householdPolicy?: {
+      householdRequired: boolean;
+      requiresHouseholdForMinors: boolean;
+      adultCanSkipHousehold: boolean;
+      description: string;
+    };
+  };
+
+  const { data: agePolicy } = useQuery<AgePolicy>({
+    queryKey: ["/api/tenant/age-policy"],
+    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
+    enabled: isAuthenticated,
+  });
+
+  // Fetch households to check if user has a household
+  type HouseholdMember = { userId?: string | null };
+  type Household = { members: HouseholdMember[] };
+  
+  const { data: households = [] } = useQuery<Household[]>({
+    queryKey: ["/api/households"],
+    enabled: isAuthenticated && !!user?.tenantId,
+  });
+
+  const userHasHousehold = households.some(h => 
+    h.members?.some(m => m.userId === user?.id)
+  );
+
+  // Determine if player creation should be blocked based on age policy
+  const householdRequired = agePolicy?.householdPolicy?.householdRequired === true;
+  const needsHouseholdFirst = householdRequired && !userHasHousehold;
+  
+  // For mixed mode: minors need household but adults don't
+  const isMixedMode = agePolicy?.audienceMode === 'mixed';
+  const requiresHouseholdForMinors = agePolicy?.householdPolicy?.requiresHouseholdForMinors === true;
+  const showMinorHouseholdWarning = isMixedMode && requiresHouseholdForMinors && !userHasHousehold;
 
   const deletePlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
@@ -264,12 +304,53 @@ export default function Dashboard() {
   const paidSessionsCount = signups.filter(s => s.paid).length;
   const pendingPayments = upcomingSignups.filter(s => !s.paid).length;
 
+  // Sync tab state with URL query params
+  const searchString = useSearch();
+  const getTabFromUrl = useCallback(() => {
+    const params = new URLSearchParams(searchString);
+    const tabParam = params.get('tab');
+    return tabParam === 'household' ? 'household' : 'overview';
+  }, [searchString]);
+
+  const [activeTab, setActiveTab] = useState(getTabFromUrl);
+
+  // Update tab when URL changes (e.g., from redirect)
+  useEffect(() => {
+    const newTab = getTabFromUrl();
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
+  }, [searchString, getTabFromUrl]);
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((newTab: string) => {
+    setActiveTab(newTab);
+    const newUrl = newTab === 'overview' ? '/dashboard' : `/dashboard?tab=${newTab}`;
+    setLocation(newUrl, { replace: true });
+  }, [setLocation]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Navbar />
       
-      {/* Modern Hero Section */}
-      <section className="relative overflow-hidden">
+      {/* Dashboard Tab Navigation */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="overview" className="gap-2" data-testid="tab-overview">
+              <Calendar className="w-4 h-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="household" className="gap-2" data-testid="tab-household">
+              <Home className="w-4 h-4" />
+              Household
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="mt-6">
+            {/* Overview Tab Content - Original Dashboard */}
+            {/* Modern Hero Section */}
+            <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 relative">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
@@ -457,26 +538,61 @@ export default function Dashboard() {
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Your Players</h2>
               <p className="text-muted-foreground">Manage your household players and their bookings</p>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" data-testid="button-add-player">
-                  <Plus className="w-4 h-4" />
-                  Add Player
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                </DialogHeader>
-                <PlayerForm onSuccess={() => {
-                  setIsAddDialogOpen(false);
-                  setEditingPlayer(null);
-                }} />
-              </DialogContent>
-            </Dialog>
+            {needsHouseholdFirst ? (
+              <Button 
+                className="gap-2" 
+                variant="outline"
+                onClick={() => handleTabChange("household")}
+                data-testid="button-create-household-first"
+              >
+                <Home className="w-4 h-4" />
+                Create Household First
+              </Button>
+            ) : (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2" data-testid="button-add-player">
+                    <Plus className="w-4 h-4" />
+                    Add Player
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Add New Player</DialogTitle>
+                  </DialogHeader>
+                  <PlayerForm onSuccess={() => {
+                    setIsAddDialogOpen(false);
+                    setEditingPlayer(null);
+                  }} />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
-          {players.length === 0 ? (
+          {/* Show household requirement notice if needed */}
+          {needsHouseholdFirst && (
+            <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 mb-6">
+              <CardContent className="flex items-center gap-4 py-4">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Home className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Household Required</p>
+                  <p className="text-sm text-muted-foreground">
+                    This organization requires you to create a household before adding players.{' '}
+                    <button 
+                      className="text-primary hover:underline"
+                      onClick={() => handleTabChange("household")}
+                    >
+                      Go to Household tab
+                    </button>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {players.length === 0 && !needsHouseholdFirst ? (
             <Card className="border-dashed border-2 bg-card/50">
               <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
@@ -503,6 +619,27 @@ export default function Dashboard() {
                     }} />
                   </DialogContent>
                 </Dialog>
+              </CardContent>
+            </Card>
+          ) : players.length === 0 && needsHouseholdFirst ? (
+            <Card className="border-dashed border-2 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-6">
+                  <Home className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Create Your Household First</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm">
+                  This organization requires a household before you can add players. Create your household to get started.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="gap-2" 
+                  onClick={() => handleTabChange("household")}
+                  data-testid="button-go-to-household"
+                >
+                  <Home className="w-5 h-5" />
+                  Go to Household
+                </Button>
               </CardContent>
             </Card>
           ) : (
@@ -686,30 +823,37 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </section>
+            </section>
 
-      {/* Payment Modal */}
-      {selectedPaymentSession && (
-        <SessionPaymentModal
-          isOpen={paymentModalOpen}
-          onClose={() => {
-            setPaymentModalOpen(false);
-            setSelectedPaymentSession(null);
-          }}
-          session={{
-            id: selectedPaymentSession.session.id,
-            location: selectedPaymentSession.session.location,
-            startTime: typeof selectedPaymentSession.session.startTime === 'string' 
-              ? selectedPaymentSession.session.startTime 
-              : selectedPaymentSession.session.startTime.toISOString(),
-            ageGroup: selectedPaymentSession.session.ageGroups?.[0] || 'Unknown',
-            priceCents: selectedPaymentSession.session.priceCents,
-            title: selectedPaymentSession.session.title
-          }}
-          player={selectedPaymentSession.player}
-          signup={selectedPaymentSession.signup}
-        />
-      )}
+            {/* Payment Modal */}
+            {selectedPaymentSession && (
+              <SessionPaymentModal
+                isOpen={paymentModalOpen}
+                onClose={() => {
+                  setPaymentModalOpen(false);
+                  setSelectedPaymentSession(null);
+                }}
+                session={{
+                  id: selectedPaymentSession.session.id,
+                  location: selectedPaymentSession.session.location,
+                  startTime: typeof selectedPaymentSession.session.startTime === 'string' 
+                    ? selectedPaymentSession.session.startTime 
+                    : selectedPaymentSession.session.startTime.toISOString(),
+                  ageGroup: selectedPaymentSession.session.ageGroups?.[0] || 'Unknown',
+                  priceCents: selectedPaymentSession.session.priceCents,
+                  title: selectedPaymentSession.session.title
+                }}
+                player={selectedPaymentSession.player}
+                signup={selectedPaymentSession.signup}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="household" className="mt-6">
+            <HouseholdSection />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
