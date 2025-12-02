@@ -24,7 +24,7 @@ const getDisplayFeatures = (planId: string) => {
   
   // Add inheritance note for non-free plans
   if (planId !== 'free') {
-    const previousPlanNames = {
+    const previousPlanNames: Record<string, string> = {
       'core': 'Free',
       'growth': 'Core', 
       'elite': 'Growth'
