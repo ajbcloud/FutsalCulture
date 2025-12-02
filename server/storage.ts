@@ -125,9 +125,10 @@ export interface IStorage {
   updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect>;
   deleteTenant(id: string): Promise<void>;
 
-  // User operations (required for Replit Auth) - now tenant-aware
+  // User operations - now tenant-aware
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByClerkId(clerkUserId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, user: UpdateUser): Promise<User>;
   updateUserParent2Invite(userId: string, method: string, contact: string, invitedAt: Date): Promise<User>;
@@ -469,6 +470,14 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByClerkId(clerkUserId: string): Promise<User | undefined> {
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.clerkUserId, clerkUserId))
+      .limit(1);
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const userId = userData.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -477,6 +486,7 @@ export class DatabaseStorage implements IStorage {
         id: userId,
         email: userData.email,
         passwordHash: userData.passwordHash,
+        clerkUserId: userData.clerkUserId,
         authProvider: userData.authProvider || 'local',
         authProviderId: userData.authProviderId,
         firstName: userData.firstName,
@@ -491,6 +501,7 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           email: userData.email,
+          clerkUserId: userData.clerkUserId,
           firstName: userData.firstName,
           lastName: userData.lastName,
           profileImageUrl: userData.profileImageUrl,

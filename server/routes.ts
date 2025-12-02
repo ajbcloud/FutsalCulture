@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth as setupLocalAuth, isAuthenticated } from "./auth";
+import { getSession } from "./auth";
+import { clerkMiddleware, syncClerkUser, requireClerkAuth } from "./clerk-auth";
 import { 
   insertPlayerSchema, 
   insertSessionSchema, 
@@ -40,6 +41,8 @@ import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
 
+const isAuthenticated = requireClerkAuth;
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public ingestion endpoints (BEFORE auth middleware since they're public)
@@ -48,8 +51,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
 
-  // Local email/password authentication
-  await setupLocalAuth(app);
+  // Session middleware (still needed for legacy features and fallback)
+  app.set("trust proxy", 1);
+  app.use(getSession());
+
+  // Clerk authentication middleware - must be BEFORE sync middleware
+  app.use(clerkMiddleware());
+  
+  // Sync Clerk users to our database
+  app.use(syncClerkUser);
 
   // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)
   app.post('/api/users/self-signup', async (req, res) => {

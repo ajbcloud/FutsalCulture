@@ -184,13 +184,14 @@ export const tenantInviteCodes = pgTable("tenant_invite_codes", {
   index("tenant_invite_codes_code_idx").on(table.code),
 ]);
 
-// User storage table for Replit Auth
+// User storage table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").references(() => tenants.id),
   email: varchar("email").unique(),
-  passwordHash: text("password_hash"), // Hashed password for local auth
-  authProvider: varchar("auth_provider"), // 'local', 'google', 'microsoft'
+  passwordHash: text("password_hash"), // Hashed password for local auth (legacy)
+  clerkUserId: varchar("clerk_user_id").unique(), // Clerk user ID for Clerk auth
+  authProvider: varchar("auth_provider"), // 'local', 'clerk', 'google', 'microsoft'
   authProviderId: varchar("auth_provider_id"), // ID from the auth provider
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -1800,6 +1801,11 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = Partial<InsertUser> & { id?: string; clerkUserId?: string };
+export type UpdateUser = Partial<InsertUser>;
 
 export const insertServiceBillingSchema = createInsertSchema(serviceBilling).omit({
   id: true,
