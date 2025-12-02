@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from './db';
-import { tenants, integrations } from '../shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { tenants, integrations, tenantSubscriptionEvents } from '../shared/schema';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { stripe, getPriceIdFromPlanLevel, getAppBaseUrl } from '../lib/stripe';
 import { clearCapabilitiesCache } from './middleware/featureAccess';
@@ -1134,6 +1134,82 @@ router.get('/billing/braintree/subscription', async (req: any, res) => {
   } catch (error) {
     console.error('Error getting Braintree subscription details:', error);
     res.status(500).json({ message: 'Failed to get subscription details' });
+  }
+});
+
+// Get Braintree payment history
+router.get('/billing/braintree/payment-history', async (req: any, res) => {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    // Get transaction history from tenant subscription events
+    const events = await db.select({
+      id: tenantSubscriptionEvents.id,
+      eventType: tenantSubscriptionEvents.eventType,
+      planLevel: tenantSubscriptionEvents.planLevel,
+      amount: tenantSubscriptionEvents.amount,
+      currency: tenantSubscriptionEvents.currency,
+      status: tenantSubscriptionEvents.status,
+      createdAt: tenantSubscriptionEvents.createdAt,
+      metadata: tenantSubscriptionEvents.metadata
+    })
+    .from(tenantSubscriptionEvents)
+    .where(eq(tenantSubscriptionEvents.tenantId, currentUser.tenantId))
+    .orderBy(desc(tenantSubscriptionEvents.createdAt))
+    .limit(50);
+
+    // Also get payment method info from tenant
+    const [tenant] = await db.select({
+      braintreePaymentMethodToken: tenants.braintreePaymentMethodToken
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    // Get payment method details if we have Braintree configured
+    let paymentMethodDetails: any = null;
+    if (braintreeService.isBraintreeEnabled() && tenant?.braintreePaymentMethodToken) {
+      try {
+        const pmDetails = await braintreeService.getSubscriptionDetails(currentUser.tenantId);
+        if (pmDetails.paymentMethod) {
+          paymentMethodDetails = {
+            cardType: (pmDetails.paymentMethod as any).cardType,
+            last4: (pmDetails.paymentMethod as any).last4
+          };
+        }
+      } catch (e) {
+        // Payment method lookup failed, continue without it
+      }
+    }
+
+    // Transform events to payment history format
+    const paymentHistory = events
+      .filter(event => 
+        event.eventType === 'subscription_charged_successfully' ||
+        event.eventType === 'payment_completed' ||
+        event.eventType === 'subscription_created'
+      )
+      .map(event => ({
+        id: event.id,
+        date: event.createdAt?.toISOString() || new Date().toISOString(),
+        amount: event.amount || 0,
+        status: event.status === 'completed' || event.eventType === 'subscription_charged_successfully' 
+          ? 'completed' 
+          : event.status === 'failed' ? 'failed' : 'pending',
+        plan: event.planLevel || 'unknown',
+        paymentMethod: paymentMethodDetails,
+        description: event.eventType === 'subscription_created' 
+          ? 'Initial subscription' 
+          : 'Monthly subscription payment'
+      }));
+
+    res.json(paymentHistory);
+  } catch (error) {
+    console.error('Error getting payment history:', error);
+    res.status(500).json({ message: 'Failed to get payment history' });
   }
 });
 

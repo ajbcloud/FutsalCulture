@@ -90,7 +90,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
   },
   elite: {
     name: 'Elite',
-    price: 499,
+    price: 399,
     description: 'Enterprise-grade features',
     icon: <Crown className="h-5 w-5 text-yellow-600" />,
     features: [
@@ -151,81 +151,40 @@ export function PlanUpgradeCard({
     enabled: false, // We'll refetch manually when needed
   });
 
-  const checkoutMutation = useMutation({
+  // Braintree upgrade mutation - immediate plan upgrade
+  const upgradeMutation = useMutation({
     mutationFn: async () => {
-      const body: any = { plan: planKey };
-      if (discountCode) {
-        body.discountCode = discountCode;
-      }
-      const res = await apiRequest('POST', '/api/billing/checkout', body);
-      const data = await res.json();
-      
-      // If checkout returns success:true with no URL, it means the plan was updated directly
-      if (data.success && !data.url) {
-        return data;
-      }
-      
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        // Redirect to embedded checkout page with session URL
-        const encodedUrl = encodeURIComponent(data.url);
-        const discountParam = discountCode ? `&discount_code=${encodeURIComponent(discountCode)}` : '';
-        navigate(`/checkout?session_url=${encodedUrl}${discountParam}`);
-      } else if (data.success) {
-        // Plan was updated directly (for existing subscriptions)
-        toast({
-          title: 'Success',
-          description: data.message || 'Your plan has been updated successfully',
-        });
-        queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
-        if (onUpgrade) onUpgrade();
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to process plan change',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const changePlanMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/billing/change-plan', { plan: planKey });
+      const res = await apiRequest('POST', '/api/billing/braintree/upgrade', { plan: planKey });
       return res.json();
     },
     onSuccess: (data) => {
       toast({
-        title: 'Success',
-        description: data.message || 'Your plan has been changed successfully',
+        title: 'Plan Upgraded',
+        description: data.message || 'Your plan has been upgraded immediately.',
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/braintree/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
       if (onUpgrade) onUpgrade();
     },
     onError: (error: any) => {
-      // If error is about no subscription, fall back to checkout
-      if (error.message?.includes('No active subscription')) {
-        checkoutMutation.mutate();
+      // If no subscription exists, redirect to billing page for new subscription
+      if (error.message?.includes('No active subscription') || error.message?.includes('not found')) {
+        navigate('/admin/billing');
       } else {
         toast({
-          title: 'Error',
-          description: error.message || 'Failed to change plan',
+          title: 'Upgrade Failed',
+          description: error.message || 'Failed to upgrade plan',
           variant: 'destructive',
         });
       }
     },
   });
 
+  // Braintree downgrade mutation - scheduled for end of billing period
   const downgradeMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', '/api/billing/downgrade', { plan: planKey });
+      const res = await apiRequest('POST', '/api/billing/braintree/downgrade', { plan: planKey });
       return res.json();
     },
     onSuccess: (data) => {
@@ -233,15 +192,15 @@ export function PlanUpgradeCard({
         title: 'Downgrade Scheduled',
         description: `Your plan will be downgraded at the end of the current billing period`,
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/braintree/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/info'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/billing/check-subscription'] });
       if (onDowngrade) onDowngrade();
     },
     onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to downgrade plan',
+        title: 'Downgrade Failed',
+        description: error.message || 'Failed to schedule downgrade',
         variant: 'destructive',
       });
     },
@@ -251,26 +210,26 @@ export function PlanUpgradeCard({
     setIsLoading(true);
     
     try {
-      // First check subscription status
-      const res = await apiRequest('GET', '/api/billing/check-subscription');
+      // Check Braintree subscription status
+      const res = await apiRequest('GET', '/api/billing/braintree/subscription');
       const status = await res.json();
       
       if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
         if (status?.hasSubscription) {
-          // For existing subscriptions, use change-plan endpoint
-          await changePlanMutation.mutateAsync();
+          // For existing subscriptions, use upgrade endpoint
+          await upgradeMutation.mutateAsync();
         } else {
-          // For new subscriptions, use checkout which handles both cases
-          await checkoutMutation.mutateAsync();
+          // For new subscriptions, redirect to billing page to set up subscription
+          navigate('/admin/billing');
         }
       } else if (isDowngrade) {
         await downgradeMutation.mutateAsync();
       }
     } catch (error) {
       console.error('Error handling plan action:', error);
-      // If checking subscription fails, default to checkout which handles both cases
+      // If checking subscription fails, redirect to billing page
       if (isUpgrade || (!isCurrentPlan && !isDowngrade)) {
-        await checkoutMutation.mutateAsync();
+        navigate('/admin/billing');
       }
     } finally {
       setIsLoading(false);
@@ -342,10 +301,10 @@ export function PlanUpgradeCard({
               className="w-full mt-4"
               variant={isUpgrade ? 'default' : 'outline'}
               onClick={handleAction}
-              disabled={isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending}
+              disabled={isLoading || upgradeMutation.isPending || downgradeMutation.isPending}
               data-testid={`button-${isUpgrade ? 'upgrade' : 'downgrade'}-${planKey}`}
             >
-              {isLoading || checkoutMutation.isPending || changePlanMutation.isPending || downgradeMutation.isPending
+              {isLoading || upgradeMutation.isPending || downgradeMutation.isPending
                 ? 'Processing...'
                 : isUpgrade
                 ? `Upgrade to ${plan.name}`
