@@ -114,18 +114,33 @@ export function isClerkAuthenticated(req: Request, res: Response, next: NextFunc
 }
 
 export async function requireClerkAuth(req: Request, res: Response, next: NextFunction) {
+  // First, check if user is authenticated via Clerk
   const auth = getAuth(req);
   
-  if (!auth.userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-
-  const user = (req as any).user;
-  if (!user) {
-    return res.status(401).json({ message: "User not found" });
+  if (auth?.userId) {
+    // Clerk authentication - user should be set by syncClerkUser middleware
+    const user = (req as any).user;
+    if (user) {
+      return next();
+    }
   }
   
-  next();
+  // Fallback to legacy session authentication for backward compatibility
+  const session = (req as any).session;
+  if (session?.userId) {
+    try {
+      const user = await storage.getUser(session.userId);
+      if (user) {
+        (req as any).user = user;
+        (req as any).userId = user.id;
+        return next();
+      }
+    } catch (error) {
+      console.error('Error fetching legacy session user:', error);
+    }
+  }
+  
+  return res.status(401).json({ message: "Authentication required" });
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {

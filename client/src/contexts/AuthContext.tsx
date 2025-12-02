@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-react';
+import { useAuth as useClerkAuth, useUser as useClerkUser, useClerk } from '@clerk/clerk-react';
 
 interface User {
   id: string;
@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
   const { user: clerkUser } = useClerkUser();
+  const { signOut } = useClerk();
 
   const fetchUser = async () => {
     try {
@@ -78,7 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    setUser(null);
+    try {
+      await signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Error during logout:', error);
+      setUser(null);
+    }
   };
 
   const refreshUser = async () => {
@@ -94,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     loading: loading || !clerkLoaded,
-    isAuthenticated: !!user && isSignedIn,
+    isAuthenticated: !!user && !!isSignedIn,
     isLoading: loading || !clerkLoaded,
     login,
     logout,
