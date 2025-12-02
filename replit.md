@@ -19,7 +19,7 @@ Preferred communication style: Simple, everyday language.
 ### Technical Implementations
 - **Backend**: Node.js with Express and TypeScript for a RESTful API.
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM for type-safe queries and schema management, utilizing connection pooling.
-- **Authentication**: Replit Auth (OpenID Connect) for session-based authentication, with role-based access control (parent, admin, Super-Admin) and a PostgreSQL-backed session store. Includes a failsafe Super Admin, email verification, and a player portal system for ages 13+.
+- **Authentication**: Clerk-hosted authentication (@clerk/clerk-react, @clerk/express) with dual-auth support for backward compatibility during migration. Users table includes `clerkUserId` field to link Clerk accounts to internal users. The system supports both Clerk (new users) and legacy session-based auth (existing users). Role-based access control (parent, admin, Super-Admin) and PostgreSQL-backed session store remain for legacy features. Includes failsafe Super Admin, email verification, and player portal system for ages 13+.
 - **Authorization**: Capability-Based Access Control for fine-grained permissions, especially for Assistant roles, enforced by backend middleware.
 - **State Management**: TanStack Query for server state management and data fetching.
 - **Form Handling**: React Hook Form with Zod for type-safe form validation.
@@ -47,6 +47,6 @@ Preferred communication style: Simple, everyday language.
 
 - **Neon Database**: PostgreSQL hosting.
 - **Stripe**: Payment processing.
-- **Replit Auth**: User authentication (OpenID Connect).
+- **Clerk**: User authentication (hosted auth UI and session management).
 - **SendGrid**: Email communication.
 - **Twilio**: SMS communication.
