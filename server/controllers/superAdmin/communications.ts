@@ -211,9 +211,7 @@ export async function sendPlatformMessage(req: Request, res: Response) {
 
     // If scheduled, create a campaign
     if (schedule && schedule !== 'immediate') {
-      const campaignId = nanoid();
-      await db.insert(communicationCampaigns).values({
-        id: campaignId,
+      const [newCampaign] = await db.insert(communicationCampaigns).values({
         tenantId: null, // Platform campaign
         name: subject || 'Platform Announcement',
         type,
@@ -228,12 +226,12 @@ export async function sendPlatformMessage(req: Request, res: Response) {
         recurringTime: req.body.recurringTime,
         recurringEndDate: req.body.recurringEndDate,
         status: 'scheduled',
-        createdBy: req.user?.id || 'system',
-      });
+        createdBy: (req as any).user?.id || null,
+      }).returning();
 
       return res.json({ 
         message: 'Campaign scheduled successfully',
-        campaignId,
+        campaignId: newCampaign.id,
         recipientCount: finalRecipients.length
       });
     }
@@ -267,29 +265,25 @@ export async function getMessageHistory(req: Request, res: Response) {
       offset = 0
     } = req.query;
 
-    let query = db
-      .select({
-        campaign: communicationCampaigns,
-        logs: communicationLogs
-      })
-      .from(communicationCampaigns)
-      .leftJoin(communicationLogs, eq(communicationCampaigns.id, communicationLogs.campaignId))
-      .where(sql`${communicationCampaigns.tenantId} IS NULL`)
-      .orderBy(desc(communicationCampaigns.createdAt));
-
-    // Apply filters
-    const conditions = [];
+    // Build conditions for the query
+    const conditions: any[] = [sql`${communicationCampaigns.tenantId} IS NULL`];
     if (type) conditions.push(eq(communicationCampaigns.type, type as string));
     if (status) conditions.push(eq(communicationCampaigns.status, status as string));
     if (campaignId) conditions.push(eq(communicationCampaigns.id, campaignId as string));
     if (startDate) conditions.push(gte(communicationCampaigns.createdAt, new Date(startDate as string)));
     if (endDate) conditions.push(lte(communicationCampaigns.createdAt, new Date(endDate as string)));
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const results = await query.limit(Number(limit)).offset(Number(offset));
+    const results = await db
+      .select({
+        campaign: communicationCampaigns,
+        logs: communicationLogs
+      })
+      .from(communicationCampaigns)
+      .leftJoin(communicationLogs, eq(communicationCampaigns.id, communicationLogs.campaignId))
+      .where(and(...conditions))
+      .orderBy(desc(communicationCampaigns.createdAt))
+      .limit(Number(limit))
+      .offset(Number(offset));
 
     // Group logs by campaign
     const campaignsMap = new Map();
@@ -297,7 +291,7 @@ export async function getMessageHistory(req: Request, res: Response) {
       if (!campaignsMap.has(row.campaign.id)) {
         campaignsMap.set(row.campaign.id, {
           ...row.campaign,
-          logs: []
+          logs: [] as any[]
         });
       }
       if (row.logs) {
@@ -309,12 +303,12 @@ export async function getMessageHistory(req: Request, res: Response) {
 
     // Calculate metrics for each campaign
     const campaignsWithMetrics = campaigns.map(campaign => {
-      const logs = campaign.logs || [];
-      const sent = logs.filter(l => l.status === 'sent').length;
-      const delivered = logs.filter(l => l.status === 'delivered').length;
-      const opened = logs.filter(l => l.openedAt).length;
-      const clicked = logs.filter(l => l.clickedAt).length;
-      const failed = logs.filter(l => l.status === 'failed').length;
+      const logs = campaign.logs || [] as any[];
+      const sent = logs.filter((l: any) => l.status === 'sent').length;
+      const delivered = logs.filter((l: any) => l.status === 'delivered').length;
+      const opened = logs.filter((l: any) => l.openedAt).length;
+      const clicked = logs.filter((l: any) => l.clickedAt).length;
+      const failed = logs.filter((l: any) => l.status === 'failed').length;
 
       return {
         ...campaign,

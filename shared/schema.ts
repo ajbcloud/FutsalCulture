@@ -1236,7 +1236,7 @@ export const unsubscribes = pgTable("unsubscribes", {
 
 export const notificationTemplates = pgTable("notification_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: "cascade" }), // Nullable for platform-level templates
   name: varchar("name", { length: 100 }).notNull(),
   type: notificationTypeEnum("type").notNull(),
   method: varchar("method", { length: 50 }).notNull(),
@@ -2320,7 +2320,7 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 // Communication Campaigns
 export const communicationCampaigns = pgTable('communication_campaigns', {
   id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  tenantId: varchar('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }), // Nullable for platform-level campaigns
   name: text('name').notNull(),
   type: text('type').notNull(), // 'email' or 'sms'
   subject: text('subject'), // For emails
@@ -2344,7 +2344,7 @@ export const communicationCampaigns = pgTable('communication_campaigns', {
   failedCount: integer('failed_count').default(0),
   lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
   nextRunAt: timestamp('next_run_at', { withTimezone: true }),
-  createdBy: varchar('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdBy: varchar('created_by').references(() => users.id, { onDelete: 'cascade' }), // Nullable for platform-level campaigns
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 }, (table) => [
