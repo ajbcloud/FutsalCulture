@@ -30,7 +30,8 @@ export default function SignupBusiness() {
           routing="path" 
           path="/signup-business"
           signInUrl="/login-business"
-          afterSignUpUrl="/get-started"
+          forceRedirectUrl="/get-started"
+          signInForceRedirectUrl="/get-started"
           appearance={{
             variables: {
               colorPrimary: "#3b82f6",
