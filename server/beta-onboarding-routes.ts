@@ -14,7 +14,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { createOrganizationForTenant, isClerkEnabled } from "./services/clerkOrganizationService";
 
 export function setupBetaOnboardingRoutes(app: Express) {
@@ -203,9 +203,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Find tenant by code
+      // Find tenant by code (case-insensitive)
+      const normalizedCode = tenant_code.toLowerCase().trim();
       const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.tenantCode, tenant_code.toUpperCase())
+        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
       });
 
       if (!tenant) {
@@ -412,14 +413,15 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Could not determine email address" });
       }
 
-      // Find tenant by code (try tenantCode first, then inviteCode)
+      // Find tenant by code (case-insensitive, try tenantCode first, then inviteCode)
+      const normalizedCode = tenant_code.toLowerCase().trim();
       let tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.tenantCode, tenant_code.toUpperCase())
+        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
       });
       
       if (!tenant) {
         tenant = await db.query.tenants.findFirst({
-          where: eq(tenants.inviteCode, tenant_code.toUpperCase())
+          where: sql`LOWER(${tenants.inviteCode}) = ${normalizedCode}`
         });
       }
 

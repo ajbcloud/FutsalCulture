@@ -276,8 +276,8 @@ export default function Join() {
                 <Input
                   id="code"
                   value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                  placeholder="e.g., ABC12345"
+                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                  placeholder="e.g., futsal-culture"
                   required
                   autoFocus
                   data-testid="input-clerk-team-code"
