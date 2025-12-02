@@ -123,7 +123,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-simple-maps": "^3.0.0",
     "recharts": "^2.15.4",
-    "resend": "^6.0.1",
+    "resend": "^4.0.0",
     "speakeasy": "^2.0.0",
     "stripe": "^18.4.0",
     "tailwind-merge": "^2.6.0",
