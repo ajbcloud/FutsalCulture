@@ -40,6 +40,7 @@ import templatesRouter from './routes/templates';
 import notificationsRouter from './routes/notifications';
 import contactGroupsRouter from './routes/contact-groups';
 import terminologyRouter from './routes/terminology';
+import { publicSessionsRouter } from './routes/public-sessions';
 
 const app = express();
 
@@ -125,6 +126,7 @@ app.use((req, res, next) => {
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);
   app.use('/api', companySignupRouter);
+  app.use('/api/public', publicSessionsRouter);
   
   // Ensure admin user exists for testing
   await ensureAdminUser();

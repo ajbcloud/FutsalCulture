@@ -20,6 +20,7 @@ import { AGE_GROUPS } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 import { useQuery } from '@tanstack/react-query';
 import { useHasFeature } from '@/hooks/use-feature-flags';
+import { Globe, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -55,6 +56,7 @@ export default function AdminSessionDetail() {
     bookingOpenMinute: 0,
     noTimeConstraints: false,
     daysBeforeBooking: 0,
+    visibility: 'private' as 'public' | 'private' | 'access_code_required',
     hasAccessCode: false,
     accessCode: '',
     waitlistEnabled: true,
@@ -66,6 +68,17 @@ export default function AdminSessionDetail() {
     recurringEndDate: '',
     recurringCount: 8,
   });
+
+  // Set default visibility from admin settings when creating new session
+  useEffect(() => {
+    if (isNew && adminSettings?.defaultSessionVisibility) {
+      setFormData(prev => ({
+        ...prev,
+        visibility: adminSettings.defaultSessionVisibility,
+        hasAccessCode: adminSettings.defaultSessionVisibility === 'access_code_required'
+      }));
+    }
+  }, [isNew, adminSettings?.defaultSessionVisibility]);
 
   useEffect(() => {
     if (isNew) {
@@ -88,6 +101,7 @@ export default function AdminSessionDetail() {
           bookingOpenMinute: data.bookingOpenMinute ?? 0,
           noTimeConstraints: data.noTimeConstraints ?? false,
           daysBeforeBooking: data.daysBeforeBooking ?? 0,
+          visibility: data.visibility || 'private',
           hasAccessCode: data.hasAccessCode || false,
           accessCode: data.accessCode || '',
           waitlistEnabled: data.waitlistEnabled ?? true,
@@ -152,8 +166,10 @@ export default function AdminSessionDetail() {
         // New booking constraint fields
         noTimeConstraints: Boolean(formData.noTimeConstraints),
         daysBeforeBooking: formData.daysBeforeBooking || 0,
-        hasAccessCode: Boolean(formData.hasAccessCode),
-        accessCode: formData.hasAccessCode && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
+        // Session visibility
+        visibility: formData.visibility,
+        hasAccessCode: formData.visibility === 'access_code_required' || Boolean(formData.hasAccessCode),
+        accessCode: (formData.visibility === 'access_code_required' || formData.hasAccessCode) && formData.accessCode ? formData.accessCode.trim().toUpperCase() : null,
         // Waitlist settings
         waitlistEnabled: Boolean(formData.waitlistEnabled),
         waitlistLimit: formData.waitlistLimit && formData.waitlistLimit.trim() ? parseInt(formData.waitlistLimit) : null,
@@ -585,35 +601,78 @@ export default function AdminSessionDetail() {
           </div>
         </div>
 
-        {/* Access Code Section */}
+        {/* Session Visibility Section */}
         <div className="border-t border-border pt-6 mt-6">
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-            <Key className="w-5 h-5 mr-2" />
-            Access Code Settings
+            <Eye className="w-5 h-5 mr-2" />
+            Session Visibility
           </h3>
           <div className="bg-muted/50 rounded-lg p-4 mb-4">
             <p className="text-sm text-muted-foreground mb-2">
-              Enable access code protection to require parents to enter a code before booking this session.
-              This is useful for private sessions or controlling access to specific sessions.
+              Control who can see and book this session. Public sessions are visible to anyone browsing your calendar.
+              Private sessions are only visible to club members. Access code sessions require a code to view and book.
             </p>
           </div>
           
           <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <Switch
-                checked={formData.hasAccessCode}
-                onCheckedChange={(checked) => setFormData({...formData, hasAccessCode: checked})}
-              />
-              <Label className="text-foreground flex items-center">
-                {formData.hasAccessCode ? (
-                  <><Lock className="w-4 h-4 mr-2" />Require access code for booking</>
-                ) : (
-                  <><Unlock className="w-4 h-4 mr-2" />Session is open for booking</>
-                )}
-              </Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.visibility === 'public'
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                    : 'border-border hover:border-muted-foreground/50'
+                }`}
+                onClick={() => setFormData({...formData, visibility: 'public', hasAccessCode: false})}
+                data-testid="visibility-public"
+              >
+                <div className="flex items-center mb-2">
+                  <Globe className="w-5 h-5 mr-2 text-green-600" />
+                  <span className="font-medium text-foreground">Public</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Visible to anyone browsing your calendar, including non-members
+                </p>
+              </div>
+              
+              <div
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.visibility === 'private'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-border hover:border-muted-foreground/50'
+                }`}
+                onClick={() => setFormData({...formData, visibility: 'private', hasAccessCode: false})}
+                data-testid="visibility-private"
+              >
+                <div className="flex items-center mb-2">
+                  <EyeOff className="w-5 h-5 mr-2 text-blue-600" />
+                  <span className="font-medium text-foreground">Private</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Only visible to registered club members
+                </p>
+              </div>
+              
+              <div
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.visibility === 'access_code_required'
+                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                    : 'border-border hover:border-muted-foreground/50'
+                }`}
+                onClick={() => setFormData({...formData, visibility: 'access_code_required', hasAccessCode: true})}
+                data-testid="visibility-access-code"
+              >
+                <div className="flex items-center mb-2">
+                  <Key className="w-5 h-5 mr-2 text-amber-600" />
+                  <span className="font-medium text-foreground">Access Code</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Requires a code to view and book this session
+                </p>
+              </div>
             </div>
 
-            {formData.hasAccessCode && (
+            {/* Access Code Input - shown when visibility is access_code_required */}
+            {formData.visibility === 'access_code_required' && (
               <div className="space-y-3 pl-6">
                 <div>
                   <Label htmlFor="accessCode" className="text-muted-foreground">Access Code</Label>

@@ -76,6 +76,8 @@ import AdminQuickBooksIntegration from "./pages/admin/quickbooks-integration";
 import AdminFinancialReports from "./pages/admin/financial-reports";
 import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
+import PublicSessions from "./pages/PublicSessions";
+import PublicSessionDetail from "./pages/PublicSessionDetail";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -118,6 +120,8 @@ function Router() {
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />
+        <Route path="/browse/:tenantSlug" component={PublicSessions} />
+        <Route path="/browse/:tenantSlug/session/:sessionId" component={PublicSessionDetail} />
         <Route path="/profile" component={Profile} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/sessions" component={Sessions} />

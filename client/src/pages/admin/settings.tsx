@@ -65,6 +65,8 @@ interface SystemSettings {
   fiscalYearType: string;
   fiscalYearStartMonth: number;
   availableLocations: (string | LocationData)[];
+  // Session visibility default
+  defaultSessionVisibility: 'public' | 'private' | 'access_code_required';
   // Waitlist settings
   defaultWaitlistEnabled: boolean;
   defaultWaitlistLimit: number;
@@ -671,6 +673,8 @@ export default function AdminSettings() {
       { name: 'Sports Hub', addressLine1: 'Sports Hub', city: 'Singapore', country: 'SG' },
       { name: 'Jurong East', addressLine1: 'Jurong East', city: 'Singapore', country: 'SG' }
     ],
+    // Session visibility default
+    defaultSessionVisibility: 'private' as const,
     // Waitlist settings
     defaultWaitlistEnabled: true,
     defaultWaitlistLimit: 10,
@@ -1668,6 +1672,64 @@ export default function AdminSettings() {
                     data-testid="input-refund-cutoff"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Minutes before session start when refunds are no longer allowed</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-foreground">Default Session Visibility</h4>
+                <p className="text-sm text-muted-foreground">Control who can see new sessions by default. Individual sessions can override this setting.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      settings.defaultSessionVisibility === 'public'
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'public' }))}
+                    data-testid="settings-visibility-public"
+                  >
+                    <div className="flex items-center mb-2">
+                      <span className="font-medium text-foreground">Public</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Visible to anyone browsing your calendar
+                    </p>
+                  </div>
+                  
+                  <div
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      settings.defaultSessionVisibility === 'private'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'private' }))}
+                    data-testid="settings-visibility-private"
+                  >
+                    <div className="flex items-center mb-2">
+                      <span className="font-medium text-foreground">Private</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Only visible to club members
+                    </p>
+                  </div>
+                  
+                  <div
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      settings.defaultSessionVisibility === 'access_code_required'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'access_code_required' }))}
+                    data-testid="settings-visibility-access-code"
+                  >
+                    <div className="flex items-center mb-2">
+                      <span className="font-medium text-foreground">Access Code</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Requires a code to view and book
+                    </p>
+                  </div>
                 </div>
               </div>
 
