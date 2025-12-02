@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck } from "lucide-react";
+import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
 import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
+import PlayerForm from "@/components/player-form";
 
 type AgePolicy = {
   requireConsent: boolean | string | number;
@@ -72,6 +73,9 @@ export default function HouseholdSection() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [pendingPlayerToAdd, setPendingPlayerToAdd] = useState<Player | null>(null);
+  const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Super admins without tenantId can still access households (backend resolves tenant)
   const canAccessHouseholds = isAuthenticated && (!!user?.tenantId || user?.isSuperAdmin);
@@ -302,6 +306,112 @@ export default function HouseholdSection() {
           </Badge>
         )}
       </div>
+
+      {/* Household Players Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Players
+            </CardTitle>
+            <Dialog open={isAddPlayerDialogOpen} onOpenChange={setIsAddPlayerDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-new-player">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Player
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
+                </DialogHeader>
+                <PlayerForm onSuccess={() => {
+                  setIsAddPlayerDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+                }} />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {userPlayers.length === 0 ? (
+            <div className="text-center py-8">
+              <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">No players registered yet</p>
+              <Button variant="outline" onClick={() => setIsAddPlayerDialogOpen(true)} data-testid="button-add-first-player">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Player
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {userPlayers.map((player) => (
+                <Card key={player.id} className="bg-muted/50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-semibold">{player.firstName} {player.lastName}</h4>
+                        {player.birthYear && (
+                          <p className="text-sm text-muted-foreground">
+                            Born {player.birthYear}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingPlayer(player);
+                          setIsEditDialogOpen(true);
+                        }}
+                        data-testid={`button-edit-player-${player.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {!userHousehold?.members.some(m => m.playerId === player.id) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-3"
+                        onClick={() => handleAddPlayer(player.id)}
+                        disabled={addPlayerMutation.isPending}
+                        data-testid={`button-link-player-${player.id}`}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Link to Household
+                      </Button>
+                    )}
+                    {userHousehold?.members.some(m => m.playerId === player.id) && (
+                      <Badge variant="secondary" className="mt-3">
+                        In Household
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Player Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Edit Player</DialogTitle>
+          </DialogHeader>
+          <PlayerForm 
+            player={editingPlayer as any}
+            onSuccess={() => {
+              setIsEditDialogOpen(false);
+              setEditingPlayer(null);
+              queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
