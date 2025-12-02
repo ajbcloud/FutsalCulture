@@ -37,6 +37,7 @@ import unifiedInvitationRoutes from './routes/unified-invitations';
 import { superAdminEmailRouter } from './routes/super-admin-email';
 import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { resendWebhookRouter } from './routes/resend-webhooks';
+import { telnyxWebhookRouter } from './routes/telnyx-webhooks';
 import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
@@ -51,6 +52,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);
+
+  // Telnyx webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
+  app.use('/api/webhooks/telnyx', telnyxWebhookRouter);
 
   // Session middleware (still needed for legacy features and fallback)
   app.set("trust proxy", 1);

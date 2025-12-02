@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { DollarSign, Receipt, AlertCircle, CheckCircle } from "lucide-react";
 import { useUserTerminology } from "@/hooks/use-user-terminology";
+import Navbar from "@/components/navbar";
 
 interface Payment {
   id: string;
@@ -49,8 +50,9 @@ export default function PaymentHistory() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+        <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
@@ -65,7 +67,8 @@ export default function PaymentHistory() {
     .reduce((sum, p) => sum + (p.paymentAmount || 0), 0) / 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-2">
