@@ -52,6 +52,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/braintree": "^3.4.0",
+    "@types/braintree-web": "^3.96.17",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
     "@types/d3-scale": "^4.0.9",

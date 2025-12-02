@@ -51,6 +51,7 @@ const adminNavItems = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
+  { href: "/admin/billing", label: "Billing", icon: Sparkles },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

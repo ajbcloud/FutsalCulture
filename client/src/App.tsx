@@ -64,6 +64,7 @@ import CreditHistory from "./pages/credit-history";
 import PaymentHistory from "./pages/payment-history";
 import AdminCredits from "./pages/admin/credits";
 import AdminSmsCredits from "./pages/admin/sms-credits";
+import AdminBilling from "./pages/admin/billing";
 import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
 
@@ -144,6 +145,7 @@ function Router() {
             <Route path="/admin/integrations" component={AdminIntegrations} />
             <Route path="/admin/credits" component={AdminCredits} />
             <Route path="/admin/sms-credits" component={AdminSmsCredits} />
+            <Route path="/admin/billing" component={AdminBilling} />
             <Route path="/admin/payment" component={AdminPayment} />
           </>
         )}
