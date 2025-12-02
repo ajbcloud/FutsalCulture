@@ -8,6 +8,7 @@ import {
   getPlanLevelFromPlanId 
 } from '../services/braintreeService';
 import { clearCapabilitiesCache } from '../middleware/featureAccess';
+import { syncOrganizationMemberLimit, isClerkEnabled } from '../services/clerkOrganizationService';
 
 const router = Router();
 
@@ -253,6 +254,16 @@ router.post('/', async (req: Request, res: Response) => {
         });
 
         clearCapabilitiesCache(tenantId);
+        
+        // Sync Clerk organization to free plan limits
+        if (isClerkEnabled()) {
+          try {
+            await syncOrganizationMemberLimit(tenantId, 'free');
+          } catch (clerkError) {
+            console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenantId}:`, clerkError);
+          }
+        }
+        
         console.log(`🚫 Subscription ${subscription.id} canceled`);
         break;
       }
@@ -289,6 +300,16 @@ router.post('/', async (req: Request, res: Response) => {
         });
 
         clearCapabilitiesCache(tenantId);
+        
+        // Sync Clerk organization to free plan limits
+        if (isClerkEnabled()) {
+          try {
+            await syncOrganizationMemberLimit(tenantId, 'free');
+          } catch (clerkError) {
+            console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenantId}:`, clerkError);
+          }
+        }
+        
         console.log(`⏰ Subscription ${subscription.id} expired`);
         break;
       }
@@ -324,6 +345,15 @@ router.post('/', async (req: Request, res: Response) => {
 
         if (planLevel) {
           clearCapabilitiesCache(tenantId);
+          
+          // Sync Clerk organization member limit when subscription becomes active
+          if (isClerkEnabled()) {
+            try {
+              await syncOrganizationMemberLimit(tenantId, planLevel);
+            } catch (clerkError) {
+              console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenantId}:`, clerkError);
+            }
+          }
         }
 
         console.log(`✅ Subscription ${subscription.id} went active`);

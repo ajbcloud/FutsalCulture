@@ -128,6 +128,27 @@ Preferred communication style: Simple, everyday language.
 #### Scheduled Jobs
 - Daily pending downgrade processing at 4 AM UTC
 
+### Clerk Organization Integration (Phase 4 - Complete)
+- Integrated Clerk Organizations for multi-tenant membership management
+- Schema: Added `clerkOrganizationId` and `clerkOrganizationSyncedAt` fields to tenants table
+- Plan-based member limits: Free=25, Core=100, Growth=250, Elite=unlimited
+
+#### Clerk Organization Service (`server/services/clerkOrganizationService.ts`)
+- `createOrganizationForTenant` - Creates Clerk org with plan-appropriate member limit
+- `syncOrganizationMemberLimit` - Updates member limit when plan changes
+- `addMemberToOrganization` / `removeMemberFromOrganization` - Member management
+- `backfillClerkOrganizations` - Backfill function with optional resync for existing orgs
+
+#### Integration Points
+- Beta onboarding: Creates Clerk org when tenant is created
+- Super Admin tenant creation: Creates Clerk org automatically
+- Stripe webhooks: Syncs member limits on checkout, upgrades, downgrades, and cancellations
+- Braintree webhooks: Syncs member limits on subscription changes
+
+#### Backfill Endpoint
+- `POST /api/super-admin/integrations/clerk/backfill` - Creates missing Clerk orgs
+- Optional `resyncExisting: true` to update limits for existing orgs
+
 ### Consent Form System (Recently Updated)
 - **Default Behavior**: Consent forms are now required by default (`requireConsent: true` in age policy)
 - **Tenant Age Policy Endpoint**: `/api/tenant/age-policy` - accessible by any authenticated user (not just admins)

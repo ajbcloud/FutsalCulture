@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { clearCapabilitiesCache } from './middleware/featureAccess';
 import { logPlanChange, determinePlanChangeType, calculateMRR, calculateAnnualValue } from './services/planHistoryService';
 import { getPlanLevelFromPriceId, getPlanLevelFromAmount } from '../lib/stripe';
+import { syncOrganizationMemberLimit, isClerkEnabled } from './services/clerkOrganizationService';
 
 // Stripe is now optional - transitioning to Braintree
 let stripe: Stripe | null = null;
@@ -236,6 +237,15 @@ router.post('/webhook', async (req, res) => {
               // Clear capabilities cache for this tenant
               clearCapabilitiesCache(tenantId);
               
+              // Sync Clerk organization member limit
+              if (isClerkEnabled()) {
+                try {
+                  await syncOrganizationMemberLimit(tenantId, planLevel);
+                } catch (clerkError) {
+                  console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenantId}:`, clerkError);
+                }
+              }
+              
               console.log(`✅ Updated tenant ${tenantId} to ${planLevel} plan via webhook - Customer: ${customerId}, Subscription: ${subscriptionId}`);
             } else {
               console.log(`⚠️ Could not update tenant: tenantId=${tenantId}, planLevel=${planLevel}, customer=${customerId}`);
@@ -281,6 +291,16 @@ router.post('/webhook', async (req, res) => {
 
             // Clear capabilities cache
             clearCapabilitiesCache(tenant[0].id);
+            
+            // Sync Clerk organization member limit (use pendingPlanCode if available, otherwise fall back to planLevel)
+            const syncPlan = tenant[0].pendingPlanCode || tenant[0].planLevel || 'free';
+            if (isClerkEnabled()) {
+              try {
+                await syncOrganizationMemberLimit(tenant[0].id, syncPlan);
+              } catch (clerkError) {
+                console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenant[0].id}:`, clerkError);
+              }
+            }
             
             console.log(`✅ Downgrade applied successfully for tenant ${tenant[0].id}`);
           }
@@ -413,6 +433,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       },
     });
     
+    // Sync Clerk organization member limit when plan changes
+    if (isClerkEnabled()) {
+      try {
+        await syncOrganizationMemberLimit(tenant[0].id, newPlan);
+      } catch (clerkError) {
+        console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenant[0].id}:`, clerkError);
+      }
+    }
+    
     console.log(`✅ Plan changed for tenant ${tenant[0].id}: ${oldPlan} → ${newPlan} (${changeType})`);
   } else {
     console.log(`✅ Subscription updated for tenant ${tenant[0].id}, plan remains ${planLevel}`);
@@ -507,6 +536,15 @@ async function handleSubscriptionCancellation(subscription: Stripe.Subscription)
         cancelledAt: new Date().toISOString(),
       },
     });
+    
+    // Sync Clerk organization to free plan limits
+    if (isClerkEnabled()) {
+      try {
+        await syncOrganizationMemberLimit(tenant[0].id, newPlan);
+      } catch (clerkError) {
+        console.error(`⚠️ Failed to sync Clerk organization for tenant ${tenant[0].id}:`, clerkError);
+      }
+    }
     
     console.log(`✅ Tenant ${tenant[0].id} reverted to free plan after subscription cancellation`);
   }

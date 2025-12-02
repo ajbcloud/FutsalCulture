@@ -168,6 +168,16 @@ export function setupSuperAdminRoutes(app: Express) {
         }).catch(err => console.error('Failed to send welcome email:', err));
       }
       
+      // Create Clerk organization for tenant
+      try {
+        const { createOrganizationForTenant, isClerkEnabled } = await import('./services/clerkOrganizationService');
+        if (isClerkEnabled()) {
+          await createOrganizationForTenant(tenant.id);
+        }
+      } catch (clerkError) {
+        console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
+      }
+      
       res.json({
         tenant,
         adminUser: { id: adminUser.id, email: adminUser.email },
@@ -1230,6 +1240,30 @@ export function setupSuperAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating payment integration:", error);
       res.status(500).json({ message: "Failed to update payment integration" });
+    }
+  });
+
+  // Clerk organization backfill endpoint
+  app.post('/api/super-admin/integrations/clerk/backfill', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { backfillClerkOrganizations, isClerkEnabled } = await import('./services/clerkOrganizationService');
+      const { resyncExisting = false } = req.body || {};
+      
+      if (!isClerkEnabled()) {
+        return res.status(400).json({ error: 'Clerk is not configured. Set CLERK_SECRET_KEY environment variable.' });
+      }
+      
+      console.log(`Starting Clerk organization backfill (resyncExisting: ${resyncExisting})...`);
+      const result = await backfillClerkOrganizations(resyncExisting);
+      
+      res.json({
+        success: true,
+        message: `Clerk organization backfill complete`,
+        result
+      });
+    } catch (error) {
+      console.error("Error running Clerk backfill:", error);
+      res.status(500).json({ message: "Failed to run Clerk organization backfill" });
     }
   });
 

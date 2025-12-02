@@ -15,6 +15,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, isNull } from "drizzle-orm";
+import { createOrganizationForTenant, isClerkEnabled } from "./services/clerkOrganizationService";
 
 export function setupBetaOnboardingRoutes(app: Express) {
   
@@ -75,6 +76,15 @@ export function setupBetaOnboardingRoutes(app: Express) {
         eventType: "tenant_created",
         metadataJson: { slug, org_name }
       });
+
+      // Create Clerk organization for tenant
+      if (isClerkEnabled()) {
+        try {
+          await createOrganizationForTenant(tenant.id);
+        } catch (clerkError) {
+          console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
+        }
+      }
 
       res.json({ 
         success: true, 
