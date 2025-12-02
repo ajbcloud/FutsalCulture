@@ -11,7 +11,8 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
   try {
     const auth = getAuth(req);
     
-    if (!auth.userId) {
+    // Handle cases where auth is null or userId is not present
+    if (!auth || !auth.userId) {
       return next();
     }
 

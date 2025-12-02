@@ -55,11 +55,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.set("trust proxy", 1);
   app.use(getSession());
 
-  // Clerk authentication middleware - must be BEFORE sync middleware
-  app.use(clerkMiddleware());
+  // Clerk authentication middleware - only for API routes
+  app.use('/api', clerkMiddleware());
   
-  // Sync Clerk users to our database
-  app.use(syncClerkUser);
+  // Sync Clerk users to our database - only for API routes
+  app.use('/api', syncClerkUser);
 
   // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)
   app.post('/api/users/self-signup', async (req, res) => {
