@@ -122,6 +122,10 @@ export default function HouseholdSection() {
   const createHouseholdMutation = useMutation({
     mutationFn: async (name: string) => {
       const response = await apiRequest("POST", "/api/households", { name });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create household");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -137,6 +141,10 @@ export default function HouseholdSection() {
   const addPlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
       const response = await apiRequest("POST", `/api/households/${userHousehold?.id}/players`, { playerId });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add player to household");
+      }
       return response.json();
     },
     onSuccess: () => {

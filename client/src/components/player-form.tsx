@@ -99,6 +99,10 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   const createPlayerMutation = useMutation({
     mutationFn: async (data: PlayerForm) => {
       const response = await apiRequest("POST", "/api/players", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add player");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -110,7 +114,7 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       form.reset();
       onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -124,7 +128,7 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       }
       toast({
         title: "Error",
-        description: "Failed to add player",
+        description: error.message || "Failed to add player",
         variant: "destructive",
       });
     },
