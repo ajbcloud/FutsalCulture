@@ -20,7 +20,6 @@ import AnalyticsV2 from "@/pages/super-admin/analytics-v2";
 import PlatformBilling from "@/pages/super-admin/platform-billing";
 import SuperAdminDunning from "@/pages/super-admin/dunning";
 import IntegrationsHealth from "@/pages/super-admin/integrations-health";
-import CommsDeliverability from "@/pages/super-admin/comms";
 import SuperAdminCommunications from "@/pages/super-admin/communications";
 import SecurityAudit from "@/pages/super-admin/security";
 import PlanManagement from "@/pages/super-admin/plan-management";
@@ -92,7 +91,6 @@ export default function SuperAdminPage() {
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Communications", href: "/super-admin/communications", icon: Mail, current: basePath === "/super-admin/communications" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
-    { name: "Comms Deliverability", href: "/super-admin/comms", icon: Mail, current: basePath === "/super-admin/comms" },
     { name: "Security & Audit", href: "/super-admin/security", icon: Shield, current: basePath === "/super-admin/security" },
     { name: "Settings", href: "/super-admin/settings", icon: Settings, current: basePath === "/super-admin/settings" },
   ];
@@ -126,8 +124,6 @@ export default function SuperAdminPage() {
         return <IntegrationsHealth />;
       case basePath === "/super-admin/communications":
         return <SuperAdminCommunications />;
-      case basePath === "/super-admin/comms":
-        return <CommsDeliverability />;
       case basePath === "/super-admin/security":
         return <SecurityAudit />;
       case basePath === "/super-admin/settings":

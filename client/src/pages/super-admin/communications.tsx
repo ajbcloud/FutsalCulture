@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import FilterBar from '@/components/shared/FilterBar';
 import {
   Tabs,
   TabsContent,
@@ -92,6 +94,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   Globe,
   Building,
   UserCheck,
@@ -107,6 +110,7 @@ import {
   MousePointer,
   Target,
   Repeat,
+  FileDown,
 } from "lucide-react";
 
 // Types
@@ -164,6 +168,45 @@ interface Recipient {
   phone?: string;
 }
 
+// Deliverability types
+interface DeliverabilityEmailStats {
+  delivered: number;
+  failed: number;
+  opens: number;
+  clicks: number;
+}
+
+interface DeliverablilitySmsStats {
+  delivered: number;
+  failed: number;
+}
+
+interface CommsTemplate {
+  template_key: string;
+  delivered: number;
+  failed: number;
+  opens: number;
+  clicks: number;
+}
+
+interface CommsOverview {
+  email: DeliverabilityEmailStats;
+  sms: DeliverablilitySmsStats;
+  templates: CommsTemplate[];
+}
+
+interface SeriesData {
+  email: { d: string; delivered: number; failed: number; }[];
+  sms: { d: string; delivered: number; failed: number; }[];
+}
+
+interface EventsResponse {
+  rows: any[];
+  page: number;
+  pageSize: number;
+  totalRows: number;
+}
+
 // Schemas
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
@@ -211,6 +254,15 @@ export default function SuperAdminCommunications() {
     status: "all",
   });
   const [exportPopoverOpen, setExportPopoverOpen] = useState(false);
+  
+  // Deliverability state
+  const [deliverabilityDateRange, setDeliverabilityDateRange] = useState({
+    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    to: new Date().toISOString(),
+  });
+  const [selectedChannel, setSelectedChannel] = useState<'email' | 'sms'>('email');
+  const [eventsPage, setEventsPage] = useState(1);
+  
   const { toast} = useToast();
 
   // Template form
@@ -291,6 +343,68 @@ export default function SuperAdminCommunications() {
     queryKey: ["/api/super-admin/communications/campaigns", selectedCampaign?.id, "analytics"],
     enabled: !!selectedCampaign && analyticsDialogOpen,
   });
+
+  // Deliverability queries
+  const { data: commsOverview, isLoading: commsOverviewLoading } = useQuery<CommsOverview>({
+    queryKey: ['super-admin', 'comms', 'overview', deliverabilityDateRange],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/overview?from=${encodeURIComponent(deliverabilityDateRange.from)}&to=${encodeURIComponent(deliverabilityDateRange.to)}`);
+      return await response.json();
+    },
+    enabled: activeTab === "deliverability",
+  });
+
+  const { data: commsSeriesData } = useQuery<SeriesData>({
+    queryKey: ['super-admin', 'comms', 'series', deliverabilityDateRange],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/series?from=${encodeURIComponent(deliverabilityDateRange.from)}&to=${encodeURIComponent(deliverabilityDateRange.to)}`);
+      return await response.json();
+    },
+    enabled: activeTab === "deliverability",
+  });
+
+  const { data: commsEventsData, isLoading: commsEventsLoading } = useQuery<EventsResponse>({
+    queryKey: ['super-admin', 'comms', 'events', selectedChannel, deliverabilityDateRange, eventsPage],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/super-admin/comms/events?channel=${selectedChannel}&from=${encodeURIComponent(deliverabilityDateRange.from)}&to=${encodeURIComponent(deliverabilityDateRange.to)}&page=${eventsPage}&pageSize=25`);
+      return await response.json();
+    },
+    enabled: activeTab === "deliverability",
+  });
+
+  // Deliverability calculated values
+  const deliverabilityEmailStats = commsOverview?.email || { delivered: 0, failed: 0, opens: 0, clicks: 0 };
+  const deliverabilitySmsStats = commsOverview?.sms || { delivered: 0, failed: 0 };
+  const commsTemplates = commsOverview?.templates || [];
+
+  const emailDeliveryRate = deliverabilityEmailStats.delivered + deliverabilityEmailStats.failed > 0 
+    ? (deliverabilityEmailStats.delivered / (deliverabilityEmailStats.delivered + deliverabilityEmailStats.failed)) * 100 
+    : 0;
+  const smsDeliveryRate = deliverabilitySmsStats.delivered + deliverabilitySmsStats.failed > 0 
+    ? (deliverabilitySmsStats.delivered / (deliverabilitySmsStats.delivered + deliverabilitySmsStats.failed)) * 100 
+    : 0;
+
+  const emailCTR = deliverabilityEmailStats.delivered > 0 
+    ? (deliverabilityEmailStats.clicks / deliverabilityEmailStats.delivered) * 100 
+    : 0;
+
+  const emailOpenRate = deliverabilityEmailStats.delivered > 0 
+    ? (deliverabilityEmailStats.opens / deliverabilityEmailStats.delivered) * 100 
+    : 0;
+
+  const chartData = selectedChannel === 'email' 
+    ? (commsSeriesData?.email || []).map(item => ({
+        date: new Date(item.d).toLocaleDateString(),
+        delivered: item.delivered,
+        failed: item.failed,
+        rate: item.delivered + item.failed > 0 ? (item.delivered / (item.delivered + item.failed)) * 100 : 0,
+      }))
+    : (commsSeriesData?.sms || []).map(item => ({
+        date: new Date(item.d).toLocaleDateString(),
+        delivered: item.delivered,
+        failed: item.failed,
+        rate: item.delivered + item.failed > 0 ? (item.delivered / (item.delivered + item.failed)) * 100 : 0,
+      }));
 
   // Mutations
   const createTemplateMutation = useMutation({
@@ -634,7 +748,7 @@ export default function SuperAdminCommunications() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4">
+          <TabsList className="grid w-full max-w-4xl grid-cols-5">
             <TabsTrigger value="templates" data-testid="tab-templates">
               <FileText className="w-4 h-4 mr-2" />
               Templates
@@ -650,6 +764,10 @@ export default function SuperAdminCommunications() {
             <TabsTrigger value="analytics" data-testid="tab-analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="deliverability" data-testid="tab-deliverability">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Deliverability
             </TabsTrigger>
           </TabsList>
 
@@ -1483,6 +1601,363 @@ export default function SuperAdminCommunications() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Deliverability Tab */}
+          <TabsContent value="deliverability" className="space-y-8" data-testid="content-deliverability">
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <Button variant="outline" size="sm">
+                <FileDown className="w-4 h-4 mr-2" />
+                Export Report
+              </Button>
+              <Button size="sm">
+                <TestTube className="w-4 h-4 mr-2" />
+                Test Delivery
+              </Button>
+            </div>
+
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <FilterBar
+                dateFrom={deliverabilityDateRange.from}
+                dateTo={deliverabilityDateRange.to}
+                onDateRangeChange={(from, to) => setDeliverabilityDateRange({ from, to })}
+              />
+            </div>
+
+            <Tabs value={selectedChannel} onValueChange={(value) => setSelectedChannel(value as 'email' | 'sms')}>
+              <div className="flex justify-center">
+                <TabsList className="grid grid-cols-2 max-w-lg h-12 bg-muted">
+                  <TabsTrigger value="email" data-testid="deliverability-tab-email" className="text-base font-medium">
+                    <Mail className="h-5 w-5 mr-2" />
+                    Email
+                  </TabsTrigger>
+                  <TabsTrigger value="sms" data-testid="deliverability-tab-sms" className="text-base font-medium">
+                    <MessageSquare className="h-5 w-5 mr-2" />
+                    SMS
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="email" className="space-y-8">
+                {/* Email KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                  <Card data-testid="email-delivered" className="border-l-4 border-l-green-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Delivered</CardTitle>
+                      <Mail className="h-5 w-5 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-green-600">
+                        {deliverabilityEmailStats.delivered.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-green-600 font-medium">
+                        {emailDeliveryRate.toFixed(1)}% delivery rate
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="email-failed" className="border-l-4 border-l-red-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Failed</CardTitle>
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-red-600">
+                        {deliverabilityEmailStats.failed.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Bounces, drops, spam reports
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="email-opens" className="border-l-4 border-l-blue-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm font-semibold">Opens</CardTitle>
+                      <Eye className="h-5 w-5 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-blue-600">
+                        {deliverabilityEmailStats.opens.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-blue-600 font-medium">
+                        {emailOpenRate.toFixed(1)}% open rate
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="email-clicks">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Clicks</CardTitle>
+                      <MousePointer className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {deliverabilityEmailStats.clicks.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {emailCTR.toFixed(2)}% CTR
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="sms" className="space-y-6">
+                {/* SMS KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card data-testid="sms-delivered">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">
+                        {deliverabilitySmsStats.delivered.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {smsDeliveryRate.toFixed(1)}% delivery rate
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="sms-failed">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Failed</CardTitle>
+                      <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-600">
+                        {deliverabilitySmsStats.failed.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Undelivered, failed
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Time Series Chart */}
+            <Card data-testid="delivery-chart">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  {selectedChannel.toUpperCase()} Delivery Trends
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Line 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="delivered" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      name="Delivered"
+                    />
+                    <Line 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="failed" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      name="Failed"
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="rate" 
+                      stroke="#6366f1" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Success Rate (%)"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Template Performance (Email only) */}
+            {selectedChannel === 'email' && (
+              <Card data-testid="template-performance">
+                <CardHeader>
+                  <CardTitle>Email Template Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {commsTemplates.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No template data available for selected timeframe
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead data-testid="header-template">Template Key</TableHead>
+                          <TableHead data-testid="header-delivered">Delivered</TableHead>
+                          <TableHead data-testid="header-failed">Failed</TableHead>
+                          <TableHead data-testid="header-open-rate">Open Rate</TableHead>
+                          <TableHead data-testid="header-click-rate">Click Rate</TableHead>
+                          <TableHead data-testid="header-performance">Performance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {commsTemplates.slice(0, 10).map((template) => {
+                          const openRate = template.delivered > 0 ? (template.opens / template.delivered) * 100 : 0;
+                          const clickRate = template.delivered > 0 ? (template.clicks / template.delivered) * 100 : 0;
+                          const deliveryRate = template.delivered + template.failed > 0 
+                            ? (template.delivered / (template.delivered + template.failed)) * 100 
+                            : 0;
+                          
+                          return (
+                            <TableRow key={template.template_key} data-testid={`template-${template.template_key}`}>
+                              <TableCell className="font-medium">{template.template_key}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-green-50 text-green-700">
+                                  {template.delivered.toLocaleString()}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {template.failed > 0 ? (
+                                  <Badge variant="destructive">
+                                    {template.failed.toLocaleString()}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-400">0</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-medium">{openRate.toFixed(1)}%</span>
+                                <div className="text-xs text-gray-500">{template.opens.toLocaleString()} opens</div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-medium">{clickRate.toFixed(1)}%</span>
+                                <div className="text-xs text-gray-500">{template.clicks.toLocaleString()} clicks</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-green-500 transition-all duration-300"
+                                      style={{ width: `${Math.min(deliveryRate, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-600">{deliveryRate.toFixed(1)}%</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Event Explorer */}
+            <Card data-testid="event-explorer">
+              <CardHeader>
+                <CardTitle>
+                  {selectedChannel.toUpperCase()} Event Explorer
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {commsEventsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : !commsEventsData || commsEventsData.rows.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No {selectedChannel} events found for selected timeframe
+                  </div>
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Provider</TableHead>
+                          <TableHead>To</TableHead>
+                          <TableHead>Event</TableHead>
+                          <TableHead>Reason/Code</TableHead>
+                          <TableHead>Tenant</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {commsEventsData.rows.map((event, index) => (
+                          <TableRow key={`${event.id || index}`} data-testid={`event-row-${index}`}>
+                            <TableCell className="text-sm">
+                              {new Date(event.created_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{event.provider}</Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {selectedChannel === 'email' ? event.to_addr : event.to_number}
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  event.event === 'delivered' ? 'default' :
+                                  ['bounce', 'dropped', 'spamreport', 'undelivered', 'failed'].includes(event.event) ? 'destructive' :
+                                  'secondary'
+                                }
+                              >
+                                {event.event}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {selectedChannel === 'email' ? event.reason : event.error_code || '—'}
+                            </TableCell>
+                            <TableCell>
+                              {event.tenant_id || 'System'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    
+                    {/* Pagination */}
+                    {commsEventsData.totalRows > commsEventsData.pageSize && (
+                      <div className="flex items-center justify-between px-2 py-4">
+                        <div className="text-sm text-gray-500">
+                          Showing {((commsEventsData.page - 1) * commsEventsData.pageSize) + 1} to {Math.min(commsEventsData.page * commsEventsData.pageSize, commsEventsData.totalRows)} of {commsEventsData.totalRows} events
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEventsPage(p => Math.max(1, p - 1))}
+                            disabled={commsEventsData.page <= 1}
+                            data-testid="prev-page"
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEventsPage(p => p + 1)}
+                            disabled={commsEventsData.page * commsEventsData.pageSize >= commsEventsData.totalRows}
+                            data-testid="next-page"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
