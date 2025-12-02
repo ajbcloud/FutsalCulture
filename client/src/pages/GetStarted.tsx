@@ -21,6 +21,7 @@ export default function GetStarted() {
 
   const [formData, setFormData] = useState({
     org_name: "",
+    join_code: "",
     contact_name: "",
     contact_email: "",
     country: "",
@@ -30,6 +31,7 @@ export default function GetStarted() {
     sports: [] as string[],
     accept: false
   });
+  const [joinCodeTouched, setJoinCodeTouched] = useState(false);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,33 @@ export default function GetStarted() {
   }, [user]);
 
   const sportOptions = ["Soccer", "Futsal", "Basketball", "Volleyball", "Other"];
+  
+  function generateJoinCode(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 30);
+  }
+
+  function handleOrgNameChange(name: string) {
+    setFormData(prev => ({ 
+      ...prev, 
+      org_name: name,
+      join_code: joinCodeTouched ? prev.join_code : generateJoinCode(name)
+    }));
+  }
+
+  function handleJoinCodeChange(code: string) {
+    setJoinCodeTouched(true);
+    const sanitized = code
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .substring(0, 30);
+    setFormData(prev => ({ ...prev, join_code: sanitized }));
+  }
   
   const usStates = [
     { code: "AL", name: "Alabama" },
@@ -146,10 +175,19 @@ export default function GetStarted() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!formData.org_name || !formData.contact_name || !formData.accept) {
+    if (!formData.org_name || !formData.join_code || !formData.contact_name || !formData.accept) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields and accept the terms",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.join_code.length < 3) {
+      toast({
+        title: "Invalid join code",
+        description: "Join code must be at least 3 characters",
         variant: "destructive",
       });
       return;
@@ -159,6 +197,7 @@ export default function GetStarted() {
     try {
       const response = await apiRequest("POST", "/api/beta/clerk-create-club", {
         org_name: formData.org_name,
+        join_code: formData.join_code,
         contact_name: formData.contact_name,
         city: formData.city,
         state: formData.state,
@@ -232,11 +271,26 @@ export default function GetStarted() {
               <Input
                 id="org_name"
                 value={formData.org_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, org_name: e.target.value }))}
+                onChange={(e) => handleOrgNameChange(e.target.value)}
                 placeholder="e.g., City United FC"
                 required
                 data-testid="input-org-name"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="join_code">Your Club's Player & Parent Join Code *</Label>
+              <Input
+                id="join_code"
+                value={formData.join_code}
+                onChange={(e) => handleJoinCodeChange(e.target.value)}
+                placeholder="e.g., city-united-fc"
+                required
+                data-testid="input-join-code"
+              />
+              <p className="text-xs text-muted-foreground">
+                This is the code players and parents will use to join your club. Letters, numbers, and dashes only.
+              </p>
             </div>
 
             <div className="space-y-2">
