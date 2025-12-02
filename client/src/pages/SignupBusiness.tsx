@@ -1,19 +1,52 @@
-import { SignUp, useAuth } from "@clerk/clerk-react";
+import { SignUp, useAuth, useSession } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useRef, useCallback } from "react";
 
 export default function SignupBusiness() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn, isLoaded } = useAuth();
-  const [, navigate] = useLocation();
+  const { session } = useSession();
+  const hasRedirected = useRef(false);
 
+  const redirectToGetStarted = useCallback(() => {
+    if (!hasRedirected.current) {
+      hasRedirected.current = true;
+      window.location.href = "/get-started";
+    }
+  }, []);
+
+  // Redirect when signed in
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      navigate("/get-started");
+      redirectToGetStarted();
     }
-  }, [isLoaded, isSignedIn, navigate]);
+  }, [isLoaded, isSignedIn, redirectToGetStarted]);
+
+  // Skip Clerk's organization creation step if it appears
+  useEffect(() => {
+    const currentTask = (session as any)?.currentTask;
+    if (currentTask?.key === 'choose-organization' || currentTask?.key === 'create-organization') {
+      redirectToGetStarted();
+    }
+  }, [session, redirectToGetStarted]);
+
+  // Monitor for organization creation modal and skip it
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          const orgElements = document.querySelectorAll('[data-localization-key*="organization"], [class*="cl-organizationSwitcher"], [class*="cl-createOrganization"]');
+          if (orgElements.length > 0 && isSignedIn && isLoaded) {
+            redirectToGetStarted();
+          }
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isSignedIn, isLoaded, redirectToGetStarted]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
