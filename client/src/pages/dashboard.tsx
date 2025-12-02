@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { players, signups, futsalSessions, NotificationPreferences } from "@shared/schema";
 
@@ -47,7 +47,6 @@ export default function Dashboard() {
     signup: any;
   } | null>(null);
 
-  // All useQuery hooks (always called in same order)
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
     enabled: isAuthenticated,
@@ -76,7 +75,6 @@ export default function Dashboard() {
   });
 
 
-  // All useMutation hooks (always called in same order)
   const deletePlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
       await apiRequest("DELETE", `/api/players/${playerId}`);
@@ -183,7 +181,6 @@ export default function Dashboard() {
         title: "Success",
         description: "Spot reserved! Complete payment to confirm.",
       });
-      // Redirect to checkout
       window.location.href = `/checkout/${signup.id}`;
     },
     onError: (error) => {
@@ -206,7 +203,6 @@ export default function Dashboard() {
     },
   });
 
-  // useEffect hooks (always called in same order)
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -221,7 +217,6 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Early return after all hooks
   if (isLoading || playersLoading || signupsLoading || prefsLoading || sessionsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -234,31 +229,22 @@ export default function Dashboard() {
     new Date(signup.session.startTime) > new Date()
   );
 
-
-
-  // Filter today's sessions - only show sessions eligible for parent's players AND not yet started
   const todaySessions = sessions.filter(session => {
     const sessionDate = new Date(session.startTime);
     const now = new Date();
     const today = new Date();
     const isToday = sessionDate.toDateString() === today.toDateString();
     
-    // Only show today's sessions
     if (!isToday) return false;
-    
-    // Only show sessions that haven't started yet
     if (sessionDate <= now) return false;
     
-    // If parent has NO players, show nothing
     if (players.length === 0) {
       return false;
     }
     
-    // If parent has players, only show sessions eligible for their players
     return players.some(player => isSessionEligibleForPlayer(session, player));
   });
 
-  // Build set of session IDs that the user has already reserved today
   const reservedSessionIds = new Set(
     signups
       .filter(signup => {
@@ -269,122 +255,168 @@ export default function Dashboard() {
       .map(signup => signup.sessionId)
   );
 
-  // Remove any locally cleared sessions from the reserved set
   const actualReservedSessionIds = new Set(
     Array.from(reservedSessionIds).filter(sessionId => 
       !localReservedSessions.has(`cleared-${sessionId}`)
     )
   );
 
+  const paidSessionsCount = signups.filter(s => s.paid).length;
+  const pendingPayments = upcomingSignups.filter(s => !s.paid).length;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Navbar />
       
-      {/* Welcome Section - Mobile First */}
-      <section className="from-futsal-600 to-brand-600 text-foreground bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 sm:text-3xl md:text-4xl">
-              Welcome Back{user?.firstName ? `, ${user.firstName}` : ''}!
-            </h1>
-            <p className="text-base text-foreground sm:text-lg md:text-xl">
-              Ready to book today's training sessions?
-            </p>
+      {/* Modern Hero Section */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 relative">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                <Sparkles className="w-4 h-4" />
+                <span>Welcome back</span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
+                Hey{user?.firstName ? `, ${user.firstName}` : ''}!
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl">
+                Ready to book today's training sessions? Let's get your players on the field.
+              </p>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto mb-2">
+                  <Users className="w-5 h-5" />
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{players.length}</p>
+                <p className="text-xs text-muted-foreground">Players</p>
+              </div>
+              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10 text-green-500 mx-auto mb-2">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{paidSessionsCount}</p>
+                <p className="text-xs text-muted-foreground">Sessions Booked</p>
+              </div>
+              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 mx-auto mb-2">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{pendingPayments}</p>
+                <p className="text-xs text-muted-foreground">Pending Payment</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-
       {/* Waitlist Offers Section */}
-      <section className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <section className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         <WaitlistOffers />
       </section>
 
-      {/* Today's Sessions - Mobile First */}
-      <section className="py-6 bg-background sm:py-8">
+      {/* Today's Sessions Section */}
+      <section className="py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Today's Sessions</h2>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base sm:mt-2">Sessions available for booking today (rules may vary)</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div className="space-y-1">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Today's Sessions</h2>
+              <p className="text-muted-foreground">Sessions available for booking today</p>
             </div>
             <Button 
               variant="outline" 
-              className="w-full sm:w-auto"
-              onClick={() => {
-                // View Future Sessions Calendar - go to calendar view
-                setLocation('/calendar');
-              }}
+              className="gap-2 group"
+              onClick={() => setLocation('/calendar')}
+              data-testid="button-view-future-sessions"
             >
+              <CalendarDays className="w-4 h-4" />
               View Future Sessions
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </div>
 
           {todaySessions.length === 0 ? (
-            <div className="text-center py-12">
-              {players.length === 0 ? (
-                <>
-                  <p className="text-muted-foreground text-lg">Add a player to see available sessions</p>
-                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="mt-4 bg-green-600 hover:bg-green-700">Add Your First Player</Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-card border-border">
-                      <DialogHeader>
-                        <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                      </DialogHeader>
-                      <PlayerForm onSuccess={() => {
-                        setIsAddDialogOpen(false);
-                        setEditingPlayer(null);
-                      }} />
-                    </DialogContent>
-                  </Dialog>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground text-lg">No eligible sessions scheduled for today.</p>
-                  <Button 
-                    className="mt-4"
-                    onClick={() => {
-                      // Build URL with filters based on players' eligibility
-                      const playerAgeGroups = Array.from(new Set(players.map(player => calculateAgeGroup(player.birthYear))));
-                      const playerGenders = Array.from(new Set(players.map(player => player.gender)));
-                      
-                      // For multiple players, pass all their age groups and genders as comma-separated values
-                      const params = new URLSearchParams();
-                      if (playerAgeGroups.length > 0) {
-                        params.set('ages', playerAgeGroups.join(','));
-                      }
-                      if (playerGenders.length > 0) {
-                        params.set('genders', playerGenders.join(','));
-                      }
-                      
-                      // Add eligibleOnly flag to indicate this came from the eligible sessions button
-                      params.set('eligibleOnly', 'true');
-                      
-                      const url = `/calendar${params.toString() ? `?${params.toString()}` : ''}`;
-                      setLocation(url);
-                    }}
-                  >
-                    View All Eligible Sessions
-                  </Button>
-                </>
-              )}
-            </div>
+            <Card className="border-dashed border-2 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                {players.length === 0 ? (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                      <UserPlus className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">Add Your First Player</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm">
+                      Get started by adding a player to your household. You'll then see all available sessions they're eligible for.
+                    </p>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="lg" className="gap-2" data-testid="button-add-first-player">
+                          <Plus className="w-5 h-5" />
+                          Add Player
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-card border-border">
+                        <DialogHeader>
+                          <DialogTitle className="text-foreground">Add New Player</DialogTitle>
+                        </DialogHeader>
+                        <PlayerForm onSuccess={() => {
+                          setIsAddDialogOpen(false);
+                          setEditingPlayer(null);
+                        }} />
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-6">
+                      <Calendar className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">No Sessions Today</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm">
+                      There are no eligible sessions scheduled for today. Check out upcoming sessions in the calendar.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      size="lg"
+                      className="gap-2"
+                      onClick={() => {
+                        const playerAgeGroups = Array.from(new Set(players.map(player => calculateAgeGroup(player.birthYear))));
+                        const playerGenders = Array.from(new Set(players.map(player => player.gender)));
+                        
+                        const params = new URLSearchParams();
+                        if (playerAgeGroups.length > 0) {
+                          params.set('ages', playerAgeGroups.join(','));
+                        }
+                        if (playerGenders.length > 0) {
+                          params.set('genders', playerGenders.join(','));
+                        }
+                        params.set('eligibleOnly', 'true');
+                        
+                        const url = `/calendar${params.toString() ? `?${params.toString()}` : ''}`;
+                        setLocation(url);
+                      }}
+                      data-testid="button-view-eligible-sessions"
+                    >
+                      <CalendarDays className="w-5 h-5" />
+                      View Upcoming Sessions
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:grid-cols-3 lg:gap-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {todaySessions.map((session) => {
-                // Find matching reservation/signup for this session
                 const reservationSignup = signups.find(signup => 
                   signup.sessionId === session.id && 
                   !signup.paid && (
-                    // Either has valid expiration time or no expiration (legacy reservations)
                     !signup.reservationExpiresAt || 
                     new Date(signup.reservationExpiresAt) > new Date()
                   )
                 );
-
-
 
                 return (
                   <EnhancedSessionCard 
@@ -397,14 +429,14 @@ export default function Dashboard() {
                         setLocalReservedSessions(prev => {
                           const next = new Set(prev);
                           next.add(sessionId);
-                          next.delete(`cleared-${sessionId}`); // Remove any previous clear marker
+                          next.delete(`cleared-${sessionId}`);
                           return next;
                         });
                       } else {
                         setLocalReservedSessions(prev => {
                           const next = new Set(prev);
                           next.delete(sessionId);
-                          next.add(`cleared-${sessionId}`); // Mark as cleared to override server state
+                          next.add(`cleared-${sessionId}`);
                           return next;
                         });
                       }
@@ -417,16 +449,18 @@ export default function Dashboard() {
         </div>
       </section>
 
-
-      {/* Player Management Section - Mobile First */}
-      <section className="py-6 bg-background sm:py-8">
+      {/* Player Management Section */}
+      <section className="py-8 sm:py-12 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:justify-between sm:items-center sm:mb-8">
-            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Your Players</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div className="space-y-1">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Your Players</h2>
+              <p className="text-muted-foreground">Manage your household players and their bookings</p>
+            </div>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full bg-green-600 hover:bg-green-700 sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
+                <Button className="gap-2" data-testid="button-add-player">
+                  <Plus className="w-4 h-4" />
                   Add Player
                 </Button>
               </DialogTrigger>
@@ -442,15 +476,22 @@ export default function Dashboard() {
             </Dialog>
           </div>
 
-        {/* Player Management Cards */}
-        <div className="space-y-6 sm:space-y-8">
           {players.length === 0 ? (
-            <Card className="bg-card border border-border">
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No players added yet.</p>
+            <Card className="border-dashed border-2 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Users className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">No Players Yet</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm">
+                  Add your first player to start booking training sessions.
+                </p>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">Add Your First Player</Button>
+                    <Button size="lg" className="gap-2" data-testid="button-add-first-player-section">
+                      <Plus className="w-5 h-5" />
+                      Add Your First Player
+                    </Button>
                   </DialogTrigger>
                   <DialogContent className="bg-card border-border">
                     <DialogHeader>
@@ -465,171 +506,185 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ) : (
-            players.map((player) => {
-              const playerAgeGroup = calculateAgeGroup(player.birthYear);
-              
-              // Get upcoming reservations for this specific player
-              const playerUpcomingReservations = upcomingSignups.filter(signup => 
-                signup.playerId === player.id
-              );
-              
-              return (
-                <Card key={player.id} className="bg-card border border-border">
-                  <CardHeader>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
-                      <div>
-                        <CardTitle className="text-foreground text-lg sm:text-xl">
-                          {player.firstName} {player.lastName}
-                        </CardTitle>
-                        <p className="text-muted-foreground text-sm sm:text-base">
-                          {playerAgeGroup} • Born {player.birthYear} • {new Date().getFullYear() - player.birthYear} years old • {player.gender}
-                        </p>
+            <div className="grid gap-6">
+              {players.map((player) => {
+                const playerAgeGroup = calculateAgeGroup(player.birthYear);
+                const playerUpcomingReservations = upcomingSignups.filter(signup => 
+                  signup.playerId === player.id
+                );
+                
+                return (
+                  <Card key={player.id} className="overflow-hidden bg-card hover:shadow-lg transition-shadow">
+                    <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-lg font-bold text-primary">
+                              {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <CardTitle className="text-foreground text-lg sm:text-xl">
+                              {player.firstName} {player.lastName}
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {playerAgeGroup}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                Born {player.birthYear} • {new Date().getFullYear() - player.birthYear}y • {player.gender}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-9 w-9"
+                                onClick={() => {
+                                  setEditingPlayer(player);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-player-${player.id}`}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-card border-border">
+                              <DialogHeader>
+                                <DialogTitle className="text-foreground">Edit Player</DialogTitle>
+                              </DialogHeader>
+                              <PlayerForm 
+                                player={editingPlayer} 
+                                onSuccess={() => {
+                                  setIsEditDialogOpen(false);
+                                  setEditingPlayer(null);
+                                }} 
+                              />
+                            </DialogContent>
+                          </Dialog>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => deletePlayerMutation.mutate(player.id)}
+                            disabled={deletePlayerMutation.isPending}
+                            data-testid={`button-delete-player-${player.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex space-x-2 self-start sm:self-center">
-                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              className="h-11 w-11 sm:h-8 sm:w-8" 
-                              onClick={() => {
-                                setEditingPlayer(player);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="bg-card border-border">
-                            <DialogHeader>
-                              <DialogTitle className="text-foreground">Edit Player</DialogTitle>
-                            </DialogHeader>
-                            <PlayerForm 
-                              player={editingPlayer} 
-                              onSuccess={() => {
-                                setIsEditDialogOpen(false);
-                                setEditingPlayer(null);
-                              }} 
-                            />
-                          </DialogContent>
-                        </Dialog>
-                        <Button 
-                          variant="ghost" 
-                          className="h-11 w-11 sm:h-8 sm:w-8" 
-                          onClick={() => deletePlayerMutation.mutate(player.id)}
-                          disabled={deletePlayerMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Upcoming Reservations Section */}
-                    <div className="mt-4">
-                      <h4 className="text-lg font-semibold text-foreground mb-4">Upcoming Reservations</h4>
-                      {playerUpcomingReservations.length > 0 ? (
-                        <div className="space-y-3">
-                          {playerUpcomingReservations.map(reservation => (
-                            <div key={reservation.id} className="bg-muted border border-border rounded p-3">
-                              <div className="flex flex-col gap-3">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-foreground">{reservation.session.title}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
-                                  </div>
-                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-3 flex-shrink-0">
-                                    {reservation.paid && (
-                                      <span className="px-2 py-1 rounded text-sm font-medium text-center sm:text-left bg-green-500 text-black">
-                                        Paid
-                                      </span>
-                                    )}
-                                    
-                                    {!reservation.paid && (
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedPaymentSession({
-                                            session: reservation.session,
-                                            player: player,
-                                            signup: reservation
-                                          });
-                                          setPaymentModalOpen(true);
-                                        }}
-                                        className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
-                                        data-testid="button-pay-now"
-                                      >
-                                        Pay Now
-                                      </Button>
-                                    )}
-                                    
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      {/* Upcoming Reservations */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-foreground">Upcoming Reservations</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {playerUpcomingReservations.length} upcoming
+                          </Badge>
+                        </div>
+                        
+                        {playerUpcomingReservations.length > 0 ? (
+                          <div className="space-y-3">
+                            {playerUpcomingReservations.map(reservation => (
+                              <div 
+                                key={reservation.id} 
+                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg bg-muted/50 border border-border/50"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-foreground">{reservation.session.title}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {format(new Date(reservation.session.startTime), 'EEEE, MMMM d')} at {format(new Date(reservation.session.startTime), 'h:mm a')}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">{reservation.session.location}</p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                  {reservation.paid ? (
+                                    <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 justify-center">
+                                      Confirmed
+                                    </Badge>
+                                  ) : (
                                     <Button
-                                      variant="outline"
                                       size="sm"
                                       onClick={() => {
-                                        cancelSignupMutation.mutate(reservation.id, {
-                                          onSuccess: () => {
-                                            // Invalidate sessions cache to refresh spot counts
-                                            queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
-                                          }
+                                        setSelectedPaymentSession({
+                                          session: reservation.session,
+                                          player: player,
+                                          signup: reservation
                                         });
+                                        setPaymentModalOpen(true);
                                       }}
-                                      disabled={cancelSignupMutation.isPending}
-                                      className="w-full border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 sm:w-auto"
-                                      data-testid="button-cancel-reservation"
+                                      className="bg-green-600 hover:bg-green-700"
+                                      data-testid="button-pay-now"
                                     >
-                                      {cancelSignupMutation.isPending ? "Cancelling..." : "Cancel"}
+                                      Pay Now
                                     </Button>
-                                  </div>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      cancelSignupMutation.mutate(reservation.id, {
+                                        onSuccess: () => {
+                                          queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+                                        }
+                                      });
+                                    }}
+                                    disabled={cancelSignupMutation.isPending}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    data-testid="button-cancel-reservation"
+                                  >
+                                    {cancelSignupMutation.isPending ? "Cancelling..." : "Cancel"}
+                                  </Button>
                                 </div>
                                 
                                 {!reservation.paid && reservation.reservationExpiresAt && (
-                                  <div className="w-full">
+                                  <div className="w-full sm:hidden">
                                     <ReservationCountdown 
                                       expiresAt={typeof reservation.reservationExpiresAt === 'string' 
                                         ? reservation.reservationExpiresAt 
                                         : new Date(reservation.reservationExpiresAt).toISOString()}
                                       onExpired={() => {
-                                        // Refresh signups when reservation expires
                                         queryClient.invalidateQueries({ queryKey: ['/api/signups'] });
                                       }}
                                     />
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground italic">No upcoming reservations.</p>
-                      )}
-                    </div>
-                    
-                    {/* Session History Section */}
-                    <div className="mt-6 pt-4 border-t border-border">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-semibold text-foreground">Session History</h4>
-                        <ParentSessionHistoryDropdown
-                          playerId={player.id}
-                          sessionCount={signups.filter(s => s.playerId === player.id && s.paid).length}
-                          playerName={`${player.firstName} ${player.lastName}`}
-                        />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic py-4">No upcoming reservations for this player.</p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Click the session count to view detailed history of paid sessions
-                      </p>
-                    </div>
-                    
-                    <PlayerPortalControls player={player} />
-                  </CardContent>
-                </Card>
-              );
-            })
+                      
+                      {/* Session History */}
+                      <div className="mt-6 pt-6 border-t border-border/50">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-foreground">Session History</h4>
+                          <ParentSessionHistoryDropdown
+                            playerId={player.id}
+                            sessionCount={signups.filter(s => s.playerId === player.id && s.paid).length}
+                            playerName={`${player.firstName} ${player.lastName}`}
+                          />
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Click the session count to view detailed history
+                        </p>
+                      </div>
+                      
+                      <PlayerPortalControls player={player} />
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
-        </div>
         </div>
       </section>
 
@@ -655,7 +710,6 @@ export default function Dashboard() {
           signup={selectedPaymentSession.signup}
         />
       )}
-
     </div>
   );
 }
