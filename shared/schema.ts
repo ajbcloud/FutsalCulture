@@ -211,6 +211,10 @@ export const tenants = pgTable("tenants", {
   smsCreditsLastPurchasedAt: timestamp("sms_credits_last_purchased_at"),
   smsCreditsAutoRecharge: boolean("sms_credits_auto_recharge").default(false),
   smsCreditsAutoRechargeAmount: integer("sms_credits_auto_recharge_amount"), // Package to auto-buy when low
+
+  // Clerk Organization Integration
+  clerkOrganizationId: varchar("clerk_organization_id").unique(), // Links to Clerk Organization
+  clerkOrganizationSyncedAt: timestamp("clerk_organization_synced_at"), // Last sync timestamp
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
