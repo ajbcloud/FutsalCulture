@@ -5,9 +5,9 @@ import { eq, isNull } from 'drizzle-orm';
 const CLERK_API_BASE = 'https://api.clerk.com/v1';
 
 const PLAN_MEMBER_LIMITS: Record<string, number | null> = {
-  free: 25,
-  core: 100,
-  growth: 250,
+  free: 50,
+  core: 250,
+  growth: 1000,
   elite: null,
 };
 
