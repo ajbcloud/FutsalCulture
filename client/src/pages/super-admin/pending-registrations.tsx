@@ -444,7 +444,7 @@ export default function SuperAdminPendingRegistrations() {
               <Building2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              {stats.pendingByTenant[0] ? (
+              {stats.pendingByTenant?.[0] ? (
                 <>
                   <div className="text-2xl font-bold">
                     {stats.pendingByTenant[0].pendingCount}
