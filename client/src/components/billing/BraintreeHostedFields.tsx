@@ -23,6 +23,7 @@ interface BraintreeHostedFieldsProps {
 const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHostedFieldsProps>(
   ({ clientToken, onReady, onError, onCardTypeChange, onValidityChange, className }, ref) => {
     const [hostedFieldsInstance, setHostedFieldsInstance] = useState<braintree.HostedFields | null>(null);
+    const hostedFieldsInstanceRef = useRef<braintree.HostedFields | null>(null);
     const [isReady, setIsReady] = useState(false);
     const [cardType, setCardType] = useState<string>("");
     const [fieldStates, setFieldStates] = useState({
@@ -81,11 +82,14 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
             },
           },
         });
-      }).then((hostedFieldsInstance) => {
-        setHostedFieldsInstance(hostedFieldsInstance);
+      }).then((instance) => {
+        hostedFieldsInstanceRef.current = instance;
+        setHostedFieldsInstance(instance);
         setIsReady(true);
         initializingRef.current = false;
         onReady?.();
+
+        const hostedFieldsInstance = instance;
 
         hostedFieldsInstance.on("cardTypeChange", (event) => {
           if (event.cards.length === 1) {
@@ -140,8 +144,9 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
       });
 
       return () => {
-        if (hostedFieldsInstance) {
-          hostedFieldsInstance.teardown();
+        if (hostedFieldsInstanceRef.current) {
+          hostedFieldsInstanceRef.current.teardown();
+          hostedFieldsInstanceRef.current = null;
         }
       };
     }, [clientToken]);
