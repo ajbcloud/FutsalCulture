@@ -355,13 +355,13 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 relative">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div className="space-y-4">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
+                Hey{user?.firstName ? `, ${user.firstName}` : ''}!
+              </h1>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
                 <span>Welcome back</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
-                Hey{user?.firstName ? `, ${user.firstName}` : ''}!
-              </h1>
               <p className="text-lg text-muted-foreground max-w-xl">
                 Ready to book today's training sessions? Let's get your players on the field.
               </p>
