@@ -46,7 +46,21 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 - **Neon Database**: PostgreSQL hosting.
-- **Stripe**: Payment processing.
+- **Stripe**: Payment processing (transitioning to Braintree).
 - **Clerk**: User authentication (hosted auth UI and session management).
-- **SendGrid**: Email communication.
+- **Resend**: Email communication (migrated from SendGrid).
 - **Twilio**: SMS communication.
+
+## Recent Migration Progress
+
+### Email Migration (Phase 1 - Complete)
+- Migrated from SendGrid to Resend for all email sending
+- Created email provider abstraction layer (`server/utils/email-provider.ts`) for provider-agnostic email sending
+- Created Resend client (`server/utils/resend-client.ts`) with batching support
+- Implemented Resend webhook endpoint (`server/routes/resend-webhooks.ts`) for email event tracking
+- Updated all email-sending code to use unified FROM_EMAIL constant
+- Legacy SendGrid webhook routes retained for SMS event tracking (Phase 2)
+
+### Payment Migration (Phase 3 - Pending)
+- Stripe made fully optional with graceful degradation
+- Braintree integration to be implemented with OAuth-based client connections
