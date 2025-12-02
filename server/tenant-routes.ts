@@ -5,6 +5,16 @@ import { tenants } from '../shared/schema';
 
 const router = Router();
 
+// Middleware to set currentUser from req.user (set by Clerk sync)
+router.use(async (req: any, res, next) => {
+  if (req.user?.id) {
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(req.user.id);
+    (req as any).currentUser = user;
+  }
+  next();
+});
+
 // Get comprehensive tenant information - SINGLE SOURCE OF TRUTH
 router.get('/tenant/info', async (req: any, res) => {
   try {

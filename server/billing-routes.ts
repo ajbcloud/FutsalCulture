@@ -8,6 +8,16 @@ import { clearCapabilitiesCache } from './middleware/featureAccess';
 
 const router = Router();
 
+// Middleware to set currentUser from req.user (set by Clerk sync)
+router.use(async (req: any, res, next) => {
+  if (req.user?.id) {
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(req.user.id);
+    (req as any).currentUser = user;
+  }
+  next();
+});
+
 // Check subscription status endpoint
 router.get('/billing/check-subscription', async (req: any, res) => {
   try {
