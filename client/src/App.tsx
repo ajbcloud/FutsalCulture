@@ -49,6 +49,9 @@ import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
+import LoginBusiness from "@/pages/LoginBusiness";
+import LoginConsumer from "@/pages/LoginConsumer";
+import AppUnassigned from "@/pages/AppUnassigned";
 import ForgotPassword from "@/pages/ForgotPassword";
 import VerifyEmailSent from "@/pages/VerifyEmailSent";
 import SetPassword from "@/pages/SetPassword";
@@ -87,12 +90,17 @@ function Router() {
         <Route path="/" component={HomePlayHQ} />
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
+        <Route path="/app-unassigned" component={AppUnassigned} />
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={GetStarted} />
         <Route path="/join" component={Join} />
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
+        <Route path="/login-business" component={LoginBusiness} />
+        <Route path="/login-business/*" component={LoginBusiness} />
+        <Route path="/login-consumer" component={LoginConsumer} />
+        <Route path="/login-consumer/*" component={LoginConsumer} />
         <Route path="/login/*" component={Login} />
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/verify-email-sent" component={VerifyEmailSent} />
