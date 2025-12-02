@@ -1,0 +1,355 @@
+THE FULL EXPECTED PROCESS
+Written Verbally, Step by Step
+For You, Your Team, and Your Replit Agent
+
+This is the complete, real world flow of your subscription and plan system using:
+
+• Free
+• Core
+• Growth
+• Elite
+
+With logic for upgrades, downgrades, trials, webhooks, redirects, and more.
+
+Everything described below is exactly what your system should do.
+
+PART 1
+When a new client signs up for the first time
+
+They create an account in your app.
+
+Your app automatically assigns them the Free plan.
+
+No customer or subscription is created in Braintree yet.
+
+They now have full Free access to your platform.
+
+All plan data lives inside your app database at this point.
+
+This means they can explore the app, invite users, set things up, and evaluate before upgrading.
+
+PART 2
+When the client wants to upgrade
+
+On your “Plans” page, you have three upgrade buttons:
+
+• Upgrade to Core
+• Upgrade to Growth
+• Upgrade to Elite
+
+Each button corresponds to a single Braintree plan ID, which never comes from the frontend.
+Frontend only sends the plan name:
+
+For example:
+
+User clicks “Upgrade to Growth”
+Frontend sends:
+
+plan: "Growth"
+
+Your backend maps:
+
+Growth → plan_growth_123 in Braintree
+
+Now the upgrade process begins.
+
+PART 3
+Upgrade flow inside the backend and Braintree
+
+The backend checks that the user is logged in.
+
+The backend verifies that the requested plan is valid.
+
+The backend checks that the user is not already on that plan.
+
+The backend creates or retrieves the user’s Braintree customer record.
+
+The backend creates a Braintree subscription checkout session for the selected plan.
+
+The backend stores a pending upgrade record for tracking.
+
+The backend returns the Braintree checkout redirect URL to the frontend.
+
+The frontend redirects the user to the hosted Braintree checkout page.
+
+The checkout page handles all payment details, so the app remains fully PCI safe.
+
+PART 4
+After payment is completed
+
+After a successful payment inside Braintree:
+
+Braintree redirects the user back to your app.
+
+The frontend receives the redirect URL and calls your backend to confirm the payment.
+
+Your backend looks up the subscription in Braintree and verifies:
+• subscription exists
+• subscription belongs to that customer
+• subscription is for the correct plan
+• subscription was successfully created
+
+The backend updates the pending upgrade state to waiting for webhook confirmation.
+
+You do not upgrade the user yet.
+Payment redirects can be misleading or manipulated.
+The webhook is the source of truth.
+
+PART 5
+Webhook confirmation
+
+Braintree sends a webhook event like:
+
+• subscription_went_active
+• subscription_charged_successfully
+
+Your backend:
+
+Verifies the webhook signature.
+
+Retrieves the user’s pending upgrade entry.
+
+Confirms the subscription and plan.
+
+Updates the user’s plan to Core, Growth, or Elite.
+
+Stores subscriptionId, nextBillingDate, and subscriptionStatus in your database.
+
+Unlocks all paid features.
+
+Clears pending upgrade state.
+
+At this moment, the user officially becomes a paid subscriber.
+
+PART 6
+How feature access works after upgrading
+
+Your app will check:
+
+• currentPlan
+• subscriptionStatus
+• nextBillingDate
+• any pending downgrade
+• payment status from webhooks
+
+Paid plans unlock:
+
+• additional features
+• additional limits
+• additional messaging options
+• any premium modules your platform offers
+
+This is all based solely on your database, not Braintree.
+
+PART 7
+The downgrade process
+(Based on your choice: end of billing cycle downgrade)
+
+When a paid user clicks “Downgrade to Free”:
+
+The backend fetches the subscription’s next billing date from Braintree.
+
+Your app does not cancel the subscription immediately.
+
+Instead, your app stores:
+• pendingDowngrade = Free
+• downgradeEffectiveDate = next renewal date
+
+The user continues to use their paid plan normally.
+
+The user is notified that they will downgrade on the renewal date.
+
+They can cancel the downgrade anytime before the renewal date.
+
+On the renewal date:
+
+A scheduled daily job runs early in the morning.
+
+It detects that the downgradeEffectiveDate is today.
+
+It cancels the Braintree subscription.
+
+It sets the user’s plan to Free.
+
+It removes all paid features.
+
+It clears subscriptionId, subscriptionStatus, and pendingDowngrade.
+
+This pattern matches modern subscription SaaS like Slack, Zoom, ClickUp, Notion, and Asana.
+
+PART 8
+What happens if the user upgrades again during a pending downgrade?
+
+This is very common.
+
+If the user has:
+
+pendingDowngrade = Free
+downgradeEffectiveDate = some date
+
+And they click “Upgrade to Growth,” you do:
+
+Cancel the pending downgrade.
+
+Start a normal upgrade flow.
+
+Create the new subscription checkout.
+
+Let the webhook confirm.
+
+Set the user to the new paid plan.
+
+Downgrades never block upgrades.
+
+PART 9
+What happens if a scheduled downgrade comes but the user’s payment fails before that date?
+
+If the subscription goes past due before downgrade date:
+
+You follow your failed payment retry rules.
+
+If retries succeed, user’s downgrade remains scheduled for the original date.
+
+If retries fail permanently, you cancel the paid subscription early and downgrade immediately.
+
+This avoids users getting extra paid time for free.
+
+PART 10
+What happens if they cancel payment directly inside Braintree or their bank?
+
+Your webhook receives subscription_canceled or subscription_went_past_due.
+
+Your backend must:
+
+Immediately remove paid features.
+
+Set plan to Free.
+
+Clear subscriptionId and subscriptionStatus.
+
+Clear pendingDowngrade if one existed.
+
+Webhooks are always the source of truth.
+
+PART 11
+What your UI must show the user
+When free user:
+
+Show upgrade buttons for Core, Growth, Elite.
+
+When paid user with no changes pending:
+
+Show their current billing info.
+Show “Downgrade to Free” option.
+
+When pending downgrade exists:
+
+Hide upgrade buttons.
+Show “Cancel scheduled downgrade” button.
+Show a banner:
+
+“You will downgrade to Free on [date]. You will retain access to all paid features until then.”
+
+PART 12
+What your database must hold
+
+Your user or account table must store:
+
+currentPlan
+subscriptionId
+braintreeCustomerId
+subscriptionStatus
+nextBillingDate
+pendingDowngrade
+downgradeEffectiveDate
+planEffectiveDate
+updatedAt
+createdAt
+
+This allows you to handle all the lifecycle events without ambiguity.
+
+PART 13
+The backend responsibilities summarized
+
+• Create Braintree customers
+• Create subscriptions
+• Verify checkout results
+• Process webhooks
+• Apply upgrades
+• Schedule and process downgrades
+• Handle failed payments
+• Handle cancellations
+• Enforce feature gating
+• Sync subscription next billing date
+• Manage pending upgrade and pending downgrade states
+
+PART 14
+The frontend responsibilities summarized
+
+• Display Free, Core, Growth, Elite plans
+• Send plan selection to backend
+• Redirect to Braintree
+• Show upgrade success page
+• Show plan details
+• Show downgrade scheduled state
+• Allow canceling scheduled downgrade
+• Show billing settings
+
+The frontend never handles payment logic, only UX.
+
+PART 15
+The webhook responsibilities summarized
+
+Webhooks must:
+
+• Validate Braintree’s signature
+• Fetch subscription data
+• Update user plan
+• Update subscription status
+• Cancel pending downgrade during upgrade
+• Apply immediate downgrade if subscription is canceled
+• Save nextBillingDate
+• Save renewal date
+• Handle past due transitions
+• Handle expired or canceled subscriptions
+
+PART 16
+What the agent must build from this description
+
+Below is the simplified list you can give the agent once you are ready:
+
+Build These Systems:
+
+Free Plan signup flow
+
+Upgrade flow using Braintree
+
+Webhook handling for subscription events
+
+Pending upgrade state logic
+
+Pending downgrade state logic
+
+End of billing cycle downgrade job
+
+Feature gating based on plan
+
+Billing settings UI
+
+Plan selection UI
+
+Subscription state machine in the backend
+
+Integration with Redirect URLs
+
+Cancel downgrade functionality
+
+Handling payment failures and retries
+
+Database tables and models for all plan states
+
+API routes for upgrade, downgrade, cancel downgrade, and fetch billing info
+
+Admin tools for debugging subscription issues
+
+This is everything the agent needs to construct the entire subscription engine correctly.

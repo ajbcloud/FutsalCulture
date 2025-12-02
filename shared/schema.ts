@@ -164,6 +164,13 @@ export const tenants = pgTable("tenants", {
   inviteCode: varchar("invite_code").unique().notNull(),
   inviteCodeUpdatedAt: timestamp("invite_code_updated_at").defaultNow().notNull(),
   inviteCodeUpdatedBy: varchar("invite_code_updated_by").references(() => users.id),
+
+  // SMS Credits System
+  smsCreditsBalance: integer("sms_credits_balance").default(0).notNull(),
+  smsCreditsLowThreshold: integer("sms_credits_low_threshold").default(50), // Alert when below this
+  smsCreditsLastPurchasedAt: timestamp("sms_credits_last_purchased_at"),
+  smsCreditsAutoRecharge: boolean("sms_credits_auto_recharge").default(false),
+  smsCreditsAutoRechargeAmount: integer("sms_credits_auto_recharge_amount"), // Package to auto-buy when low
 });
 
 // Tenant Invite Codes - Multiple static codes per tenant
@@ -1094,6 +1101,50 @@ export const smsEvents = pgTable("sms_events", {
   index("sms_events_event_idx").on(table.event),
 ]);
 
+// SMS Credits System - Transaction type enum
+export const smsCreditTransactionTypeEnum = pgEnum("sms_credit_transaction_type", [
+  "purchase",      // Credits purchased
+  "usage",         // Credits used for sending SMS
+  "refund",        // Credits refunded (failed delivery)
+  "bonus",         // Bonus credits (promotions, signups)
+  "adjustment",    // Manual adjustment by admin
+  "expiration"     // Credits expired
+]);
+
+// SMS Credit Transactions - Tracks all credit movements
+export const smsCreditTransactions = pgTable("sms_credit_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  type: smsCreditTransactionTypeEnum("type").notNull(),
+  amount: integer("amount").notNull(), // Positive for additions, negative for usage
+  balanceAfter: integer("balance_after").notNull(), // Balance after this transaction
+  description: text("description"),
+  referenceId: varchar("reference_id"), // Links to payment ID, SMS message ID, etc.
+  referenceType: varchar("reference_type"), // 'payment', 'sms', 'admin', etc.
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Additional context
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("sms_credit_transactions_tenant_id_idx").on(table.tenantId),
+  index("sms_credit_transactions_type_idx").on(table.type),
+  index("sms_credit_transactions_created_at_idx").on(table.createdAt),
+  index("sms_credit_transactions_reference_idx").on(table.referenceId, table.referenceType),
+]);
+
+// SMS Credit Packages - Available for purchase
+export const smsCreditPackages = pgTable("sms_credit_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  credits: integer("credits").notNull(),
+  priceInCents: integer("price_in_cents").notNull(),
+  bonusCredits: integer("bonus_credits").default(0),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const unsubscribes = pgTable("unsubscribes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   channel: unsubscribeChannelEnum("channel").notNull(),
@@ -1396,6 +1447,7 @@ export const tenantsRelations = relations(tenants, ({ many, one }) => ({
   // Communication Events relations
   emailEvents: many(emailEvents),
   smsEvents: many(smsEvents),
+  smsCreditTransactions: many(smsCreditTransactions),
   // Impersonation Events relations
   impersonationEvents: many(impersonationEvents),
   // Household relations
@@ -1725,6 +1777,18 @@ export const smsEventsRelations = relations(smsEvents, ({ one }) => ({
   tenant: one(tenants, {
     fields: [smsEvents.tenantId],
     references: [tenants.id],
+  }),
+}));
+
+// SMS Credits Relations
+export const smsCreditTransactionsRelations = relations(smsCreditTransactions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [smsCreditTransactions.tenantId],
+    references: [tenants.id],
+  }),
+  createdByUser: one(users, {
+    fields: [smsCreditTransactions.createdBy],
+    references: [users.id],
   }),
 }));
 
@@ -2140,6 +2204,18 @@ export const insertEmailEventSchema = createInsertSchema(emailEvents).omit({
 export const insertSmsEventSchema = createInsertSchema(smsEvents).omit({
   id: true,
   createdAt: true,
+});
+
+// SMS Credits Insert Schemas
+export const insertSmsCreditTransactionSchema = createInsertSchema(smsCreditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSmsCreditPackageSchema = createInsertSchema(smsCreditPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertUnsubscribeSchema = createInsertSchema(unsubscribes).omit({
