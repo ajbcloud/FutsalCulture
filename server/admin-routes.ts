@@ -6011,4 +6011,8 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Import and use tenant invite codes routes
   const { default: tenantInviteCodesRoutes } = await import('./routes/tenant-invite-codes.js');
   app.use('/api/admin', tenantInviteCodesRoutes);
+
+  // Import and use SMS credits routes
+  const { default: smsCreditsRoutes } = await import('./routes/sms-credits.js');
+  app.use('/api/admin', smsCreditsRoutes);
 }

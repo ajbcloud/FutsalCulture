@@ -30,7 +30,8 @@ import {
   Sparkles,
   TrendingUp,
   Mail,
-  UserPlus
+  UserPlus,
+  MessageSquare
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
@@ -46,6 +47,7 @@ const adminNavItems = [
   { href: "/admin/credits", label: "Credits", icon: CreditCard },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
+  { href: "/admin/sms-credits", label: "SMS Credits", icon: MessageSquare, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },

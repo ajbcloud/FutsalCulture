@@ -49,7 +49,14 @@ Preferred communication style: Simple, everyday language.
 - **Stripe**: Payment processing (transitioning to Braintree).
 - **Clerk**: User authentication (hosted auth UI and session management).
 - **Resend**: Email communication (migrated from SendGrid).
-- **Twilio**: SMS communication.
+- **Telnyx**: SMS communication (migrated from Twilio/SendGrid).
+
+## Required Environment Variables
+
+### Telnyx (SMS)
+- `TELNYX_API_KEY` - Telnyx API key from Mission Control Portal
+- `TELNYX_FROM_NUMBER` - Telnyx phone number for sending SMS (E.164 format, e.g., +15551234567)
+- `TELNYX_MESSAGING_PROFILE_ID` - (Optional) Messaging profile ID for sending
 
 ## Recent Migration Progress
 
@@ -59,7 +66,25 @@ Preferred communication style: Simple, everyday language.
 - Created Resend client (`server/utils/resend-client.ts`) with batching support
 - Implemented Resend webhook endpoint (`server/routes/resend-webhooks.ts`) for email event tracking
 - Updated all email-sending code to use unified FROM_EMAIL constant
-- Legacy SendGrid webhook routes retained for SMS event tracking (Phase 2)
+- Legacy SendGrid webhook routes retained for backward compatibility
+
+### SMS Migration (Phase 2 - Complete)
+- Migrated from Twilio/SendGrid to Telnyx for all SMS sending
+- Created SMS credit system with balance tracking per tenant:
+  - Database tables: `sms_credit_transactions`, `sms_credit_packages`
+  - Tenant fields: `sms_credits_balance`, `sms_credits_low_threshold`, `sms_credits_auto_recharge`
+- Created SMS credit service (`server/utils/sms-credits.ts`) with:
+  - Balance checking and credit deduction on send
+  - Purchase functionality with package selection
+  - Transaction history and usage analytics
+  - Low-balance warnings and auto-recharge settings
+- Updated smsService.ts to use Telnyx SDK with credit integration
+- Created admin API routes (`server/routes/sms-credits.ts`) for credit management
+- Built admin UI page (`client/src/pages/admin/sms-credits.tsx`) with:
+  - Balance display and low balance warnings
+  - Package purchase cards
+  - Transaction history table
+  - Auto-recharge settings
 
 ### Payment Migration (Phase 3 - Pending)
 - Stripe made fully optional with graceful degradation

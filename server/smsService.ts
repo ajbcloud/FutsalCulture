@@ -1,13 +1,14 @@
-import twilio from 'twilio';
+import Telnyx from 'telnyx';
+import { checkSmsCredits, deductSmsCredits, checkAndTriggerLowBalanceWarning } from './utils/sms-credits';
 
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
+const TELNYX_API_KEY = process.env.TELNYX_API_KEY;
+const TELNYX_FROM_NUMBER = process.env.TELNYX_FROM_NUMBER;
+const TELNYX_MESSAGING_PROFILE_ID = process.env.TELNYX_MESSAGING_PROFILE_ID;
 
-let twilioClient: twilio.Twilio | null = null;
+let telnyxClient: Telnyx | null = null;
 
-if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-  twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+if (TELNYX_API_KEY) {
+  telnyxClient = new Telnyx({ apiKey: TELNYX_API_KEY });
 }
 
 interface SMSParams {
@@ -16,34 +17,82 @@ interface SMSParams {
   from?: string;
   tenantId?: string;
   campaignId?: string;
+  skipCreditCheck?: boolean;
 }
 
-export async function sendSMS(params: SMSParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  if (!twilioClient || !TWILIO_FROM_NUMBER) {
-    console.warn('Twilio not configured - skipping SMS notification');
-    return { success: false, error: 'Twilio not configured' };
+interface SMSResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  creditDeducted?: boolean;
+}
+
+export async function sendSMS(params: SMSParams): Promise<SMSResult> {
+  if (!telnyxClient || !TELNYX_FROM_NUMBER) {
+    console.warn('Telnyx not configured - skipping SMS notification');
+    return { success: false, error: 'Telnyx not configured' };
+  }
+
+  if (params.tenantId && !params.skipCreditCheck) {
+    const creditCheck = await checkSmsCredits(params.tenantId, 1);
+    if (!creditCheck.hasCredits) {
+      console.warn(`❌ SMS blocked - insufficient credits for tenant ${params.tenantId}`);
+      return { 
+        success: false, 
+        error: `Insufficient SMS credits. Available: ${creditCheck.currentBalance}, Required: 1`,
+        creditDeducted: false
+      };
+    }
   }
 
   try {
-    const message = await twilioClient.messages.create({
+    const messageData: Telnyx.Messages.MessageSendParams = {
       to: params.to,
-      from: params.from || TWILIO_FROM_NUMBER,
-      body: params.body,
-      // Add custom parameters for tracking
-      statusCallback: process.env.TWILIO_WEBHOOK_URL ? `${process.env.TWILIO_WEBHOOK_URL}/api/webhooks/twilio` : undefined
-    });
+      from: params.from || TELNYX_FROM_NUMBER,
+      text: params.body,
+    };
 
-    console.log(`📱 SMS sent successfully to ${params.to}, Message SID: ${message.sid}`);
+    if (TELNYX_MESSAGING_PROFILE_ID) {
+      messageData.messaging_profile_id = TELNYX_MESSAGING_PROFILE_ID;
+    }
+
+    const message = await telnyxClient.messages.send(messageData);
+    const messageId = message.data?.id || 'unknown';
+
+    console.log(`📱 SMS sent successfully to ${params.to}, Message ID: ${messageId}`);
+
+    if (params.tenantId && !params.skipCreditCheck) {
+      const deductResult = await deductSmsCredits(params.tenantId, 1, {
+        description: `SMS to ${params.to.substring(0, 6)}...`,
+        referenceId: messageId,
+        referenceType: 'sms_message',
+        metadata: {
+          to: params.to,
+          campaignId: params.campaignId,
+        },
+      });
+
+      if (deductResult.success) {
+        await checkAndTriggerLowBalanceWarning(params.tenantId);
+      }
+
+      return { 
+        success: true, 
+        messageId,
+        creditDeducted: deductResult.success
+      };
+    }
     
     return { 
       success: true, 
-      messageId: message.sid 
+      messageId 
     };
   } catch (error: any) {
-    console.error('❌ Twilio SMS error:', error);
+    console.error('❌ Telnyx SMS error:', error);
     return { 
       success: false, 
-      error: error.message || 'SMS sending failed' 
+      error: error.message || 'SMS sending failed',
+      creditDeducted: false
     };
   }
 }
@@ -52,10 +101,34 @@ export async function sendBulkSMS(recipients: Array<{ phone: string; body: strin
   sent: number;
   failed: number;
   results: Array<{ phone: string; success: boolean; messageId?: string; error?: string }>;
+  creditsDeducted: number;
 }> {
-  if (!twilioClient || !TWILIO_FROM_NUMBER) {
-    console.warn('Twilio not configured - skipping bulk SMS');
-    return { sent: 0, failed: recipients.length, results: recipients.map(r => ({ phone: r.phone, success: false, error: 'Twilio not configured' })) };
+  if (!telnyxClient || !TELNYX_FROM_NUMBER) {
+    console.warn('Telnyx not configured - skipping bulk SMS');
+    return { 
+      sent: 0, 
+      failed: recipients.length, 
+      results: recipients.map(r => ({ phone: r.phone, success: false, error: 'Telnyx not configured' })),
+      creditsDeducted: 0
+    };
+  }
+
+  const tenantId = recipients[0]?.tenantId;
+  if (tenantId) {
+    const creditCheck = await checkSmsCredits(tenantId, recipients.length);
+    if (!creditCheck.hasCredits) {
+      console.warn(`❌ Bulk SMS blocked - insufficient credits for tenant ${tenantId}. Need ${recipients.length}, have ${creditCheck.currentBalance}`);
+      return { 
+        sent: 0, 
+        failed: recipients.length, 
+        results: recipients.map(r => ({ 
+          phone: r.phone, 
+          success: false, 
+          error: `Insufficient SMS credits. Available: ${creditCheck.currentBalance}, Required: ${recipients.length}` 
+        })),
+        creditsDeducted: 0
+      };
+    }
   }
 
   const results = [];
@@ -67,12 +140,15 @@ export async function sendBulkSMS(recipients: Array<{ phone: string; body: strin
       to: recipient.phone,
       body: recipient.body,
       tenantId: recipient.tenantId,
-      campaignId: recipient.campaignId
+      campaignId: recipient.campaignId,
+      skipCreditCheck: true
     });
 
     results.push({
       phone: recipient.phone,
-      ...result
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error
     });
 
     if (result.success) {
@@ -81,16 +157,28 @@ export async function sendBulkSMS(recipients: Array<{ phone: string; body: strin
       failed++;
     }
 
-    // Add small delay between messages to avoid rate limiting
     await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  if (tenantId && sent > 0) {
+    await deductSmsCredits(tenantId, sent, {
+      description: `Bulk SMS campaign (${sent} messages)`,
+      referenceType: 'bulk_sms',
+      metadata: {
+        totalRecipients: recipients.length,
+        successfulSends: sent,
+        failedSends: failed,
+        campaignId: recipients[0]?.campaignId,
+      },
+    });
+    await checkAndTriggerLowBalanceWarning(tenantId);
   }
 
   console.log(`📱 Bulk SMS completed: ${sent} sent, ${failed} failed`);
   
-  return { sent, failed, results };
+  return { sent, failed, results, creditsDeducted: sent };
 }
 
-// SMS Template Library
 export const SMS_TEMPLATES = {
   invitation: {
     parent: "Hi {{name}}! {{senderName}} invited you to join {{tenantName}} on PlayHQ. Book training sessions & manage payments easily. Accept: {{inviteUrl}} Expires: {{expiresAt}}",
@@ -119,7 +207,7 @@ export async function sendInvitationSMS(options: {
   inviteUrl: string;
   expiresAt: string;
   tenantId?: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+}): Promise<SMSResult> {
   const template = SMS_TEMPLATES.invitation[options.role];
   
   const personalizedMessage = template
@@ -142,11 +230,10 @@ export async function sendCampaignSMS(
   recipients: Array<{ phone: string; name?: string; tenantId?: string }>,
   template: string,
   variables: Record<string, string> = {}
-): Promise<{ sent: number; failed: number }> {
+): Promise<{ sent: number; failed: number; creditsDeducted: number }> {
   const { replaceTemplateVariables } = await import('./utils/template-variables');
   
   const smsRecipients = recipients.map(recipient => {
-    // Build template variables with common fields
     const templateVars = {
       name: recipient.name || 'there',
       firstName: recipient.name?.split(' ')[0] || 'there',
@@ -154,7 +241,6 @@ export async function sendCampaignSMS(
       ...variables
     };
     
-    // Replace template variables using centralized utility
     const personalizedBody = replaceTemplateVariables(template, templateVars);
 
     return {
@@ -166,10 +252,9 @@ export async function sendCampaignSMS(
   });
 
   const result = await sendBulkSMS(smsRecipients);
-  return { sent: result.sent, failed: result.failed };
+  return { sent: result.sent, failed: result.failed, creditsDeducted: result.creditsDeducted };
 }
 
-// Analytics tracking for SMS
 export async function trackSMSEvent(eventData: {
   messageId: string;
   phone: string;
@@ -179,17 +264,31 @@ export async function trackSMSEvent(eventData: {
   errorMessage?: string;
 }): Promise<void> {
   try {
-    // Log to console for now - could be expanded to database tracking
     console.log(`📱 SMS Event: ${eventData.event} for ${eventData.phone}`, {
       messageId: eventData.messageId,
       tenantId: eventData.tenantId,
       campaignId: eventData.campaignId,
       error: eventData.errorMessage
     });
-    
-    // Future: Store in database for analytics
-    // await db.insert(smsEvents).values(eventData);
   } catch (error) {
     console.error('Failed to track SMS event:', error);
   }
+}
+
+export function isSmsConfigured(): boolean {
+  return !!(telnyxClient && TELNYX_FROM_NUMBER);
+}
+
+export async function getSmsBalance(tenantId: string): Promise<{
+  balance: number;
+  isLow: boolean;
+  lowThreshold: number;
+}> {
+  const { getSmsCreditsBalance } = await import('./utils/sms-credits');
+  const balanceInfo = await getSmsCreditsBalance(tenantId);
+  return {
+    balance: balanceInfo.balance,
+    isLow: balanceInfo.isLow,
+    lowThreshold: balanceInfo.lowThreshold
+  };
 }
