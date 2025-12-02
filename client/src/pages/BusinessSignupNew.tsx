@@ -104,6 +104,7 @@ interface SignupResponse {
   tenantId?: string;
   tenantCode?: string;
   requiresEmailVerification: boolean;
+  emailVerificationFailed?: boolean;
 }
 
 export default function BusinessSignupNew() {
@@ -112,6 +113,9 @@ export default function BusinessSignupNew() {
   const [, setLocation] = useLocation();
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [emailVerificationFailed, setEmailVerificationFailed] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const form = useForm<BusinessSignupForm>({
     resolver: zodResolver(businessSignupSchema),
@@ -147,10 +151,26 @@ export default function BusinessSignupNew() {
     onSuccess: (data) => {
       if (data.success) {
         setUserEmail(form.getValues("email"));
+        setEmailVerificationFailed(data.emailVerificationFailed || false);
         setSignupSuccess(true);
       }
     },
   });
+
+  const handleResendVerification = async () => {
+    setResending(true);
+    try {
+      const response = await apiRequest("POST", "/api/auth/resend-verification", { email: userEmail });
+      if (response.ok) {
+        setResendSuccess(true);
+        setEmailVerificationFailed(false);
+      }
+    } catch (error) {
+      console.error("Failed to resend verification:", error);
+    } finally {
+      setResending(false);
+    }
+  };
 
   const onSubmit = (data: BusinessSignupForm) => {
     signupMutation.mutate(data);
@@ -165,17 +185,46 @@ export default function BusinessSignupNew() {
               <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className={isDarkMode ? "text-white" : ""}>
-              Check Your Email
+              {resendSuccess ? "Verification Email Sent!" : "Check Your Email"}
             </CardTitle>
             <CardDescription className={isDarkMode ? "text-slate-300" : ""}>
-              We've sent a verification link to <strong>{userEmail}</strong>
+              {resendSuccess 
+                ? `We've resent the verification link to ${userEmail}`
+                : <>We've sent a verification link to <strong>{userEmail}</strong></>
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {emailVerificationFailed && (
+              <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
+                <p className="text-sm text-amber-800 dark:text-amber-200 text-center">
+                  There was an issue sending the verification email. Please click below to resend.
+                </p>
+              </div>
+            )}
             <p className={`text-sm text-center ${isDarkMode ? "text-slate-400" : "text-gray-600"}`}>
               Click the link in your email to verify your account and complete setup.
               While you verify, we're getting your club ready in the background.
             </p>
+            {emailVerificationFailed && (
+              <div className="text-center">
+                <Button
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-resend-primary"
+                >
+                  {resending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Resend Verification Email"
+                  )}
+                </Button>
+              </div>
+            )}
             <div className="text-center">
               <Button
                 variant="outline"
@@ -186,18 +235,19 @@ export default function BusinessSignupNew() {
                 Go to Sign In
               </Button>
             </div>
-            <p className={`text-xs text-center ${isDarkMode ? "text-slate-500" : "text-gray-500"}`}>
-              Didn't receive the email? Check your spam folder or{" "}
-              <button 
-                className="text-blue-600 dark:text-blue-400 underline"
-                onClick={() => {
-                  apiRequest("POST", "/api/auth/resend-verification", { email: userEmail });
-                }}
-                data-testid="button-resend-verification"
-              >
-                resend verification
-              </button>
-            </p>
+            {!emailVerificationFailed && (
+              <p className={`text-xs text-center ${isDarkMode ? "text-slate-500" : "text-gray-500"}`}>
+                Didn't receive the email? Check your spam folder or{" "}
+                <button 
+                  className="text-blue-600 dark:text-blue-400 underline"
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                  data-testid="button-resend-verification"
+                >
+                  {resending ? "sending..." : "resend verification"}
+                </button>
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

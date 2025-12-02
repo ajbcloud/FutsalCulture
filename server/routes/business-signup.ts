@@ -219,6 +219,14 @@ router.post('/business-signup', async (req: Request, res: Response) => {
 
     if (!tenant) {
       console.error('Failed to create tenant for:', data.orgName);
+      try {
+        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
+        });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup Clerk user after tenant creation returned null:', cleanupError);
+      }
       return res.status(500).json({
         success: false,
         message: 'Failed to create organization. Please try again.',
@@ -226,22 +234,31 @@ router.post('/business-signup', async (req: Request, res: Response) => {
       } as BusinessSignupResponse);
     }
 
-    const user = await storage.upsertUser({
-      email: data.email,
-      clerkUserId: clerkUser.id,
-      authProvider: 'clerk',
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone || null,
-      tenantId: tenant.id,
-      isAdmin: true,
-      role: 'tenant_admin',
-      isApproved: true,
-      registrationStatus: 'approved',
-    });
-
-    if (!user) {
-      console.error('Failed to create user for:', data.email);
+    let user;
+    try {
+      user = await storage.upsertUser({
+        email: data.email,
+        clerkUserId: clerkUser.id,
+        authProvider: 'clerk',
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone || null,
+        tenantId: tenant.id,
+        isAdmin: true,
+        role: 'tenant_admin',
+        isApproved: true,
+        registrationStatus: 'approved',
+      });
+    } catch (userError: any) {
+      console.error('Failed to create user, attempting cleanup:', userError);
+      try {
+        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
+        });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup Clerk user after user creation failure:', cleanupError);
+      }
       return res.status(500).json({
         success: false,
         message: 'Failed to create user account. Please try again.',
@@ -249,21 +266,45 @@ router.post('/business-signup', async (req: Request, res: Response) => {
       } as BusinessSignupResponse);
     }
 
+    if (!user) {
+      console.error('Failed to create user for:', data.email);
+      try {
+        await fetch(`https://api.clerk.com/v1/users/${clerkUser.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}` },
+        });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup Clerk user after user creation returned null:', cleanupError);
+      }
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create user account. Please try again.',
+        requiresEmailVerification: false,
+      } as BusinessSignupResponse);
+    }
+
+    let emailVerificationFailed = false;
     try {
       await sendEmailVerification(clerkUser.id);
     } catch (verifyError) {
       console.error('Email verification preparation failed:', verifyError);
+      emailVerificationFailed = true;
     }
 
-    console.log(`Business signup successful: ${data.email} -> Tenant: ${tenant.name} (${tenant.id})`);
+    console.log(`Business signup successful: ${data.email} -> Tenant: ${tenant.name} (${tenant.id})${emailVerificationFailed ? ' (email verification failed)' : ''}`);
+
+    const message = emailVerificationFailed 
+      ? 'Account created! There was an issue sending the verification email. Please use the resend option below.'
+      : 'Account created! Please check your email to verify your account.';
 
     return res.status(201).json({
       success: true,
-      message: 'Account created! Please check your email to verify your account.',
+      message,
       userId: user.id,
       tenantId: tenant.id,
       tenantCode: tenant.tenantCode,
       requiresEmailVerification: true,
+      emailVerificationFailed,
     } as BusinessSignupResponse);
 
   } catch (error: any) {

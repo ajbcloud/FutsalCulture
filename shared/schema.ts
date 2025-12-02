@@ -3611,6 +3611,7 @@ export const businessSignupResponseSchema = z.object({
   tenantId: z.string().optional(),
   tenantCode: z.string().optional(),
   requiresEmailVerification: z.boolean(),
+  emailVerificationFailed: z.boolean().optional(),
 });
 
 export type BusinessSignupResponse = z.infer<typeof businessSignupResponseSchema>;
