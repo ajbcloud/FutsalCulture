@@ -820,4 +820,321 @@ router.get('/billing/active-processor', async (req: any, res) => {
   }
 });
 
+// ============================================================================
+// BRAINTREE BILLING ENDPOINTS
+// ============================================================================
+
+import * as braintreeService from './services/braintreeService';
+
+// Get Braintree client token for Drop-In UI
+router.get('/billing/braintree/client-token', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    // Get tenant's Braintree customer ID if exists
+    const tenant = await db.select({
+      braintreeCustomerId: tenants.braintreeCustomerId
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    const customerId = tenant[0]?.braintreeCustomerId || undefined;
+    const clientToken = await braintreeService.generateClientToken(customerId);
+
+    res.json({ clientToken });
+  } catch (error) {
+    console.error('Error generating Braintree client token:', error);
+    res.status(500).json({ message: 'Failed to generate client token' });
+  }
+});
+
+// Check cooldown period before allowing plan changes
+router.get('/billing/braintree/cooldown-check', async (req: any, res) => {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const cooldownStatus = await braintreeService.checkCooldownPeriod(currentUser.tenantId);
+
+    res.json(cooldownStatus);
+  } catch (error) {
+    console.error('Error checking cooldown:', error);
+    res.status(500).json({ message: 'Failed to check cooldown status' });
+  }
+});
+
+// Create or update Braintree subscription
+router.post('/billing/braintree/subscribe', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const { plan, paymentMethodNonce } = req.body;
+    const currentUser = req.currentUser;
+
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan. Must be core, growth, or elite.' });
+    }
+
+    if (!paymentMethodNonce) {
+      return res.status(400).json({ message: 'Payment method nonce is required' });
+    }
+
+    // Check cooldown period
+    const cooldownStatus = await braintreeService.checkCooldownPeriod(currentUser.tenantId);
+    if (!cooldownStatus.allowed) {
+      return res.status(429).json({ 
+        message: `You must wait ${cooldownStatus.remainingHours} hours before changing plans again.`,
+        remainingHours: cooldownStatus.remainingHours,
+        lastChangeAt: cooldownStatus.lastChangeAt
+      });
+    }
+
+    // Get tenant info
+    const [tenant] = await db.select()
+      .from(tenants)
+      .where(eq(tenants.id, currentUser.tenantId))
+      .limit(1);
+
+    if (!tenant) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    // Find or create Braintree customer
+    const customer = await braintreeService.findOrCreateCustomer(
+      currentUser.tenantId,
+      currentUser.email,
+      currentUser.firstName,
+      currentUser.lastName,
+      tenant.name
+    );
+
+    // Create payment method from nonce
+    const paymentMethod = await braintreeService.createPaymentMethod(
+      customer.id,
+      paymentMethodNonce,
+      true
+    );
+
+    // Create subscription
+    const subscription = await braintreeService.createSubscription(
+      currentUser.tenantId,
+      plan as 'core' | 'growth' | 'elite',
+      paymentMethod.token
+    );
+
+    // Clear feature access cache
+    clearCapabilitiesCache(currentUser.tenantId);
+
+    res.json({ 
+      success: true,
+      subscriptionId: subscription.id,
+      plan,
+      status: subscription.status,
+      nextBillingDate: subscription.nextBillingDate
+    });
+  } catch (error) {
+    console.error('Error creating Braintree subscription:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to create subscription' });
+  }
+});
+
+// Upgrade Braintree subscription (immediate effect)
+router.post('/billing/braintree/upgrade', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const { plan } = req.body;
+    const currentUser = req.currentUser;
+
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan' });
+    }
+
+    // Check cooldown period
+    const cooldownStatus = await braintreeService.checkCooldownPeriod(currentUser.tenantId);
+    if (!cooldownStatus.allowed) {
+      return res.status(429).json({ 
+        message: `You must wait ${cooldownStatus.remainingHours} hours before changing plans again.`,
+        remainingHours: cooldownStatus.remainingHours
+      });
+    }
+
+    const subscription = await braintreeService.updateSubscriptionPlan(
+      currentUser.tenantId,
+      plan as 'core' | 'growth' | 'elite',
+      { effectiveDate: 'immediately', prorateCharges: false }
+    );
+
+    // Clear feature access cache
+    clearCapabilitiesCache(currentUser.tenantId);
+
+    res.json({ 
+      success: true,
+      message: 'Plan upgraded successfully',
+      subscription: subscription ? {
+        id: subscription.id,
+        status: subscription.status,
+        nextBillingDate: subscription.nextBillingDate
+      } : null
+    });
+  } catch (error) {
+    console.error('Error upgrading Braintree subscription:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to upgrade subscription' });
+  }
+});
+
+// Downgrade Braintree subscription (scheduled for end of billing period)
+router.post('/billing/braintree/downgrade', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const { plan } = req.body;
+    const currentUser = req.currentUser;
+
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    if (!plan || !['free', 'core', 'growth'].includes(plan)) {
+      return res.status(400).json({ message: 'Invalid plan for downgrade' });
+    }
+
+    const subscription = await braintreeService.updateSubscriptionPlan(
+      currentUser.tenantId,
+      plan as 'core' | 'growth' | 'elite',
+      { effectiveDate: 'end_of_billing_period' }
+    );
+
+    res.json({ 
+      success: true,
+      message: 'Downgrade scheduled for end of billing period',
+      subscription: subscription ? {
+        id: subscription.id,
+        nextBillingDate: subscription.nextBillingDate
+      } : null
+    });
+  } catch (error) {
+    console.error('Error downgrading Braintree subscription:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to schedule downgrade' });
+  }
+});
+
+// Cancel Braintree subscription
+router.post('/billing/braintree/cancel', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const { effectiveDate, reason } = req.body;
+    const currentUser = req.currentUser;
+
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const result = await braintreeService.cancelSubscription(
+      currentUser.tenantId,
+      {
+        effectiveDate: effectiveDate === 'immediately' ? 'immediately' : 'end_of_billing_period',
+        reason: reason || 'user_requested'
+      }
+    );
+
+    if (result) {
+      clearCapabilitiesCache(currentUser.tenantId);
+    }
+
+    res.json({ 
+      success: result,
+      message: effectiveDate === 'immediately' 
+        ? 'Subscription cancelled' 
+        : 'Subscription scheduled for cancellation at end of billing period'
+    });
+  } catch (error) {
+    console.error('Error cancelling Braintree subscription:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to cancel subscription' });
+  }
+});
+
+// Get Braintree subscription details
+router.get('/billing/braintree/subscription', async (req: any, res) => {
+  try {
+    if (!braintreeService.isBraintreeEnabled()) {
+      return res.status(503).json({ message: 'Braintree is not configured' });
+    }
+
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const details = await braintreeService.getSubscriptionDetails(currentUser.tenantId);
+
+    // Get tenant's current plan and pending changes
+    const [tenant] = await db.select({
+      planLevel: tenants.planLevel,
+      braintreeStatus: tenants.braintreeStatus,
+      pendingPlanChange: tenants.pendingPlanChange,
+      pendingPlanEffectiveDate: tenants.pendingPlanEffectiveDate
+    })
+    .from(tenants)
+    .where(eq(tenants.id, currentUser.tenantId))
+    .limit(1);
+
+    res.json({
+      hasSubscription: !!details.subscription,
+      subscription: details.subscription ? {
+        id: details.subscription.id,
+        status: details.subscription.status,
+        planId: details.subscription.planId,
+        price: details.subscription.price,
+        nextBillingDate: details.subscription.nextBillingDate,
+        billingPeriodStartDate: details.subscription.billingPeriodStartDate,
+        billingPeriodEndDate: details.subscription.billingPeriodEndDate
+      } : null,
+      currentPlan: tenant?.planLevel || 'free',
+      braintreeStatus: tenant?.braintreeStatus,
+      pendingPlanChange: tenant?.pendingPlanChange ? {
+        plan: tenant.pendingPlanChange,
+        effectiveDate: tenant.pendingPlanEffectiveDate
+      } : null,
+      paymentMethod: details.paymentMethod ? {
+        token: details.paymentMethod.token,
+        cardType: (details.paymentMethod as any).cardType,
+        last4: (details.paymentMethod as any).last4,
+        expirationMonth: (details.paymentMethod as any).expirationMonth,
+        expirationYear: (details.paymentMethod as any).expirationYear
+      } : null
+    });
+  } catch (error) {
+    console.error('Error getting Braintree subscription details:', error);
+    res.status(500).json({ message: 'Failed to get subscription details' });
+  }
+});
+
 export default router;

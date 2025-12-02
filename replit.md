@@ -86,6 +86,54 @@ Preferred communication style: Simple, everyday language.
   - Transaction history table
   - Auto-recharge settings
 
-### Payment Migration (Phase 3 - Pending)
+### Payment Migration (Phase 3 - Complete)
 - Stripe made fully optional with graceful degradation
-- Braintree integration to be implemented with OAuth-based client connections
+- Full Braintree integration implemented with dual-processor support:
+
+#### Braintree Schema Changes
+- Added `payment_processor` enum (`stripe`, `braintree`) to track active processor per tenant
+- Added Braintree fields to tenants table:
+  - `braintree_customer_id`, `braintree_subscription_id`, `braintree_status`
+  - `braintree_plan_id`, `braintree_payment_method_token`
+  - `braintree_oauth_merchant_id` (for OAuth-connected merchants)
+  - Timestamps: `braintree_next_billing_date`, `braintree_last_charge_at`, `braintree_last_failure_at`
+  - `braintree_failure_count` for payment retry tracking
+- Created `tenant_subscription_events` table for comprehensive subscription audit history
+
+#### Braintree Service (`server/services/braintreeService.ts`)
+- Customer provisioning and lookup
+- Client token generation for Drop-In UI
+- Subscription CRUD (create, update, cancel)
+- Plan mapping (Core, Growth, Elite)
+- 24-hour cooldown period enforcement for plan changes
+- Pending downgrade scheduling (effective at billing period end)
+- Payment retry functionality
+- Subscription event logging
+
+#### Braintree API Endpoints
+- `GET /api/billing/braintree/client-token` - Get Drop-In UI client token
+- `GET /api/billing/braintree/cooldown-check` - Check plan change eligibility
+- `POST /api/billing/braintree/subscribe` - Create new subscription
+- `POST /api/billing/braintree/upgrade` - Immediate plan upgrade
+- `POST /api/billing/braintree/downgrade` - Schedule end-of-period downgrade
+- `POST /api/billing/braintree/cancel` - Cancel subscription
+- `GET /api/billing/braintree/subscription` - Get subscription details
+
+#### Braintree Webhooks (`/api/webhooks/braintree`)
+- Subscription charged successfully/unsuccessfully
+- Subscription canceled/expired
+- Subscription went active/past due
+- Dispute opened/won/lost
+
+#### Scheduled Jobs
+- Daily pending downgrade processing at 4 AM UTC
+
+## Required Environment Variables
+
+### Braintree
+- `BRAINTREE_MERCHANT_ID` - Braintree merchant ID
+- `BRAINTREE_PUBLIC_KEY` - Braintree public key
+- `BRAINTREE_PRIVATE_KEY` - Braintree private key
+- `BRAINTREE_PLAN_CORE` - (Optional) Plan ID for Core tier (default: playhq_core)
+- `BRAINTREE_PLAN_GROWTH` - (Optional) Plan ID for Growth tier (default: playhq_growth)
+- `BRAINTREE_PLAN_ELITE` - (Optional) Plan ID for Elite tier (default: playhq_elite)
