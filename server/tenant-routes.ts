@@ -31,6 +31,7 @@ router.get('/tenant/info', async (req: any, res) => {
       billingStatus: tenants.billingStatus,
       stripeCustomerId: tenants.stripeCustomerId,
       stripeSubscriptionId: tenants.stripeSubscriptionId,
+      braintreeSubscriptionId: tenants.braintreeSubscriptionId,
       trialStartedAt: tenants.trialStartedAt,
       trialEndsAt: tenants.trialEndsAt,
       city: tenants.city,
@@ -49,20 +50,29 @@ router.get('/tenant/info', async (req: any, res) => {
 
     const tenant = result[0];
     
-    // Map planLevel to planCode (they're the same in this system)
-    // planLevel is the database field, planCode is what the UI expects
-    const planCode = tenant.planLevel || 'free';
+    // AUTOMATIC ENFORCEMENT: Check if there's an active subscription
+    // If no subscription exists, treat the plan as 'free' regardless of database value
+    const hasActiveSubscription = !!(tenant.stripeSubscriptionId || tenant.braintreeSubscriptionId);
+    const isInActiveTrial = tenant.trialEndsAt && new Date(tenant.trialEndsAt) > new Date();
     
-    // Determine billing status
-    let billingStatus = tenant.billingStatus || 'none';
-    if (!billingStatus || billingStatus === 'none') {
-      if (tenant.stripeSubscriptionId && planCode !== 'free') {
-        billingStatus = 'active';
-      } else if (tenant.trialEndsAt && new Date(tenant.trialEndsAt) > new Date()) {
-        billingStatus = 'trialing';
-      } else {
-        billingStatus = 'none';
-      }
+    // Only use the stored plan level if there's an active subscription or active trial
+    // Otherwise, enforce 'free' plan
+    let planCode: string;
+    if (hasActiveSubscription || isInActiveTrial) {
+      planCode = tenant.planLevel || 'free';
+    } else {
+      planCode = 'free'; // No subscription = free plan
+    }
+    
+    // Determine billing status - ALWAYS compute based on current subscription state
+    // Ignores stale DB values to ensure consistency with plan enforcement
+    let billingStatus: string;
+    if (hasActiveSubscription && planCode !== 'free') {
+      billingStatus = 'active';
+    } else if (isInActiveTrial) {
+      billingStatus = 'trialing';
+    } else {
+      billingStatus = 'none';
     }
 
     // Calculate renewal date if subscription is active
@@ -126,7 +136,7 @@ router.get('/tenant/plan', async (req: any, res) => {
 
     // Use raw SQL to avoid Drizzle ORM schema issues
     const result = await db.execute(
-      sql`SELECT plan_level, stripe_subscription_id, stripe_customer_id 
+      sql`SELECT plan_level, stripe_subscription_id, braintree_subscription_id, stripe_customer_id, trial_ends_at 
           FROM tenants 
           WHERE id = ${currentUser.tenantId} 
           LIMIT 1`
@@ -137,12 +147,23 @@ router.get('/tenant/plan', async (req: any, res) => {
     }
 
     const tenantData: any = result.rows[0];
-    const planId = tenantData.plan_level || 'core';
-    const hasActiveSubscription = !!(tenantData.stripe_subscription_id && planId !== 'free');
+    
+    // AUTOMATIC ENFORCEMENT: Check if there's an active subscription
+    const hasActiveSubscription = !!(tenantData.stripe_subscription_id || tenantData.braintree_subscription_id);
+    const isInActiveTrial = tenantData.trial_ends_at && new Date(tenantData.trial_ends_at) > new Date();
+    
+    // Only use stored plan level if there's an active subscription or trial
+    // Otherwise, enforce 'free' plan
+    let planId: string;
+    if (hasActiveSubscription || isInActiveTrial) {
+      planId = tenantData.plan_level || 'free';
+    } else {
+      planId = 'free'; // No subscription = free plan
+    }
 
     res.json({
       planId,
-      billingStatus: hasActiveSubscription ? 'active' : 'none',
+      billingStatus: hasActiveSubscription ? 'active' : (isInActiveTrial ? 'trialing' : 'none'),
       renewalDate: hasActiveSubscription ? new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString() : null,
       featureOverrides: {} // For future use
     });
