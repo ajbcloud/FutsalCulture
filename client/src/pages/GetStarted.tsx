@@ -210,14 +210,22 @@ export default function GetStarted() {
         const data = await response.json();
         toast({
           title: "Club created!",
-          description: `Welcome to ${data.tenantName}! Redirecting to your dashboard...`,
+          description: `Welcome to ${data.tenantName}! Your join code is: ${data.tenantCode}`,
         });
         setTimeout(() => {
           navigate("/admin/dashboard");
-        }, 1500);
+        }, 2000);
       } else {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create club");
+        if (data.field === "join_code") {
+          toast({
+            title: "Join code unavailable",
+            description: data.error,
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(data.error || "Failed to create club");
+        }
       }
     } catch (error: any) {
       console.error("Error creating club:", error);

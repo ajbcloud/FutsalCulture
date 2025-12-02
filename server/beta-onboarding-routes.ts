@@ -114,10 +114,37 @@ export function setupBetaOnboardingRoutes(app: Express) {
       }
       
       const clerk_user_id = auth.userId;
-      const { org_name, contact_name, city, state, country, zip_code, sports } = req.body;
+      const { org_name, join_code, contact_name, city, state, country, zip_code, sports } = req.body;
       
       if (!org_name || !contact_name) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Validate join_code if provided
+      if (!join_code || typeof join_code !== 'string') {
+        return res.status(400).json({ error: "Join code is required" });
+      }
+      
+      const sanitizedCode = join_code.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (sanitizedCode.length < 3) {
+        return res.status(400).json({ error: "Join code must be at least 3 characters" });
+      }
+      if (sanitizedCode.length > 30) {
+        return res.status(400).json({ error: "Join code must be 30 characters or less" });
+      }
+      if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]{1,2}$/.test(sanitizedCode)) {
+        return res.status(400).json({ error: "Join code must start and end with a letter or number" });
+      }
+
+      // Check if join code is already taken
+      const existingTenant = await db.query.tenants.findFirst({ 
+        where: eq(tenants.subdomain, sanitizedCode) 
+      });
+      if (existingTenant) {
+        return res.status(409).json({ 
+          error: "This join code is already taken. Please choose a different one.",
+          field: "join_code"
+        });
       }
 
       // Get user's email from Clerk
@@ -138,17 +165,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
         }
       }
 
-      // Generate unique slug and tenant code
-      const baseSlug = slugify(org_name);
-      let slug = baseSlug;
-      let counter = 1;
-      
-      while (await db.query.tenants.findFirst({ where: eq(tenants.subdomain, slug) })) {
-        slug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-      
-      const tenantCode = generateTenantCode();
+      // Use the sanitized join_code as both slug and tenantCode
+      const slug = sanitizedCode;
+      const tenantCode = sanitizedCode;
 
       // Create tenant
       const tenantResult = await db.insert(tenants).values({
