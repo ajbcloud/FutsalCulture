@@ -74,11 +74,32 @@ export default function HomePlayHQ() {
 
         {/* Social Proof */}
         <section className="mx-auto max-w-6xl px-6 py-8">
-          <p className="text-center text-sm text-gray-500 mb-6">Trusted by clubs worldwide</p>
-          <div className="flex justify-center items-center gap-8">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-16 h-8 bg-gray-200 rounded"></div>
-            ))}
+          <p className="text-center text-sm text-gray-500 mb-6">Trusted by your favorite clubs</p>
+          <div className="flex justify-center items-center gap-12">
+            <a 
+              href="https://www.teamboca.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img 
+                src="https://www.teamboca.com/wp-content/themes/theme_teamboca/images/logo.png" 
+                alt="Team Boca" 
+                className="h-12 w-auto object-contain"
+              />
+            </a>
+            <a 
+              href="https://www.ftlrush.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img 
+                src="https://lirp.cdn-website.com/5eb6b00c/dms3rep/multi/opt/Fort-Lauderdale-Rush-website-Logo.001-e18b07ca-8d99779f-378w.png" 
+                alt="Fort Lauderdale Rush" 
+                className="h-12 w-auto object-contain"
+              />
+            </a>
           </div>
         </section>
 
