@@ -102,6 +102,160 @@ export function setupBetaOnboardingRoutes(app: Express) {
     }
   });
 
+  // Create club for Clerk-authenticated users
+  app.post('/api/beta/clerk-create-club', async (req, res) => {
+    try {
+      // Verify Clerk authentication
+      const { getAuth } = await import('@clerk/express');
+      const auth = getAuth(req);
+      
+      if (!auth || !auth.userId) {
+        return res.status(401).json({ error: "Authentication required. Please sign in first." });
+      }
+      
+      const clerk_user_id = auth.userId;
+      const { org_name, contact_name, city, state, country, zip_code, sports } = req.body;
+      
+      if (!org_name || !contact_name) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get user's email from Clerk
+      let userEmail = '';
+      if (process.env.CLERK_SECRET_KEY) {
+        try {
+          const response = await fetch(`https://api.clerk.com/v1/users/${clerk_user_id}`, {
+            headers: {
+              Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+            },
+          });
+          if (response.ok) {
+            const clerkUser = await response.json();
+            userEmail = clerkUser.email_addresses?.[0]?.email_address || '';
+          }
+        } catch (e) {
+          console.error('Error fetching Clerk user:', e);
+        }
+      }
+
+      // Generate unique slug and tenant code
+      const baseSlug = slugify(org_name);
+      let slug = baseSlug;
+      let counter = 1;
+      
+      while (await db.query.tenants.findFirst({ where: eq(tenants.subdomain, slug) })) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      
+      const tenantCode = generateTenantCode();
+
+      // Create tenant
+      const tenantResult = await db.insert(tenants).values({
+        name: org_name,
+        subdomain: slug,
+        city: city || null,
+        state: state || null,
+        country: country || "US",
+        slug,
+        tenantCode,
+        contactName: contact_name,
+        contactEmail: userEmail,
+        planLevel: "free",
+      }).returning() as any[];
+      const tenant = tenantResult[0];
+      if (!tenant) {
+        return res.status(500).json({ error: "Failed to create tenant" });
+      }
+
+      // Import required tables
+      const { tenantPlanAssignments, users } = await import('@shared/schema');
+
+      // Create plan assignment
+      await db.insert(tenantPlanAssignments).values({
+        tenantId: tenant.id,
+        planCode: "free",
+        since: new Date(),
+        until: null
+      });
+
+      // Create or find user with Clerk ID
+      let existingUser = await db.query.users.findFirst({
+        where: eq(users.clerkUserId, clerk_user_id)
+      });
+
+      let currentUser: { id: string; email: string };
+
+      if (!existingUser) {
+        // Create new user
+        const userResult = await db.insert(users).values({
+          tenantId: tenant.id,
+          email: userEmail,
+          firstName: contact_name.split(' ')[0] || contact_name,
+          lastName: contact_name.split(' ').slice(1).join(' ') || '',
+          role: 'tenant_admin',
+          status: 'active',
+          clerkUserId: clerk_user_id,
+          emailVerified: true,
+        }).returning() as any[];
+        currentUser = userResult[0];
+      } else {
+        // Update existing user with tenant and admin role
+        await db.update(users)
+          .set({ 
+            tenantId: tenant.id, 
+            role: 'tenant_admin',
+            status: 'active'
+          })
+          .where(eq(users.id, existingUser.id));
+        currentUser = existingUser;
+      }
+
+      // Create tenant membership
+      await db.insert(tenantMemberships).values({
+        tenantId: tenant.id,
+        userId: currentUser.id,
+        role: 'admin',
+        status: 'active'
+      } as any);
+
+      // Record audit event
+      await db.insert(auditEvents).values({
+        tenantId: tenant.id,
+        actorUserId: currentUser.id,
+        eventType: "tenant_created",
+        metadataJson: { slug, org_name, clerkUserId: clerk_user_id }
+      });
+
+      // Create Clerk organization for tenant and add user as admin
+      if (isClerkEnabled()) {
+        try {
+          const clerkOrg = await createOrganizationForTenant(tenant.id);
+          if (clerkOrg) {
+            // Add user to the Clerk organization as admin
+            const { addMemberToOrganization } = await import('./services/clerkOrganizationService');
+            await addMemberToOrganization(clerkOrg.id, clerk_user_id, 'admin');
+            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${clerkOrg.id} as admin`);
+          }
+        } catch (clerkError) {
+          console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        tenantCode: tenant.tenantCode,
+        userId: currentUser.id
+      });
+
+    } catch (error) {
+      console.error("Clerk create-club error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Send invitation
   app.post('/api/beta/invites', async (req, res) => {
     try {

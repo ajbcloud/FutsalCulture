@@ -19,7 +19,7 @@ export default function Signup() {
         </div>
         
         <div className="grid md:grid-cols-2 gap-6">
-          <Link href="/get-started" data-testid="link-signup-business" className="h-full">
+          <Link href="/signup-business" data-testid="link-signup-business" className="h-full">
             <div className={`p-8 rounded-xl cursor-pointer transition-all duration-200 border-2 hover:border-blue-500 hover:shadow-lg h-full ${
               isDarkMode 
                 ? 'bg-[#1e293b] border-slate-700 hover:bg-[#263449]' 

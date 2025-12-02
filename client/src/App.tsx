@@ -49,6 +49,7 @@ import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Signup from "@/pages/Signup";
+import SignupBusiness from "@/pages/SignupBusiness";
 import SignupConsumer from "@/pages/SignupConsumer";
 import Login from "@/pages/Login";
 import LoginBusiness from "@/pages/LoginBusiness";
@@ -97,6 +98,8 @@ function Router() {
         <Route path="/get-started" component={GetStarted} />
         <Route path="/join" component={Join} />
         <Route path="/signup" component={Signup} />
+        <Route path="/signup-business" component={SignupBusiness} />
+        <Route path="/signup-business/*" component={SignupBusiness} />
         <Route path="/signup-consumer" component={SignupConsumer} />
         <Route path="/signup-consumer/*" component={SignupConsumer} />
         <Route path="/login" component={Login} />

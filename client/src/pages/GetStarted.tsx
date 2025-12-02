@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,11 @@ import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 export default function GetStarted() {
   const { term } = useUserTerminology();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     org_name: "",
     contact_name: "",
@@ -27,8 +33,24 @@ export default function GetStarted() {
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      navigate("/signup-business");
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const email = user.primaryEmailAddress?.emailAddress || '';
+      setFormData(prev => ({
+        ...prev,
+        contact_name: prev.contact_name || fullName,
+        contact_email: prev.contact_email || email
+      }));
+    }
+  }, [user]);
 
   const sportOptions = ["Soccer", "Futsal", "Basketball", "Volleyball", "Other"];
   
@@ -99,7 +121,6 @@ export default function GetStarted() {
         const cities = data.places?.map((place: any) => place['place name']) || [];
         setCityOptions(cities);
         
-        // If only one city, auto-fill it
         if (cities.length === 1) {
           setFormData(prev => ({ ...prev, city: cities[0] }));
         } else if (cities.length === 0) {
@@ -125,7 +146,7 @@ export default function GetStarted() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!formData.org_name || !formData.contact_name || !formData.contact_email || !formData.accept) {
+    if (!formData.org_name || !formData.contact_name || !formData.accept) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields and accept the terms",
@@ -136,14 +157,25 @@ export default function GetStarted() {
 
     setLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/signup", {
-        ...formData,
-        plan_key: "free"
+      const response = await apiRequest("POST", "/api/beta/clerk-create-club", {
+        org_name: formData.org_name,
+        contact_name: formData.contact_name,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country || "US",
+        zip_code: formData.zip_code,
+        sports: formData.sports
       });
 
       if (response.ok) {
-        // Redirect to email verification page
-        navigate(`/verify-email-sent?email=${encodeURIComponent(formData.contact_email)}`);
+        const data = await response.json();
+        toast({
+          title: "Club created!",
+          description: `Welcome to ${data.tenantName}! Redirecting to your dashboard...`,
+        });
+        setTimeout(() => {
+          navigate("/admin/dashboard");
+        }, 1500);
       } else {
         const data = await response.json();
         throw new Error(data.error || "Failed to create club");
@@ -167,6 +199,18 @@ export default function GetStarted() {
         ? prev.sports.filter(s => s !== sport)
         : [...prev.sports, sport]
     }));
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return null;
   }
 
   return (
@@ -208,16 +252,16 @@ export default function GetStarted() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_email">Work Email *</Label>
+              <Label htmlFor="contact_email">Email</Label>
               <Input
                 id="contact_email"
                 type="email"
                 value={formData.contact_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                placeholder="you@yourclub.com"
-                required
+                disabled
+                className="bg-muted"
                 data-testid="input-contact-email"
               />
+              <p className="text-xs text-muted-foreground">This is your account email</p>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
