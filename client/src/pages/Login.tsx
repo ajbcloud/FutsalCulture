@@ -1,9 +1,29 @@
-import { SignIn } from "@clerk/clerk-react";
+import { SignIn, useAuth, useOrganizationList } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function Login() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const { isSignedIn, isLoaded } = useAuth();
+  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
+    userMemberships: true
+  });
+  const [, navigate] = useLocation();
+
+  // After Clerk sign-in, check if user needs to join a tenant
+  useEffect(() => {
+    if (isLoaded && orgsLoaded && isSignedIn) {
+      // If user is in at least one Clerk organization, go to dashboard
+      if (userMemberships?.data && userMemberships.data.length > 0) {
+        navigate("/dashboard");
+      } else {
+        // User is signed in but not in any organization - redirect to join page
+        navigate("/join?need_code=true");
+      }
+    }
+  }, [isLoaded, orgsLoaded, isSignedIn, userMemberships, navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
@@ -12,7 +32,7 @@ export default function Login() {
           routing="path" 
           path="/login"
           signUpUrl="/signup"
-          afterSignInUrl="/dashboard"
+          afterSignInUrl="/login"
           appearance={{
             variables: {
               colorPrimary: "#3b82f6",

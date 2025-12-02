@@ -320,6 +320,18 @@ The PlayHQ Team`;
 
     console.log(`✅ Created tenant ${tenant.name} and sent verification email to ${user.email}`);
     
+    // Create Clerk organization for this tenant
+    try {
+      const { createOrganizationForTenant, isClerkEnabled } = await import('../services/clerkOrganizationService');
+      if (isClerkEnabled()) {
+        await createOrganizationForTenant(tenant.id);
+        console.log(`✅ Created Clerk organization for tenant ${tenant.id}`);
+      }
+    } catch (clerkError) {
+      console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
+      // Don't fail the signup if Clerk org creation fails
+    }
+    
     // Send notification to Super Admins if manual approval is required
     if (!autoApprove && requireApproval) {
       const superAdmins = await db.select()

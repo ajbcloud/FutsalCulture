@@ -342,11 +342,192 @@ export function setupBetaOnboardingRoutes(app: Express) {
           metadataJson: { email, role, age }
         });
 
+        // Add user to tenant's Clerk organization if applicable
+        if (tenant.clerkOrganizationId && user.clerkUserId) {
+          try {
+            const { addMemberToOrganization, isClerkEnabled } = await import('./services/clerkOrganizationService');
+            if (isClerkEnabled()) {
+              await addMemberToOrganization(
+                tenant.clerkOrganizationId, 
+                user.clerkUserId,
+                role === 'tenant_admin' ? 'admin' : 'basic_member'
+              );
+              console.log(`✅ Added user ${user.clerkUserId} to Clerk org ${tenant.clerkOrganizationId}`);
+            }
+          } catch (clerkError) {
+            console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
+            // Don't fail the join if Clerk addition fails
+          }
+        }
+
         res.json({ success: true, tenantId: tenant.id });
       }
 
     } catch (error) {
       console.error("Beta join-by-code error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Join by code for Clerk-authenticated users (no existing PlayHQ user required)
+  // This endpoint requires Clerk authentication
+  app.post('/api/beta/clerk-join-by-code', async (req, res) => {
+    try {
+      // Verify Clerk authentication and get the real clerk_user_id from the session
+      const { getAuth } = await import('@clerk/express');
+      const auth = getAuth(req);
+      
+      if (!auth || !auth.userId) {
+        return res.status(401).json({ error: "Authentication required. Please sign in first." });
+      }
+      
+      // Use the authenticated clerk_user_id from the session, NOT from the request body
+      const clerk_user_id = auth.userId;
+      
+      const { tenant_code, email, first_name, last_name, role = 'parent' } = req.body;
+      
+      if (!tenant_code) {
+        return res.status(400).json({ error: "Missing tenant code" });
+      }
+      
+      // If email not provided, fetch from Clerk
+      let userEmail = email;
+      if (!userEmail && process.env.CLERK_SECRET_KEY) {
+        try {
+          const response = await fetch(`https://api.clerk.com/v1/users/${clerk_user_id}`, {
+            headers: {
+              Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+            },
+          });
+          if (response.ok) {
+            const clerkUser = await response.json();
+            userEmail = clerkUser.email_addresses?.[0]?.email_address;
+          }
+        } catch (e) {
+          console.error('Error fetching Clerk user:', e);
+        }
+      }
+      
+      if (!userEmail) {
+        return res.status(400).json({ error: "Could not determine email address" });
+      }
+
+      // Find tenant by code (try tenantCode first, then inviteCode)
+      let tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.tenantCode, tenant_code.toUpperCase())
+      });
+      
+      if (!tenant) {
+        tenant = await db.query.tenants.findFirst({
+          where: eq(tenants.inviteCode, tenant_code.toUpperCase())
+        });
+      }
+
+      if (!tenant) {
+        return res.status(404).json({ error: "Organization not found. Please check your code and try again." });
+      }
+
+      // Check if user already exists by clerkUserId
+      const { users } = await import('@shared/schema');
+      let user = await db.query.users.findFirst({
+        where: eq(users.clerkUserId, clerk_user_id)
+      });
+
+      // If not, check by email
+      if (!user) {
+        user = await db.query.users.findFirst({
+          where: eq(users.email, userEmail.toLowerCase())
+        });
+      }
+
+      // Create user if they don't exist
+      let currentUser: typeof user;
+      if (!user) {
+        const [newUser] = await db.insert(users).values({
+          email: userEmail.toLowerCase(),
+          firstName: first_name || userEmail.split('@')[0],
+          lastName: last_name || '',
+          clerkUserId: clerk_user_id,
+          tenantId: tenant.id,
+          role: role as any,
+          authProvider: 'clerk',
+          verificationStatus: 'verified',
+          isApproved: true,
+          approvedAt: new Date(),
+        }).returning();
+        currentUser = newUser;
+        console.log(`✅ Created new PlayHQ user for Clerk user ${clerk_user_id}`);
+      } else {
+        currentUser = user;
+        // Update existing user with clerkUserId if not set
+        if (!currentUser.clerkUserId) {
+          await db.update(users)
+            .set({ clerkUserId: clerk_user_id })
+            .where(eq(users.id, currentUser.id));
+        }
+        // Update tenantId if not set
+        if (!currentUser.tenantId) {
+          await db.update(users)
+            .set({ tenantId: tenant.id })
+            .where(eq(users.id, currentUser.id));
+        }
+      }
+
+      // Check if already a member
+      const existingMembership = await db.query.tenantMemberships.findFirst({
+        where: and(
+          eq(tenantMemberships.tenantId, tenant.id),
+          eq(tenantMemberships.userId, currentUser.id)
+        )
+      });
+
+      if (!existingMembership) {
+        // Create tenant membership
+        await db.insert(tenantMemberships).values({
+          tenantId: tenant.id,
+          userId: currentUser.id,
+          role: role as any,
+          status: 'active'
+        });
+      }
+
+      // Add user to tenant's Clerk organization
+      if (tenant.clerkOrganizationId) {
+        try {
+          const { addMemberToOrganization, isClerkEnabled } = await import('./services/clerkOrganizationService');
+          if (isClerkEnabled()) {
+            await addMemberToOrganization(
+              tenant.clerkOrganizationId, 
+              clerk_user_id,
+              role === 'tenant_admin' ? 'admin' : 'basic_member'
+            );
+            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${tenant.clerkOrganizationId}`);
+          }
+        } catch (clerkError: any) {
+          // Ignore "already a member" errors
+          if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
+            console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
+          }
+        }
+      }
+
+      // Record audit event
+      await db.insert(auditEvents).values({
+        tenantId: tenant.id,
+        actorUserId: currentUser.id,
+        eventType: "clerk_user_joined",
+        metadataJson: { email: userEmail, role, clerkUserId: clerk_user_id }
+      });
+
+      res.json({ 
+        success: true, 
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        userId: currentUser.id
+      });
+
+    } catch (error) {
+      console.error("Clerk join-by-code error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

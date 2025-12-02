@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Link as LinkIcon } from "lucide-react";
+import { Users, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUser, useClerk, useAuth } from "@clerk/clerk-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Join() {
   const [, params] = useRoute("/join");
@@ -22,10 +24,14 @@ export default function Join() {
   const [success, setSuccess] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user: clerkUser, isLoaded: clerkUserLoaded } = useUser();
+  const { signOut } = useClerk();
+  const { isSignedIn } = useAuth();
 
-  // Check for invite token in URL
+  // Check for invite token and need_code flag in URL
   const urlParams = new URLSearchParams(window.location.search);
   const inviteToken = urlParams.get('token');
+  const needCode = urlParams.get('need_code') === 'true';
 
   useEffect(() => {
     // If there's an invite token, show the invite panel as primary
@@ -65,8 +71,72 @@ export default function Join() {
     }
   }
 
+  // Handle Clerk-authenticated user joining with a code
+  async function handleClerkJoin(e: React.FormEvent) {
+    e.preventDefault();
+    
+    if (!formData.code) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a team code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!clerkUser) {
+      toast({
+        title: "Not authenticated",
+        description: "Please log in first",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Note: clerk_user_id and email are derived server-side from the authenticated session
+      const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
+        tenant_code: formData.code,
+        first_name: clerkUser.firstName || '',
+        last_name: clerkUser.lastName || '',
+        role: formData.role
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Successfully joined!",
+          description: `Welcome to ${result.tenantName}. Please sign in again to continue.`,
+        });
+        
+        // Sign out and redirect to login so user gets fresh session with org
+        await signOut();
+        setTimeout(() => navigate("/login"), 1500);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to join with code");
+      }
+    } catch (error) {
+      console.error("Error joining with code:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to join. Please check your code and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleCodeJoin(e: React.FormEvent) {
     e.preventDefault();
+    
+    // If user is signed in via Clerk, use the Clerk join flow
+    if (isSignedIn && clerkUser) {
+      return handleClerkJoin(e);
+    }
     
     if (!formData.code || !formData.email) {
       toast({
@@ -170,6 +240,90 @@ export default function Join() {
                 className="w-full"
               >
                 Back to Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show simplified UI for Clerk users who need to enter a code
+  if (needCode && isSignedIn && clerkUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Users className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Join Your Club</CardTitle>
+            <CardDescription>
+              Hi {clerkUser.firstName || 'there'}! Enter your club's access code to continue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You're signed in but not yet part of a club. Enter the code your club provided to get started.
+              </AlertDescription>
+            </Alert>
+            
+            <form onSubmit={handleClerkJoin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Club Access Code *</Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  placeholder="e.g., ABC12345"
+                  required
+                  autoFocus
+                  data-testid="input-clerk-team-code"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">I am a *</Label>
+                <select
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                  required
+                  data-testid="select-clerk-role"
+                >
+                  <option value="parent">Parent/Guardian</option>
+                  <option value="player">Player</option>
+                  <option value="coach">Coach</option>
+                </select>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+                data-testid="button-clerk-join"
+              >
+                {loading ? "Joining..." : "Join Club"}
+              </Button>
+            </form>
+
+            <div className="mt-6 pt-4 border-t text-center">
+              <p className="text-sm text-muted-foreground">
+                Don't have a code?{" "}
+                <a href="/get-started" className="text-primary hover:underline">
+                  Create your own club
+                </a>
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => signOut()}
+              >
+                Sign out
               </Button>
             </div>
           </CardContent>
