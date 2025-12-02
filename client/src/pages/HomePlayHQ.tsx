@@ -4,6 +4,7 @@ import { BusinessBranding } from "@/components/business-branding";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
+import teamBocaLogo from "@assets/team_boca_logo_transparent_1764690655632.png";
 
 export default function HomePlayHQ() {
   const currentYear = new Date().getFullYear();
@@ -76,22 +77,30 @@ export default function HomePlayHQ() {
         {/* Social Proof */}
         <section className="mx-auto max-w-6xl px-6 py-8">
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6">Trusted by sports organizations worldwide</p>
-          <div className="flex justify-center items-center gap-8">
+          <div className="flex justify-center items-center gap-12">
             <a 
               href="https://www.teamboca.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="px-12 py-6 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors text-gray-700 dark:text-gray-300 font-semibold text-xl"
+              className="hover:opacity-80 transition-opacity"
             >
-              Team Boca
+              <img 
+                src={teamBocaLogo} 
+                alt="Team Boca" 
+                className="h-24 w-auto object-contain"
+              />
             </a>
             <a 
               href="https://www.ftlrush.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="px-12 py-6 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors text-gray-700 dark:text-gray-300 font-semibold text-xl"
+              className="hover:opacity-80 transition-opacity"
             >
-              FTL Rush
+              <img 
+                src="https://lirp.cdn-website.com/5eb6b00c/dms3rep/multi/opt/Fort-Lauderdale-Rush-website-Logo.001-e18b07ca-8d99779f-1920w.png" 
+                alt="Fort Lauderdale Rush" 
+                className="h-24 w-auto object-contain"
+              />
             </a>
           </div>
         </section>
