@@ -172,12 +172,29 @@ export default function HomePlayHQ() {
         </section>
 
         {/* Security */}
-        <section className="py-16">
+        <section className="py-16 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
           <div className="mx-auto max-w-4xl px-6 text-center">
-            <h2 className="text-2xl font-bold mb-4">Secure by default</h2>
-            <p className="text-lg text-gray-600">
-              SSO options, audit logs, role-based access, and more security features to keep your club data safe.
+            <h2 className="text-3xl font-bold mb-6">Enterprise-grade security, built in</h2>
+            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+              Your players' data deserves the best protection. PlayHQ is built with security at its core—not as an afterthought.
             </p>
+            <div className="grid md:grid-cols-3 gap-6 mt-8">
+              <div className="p-4">
+                <div className="text-2xl mb-2">🔐</div>
+                <h3 className="font-semibold mb-1">Role-based access</h3>
+                <p className="text-sm text-gray-400">Admins, coaches, parents, and players each see only what they need</p>
+              </div>
+              <div className="p-4">
+                <div className="text-2xl mb-2">📋</div>
+                <h3 className="font-semibold mb-1">Complete audit trail</h3>
+                <p className="text-sm text-gray-400">Every action is logged for transparency and accountability</p>
+              </div>
+              <div className="p-4">
+                <div className="text-2xl mb-2">🛡️</div>
+                <h3 className="font-semibold mb-1">Data encryption</h3>
+                <p className="text-sm text-gray-400">SSL/TLS encryption for all data in transit and at rest</p>
+              </div>
+            </div>
           </div>
         </section>
 
