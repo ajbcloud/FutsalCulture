@@ -143,9 +143,31 @@ export async function setupAuth(app: Express) {
 
 }
 
-export const isAuthenticated = (req: any, res: any, next: any) => {
-  if (req.isAuthenticated()) {
+export const isAuthenticated = async (req: any, res: any, next: any) => {
+  // Check if user is already set by Clerk middleware (syncClerkUser)
+  if (req.user) {
     return next();
   }
+  
+  // Fallback: Check for Passport.js authentication (legacy)
+  if (typeof req.isAuthenticated === 'function' && req.isAuthenticated()) {
+    return next();
+  }
+  
+  // Fallback: Check for legacy session-based authentication
+  if (req.session?.userId) {
+    try {
+      const { storage } = await import('./storage');
+      const user = await storage.getUser(req.session.userId);
+      if (user) {
+        req.user = user;
+        req.userId = user.id;
+        return next();
+      }
+    } catch (error) {
+      console.error('Error fetching session user:', error);
+    }
+  }
+  
   res.status(401).json({ message: "Authentication required" });
 };
