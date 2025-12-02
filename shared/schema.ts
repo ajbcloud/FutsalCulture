@@ -94,6 +94,28 @@ export const consentChannelEnum = pgEnum("consent_channel", ["sms", "email"]);
 // Code type enum for unified invite/access/discount codes
 export const codeTypeEnum = pgEnum("code_type", ["invite", "access", "discount"]);
 
+// Payment processor enum for dual-processor support during transition
+export const paymentProcessorEnum = pgEnum("payment_processor", ["stripe", "braintree"]);
+
+// Subscription event type enum for audit history
+export const subscriptionEventTypeEnum = pgEnum("subscription_event_type", [
+  "subscription_created",
+  "subscription_activated", 
+  "subscription_charged",
+  "subscription_charge_failed",
+  "subscription_past_due",
+  "subscription_canceled",
+  "subscription_expired",
+  "plan_upgraded",
+  "plan_downgraded",
+  "plan_downgrade_scheduled",
+  "plan_downgrade_cancelled",
+  "payment_method_updated",
+  "dispute_opened",
+  "dispute_won",
+  "dispute_lost"
+]);
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -112,8 +134,26 @@ export const tenants = pgTable("tenants", {
   subdomain: varchar("subdomain").unique().notNull(),
   customDomain: varchar("custom_domain").unique(),
   planLevel: planLevelEnum("plan_level").default("free"),
+  
+  // Payment Processor Selection (for dual-processor transition)
+  paymentProcessor: paymentProcessorEnum("payment_processor"), // null = not set, 'stripe' or 'braintree'
+  
+  // Stripe Fields (legacy - being phased out)
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  
+  // Braintree Fields
+  braintreeCustomerId: varchar("braintree_customer_id"),
+  braintreeSubscriptionId: varchar("braintree_subscription_id"),
+  braintreeStatus: varchar("braintree_status"), // active, past_due, canceled, expired
+  braintreePlanId: varchar("braintree_plan_id"), // Braintree plan identifier
+  braintreePaymentMethodToken: varchar("braintree_payment_method_token"),
+  braintreeOAuthMerchantId: varchar("braintree_oauth_merchant_id"), // For OAuth-connected merchants
+  braintreeNextBillingDate: timestamp("braintree_next_billing_date"),
+  braintreeLastChargeAt: timestamp("braintree_last_charge_at"),
+  braintreeLastFailureAt: timestamp("braintree_last_failure_at"),
+  braintreeFailureCount: integer("braintree_failure_count").default(0),
+  
   // Geographic location fields for US map visualization
   city: text("city"),
   state: text("state"),
@@ -172,6 +212,42 @@ export const tenants = pgTable("tenants", {
   smsCreditsAutoRecharge: boolean("sms_credits_auto_recharge").default(false),
   smsCreditsAutoRechargeAmount: integer("sms_credits_auto_recharge_amount"), // Package to auto-buy when low
 });
+
+// Tenant Subscription Events - Audit history for all subscription changes
+export const tenantSubscriptionEvents = pgTable("tenant_subscription_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  eventType: subscriptionEventTypeEnum("event_type").notNull(),
+  processor: paymentProcessorEnum("processor").notNull(), // which payment processor this event is for
+  
+  // Subscription details at time of event
+  subscriptionId: varchar("subscription_id"), // Braintree or Stripe subscription ID
+  planId: varchar("plan_id"), // The plan ID from the processor
+  planLevel: planLevelEnum("plan_level"), // Internal plan level
+  previousPlanLevel: planLevelEnum("previous_plan_level"), // For upgrade/downgrade tracking
+  
+  // Financial details
+  amountCents: integer("amount_cents"),
+  currency: varchar("currency").default("USD"),
+  
+  // Status tracking
+  status: varchar("status"), // success, failed, pending
+  failureReason: varchar("failure_reason"),
+  failureCode: varchar("failure_code"),
+  
+  // Webhook/trigger info
+  processorEventId: varchar("processor_event_id"), // The event ID from Stripe/Braintree webhook
+  triggeredBy: varchar("triggered_by"), // user_id, system, webhook
+  
+  // Additional context
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("tenant_subscription_events_tenant_idx").on(table.tenantId),
+  index("tenant_subscription_events_type_idx").on(table.eventType),
+  index("tenant_subscription_events_created_idx").on(table.createdAt),
+]);
 
 // Tenant Invite Codes - Multiple static codes per tenant
 export const tenantInviteCodes = pgTable("tenant_invite_codes", {
@@ -1859,6 +1935,14 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
 
 export type TenantInsert = z.infer<typeof insertTenantSchema>;
 export type TenantSelect = typeof tenants.$inferSelect;
+
+export const insertTenantSubscriptionEventSchema = createInsertSchema(tenantSubscriptionEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TenantSubscriptionEventInsert = z.infer<typeof insertTenantSubscriptionEventSchema>;
+export type TenantSubscriptionEventSelect = typeof tenantSubscriptionEvents.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
