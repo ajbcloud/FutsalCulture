@@ -104,13 +104,13 @@ export async function overview(req: Request, res: Response) {
         .orderBy(desc(sql`COALESCE(SUM(${payments.amountCents}), 0)`))
         .limit(5);
       
-      // Get failed payment count
+      // Get pending payment count (pending status indicates incomplete/failed transactions)
       const failedPayments = await db
         .select({ count: count() })
         .from(payments)
         .where(
           and(
-            eq(payments.status, 'failed'),
+            eq(payments.status, 'pending'),
             from ? gte(payments.createdAt, startDate) : sql`true`,
             to ? lte(payments.createdAt, endDate) : sql`true`
           )
@@ -194,8 +194,8 @@ export async function overview(req: Request, res: Response) {
         .from(signups)
         .where(
           and(
-            from ? gte(signups.signedUpAt, startDate) : sql`true`,
-            to ? lte(signups.signedUpAt, endDate) : sql`true`
+            from ? gte(signups.createdAt, startDate) : sql`true`,
+            to ? lte(signups.createdAt, endDate) : sql`true`
           )
         );
       
