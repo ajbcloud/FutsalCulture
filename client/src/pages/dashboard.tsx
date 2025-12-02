@@ -49,6 +49,31 @@ export default function Dashboard() {
     signup: any;
   } | null>(null);
 
+  // Sync tab state with URL query params - MUST be with other hooks before any computed values
+  const searchString = useSearch();
+  const getTabFromUrl = useCallback(() => {
+    const params = new URLSearchParams(searchString);
+    const tabParam = params.get('tab');
+    return tabParam === 'household' ? 'household' : 'overview';
+  }, [searchString]);
+
+  const [activeTab, setActiveTab] = useState(getTabFromUrl);
+
+  // Update tab when URL changes (e.g., from redirect)
+  useEffect(() => {
+    const newTab = getTabFromUrl();
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
+  }, [searchString, getTabFromUrl, activeTab]);
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((newTab: string) => {
+    setActiveTab(newTab);
+    const newUrl = newTab === 'overview' ? '/dashboard' : `/dashboard?tab=${newTab}`;
+    setLocation(newUrl, { replace: true });
+  }, [setLocation]);
+
   const { data: players = [], isLoading: playersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
     enabled: isAuthenticated,
@@ -303,31 +328,6 @@ export default function Dashboard() {
 
   const paidSessionsCount = signups.filter(s => s.paid).length;
   const pendingPayments = upcomingSignups.filter(s => !s.paid).length;
-
-  // Sync tab state with URL query params
-  const searchString = useSearch();
-  const getTabFromUrl = useCallback(() => {
-    const params = new URLSearchParams(searchString);
-    const tabParam = params.get('tab');
-    return tabParam === 'household' ? 'household' : 'overview';
-  }, [searchString]);
-
-  const [activeTab, setActiveTab] = useState(getTabFromUrl);
-
-  // Update tab when URL changes (e.g., from redirect)
-  useEffect(() => {
-    const newTab = getTabFromUrl();
-    if (newTab !== activeTab) {
-      setActiveTab(newTab);
-    }
-  }, [searchString, getTabFromUrl]);
-
-  // Update URL when tab changes
-  const handleTabChange = useCallback((newTab: string) => {
-    setActiveTab(newTab);
-    const newUrl = newTab === 'overview' ? '/dashboard' : `/dashboard?tab=${newTab}`;
-    setLocation(newUrl, { replace: true });
-  }, [setLocation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
