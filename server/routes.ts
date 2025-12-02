@@ -43,6 +43,7 @@ import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
+import quickbooksRoutes from './routes/quickbooks';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -2715,6 +2716,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User help request routes
   const myHelpRequestRoutes = await import('./my-help-request-routes');
   app.use('/api/help', isAuthenticated, myHelpRequestRoutes.default);
+
+  // QuickBooks integration routes
+  app.use('/api/admin/integrations/quickbooks', isAuthenticated, quickbooksRoutes);
 
   // Household CRUD routes
   // GET /api/households - List all households for tenant

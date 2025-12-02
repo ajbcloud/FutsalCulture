@@ -65,6 +65,8 @@ import PaymentHistory from "./pages/payment-history";
 import AdminCredits from "./pages/admin/credits";
 import AdminSmsCredits from "./pages/admin/sms-credits";
 import AdminBilling from "./pages/admin/billing";
+import AdminQuickBooksIntegration from "./pages/admin/quickbooks-integration";
+import AdminFinancialReports from "./pages/admin/financial-reports";
 import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
 
@@ -143,6 +145,8 @@ function Router() {
             <Route path="/admin/help-requests" component={AdminHelpRequests} />
             <Route path="/admin/settings" component={AdminSettings} />
             <Route path="/admin/integrations" component={AdminIntegrations} />
+            <Route path="/admin/integrations/quickbooks" component={AdminQuickBooksIntegration} />
+            <Route path="/admin/reports/financial" component={AdminFinancialReports} />
             <Route path="/admin/credits" component={AdminCredits} />
             <Route path="/admin/sms-credits" component={AdminSmsCredits} />
             <Route path="/admin/billing" component={AdminBilling} />

@@ -3355,3 +3355,220 @@ export type InsertContactGroup = z.infer<typeof insertContactGroupSchema>;
 export type ContactGroupWithCount = ContactGroup & { memberCount: number };
 export type ContactGroupMember = typeof contactGroupMembers.$inferSelect;
 export type InsertContactGroupMember = z.infer<typeof insertContactGroupMemberSchema>;
+
+// =============================================
+// QuickBooks Integration Tables
+// =============================================
+
+// QuickBooks sync status enum
+export const quickbooksSyncStatusEnum = pgEnum("quickbooks_sync_status", ["idle", "syncing", "error", "success"]);
+
+// QuickBooks transaction type enum (for mapping)
+export const quickbooksTransactionTypeEnum = pgEnum("quickbooks_transaction_type", [
+  "session_payment", "subscription_payment", "refund", "credit_issued", "credit_redeemed", 
+  "chargeback", "processing_fee", "adjustment"
+]);
+
+// QuickBooks connections - stores OAuth tokens per tenant
+export const quickbooksConnections = pgTable("quickbooks_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  
+  // OAuth tokens (encrypted at application level)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  
+  // QuickBooks company info
+  realmId: varchar("realm_id"), // QuickBooks company ID
+  companyName: text("company_name"),
+  companyCountry: varchar("company_country"),
+  
+  // Connection status
+  isConnected: boolean("is_connected").default(false),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: quickbooksSyncStatusEnum("sync_status").default("idle"),
+  lastError: text("last_error"),
+  
+  // Settings
+  autoSyncEnabled: boolean("auto_sync_enabled").default(false),
+  syncFrequency: varchar("sync_frequency").default("daily"), // realtime, daily, weekly
+  
+  connectedAt: timestamp("connected_at"),
+  connectedBy: varchar("connected_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("quickbooks_connections_tenant_idx").on(table.tenantId),
+  index("quickbooks_connections_realm_idx").on(table.realmId),
+]);
+
+// QuickBooks account mappings - maps PlayHQ transaction types to QB accounts
+export const quickbooksAccountMappings = pgTable("quickbooks_account_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  
+  // PlayHQ side
+  transactionType: quickbooksTransactionTypeEnum("transaction_type").notNull(),
+  
+  // QuickBooks side
+  qbAccountId: varchar("qb_account_id").notNull(),
+  qbAccountName: text("qb_account_name").notNull(),
+  qbAccountType: varchar("qb_account_type"), // Income, Expense, Liability, etc.
+  
+  // Optional class/location mapping for multi-location clubs
+  qbClassId: varchar("qb_class_id"),
+  qbClassName: text("qb_class_name"),
+  qbLocationId: varchar("qb_location_id"),
+  qbLocationName: text("qb_location_name"),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("quickbooks_mappings_tenant_idx").on(table.tenantId),
+  uniqueIndex("quickbooks_mappings_unique_idx").on(table.tenantId, table.transactionType),
+]);
+
+// QuickBooks sync preferences - tenant-specific sync settings
+export const quickbooksSyncPreferences = pgTable("quickbooks_sync_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  
+  // Sync options
+  syncCustomers: boolean("sync_customers").default(true), // Sync parents/households as QB customers
+  syncInvoices: boolean("sync_invoices").default(true),
+  syncPayments: boolean("sync_payments").default(true),
+  syncRefunds: boolean("sync_refunds").default(true),
+  
+  // Reporting preferences
+  fiscalYearStart: varchar("fiscal_year_start").default("01"), // Month number (01-12)
+  reportTimezone: varchar("report_timezone").default("America/New_York"),
+  
+  // Email report settings
+  autoEmailReports: boolean("auto_email_reports").default(false),
+  reportRecipients: text("report_recipients").array(), // Array of email addresses
+  reportFrequency: varchar("report_frequency").default("monthly"), // monthly, quarterly
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("quickbooks_prefs_tenant_idx").on(table.tenantId),
+]);
+
+// QuickBooks sync logs - audit trail of sync operations
+export const quickbooksSyncLogs = pgTable("quickbooks_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  
+  syncType: varchar("sync_type").notNull(), // full, incremental, manual, scheduled
+  status: varchar("status").notNull(), // started, completed, failed
+  
+  // Sync statistics
+  recordsProcessed: integer("records_processed").default(0),
+  recordsCreated: integer("records_created").default(0),
+  recordsUpdated: integer("records_updated").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  
+  // Timing
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  errorDetails: jsonb("error_details"),
+  
+  // Triggered by
+  triggeredBy: varchar("triggered_by"), // user_id, system, webhook
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("quickbooks_logs_tenant_idx").on(table.tenantId),
+  index("quickbooks_logs_status_idx").on(table.status),
+  index("quickbooks_logs_created_idx").on(table.createdAt),
+]);
+
+// Financial transactions - normalized ledger for reporting
+export const financialTransactions = pgTable("financial_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  
+  // Transaction details
+  transactionType: quickbooksTransactionTypeEnum("transaction_type").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  currency: varchar("currency").default("USD"),
+  
+  // Source reference
+  sourceType: varchar("source_type").notNull(), // booking, subscription, refund, etc.
+  sourceId: varchar("source_id").notNull(), // ID of the source record
+  
+  // Related entities
+  userId: varchar("user_id").references(() => users.id),
+  playerId: varchar("player_id").references(() => players.id),
+  sessionId: varchar("session_id"),
+  
+  // Payment processor info
+  processorType: paymentProcessorEnum("processor_type"),
+  processorTransactionId: varchar("processor_transaction_id"),
+  
+  // QuickBooks sync status
+  qbSyncStatus: varchar("qb_sync_status").default("pending"), // pending, synced, failed, skipped
+  qbSyncedAt: timestamp("qb_synced_at"),
+  qbTransactionId: varchar("qb_transaction_id"), // QuickBooks transaction ID
+  qbError: text("qb_error"),
+  
+  // Metadata
+  description: text("description"),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  
+  transactionDate: timestamp("transaction_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("financial_txns_tenant_idx").on(table.tenantId),
+  index("financial_txns_type_idx").on(table.transactionType),
+  index("financial_txns_date_idx").on(table.transactionDate),
+  index("financial_txns_source_idx").on(table.sourceType, table.sourceId),
+  index("financial_txns_qb_status_idx").on(table.qbSyncStatus),
+]);
+
+// QuickBooks schemas
+export const insertQuickbooksConnectionSchema = createInsertSchema(quickbooksConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuickbooksAccountMappingSchema = createInsertSchema(quickbooksAccountMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuickbooksSyncPreferencesSchema = createInsertSchema(quickbooksSyncPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuickbooksSyncLogSchema = createInsertSchema(quickbooksSyncLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFinancialTransactionSchema = createInsertSchema(financialTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// QuickBooks types
+export type QuickbooksConnection = typeof quickbooksConnections.$inferSelect;
+export type InsertQuickbooksConnection = z.infer<typeof insertQuickbooksConnectionSchema>;
+export type QuickbooksAccountMapping = typeof quickbooksAccountMappings.$inferSelect;
+export type InsertQuickbooksAccountMapping = z.infer<typeof insertQuickbooksAccountMappingSchema>;
+export type QuickbooksSyncPreferences = typeof quickbooksSyncPreferences.$inferSelect;
+export type InsertQuickbooksSyncPreferences = z.infer<typeof insertQuickbooksSyncPreferencesSchema>;
+export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
+export type InsertQuickbooksSyncLog = z.infer<typeof insertQuickbooksSyncLogSchema>;
+export type FinancialTransaction = typeof financialTransactions.$inferSelect;
+export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransactionSchema>;
