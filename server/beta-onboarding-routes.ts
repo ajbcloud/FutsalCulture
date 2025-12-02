@@ -208,7 +208,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
             status: 'active'
           })
           .where(eq(users.id, existingUser.id));
-        currentUser = existingUser;
+        currentUser = { id: existingUser.id, email: existingUser.email };
       }
 
       // Create tenant membership
@@ -438,9 +438,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
         await db.insert(notifications).values({
           tenantId: tenant.id,
           type: 'email',
-          recipientType: 'admins',
+          recipient: 'admins',
           subject: 'Minor Access Request Requires Approval',
-          body: `A minor (age ${age}) has requested to join your organization:\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${email}\nRole: ${role}\n\nPlease review and approve this request in the admin panel.`,
+          message: `A minor (age ${age}) has requested to join your organization:\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${email}\nRole: ${role}\n\nPlease review and approve this request in the admin panel.`,
           status: 'pending'
         });
 
@@ -449,10 +449,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
           await db.insert(notifications).values({
             tenantId: tenant.id,
             type: 'email',
-            recipientEmail: guardian_email,
-            recipientType: 'custom',
+            recipient: guardian_email,
             subject: 'Minor Access Request Pending Approval',
-            body: `${user.firstName} ${user.lastName} (age ${age}) has requested to join ${tenant.name}.\n\nThis request is pending approval from the organization administrators. You will be notified when the request is approved or denied.`,
+            message: `${user.firstName} ${user.lastName} (age ${age}) has requested to join ${tenant.name}.\n\nThis request is pending approval from the organization administrators. You will be notified when the request is approved or denied.`,
             status: 'pending'
           });
         }
@@ -664,7 +663,8 @@ export function setupBetaOnboardingRoutes(app: Express) {
           // Create Clerk org if tenant doesn't have one yet
           if (!clerkOrgId) {
             console.log(`⚠️ Tenant ${tenant.name} has no Clerk org, creating one...`);
-            clerkOrgId = await createClerkOrg(tenant.id, tenant.name, tenant.subdomain || tenant.slug, tenant.planLevel || 'free');
+            const createdOrg = await createClerkOrg(tenant.id);
+            clerkOrgId = createdOrg?.id || null;
             if (clerkOrgId) {
               console.log(`✅ Created Clerk org ${clerkOrgId} for tenant ${tenant.name}`);
             }
