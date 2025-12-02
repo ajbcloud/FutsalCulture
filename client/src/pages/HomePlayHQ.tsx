@@ -87,7 +87,7 @@ export default function HomePlayHQ() {
               <img 
                 src={teamBocaLogo} 
                 alt="Team Boca" 
-                className="h-24 w-auto object-contain"
+                className="h-36 w-auto object-contain"
               />
             </a>
             <a 
