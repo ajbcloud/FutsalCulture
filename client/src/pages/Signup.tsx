@@ -19,13 +19,13 @@ export default function Signup() {
         </div>
         
         <div className="grid md:grid-cols-2 gap-6">
-          <Link href="/get-started" data-testid="link-signup-business">
-            <div className={`p-8 rounded-xl cursor-pointer transition-all duration-200 border-2 hover:border-blue-500 hover:shadow-lg ${
+          <Link href="/get-started" data-testid="link-signup-business" className="h-full">
+            <div className={`p-8 rounded-xl cursor-pointer transition-all duration-200 border-2 hover:border-blue-500 hover:shadow-lg h-full ${
               isDarkMode 
                 ? 'bg-[#1e293b] border-slate-700 hover:bg-[#263449]' 
                 : 'bg-white border-gray-200 hover:bg-gray-50'
             }`}>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center h-full">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
                   isDarkMode ? 'bg-blue-600/20' : 'bg-blue-100'
                 }`}>
@@ -35,19 +35,19 @@ export default function Signup() {
                   I'm Starting a Club
                 </h2>
                 <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Create your club and manage players, sessions, and payments
+                  Create and manage your sports organization
                 </p>
               </div>
             </div>
           </Link>
           
-          <Link href="/signup-consumer" data-testid="link-signup-consumer">
-            <div className={`p-8 rounded-xl cursor-pointer transition-all duration-200 border-2 hover:border-blue-500 hover:shadow-lg ${
+          <Link href="/signup-consumer" data-testid="link-signup-consumer" className="h-full">
+            <div className={`p-8 rounded-xl cursor-pointer transition-all duration-200 border-2 hover:border-blue-500 hover:shadow-lg h-full ${
               isDarkMode 
                 ? 'bg-[#1e293b] border-slate-700 hover:bg-[#263449]' 
                 : 'bg-white border-gray-200 hover:bg-gray-50'
             }`}>
-              <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center text-center h-full">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
                   isDarkMode ? 'bg-green-600/20' : 'bg-green-100'
                 }`}>
