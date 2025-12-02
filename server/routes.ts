@@ -2053,23 +2053,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin payment refund route - DEPRECATED: Now using credit system instead of refunds
-  // When sessions are cancelled, credits are automatically issued to affected users
-  // app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {
-  //   try {
-  //     const { paymentId } = req.params;
-  //     const { reason } = req.body;
-  //     const user = req.user;
-  //
-  //     // Process refund (placeholder - would integrate with actual payment system)
-  //     const refund = await storage.processRefund(paymentId, reason, user.id);
-  //
-  //     res.json({ success: true, refund });
-  //   } catch (error) {
-  //     console.error("Error processing refund:", error);
-  //     res.status(500).json({ message: "Failed to process refund" });
-  //   }
-  // });
+  // Admin payment refund route - Issues credits to user/household instead of actual payment refunds
+  // Credits are automatically used first during checkout (FIFO)
+  app.post('/api/admin/payments/:paymentId/refund', isAuthenticated, async (req: any, res) => {
+    try {
+      const { paymentId } = req.params;
+      const { reason, applyToHousehold } = req.body;
+      const adminUser = req.user;
+
+      // Verify admin permissions
+      if (!adminUser.isAdmin && !adminUser.isSuperAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      if (!reason || reason.trim().length === 0) {
+        return res.status(400).json({ message: "Refund reason is required" });
+      }
+
+      // Get the payment details
+      const { payments: paymentsTable, signups: signupsTable, players, userCredits, householdMembers: householdMembersTable } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [payment] = await db.select()
+        .from(paymentsTable)
+        .where(eq(paymentsTable.id, paymentId))
+        .limit(1);
+
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      if (payment.refundedAt) {
+        return res.status(400).json({ message: "This payment has already been refunded" });
+      }
+
+      // Get the signup to find the player and parent
+      const [signup] = await db.select()
+        .from(signupsTable)
+        .where(eq(signupsTable.id, payment.signupId))
+        .limit(1);
+
+      if (!signup) {
+        return res.status(404).json({ message: "Associated signup not found" });
+      }
+
+      // Get the player to find the parent
+      const [player] = await db.select()
+        .from(players)
+        .where(eq(players.id, signup.playerId))
+        .limit(1);
+
+      if (!player || !player.parentId) {
+        return res.status(404).json({ message: "Parent user not found for this signup" });
+      }
+
+      const parentUserId = player.parentId;
+      const tenantId = payment.tenantId;
+      const amountCents = payment.amountCents;
+
+      // Determine if credit should go to household or user
+      let householdId: string | null = null;
+      let creditUserId: string | null = parentUserId;
+      let appliedToHousehold = false;
+      let householdNotFound = false;
+
+      if (applyToHousehold) {
+        // Check if user belongs to a household
+        const [householdMember] = await db.select({ householdId: householdMembersTable.householdId })
+          .from(householdMembersTable)
+          .where(and(
+            eq(householdMembersTable.userId, parentUserId),
+            eq(householdMembersTable.tenantId, tenantId)
+          ))
+          .limit(1);
+
+        if (householdMember) {
+          householdId = householdMember.householdId;
+          creditUserId = null; // Credit goes to household, not user
+          appliedToHousehold = true;
+        } else {
+          householdNotFound = true; // User requested household but none found
+        }
+      }
+
+      // Use a transaction to ensure atomicity of all operations
+      const result = await db.transaction(async (tx) => {
+        // Create the credit
+        const [credit] = await tx.insert(userCredits).values({
+          userId: creditUserId,
+          householdId,
+          tenantId,
+          amountCents,
+          reason: `Refund: ${reason}`,
+          signupId: signup.id,
+          sessionId: signup.sessionId,
+        }).returning();
+
+        // Mark the payment as refunded
+        await tx.update(paymentsTable)
+          .set({
+            refundedAt: new Date(),
+            refundReason: reason,
+            refundedBy: adminUser.id,
+          })
+          .where(eq(paymentsTable.id, paymentId));
+
+        // Mark the signup as refunded
+        await tx.update(signupsTable)
+          .set({
+            refunded: true,
+            refundReason: reason,
+            refundedAt: new Date(),
+          })
+          .where(eq(signupsTable.id, signup.id));
+
+        return credit;
+      });
+
+      const amountDollars = (amountCents / 100).toFixed(2);
+
+      res.json({ 
+        success: true, 
+        message: householdNotFound 
+          ? "Refund processed as credit (household not found, applied to user)" 
+          : "Refund processed as credit",
+        credit: {
+          id: result.id,
+          amountCents: amountCents,
+          amountDollars: amountDollars,
+          appliedTo: appliedToHousehold ? 'household' : 'user',
+          reason: `Refund: ${reason}`,
+          householdNotFound: householdNotFound,
+        },
+      });
+
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      res.status(500).json({ message: "Failed to process refund" });
+    }
+  });
 
   // Multi-session booking route (no payment processing)
   app.post('/api/multi-checkout', isAuthenticated, async (req: any, res) => {

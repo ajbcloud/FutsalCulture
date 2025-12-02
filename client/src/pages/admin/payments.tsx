@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { CheckCircle, RefreshCw, DollarSign, XCircle, Info, Check, Crown } from 'lucide-react';
+import { CheckCircle, RefreshCw, DollarSign, XCircle, Info, Check, Crown, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -26,6 +26,9 @@ import { Pagination } from '@/components/pagination';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/feature-flags';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Textarea } from '../../components/ui/textarea';
 
 export default function AdminPayments() {
   const [allPayments, setAllPayments] = useState<any[]>([]);
@@ -42,6 +45,14 @@ export default function AdminPayments() {
   });
   const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Refund dialog state
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundPaymentId, setRefundPaymentId] = useState<string | null>(null);
+  const [refundPaymentData, setRefundPaymentData] = useState<any>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [applyToHousehold, setApplyToHousehold] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,22 +202,47 @@ export default function AdminPayments() {
     }
   };
 
-  const handleRefund = async (paymentId: string) => {
-    const reason = prompt('Please provide a reason for the refund:');
-    if (reason && confirm('Are you sure you want to issue a refund?')) {
-      try {
-        await adminPayments.refund(paymentId, reason);
-        toast({ title: "Refund processed successfully" });
-        loadPayments(); // Refresh data
-        
-        // Refresh all dashboard-related queries
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
-      } catch (error) {
-        console.error('Error processing refund:', error);
-        toast({ title: "Error processing refund", variant: "destructive" });
-      }
+  const openRefundDialog = (paymentId: string, paymentData: any) => {
+    setRefundPaymentId(paymentId);
+    setRefundPaymentData(paymentData);
+    setRefundReason('');
+    setApplyToHousehold(false);
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!refundPaymentId || !refundReason.trim()) {
+      toast({ title: "Please provide a reason for the refund", variant: "destructive" });
+      return;
+    }
+
+    setIsRefunding(true);
+    try {
+      const result = await adminPayments.refund(refundPaymentId, refundReason.trim(), applyToHousehold);
+      const warningMessage = result.credit?.householdNotFound 
+        ? " (Note: Household not found, credit applied to user instead)"
+        : "";
+      toast({ 
+        title: "Refund processed successfully",
+        description: `Credit of $${(result.credit?.amountDollars || '0')} issued to ${result.credit?.appliedTo || 'user'}${warningMessage}`,
+        variant: result.credit?.householdNotFound ? "default" : "default"
+      });
+      setRefundDialogOpen(false);
+      loadPayments();
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/credits'] });
+    } catch (error: any) {
+      console.error('Error processing refund:', error);
+      toast({ 
+        title: "Error processing refund", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -323,10 +359,11 @@ export default function AdminPayments() {
           <Button 
             size="sm" 
             variant="destructive"
-            onClick={() => handleRefund(payment.id)}
+            onClick={() => openRefundDialog(payment.id, payment)}
+            data-testid={`button-refund-${payment.id}`}
           >
-            <XCircle className="h-4 w-4 mr-1" />
-            Refund
+            <Undo2 className="h-4 w-4 mr-1" />
+            Issue Credit
           </Button>
         );
       case 'refunded':
@@ -725,6 +762,100 @@ export default function AdminPayments() {
           className="bg-card p-4 rounded-lg border border-border"
         />
       )}
+
+      {/* Refund Dialog */}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-5 w-5" />
+              Issue Credit for Refund
+            </DialogTitle>
+            <DialogDescription>
+              This will issue a credit to the user's account instead of processing an actual refund.
+              Credits will be automatically applied to future bookings.
+            </DialogDescription>
+          </DialogHeader>
+
+          {refundPaymentData && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-semibold">${(refundPaymentData.amountCents / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Player:</span>
+                  <span>{refundPaymentData.playerName || 'Unknown'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Parent:</span>
+                  <span>{refundPaymentData.parentName || 'Unknown'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="refund-reason">Reason for refund *</Label>
+                <Textarea
+                  id="refund-reason"
+                  placeholder="Enter the reason for this refund..."
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  className="min-h-[80px]"
+                  data-testid="input-refund-reason"
+                />
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Checkbox 
+                  id="apply-household"
+                  checked={applyToHousehold}
+                  onCheckedChange={(checked) => setApplyToHousehold(checked === true)}
+                  data-testid="checkbox-apply-household"
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <Label htmlFor="apply-household" className="cursor-pointer">
+                    Apply credit to household
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    If enabled, the credit will be shared with all household members.
+                    Otherwise, it will only be available to the parent's personal account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setRefundDialogOpen(false)}
+              disabled={isRefunding}
+              data-testid="button-cancel-refund"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRefundSubmit}
+              disabled={isRefunding || !refundReason.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="button-confirm-refund"
+            >
+              {isRefunding ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Undo2 className="h-4 w-4 mr-2" />
+                  Issue Credit
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

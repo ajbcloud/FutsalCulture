@@ -60,9 +60,9 @@ const adminPayments = {
   confirm: (signupId: string) => apiRequest(`/api/admin/payments/${signupId}/mark-paid`, {
     method: 'POST',
   }),
-  refund: (paymentId: string, reason?: string) => apiRequest(`/api/admin/payments/${paymentId}/refund`, {
+  refund: (paymentId: string, reason?: string, applyToHousehold?: boolean) => apiRequest(`/api/admin/payments/${paymentId}/refund`, {
     method: 'POST',
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ reason, applyToHousehold }),
   }),
 };
 
