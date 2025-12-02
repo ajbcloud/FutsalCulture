@@ -402,6 +402,101 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Get tenant age policy settings
+  app.get('/api/super-admin/tenants/:id/age-policy', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { db } = await import('./db');
+      const { tenantPolicies } = await import('@shared/db/schema/tenantPolicy');
+      const { eq } = await import('drizzle-orm');
+      
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      // Get tenant policy
+      const [policy] = await db.select()
+        .from(tenantPolicies)
+        .where(eq(tenantPolicies.tenantId, id));
+      
+      res.json({
+        audienceMode: policy?.audienceMode || 'youth_only',
+        parentRequiredBelow: policy?.parentRequiredBelow || 13,
+        teenSelfAccessAt: policy?.teenSelfAccessAt || 13,
+        adultAge: policy?.adultAge || 18,
+        allowTeenPayments: policy?.allowTeenPayments || false,
+      });
+    } catch (error) {
+      console.error("Error fetching tenant age policy:", error);
+      res.status(500).json({ message: "Failed to fetch tenant age policy" });
+    }
+  });
+
+  // Update tenant age policy settings
+  app.patch('/api/super-admin/tenants/:id/age-policy', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { audienceMode, parentRequiredBelow, teenSelfAccessAt, adultAge, allowTeenPayments } = req.body;
+      
+      const { db } = await import('./db');
+      const { tenantPolicies } = await import('@shared/db/schema/tenantPolicy');
+      const { eq } = await import('drizzle-orm');
+      
+      const tenant = await storage.getTenant(id);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+      
+      // Validate audienceMode
+      const validModes = ['youth_only', 'mixed', 'adult_only'];
+      if (audienceMode && !validModes.includes(audienceMode)) {
+        return res.status(400).json({ message: "Invalid audience mode. Must be: youth_only, mixed, or adult_only" });
+      }
+      
+      // Check if policy exists
+      const [existingPolicy] = await db.select()
+        .from(tenantPolicies)
+        .where(eq(tenantPolicies.tenantId, id));
+      
+      const updateData: any = {};
+      if (audienceMode !== undefined) updateData.audienceMode = audienceMode;
+      if (parentRequiredBelow !== undefined) updateData.parentRequiredBelow = parentRequiredBelow;
+      if (teenSelfAccessAt !== undefined) updateData.teenSelfAccessAt = teenSelfAccessAt;
+      if (adultAge !== undefined) updateData.adultAge = adultAge;
+      if (allowTeenPayments !== undefined) updateData.allowTeenPayments = allowTeenPayments;
+      
+      let policy;
+      if (existingPolicy) {
+        // Update existing policy
+        [policy] = await db.update(tenantPolicies)
+          .set(updateData)
+          .where(eq(tenantPolicies.tenantId, id))
+          .returning();
+      } else {
+        // Create new policy
+        [policy] = await db.insert(tenantPolicies)
+          .values({
+            tenantId: id,
+            ...updateData,
+          })
+          .returning();
+      }
+      
+      res.json({
+        audienceMode: policy?.audienceMode || 'youth_only',
+        parentRequiredBelow: policy?.parentRequiredBelow || 13,
+        teenSelfAccessAt: policy?.teenSelfAccessAt || 13,
+        adultAge: policy?.adultAge || 18,
+        allowTeenPayments: policy?.allowTeenPayments || false,
+        message: "Age policy updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating tenant age policy:", error);
+      res.status(500).json({ message: "Failed to update tenant age policy" });
+    }
+  });
+
   // Get platform stats
   app.get('/api/super-admin/stats', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {

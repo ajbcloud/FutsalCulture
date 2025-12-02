@@ -93,6 +93,14 @@ interface TenantDetails {
   };
 }
 
+interface TenantAgePolicy {
+  audienceMode: 'youth_only' | 'mixed' | 'adult_only';
+  parentRequiredBelow: number;
+  teenSelfAccessAt: number;
+  adultAge: number;
+  allowTeenPayments: boolean;
+}
+
 export default function SuperAdminTenants() {
   const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -141,6 +149,37 @@ export default function SuperAdminTenants() {
       return response.json();
     },
     enabled: !!selectedTenant
+  });
+
+  // Fetch tenant age policy
+  const { data: tenantAgePolicy, isLoading: agePolicyLoading } = useQuery<TenantAgePolicy>({
+    queryKey: ['/api/super-admin/tenants', selectedTenant, 'age-policy'],
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/tenants/${selectedTenant}/age-policy`);
+      if (!response.ok) throw new Error('Failed to fetch age policy');
+      return response.json();
+    },
+    enabled: !!selectedTenant
+  });
+
+  // Update tenant age policy mutation
+  const updateAgePolicyMutation = useMutation({
+    mutationFn: async ({ tenantId, audienceMode }: { tenantId: string; audienceMode: string }) => {
+      const response = await fetch(`/api/super-admin/tenants/${tenantId}/age-policy`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audienceMode })
+      });
+      if (!response.ok) throw new Error('Failed to update age policy');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants', selectedTenant, 'age-policy'] });
+      toast({ title: 'Age policy updated successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to update age policy', description: error.message, variant: 'destructive' });
+    }
   });
 
   // Create tenant mutation
@@ -901,7 +940,7 @@ export default function SuperAdminTenants() {
                 </TabsContent>
                 
                 <TabsContent value="settings" className="space-y-4">
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Plan</Label>
@@ -930,10 +969,82 @@ export default function SuperAdminTenants() {
                         </Select>
                       </div>
                     </div>
+                    
+                    {/* Age Policy Configuration */}
                     <div className="pt-4 border-t">
-                      <p className="text-sm text-muted-foreground">
-                        Additional tenant-specific settings and configurations can be managed here.
+                      <h4 className="font-medium mb-3">Age Policy & Household Requirements</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Configure how this tenant handles player registration and household requirements.
                       </p>
+                      
+                      {agePolicyLoading ? (
+                        <div className="h-20 bg-muted rounded animate-pulse" />
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Audience Mode</Label>
+                            <Select 
+                              value={tenantAgePolicy?.audienceMode || 'youth_only'}
+                              onValueChange={(value) => {
+                                if (selectedTenant) {
+                                  updateAgePolicyMutation.mutate({ tenantId: selectedTenant, audienceMode: value });
+                                }
+                              }}
+                              disabled={updateAgePolicyMutation.isPending}
+                            >
+                              <SelectTrigger data-testid="select-audience-mode">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="youth_only">Youth Only</SelectItem>
+                                <SelectItem value="mixed">Mixed Ages</SelectItem>
+                                <SelectItem value="adult_only">Adults Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                            <p className="text-sm font-medium">Household Requirements:</p>
+                            {tenantAgePolicy?.audienceMode === 'youth_only' && (
+                              <ul className="text-sm text-muted-foreground space-y-1">
+                                <li>• Household is <strong>required</strong> before creating any player</li>
+                                <li>• All players must be associated with a household</li>
+                                <li>• Parent/guardian consent is required for all minors</li>
+                              </ul>
+                            )}
+                            {tenantAgePolicy?.audienceMode === 'mixed' && (
+                              <ul className="text-sm text-muted-foreground space-y-1">
+                                <li>• Players 18+ can register <strong>without</strong> a household</li>
+                                <li>• Players under 18 <strong>require</strong> a household</li>
+                                <li>• Parent/guardian consent needed for minors</li>
+                              </ul>
+                            )}
+                            {tenantAgePolicy?.audienceMode === 'adult_only' && (
+                              <ul className="text-sm text-muted-foreground space-y-1">
+                                <li>• Household is <strong>optional</strong></li>
+                                <li>• No age restrictions on player registration</li>
+                                <li>• No parent/guardian consent required</li>
+                              </ul>
+                            )}
+                            {!tenantAgePolicy?.audienceMode && (
+                              <p className="text-sm text-muted-foreground">Loading policy settings...</p>
+                            )}
+                          </div>
+                          
+                          {tenantAgePolicy && (
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Adult Age:</span>
+                                <span className="ml-2 font-medium">{tenantAgePolicy.adultAge}+</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Parent Required Below:</span>
+                                <span className="ml-2 font-medium">{tenantAgePolicy.parentRequiredBelow}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
