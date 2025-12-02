@@ -1,5 +1,5 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-react';
 
 interface User {
   id: string;
@@ -36,6 +36,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
+  const { user: clerkUser } = useClerkUser();
 
   const fetchUser = async () => {
     try {
@@ -58,44 +61,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include'
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Login failed');
+    if (!clerkLoaded) {
+      return;
     }
+    
+    if (isSignedIn) {
+      fetchUser();
+    } else {
+      setUser(null);
+      setLoading(false);
+    }
+  }, [isSignedIn, clerkLoaded, clerkUser?.id]);
 
-    await fetchUser();
+  const login = async (_email: string, _password: string) => {
+    window.location.href = '/login';
   };
 
   const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      // Redirect to home page after logout
-      window.location.href = '/';
-    }
+    setUser(null);
   };
 
   const refreshUser = async () => {
-    await fetchUser();
+    if (isSignedIn) {
+      await fetchUser();
+    }
   };
 
   const hasCapability = (capability: string): boolean => {
@@ -104,9 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
-    loading,
-    isAuthenticated: !!user,
-    isLoading: loading,
+    loading: loading || !clerkLoaded,
+    isAuthenticated: !!user && isSignedIn,
+    isLoading: loading || !clerkLoaded,
     login,
     logout,
     refreshUser,

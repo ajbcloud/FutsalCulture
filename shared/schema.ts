@@ -1804,7 +1804,25 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type UpsertUser = Partial<InsertUser> & { id?: string; clerkUserId?: string };
+export type UpsertUser = {
+  id?: string;
+  email?: string | null;
+  passwordHash?: string | null;
+  clerkUserId?: string | null;
+  authProvider?: string | null;
+  authProviderId?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  profileImageUrl?: string | null;
+  phone?: string | null;
+  tenantId?: string | null;
+  isApproved?: boolean | null;
+  registrationStatus?: "pending" | "approved" | "rejected" | null;
+  isAdmin?: boolean | null;
+  isSuperAdmin?: boolean | null;
+  isAssistant?: boolean | null;
+  role?: "parent" | "adult" | "player" | "tenant_admin" | "super_admin" | null;
+};
 export type UpdateUser = Partial<InsertUser>;
 
 export const insertServiceBillingSchema = createInsertSchema(serviceBilling).omit({
