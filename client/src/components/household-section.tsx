@@ -128,8 +128,9 @@ export default function HouseholdSection() {
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/households"] });
       setHouseholdName("");
       toast({ title: "Success", description: "Household created successfully" });
     },
