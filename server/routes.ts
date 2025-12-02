@@ -44,6 +44,7 @@ import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
 import quickbooksRoutes from './routes/quickbooks';
+import businessSignupRouter from './routes/business-signup';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -51,6 +52,9 @@ const isAuthenticated = requireClerkAuth;
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public ingestion endpoints (BEFORE auth middleware since they're public)
   app.use('/api/public', publicIngestionRoutes);
+
+  // Business signup endpoint (public - before auth middleware)
+  app.use('/api/auth', businessSignupRouter);
 
   // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/stripe', stripeWebhookRouter);

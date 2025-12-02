@@ -120,6 +120,8 @@ export interface IStorage {
   // Tenant operations
   getTenant(id: string): Promise<TenantSelect | undefined>;
   getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined>;
+  getTenantByCode(tenantCode: string): Promise<TenantSelect | undefined>;
+  getTenantByInviteCode(inviteCode: string): Promise<TenantSelect | undefined>;
   getTenants(): Promise<TenantSelect[]>;
   createTenant(tenant: TenantInsert): Promise<TenantSelect>;
   updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect>;
@@ -436,6 +438,16 @@ export class DatabaseStorage implements IStorage {
 
   async getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined> {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain));
+    return tenant;
+  }
+
+  async getTenantByCode(tenantCode: string): Promise<TenantSelect | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.tenantCode, tenantCode));
+    return tenant;
+  }
+
+  async getTenantByInviteCode(inviteCode: string): Promise<TenantSelect | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.inviteCode, inviteCode));
     return tenant;
   }
 

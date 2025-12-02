@@ -203,7 +203,7 @@ export const tenants = pgTable("tenants", {
   // Tenant Invitation System
   inviteCode: varchar("invite_code").unique().notNull(),
   inviteCodeUpdatedAt: timestamp("invite_code_updated_at").defaultNow().notNull(),
-  inviteCodeUpdatedBy: varchar("invite_code_updated_by").references(() => users.id),
+  inviteCodeUpdatedBy: varchar("invite_code_updated_by"),
 
   // SMS Credits System
   smsCreditsBalance: integer("sms_credits_balance").default(0).notNull(),
@@ -3584,3 +3584,33 @@ export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
 export type InsertQuickbooksSyncLog = z.infer<typeof insertQuickbooksSyncLogSchema>;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransactionSchema>;
+
+// ============================================================================
+// Business Signup Schema - Simplified auth flow for club owners
+// ============================================================================
+
+export const businessSignupSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  phone: z.string().optional(),
+  orgName: z.string().min(2, "Organization name is required"),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().default("US"),
+  sports: z.array(z.string()).default(["futsal"]),
+});
+
+export type BusinessSignupInput = z.infer<typeof businessSignupSchema>;
+
+export const businessSignupResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  userId: z.string().optional(),
+  tenantId: z.string().optional(),
+  tenantCode: z.string().optional(),
+  requiresEmailVerification: z.boolean(),
+});
+
+export type BusinessSignupResponse = z.infer<typeof businessSignupResponseSchema>;
