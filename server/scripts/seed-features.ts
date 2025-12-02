@@ -150,7 +150,7 @@ const seedFeatures = async () => {
       category: 'integrations',
       type: 'enum',
       description: 'Third-party service integrations',
-      optionsJson: { values: ['none', 'sendgrid_mailchimp_quickbooks', 'sendgrid_mailchimp_quickbooks_braintree'] },
+      optionsJson: { values: ['none', 'resend_mailchimp_quickbooks', 'resend_mailchimp_quickbooks_braintree'] },
       displayOrder: 41
     },
 
@@ -260,7 +260,7 @@ const seedFeatures = async () => {
       'pay.payment_integrations': { variant: 'stripe_only' },
       'analytics.level': { variant: 'advanced' },
       'integrations.calendar': { enabled: true },
-      'integrations.additional': { variant: 'sendgrid_mailchimp_quickbooks' },
+      'integrations.additional': { variant: 'resend_mailchimp_quickbooks' },
       'dev.api_access': { enabled: false },
       'support.level': { variant: 'standard' },
       'support.feature_request_queue': { variant: 'standard' },
@@ -284,7 +284,7 @@ const seedFeatures = async () => {
       'pay.payment_integrations': { variant: 'multiple_providers' },
       'analytics.level': { variant: 'ai_powered' },
       'integrations.calendar': { enabled: true },
-      'integrations.additional': { variant: 'sendgrid_mailchimp_quickbooks_braintree' },
+      'integrations.additional': { variant: 'resend_mailchimp_quickbooks_braintree' },
       'dev.api_access': { enabled: true },
       'support.level': { variant: 'priority_phone' },
       'support.feature_request_queue': { variant: 'priority' },

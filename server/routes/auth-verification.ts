@@ -525,7 +525,7 @@ authVerificationRouter.post("/resend_verification", async (req, res) => {
 
   await sendEmail({
     to: user.email!,
-    from: process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+    from: FROM_EMAIL,
     subject: "Verify your PlayHQ account",
     html,
     text: `Continue your setup: ${link}`,

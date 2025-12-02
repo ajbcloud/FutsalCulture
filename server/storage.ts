@@ -2333,7 +2333,7 @@ export class DatabaseStorage implements IStorage {
     return [
       {
         id: '1',
-        name: 'SendGrid',
+        name: 'Resend',
         type: 'email',
         enabled: true,
         status: 'connected',
@@ -3084,8 +3084,8 @@ export class DatabaseStorage implements IStorage {
       ],
       integrations: {
         email: {
-          provider: 'sendgrid',
-          apiKey: 'SG.***',
+          provider: 'resend',
+          apiKey: 're_***',
           verified: true
         },
         sms: {

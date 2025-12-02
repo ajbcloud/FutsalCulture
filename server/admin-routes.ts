@@ -48,6 +48,11 @@ function maskCredentials(provider: string, credentials: any): any {
         apiKey: credentials.apiKey ? `***${credentials.apiKey.slice(-4)}` : '',
         verifiedSender: credentials.verifiedSender,
       };
+    case 'resend':
+      return {
+        apiKey: credentials.apiKey ? `***${credentials.apiKey.slice(-4)}` : '',
+        fromEmail: credentials.fromEmail,
+      };
     case 'google':
       return {
         clientId: credentials.clientId ? `***${credentials.clientId.slice(-4)}` : '',
@@ -104,6 +109,11 @@ function validateCredentials(provider: string, credentials: any): string | null 
         return 'SendGrid requires API Key and Verified Sender Address';
       }
       break;
+    case 'resend':
+      if (!credentials.apiKey) {
+        return 'Resend requires API Key';
+      }
+      break;
     case 'google':
       if (!credentials.clientId || !credentials.clientSecret || !credentials.redirectUri) {
         return 'Google requires Client ID, Client Secret, and Redirect URI';
@@ -149,6 +159,15 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
       case 'sendgrid':
         // Test SendGrid connection - placeholder for now
         return { success: true };
+      case 'resend':
+        // Test Resend connection using email provider abstraction
+        try {
+          const { isEmailConfigured } = await import('./utils/email-provider');
+          const configured = await isEmailConfigured();
+          return { success: configured };
+        } catch (error) {
+          return { success: false, error: 'Failed to verify Resend configuration' };
+        }
       case 'google':
         // Test Google connection - placeholder for now
         return { success: true };
@@ -5054,6 +5073,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         stripe: { success: true, message: "Stripe connection verified successfully" },
         braintree: { success: true, message: "Braintree connection verified successfully" },
         sendgrid: { success: true, message: "SendGrid email service connected successfully" },
+        resend: { success: true, message: "Resend email service connected successfully" },
         twilio: { success: true, message: "Twilio SMS service connected successfully" },
         mailchimp: { success: true, message: "Mailchimp API connection verified" },
         google: { success: true, message: "Google Workspace integration verified" },

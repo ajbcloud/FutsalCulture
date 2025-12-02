@@ -53,9 +53,9 @@ async function seedSuperAdminFeatures() {
         enabled: true
       },
       {
-        id: 'wh_sendgrid_email',
-        name: 'SendGrid Email Events',
-        url: 'https://api.example.com/webhooks/sendgrid',
+        id: 'wh_resend_email',
+        name: 'Resend Email Events',
+        url: 'https://api.example.com/webhooks/resend',
         enabled: true
       },
       {
@@ -175,7 +175,7 @@ async function seedSuperAdminFeatures() {
     console.log('✉️ Seeding email events...');
     
     const emailEventTypes = ['processed', 'delivered', 'open', 'click', 'bounce', 'dropped', 'spamreport', 'deferred'];
-    const emailProviders = ['sendgrid', 'mailgun', 'ses'];
+    const emailProviders = ['resend', 'sendgrid', 'mailgun', 'ses'];
     
     for (let i = 0; i < 1000; i++) {
       const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
