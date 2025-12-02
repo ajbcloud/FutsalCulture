@@ -488,11 +488,17 @@ export async function setupAdminRoutes(app: any) {
         );
       const pendingPayments = pendingPaymentsResult[0]?.count || 0;
 
-      // 9. Active Parents - TENANT SCOPED
+      // 9. Active Parents - TENANT SCOPED (excluding admins and assistants)
       const activeParentsResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(users)
-        .where(eq(users.tenantId, contextTenantId)); // TENANT FILTER
+        .where(
+          and(
+            eq(users.tenantId, contextTenantId), // TENANT FILTER
+            eq(users.isAdmin, false),
+            eq(users.isAssistant, false)
+          )
+        );
       const activeParents = activeParentsResult[0]?.count || 0;
 
       // 10. Session Fill Rate (correct calculation - average fill rate per session) - TENANT SCOPED
