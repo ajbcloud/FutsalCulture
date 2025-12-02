@@ -46,11 +46,11 @@ export default function HomePlayHQ() {
               <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <a
                   href="/get-started"
-                  className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-medium bg-black text-white hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg"
                 >
                   Get started free
                 </a>
-                <a href="mailto:sales@playhq.app" className="underline text-gray-700 hover:text-gray-900 py-4 text-lg">
+                <a href="mailto:sales@playhq.app" className="underline text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white py-4 text-lg">
                   Talk to sales
                 </a>
               </div>
@@ -75,7 +75,7 @@ export default function HomePlayHQ() {
 
         {/* Social Proof */}
         <section className="mx-auto max-w-6xl px-6 py-8">
-          <p className="text-center text-sm text-gray-500 mb-6">Trusted by your favorite clubs</p>
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6">Trusted by your favorite clubs</p>
           <div className="flex justify-center items-center gap-12">
             <a 
               href="https://www.teamboca.com/" 
@@ -176,24 +176,24 @@ export default function HomePlayHQ() {
         <section className="py-16 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
           <div className="mx-auto max-w-4xl px-6 text-center">
             <h2 className="text-3xl font-bold mb-6">Enterprise-grade security, built in</h2>
-            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-200 mb-8 max-w-2xl mx-auto">
               Your players' data deserves the best protection. PlayHQ is built with security at its core—not as an afterthought.
             </p>
             <div className="grid md:grid-cols-3 gap-6 mt-8">
               <div className="p-4">
                 <div className="text-2xl mb-2">🔐</div>
-                <h3 className="font-semibold mb-1">Role-based access</h3>
-                <p className="text-sm text-gray-400">Admins, coaches, parents, and players each see only what they need</p>
+                <h3 className="font-semibold mb-1 text-white">Role-based access</h3>
+                <p className="text-sm text-gray-300">Admins, coaches, parents, and players each see only what they need</p>
               </div>
               <div className="p-4">
                 <div className="text-2xl mb-2">📋</div>
-                <h3 className="font-semibold mb-1">Complete audit trail</h3>
-                <p className="text-sm text-gray-400">Every action is logged for transparency and accountability</p>
+                <h3 className="font-semibold mb-1 text-white">Complete audit trail</h3>
+                <p className="text-sm text-gray-300">Every action is logged for transparency and accountability</p>
               </div>
               <div className="p-4">
                 <div className="text-2xl mb-2">🛡️</div>
-                <h3 className="font-semibold mb-1">Data encryption</h3>
-                <p className="text-sm text-gray-400">SSL/TLS encryption for all data in transit and at rest</p>
+                <h3 className="font-semibold mb-1 text-white">Data encryption</h3>
+                <p className="text-sm text-gray-300">SSL/TLS encryption for all data in transit and at rest</p>
               </div>
             </div>
           </div>
@@ -294,18 +294,18 @@ export default function HomePlayHQ() {
       </main>
 
       {/* Footer */}
-      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 border-t">
+      <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-6">
             <div>© {currentYear} PlayHQ</div>
             <div className="flex gap-6">
-              <a href="/terms" className="hover:text-gray-900">Terms</a>
-              <a href="/privacy" className="hover:text-gray-900">Privacy</a>
+              <a href="/terms" className="hover:text-gray-900 dark:hover:text-white">Terms</a>
+              <a href="/privacy" className="hover:text-gray-900 dark:hover:text-white">Privacy</a>
             </div>
           </div>
           <div className="flex gap-6">
-            <a href="/status" className="hover:text-gray-900">Status</a>
-            <a href="mailto:support@playhq.app" className="hover:text-gray-900">Support</a>
+            <a href="/status" className="hover:text-gray-900 dark:hover:text-white">Status</a>
+            <a href="mailto:support@playhq.app" className="hover:text-gray-900 dark:hover:text-white">Support</a>
           </div>
         </div>
       </footer>
@@ -319,8 +319,8 @@ function HowItWorksStep({ number, title, description }: { number: string; title:
       <div className="w-12 h-12 bg-blue-600 text-white font-bold rounded-full flex items-center justify-center mx-auto mb-4">
         {number}
       </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{title}</h3>
+      <p className="text-gray-600 dark:text-gray-300">{description}</p>
     </div>
   );
 }
