@@ -41,7 +41,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
       const tenantCode = generateTenantCode();
 
       // Create tenant
-      const [tenant] = await db.insert(tenants).values({
+      const tenantResult = await db.insert(tenants).values({
         name: org_name,
         subdomain: slug,
         city: city || null,
@@ -52,7 +52,11 @@ export function setupBetaOnboardingRoutes(app: Express) {
         contactName: contact_name,
         contactEmail: contact_email,
         planLevel: "free", // Always start new tenants on free plan
-      }).returning();
+      }).returning() as any[];
+      const tenant = tenantResult[0];
+      if (!tenant) {
+        return res.status(500).json({ error: "Failed to create tenant" });
+      }
 
       // Create subscription record (free plan)
       await db.insert(subscriptions).values({
@@ -443,9 +447,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
       }
 
       // Create user if they don't exist
-      let currentUser: typeof user;
+      let currentUser: NonNullable<typeof user>;
       if (!user) {
-        const [newUser] = await db.insert(users).values({
+        const insertResult = await db.insert(users).values({
           email: userEmail.toLowerCase(),
           firstName: first_name || userEmail.split('@')[0],
           lastName: last_name || '',
@@ -456,7 +460,11 @@ export function setupBetaOnboardingRoutes(app: Express) {
           verificationStatus: 'verified',
           isApproved: true,
           approvedAt: new Date(),
-        }).returning();
+        }).returning() as any[];
+        const newUser = insertResult[0];
+        if (!newUser) {
+          return res.status(500).json({ error: "Failed to create user" });
+        }
         currentUser = newUser;
         console.log(`✅ Created new PlayHQ user for Clerk user ${clerk_user_id}`);
       } else {
@@ -493,23 +501,34 @@ export function setupBetaOnboardingRoutes(app: Express) {
         });
       }
 
-      // Add user to tenant's Clerk organization
-      if (tenant.clerkOrganizationId) {
-        try {
-          const { addMemberToOrganization, isClerkEnabled } = await import('./services/clerkOrganizationService');
-          if (isClerkEnabled()) {
+      // Add user to tenant's Clerk organization (create org if needed)
+      try {
+        const { addMemberToOrganization, isClerkEnabled, createOrganizationForTenant: createClerkOrg } = await import('./services/clerkOrganizationService');
+        if (isClerkEnabled()) {
+          let clerkOrgId = tenant.clerkOrganizationId;
+          
+          // Create Clerk org if tenant doesn't have one yet
+          if (!clerkOrgId) {
+            console.log(`⚠️ Tenant ${tenant.name} has no Clerk org, creating one...`);
+            clerkOrgId = await createClerkOrg(tenant.id, tenant.name, tenant.subdomain || tenant.slug, tenant.planLevel || 'free');
+            if (clerkOrgId) {
+              console.log(`✅ Created Clerk org ${clerkOrgId} for tenant ${tenant.name}`);
+            }
+          }
+          
+          if (clerkOrgId) {
             await addMemberToOrganization(
-              tenant.clerkOrganizationId, 
+              clerkOrgId, 
               clerk_user_id,
               role === 'tenant_admin' ? 'admin' : 'basic_member'
             );
-            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${tenant.clerkOrganizationId}`);
+            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${clerkOrgId}`);
           }
-        } catch (clerkError: any) {
-          // Ignore "already a member" errors
-          if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
-            console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
-          }
+        }
+      } catch (clerkError: any) {
+        // Ignore "already a member" errors
+        if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
+          console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
         }
       }
 
