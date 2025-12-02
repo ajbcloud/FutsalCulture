@@ -2721,10 +2721,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin/integrations/quickbooks', isAuthenticated, quickbooksRoutes);
 
   // Household CRUD routes
+  // Helper to resolve tenantId for super admins (can use first available tenant)
+  async function resolveHouseholdTenantId(req: any): Promise<string | null> {
+    // If user has a tenantId, use it
+    if (req.user?.tenantId) {
+      return req.user.tenantId;
+    }
+    
+    // For super admins, check if tenantId is provided in query/body
+    if (req.user?.isSuperAdmin) {
+      if (req.body?.tenantId) return req.body.tenantId;
+      if (req.query?.tenantId) return req.query.tenantId;
+      
+      // Fall back to first available tenant for super admins
+      const { db } = await import("./db");
+      const { tenants } = await import("@shared/schema");
+      const [firstTenant] = await db.select().from(tenants).limit(1);
+      return firstTenant?.id || null;
+    }
+    
+    return null;
+  }
+
   // GET /api/households - List all households for tenant
   app.get('/api/households', isAuthenticated, async (req: any, res) => {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = await resolveHouseholdTenantId(req);
       if (!tenantId) {
         return res.status(400).json({ message: "Tenant ID is required" });
       }
@@ -2740,7 +2762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/households - Create new household
   app.post('/api/households', isAuthenticated, async (req: any, res) => {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = await resolveHouseholdTenantId(req);
       if (!tenantId) {
         return res.status(400).json({ message: "Tenant ID is required" });
       }

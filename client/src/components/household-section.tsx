@@ -73,9 +73,12 @@ export default function HouseholdSection() {
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [pendingPlayerToAdd, setPendingPlayerToAdd] = useState<Player | null>(null);
 
+  // Super admins without tenantId can still access households (backend resolves tenant)
+  const canAccessHouseholds = isAuthenticated && (!!user?.tenantId || user?.isSuperAdmin);
+  
   const { data: households = [], isLoading: householdsLoading } = useQuery<HouseholdWithMembers[]>({
     queryKey: ["/api/households"],
-    enabled: isAuthenticated && !!user?.tenantId,
+    enabled: canAccessHouseholds,
   });
 
   const userHousehold = households.find(h => 
