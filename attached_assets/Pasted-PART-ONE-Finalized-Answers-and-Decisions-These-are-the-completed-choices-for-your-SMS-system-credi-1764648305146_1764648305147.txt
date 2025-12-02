@@ -1,0 +1,241 @@
+PART ONE
+Finalized Answers and Decisions
+
+These are the completed choices for your SMS system, credit rules, billing rules, Braintree architecture, compliance, analytics, and operational logic.
+
+SMS Credit Rules
+
+• Credits are not refundable
+• Credits expire at twelve months
+• Credit liability means credits are deferred revenue until they are used or expired
+• Auto reload is allowed
+• Reload threshold: 20 percent
+• Alerts at: 50 percent, 25 percent, 10 percent, zero
+• If credits reach zero during a large send: stop immediately and require a reload
+
+Messaging and Compliance
+
+• Ten DLC ownership is client responsibility unless you choose to automate it later
+• Opt out handling must be automatic
+• Quiet hours should be enforced in your app
+• Carrier rejections logged for analytics
+• Spam rate tracking required
+
+Email and SMS Routing
+
+• Email goes through Resend
+• SMS goes through SendGrid
+• Internal notifications routed separately to avoid collisions
+• All messages require a delivery log with timestamps, cost, and status
+
+SMS Analytics
+
+• Total credits purchased
+• Total credits used
+• Cost per message
+• Deliverability rate
+• Carrier rejection rate
+• Opt out rate
+• Conversion rate
+• Message performance by time of day
+
+Subscription and Billing Architecture
+
+• You are merchant of record for all subscriptions paid to your platform
+• Your clients are merchant of record for payments from their customers
+• No proration
+• Refunds are manual
+• Failed payment retry schedule: Day one immediate retry, day three retry, day seven retry
+• Past due status after first failed attempt
+• Full suspension after day seven if unpaid
+• Users can still log in during past due status but service features restricted
+• Auto email and SMS notifications for failed payments
+
+Braintree Onboarding Flow
+
+• Client clicks Connect Braintree
+• They authenticate using OAuth or API keys
+• Your system verifies keys with a test transaction
+• Your app syncs products, subscriptions, and customer records if permissions allow
+• Your system maps merchant IDs and subscription IDs to your internal tables
+
+Webhook Requirements
+
+• Validate signatures
+• Validate payload hash
+• Prevent duplicates
+• Full idempotent processing
+• Webhook events needed:
+subscription_charged_successfully
+subscription_charged_unsuccessfully
+subscription_went_active
+subscription_went_past_due
+subscription_canceled
+transaction_disbursed
+transaction_settled
+transaction_settlement_declined
+dispute_opened
+dispute_won
+dispute_lost
+
+Subscription Mapping
+
+Your system must store:
+• Braintree merchant ID
+• Braintree customer ID
+• Braintree subscription ID
+• Product ID
+• Billing plan name
+• Current billing cycle
+• Renewal date
+• Subscription status
+
+PART TWO
+Replit Agent Prompt
+
+Copy and paste this entire prompt into your Replit AI Assistant.
+This tells the agent exactly what to build and how to structure it.
+
+REPLIT AGENT PROMPT START
+
+You are updating the app to support a new messaging and billing system.
+Use the following finalized requirements to build or modify the necessary models, controllers, services, routes, and UI components.
+
+The system must support email via Resend and SMS via SendGrid. It must also support Braintree for subscription billing, credit purchases, and client merchant account connections.
+
+Build everything using best practices for security, idempotency, atomic transactions, and clean code. Use the app's existing patterns for folder structure and naming.
+
+Below are the full requirements you must implement.
+
+SMS CREDITS
+
+• Credits are not refundable
+• Credits expire at twelve months
+• Credits are treated as deferred revenue until used
+• Auto reload is enabled
+• Auto reload triggers at twenty percent of the remaining balance
+• Alerts triggered at fifty, twenty five, ten, and zero
+• If credits reach zero during a send, stop immediately and require a reload
+• Store all credit transactions and audit data
+• Show balance, usage history, cost per message, and detailed analytics in the dashboard
+
+SMS MESSAGING
+
+• SendGrid is used for SMS only
+• Implement routing, queuing, and retry logic
+• Enforce quiet hours
+• Enforce opt out management
+• Log every message with delivery status, cost, and timestamp
+• Track deliverability, rejections, and spam rate
+• Add analytics endpoints for the front end
+
+RESEND EMAIL
+
+• All email goes through Resend
+• Implement a unified message service that selects email or SMS automatically
+• Log email status and costs
+• Add analytics endpoints
+
+SMS AND EMAIL ANALYTICS
+
+Build an analytics model and service to track:
+• Purchased credits
+• Credits used
+• Deliverability
+• Carrier rejections
+• Opt out rate
+• Conversion rate
+• Message performance by time of day
+• Cost per message
+• Email open and click metrics
+• Bounce rate
+• Complaint rate
+
+SUBSCRIPTION MANAGEMENT FOR YOUR CLIENTS
+
+• You are merchant of record
+• Subscriptions renew monthly
+• No proration
+• Refunds done manually only
+• Failed payment retry schedule: Day one immediate retry, day three retry, day seven retry
+• Past due status after the first failed attempt
+• Full suspension if unpaid after day seven
+• Users can log in while past due but core features are restricted
+• Add notifications for failed payments, past due status, and suspension
+• All subscription IDs and plan data must be mapped to internal tables
+• Add billing pages to view invoices, update payment methods, and manage plans
+
+SUBSCRIPTION MANAGEMENT FOR YOUR CLIENTS CUSTOMERS
+
+• Your clients are merchant of record
+• Build the Connect Braintree flow
+• Store their merchant ID
+• Store their customer IDs and subscription IDs
+• Sync products, plans, and subscription status
+• Enable subscription creation for their customers via your platform
+• Handle refunds only through their merchant account
+
+WEBHOOK PROCESSING
+
+Implement secure webhook handlers for:
+subscription_charged_successfully
+subscription_charged_unsuccessfully
+subscription_went_active
+subscription_went_past_due
+subscription_canceled
+transaction_disbursed
+transaction_settled
+transaction_settlement_declined
+dispute_opened
+dispute_won
+dispute_lost
+
+Webhook requirements:
+• Validate signatures
+• Validate payload hash
+• Prevent duplicates
+• Use idempotency keys
+• Use a dead letter queue for failures
+
+DATABASE UPDATES
+
+Add or update the database with tables for:
+• SMS credits
+• Credit transactions
+• SMS and email logs
+• Subscription records
+• Merchant account connections
+• Webhook event logs
+• Analytics tables
+• Message opt out preferences
+
+FRONT END
+
+Update the UI to support:
+• Viewing SMS credits
+• Purchasing credits
+• Auto reload settings
+• Messaging analytics
+• Billing overview
+• Subscription management
+• Braintree connection flow
+• Refund submission for clients
+• Account status and notifications
+
+QUALITY EXPECTATIONS
+
+• All code must be production ready
+• Use environment variables for all API keys
+• Follow strict error handling
+• Do not use card data in your system
+• Use Braintree hosted fields for all payment updates
+
+Provide:
+• Code updates
+• New files
+• Updated migration files
+• Clear instructions
+
+REPLIT AGENT PROMPT END
+
+If you want, I can also generate
