@@ -13,7 +13,18 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     
     // Handle cases where auth is null or userId is not present
     if (!auth || !auth.userId) {
-      console.log("🔍 syncClerkUser: No Clerk auth found for request to", req.path);
+      // Debug: Log cookie info for auth requests
+      if (req.path === '/auth/user') {
+        const cookies = req.headers.cookie || '';
+        const hasSessionCookie = cookies.includes('__session');
+        const authHeader = req.headers.authorization;
+        console.log("🔍 syncClerkUser DEBUG for /auth/user:", {
+          hasSessionCookie,
+          hasAuthHeader: !!authHeader,
+          cookiePreview: cookies.substring(0, 100),
+          auth: auth
+        });
+      }
       return next();
     }
 

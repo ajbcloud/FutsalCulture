@@ -44,7 +44,7 @@ import { publicSessionsRouter } from './routes/public-sessions';
 
 const app = express();
 
-// CORS configuration for production domain
+// CORS configuration for production and development domains
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://playhq.app',
@@ -54,11 +54,16 @@ app.use((req, res, next) => {
   ];
 
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin as string)) {
-    res.setHeader('Access-Control-Allow-Origin', origin as string);
+  
+  // Allow the origin if it's in the list OR if it's a Replit dev URL
+  const isAllowed = allowedOrigins.includes(origin as string) || 
+    (origin && (origin.includes('.replit.dev') || origin.includes('.repl.co')));
+  
+  if (isAllowed && origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
   }
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
