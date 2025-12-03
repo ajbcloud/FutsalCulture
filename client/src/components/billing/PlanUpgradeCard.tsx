@@ -295,8 +295,8 @@ export function PlanUpgradeCard({
 
     setIsLoading(true);
     try {
-      const nonce = await hostedFieldsRef.current.tokenize();
-      await subscribeMutation.mutateAsync(nonce);
+      const result = await hostedFieldsRef.current.tokenize();
+      await subscribeMutation.mutateAsync(result.nonce);
     } catch (error: any) {
       toast({
         title: 'Payment Error',
