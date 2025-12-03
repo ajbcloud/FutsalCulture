@@ -27,7 +27,6 @@ import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { nanoid } from 'nanoid';
 import { stripeWebhookRouter } from './stripe-webhooks';
-import publicIngestionRoutes from './routes/publicIngestion';
 import { impersonationContext } from './middleware/impersonation';
 import * as impersonationController from './controllers/impersonation';
 import { maintenanceMode, enforceMFA, enforceSessionTimeout } from './middleware/platformPolicies';
@@ -50,9 +49,6 @@ const isAuthenticated = requireClerkAuth;
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Public ingestion endpoints (BEFORE auth middleware since they're public)
-  app.use('/api/public', publicIngestionRoutes);
-
   // Public sessions browse endpoints (BEFORE auth middleware since they're public)
   app.use('/api/public', publicSessionsRouter);
 
