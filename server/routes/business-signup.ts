@@ -280,9 +280,23 @@ router.post('/business-signup/attach', async (req: Request, res: Response) => {
       .limit(1);
 
     if (existingClerkUser.length > 0) {
+      const existingUser = existingClerkUser[0];
+      let existingTenantName = 'another organization';
+      
+      if (existingUser.tenantId) {
+        const [existingTenant] = await db.select()
+          .from(tenants)
+          .where(eq(tenants.id, existingUser.tenantId))
+          .limit(1);
+        if (existingTenant) {
+          existingTenantName = existingTenant.name;
+        }
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'This account is already linked. Please sign in instead.',
+        message: `This Clerk account is already linked to ${existingTenantName}. You may need to use a different email or contact support.`,
+        existingTenantName,
       });
     }
 
