@@ -165,10 +165,10 @@ export default function Invitations() {
     },
   });
 
-  const resetForm = () => {
+  const resetForm = (codeType: "invite" | "access" | "discount" = "invite") => {
     setFormData({
       code: "",
-      codeType: "invite",
+      codeType,
       description: "",
       isActive: true,
       ageGroup: "",
@@ -782,7 +782,7 @@ export default function Invitations() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { resetForm(); setFormData(f => ({ ...f, codeType: "invite" })); setIsCreateOpen(true); }} size="sm" data-testid="button-create-invite-code">
+                  <Button onClick={() => { resetForm("invite"); setIsCreateOpen(true); }} size="sm" data-testid="button-create-invite-code">
                     <Plus className="w-4 h-4 mr-2" />
                     <span className="hidden sm:inline">Create Invite/Access Code</span>
                     <span className="sm:hidden">Create Code</span>
@@ -828,7 +828,7 @@ export default function Invitations() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { resetForm(); setFormData(f => ({ ...f, codeType: "discount" })); setIsDiscountCreateOpen(true); }} size="sm" data-testid="button-create-discount-code">
+                  <Button onClick={() => { resetForm("discount"); setIsDiscountCreateOpen(true); }} size="sm" data-testid="button-create-discount-code">
                     <Plus className="w-4 h-4 mr-2" />
                     <span className="hidden sm:inline">Create Discount Code</span>
                     <span className="sm:hidden">Create Discount</span>
