@@ -2008,4 +2008,70 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to delete invitation' });
     }
   });
+
+  // Braintree Transactions for Super Admin
+  app.get('/api/super-admin/braintree/transactions', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { searchTransactions, isBraintreeEnabled } = await import('./services/braintreeService');
+      
+      if (!isBraintreeEnabled()) {
+        return res.status(503).json({ message: 'Braintree is not configured' });
+      }
+      
+      const { startDate, endDate, status, type, customerId, limit } = req.query;
+      
+      const options: any = {};
+      if (startDate) options.startDate = new Date(startDate as string);
+      if (endDate) options.endDate = new Date(endDate as string);
+      if (status) options.status = status as string;
+      if (type) options.type = type as string;
+      if (customerId) options.customerId = customerId as string;
+      if (limit) options.limit = parseInt(limit as string, 10);
+      
+      const transactions = await searchTransactions(options);
+      res.json(transactions);
+    } catch (error: any) {
+      console.error('Error fetching Braintree transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions', details: error.message });
+    }
+  });
+
+  app.get('/api/super-admin/braintree/transactions/stats', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { getTransactionStats, isBraintreeEnabled } = await import('./services/braintreeService');
+      
+      if (!isBraintreeEnabled()) {
+        return res.status(503).json({ message: 'Braintree is not configured' });
+      }
+      
+      const days = parseInt(req.query.days as string, 10) || 30;
+      const stats = await getTransactionStats(days);
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Error fetching Braintree transaction stats:', error);
+      res.status(500).json({ error: 'Failed to fetch transaction stats', details: error.message });
+    }
+  });
+
+  app.get('/api/super-admin/braintree/transactions/:id', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { getTransactionById, isBraintreeEnabled } = await import('./services/braintreeService');
+      
+      if (!isBraintreeEnabled()) {
+        return res.status(503).json({ message: 'Braintree is not configured' });
+      }
+      
+      const { id } = req.params;
+      const transaction = await getTransactionById(id);
+      
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      
+      res.json(transaction);
+    } catch (error: any) {
+      console.error('Error fetching Braintree transaction:', error);
+      res.status(500).json({ error: 'Failed to fetch transaction', details: error.message });
+    }
+  });
 }

@@ -782,3 +782,186 @@ export async function checkCooldownPeriod(tenantId: string): Promise<{
   
   return { allowed: true };
 }
+
+export interface BraintreeTransactionSummary {
+  id: string;
+  type: string;
+  amount: string;
+  status: string;
+  createdAt: Date;
+  customerId?: string;
+  customerEmail?: string;
+  customerFirstName?: string;
+  customerLastName?: string;
+  paymentMethodType?: string;
+  cardType?: string;
+  lastFour?: string;
+  subscriptionId?: string;
+  planId?: string;
+  merchantAccountId?: string;
+  processorResponseCode?: string;
+  processorResponseText?: string;
+}
+
+export async function searchTransactions(options: {
+  startDate?: Date;
+  endDate?: Date;
+  status?: string;
+  type?: string;
+  customerId?: string;
+  limit?: number;
+}): Promise<BraintreeTransactionSummary[]> {
+  const gw = getGateway();
+  
+  const searchCriteria: any = {};
+  
+  if (options.startDate || options.endDate) {
+    searchCriteria.createdAt = {};
+    if (options.startDate) {
+      searchCriteria.createdAt.min = options.startDate;
+    }
+    if (options.endDate) {
+      searchCriteria.createdAt.max = options.endDate;
+    }
+  }
+  
+  if (options.status) {
+    searchCriteria.status = options.status;
+  }
+  
+  if (options.type) {
+    searchCriteria.type = options.type;
+  }
+  
+  if (options.customerId) {
+    searchCriteria.customerId = options.customerId;
+  }
+  
+  const transactions: BraintreeTransactionSummary[] = [];
+  const limit = options.limit || 100;
+  
+  try {
+    const stream = gw.transaction.search((search: any) => {
+      if (searchCriteria.createdAt) {
+        if (searchCriteria.createdAt.min) {
+          search.createdAt().min(searchCriteria.createdAt.min);
+        }
+        if (searchCriteria.createdAt.max) {
+          search.createdAt().max(searchCriteria.createdAt.max);
+        }
+      }
+      if (searchCriteria.status) {
+        search.status().is(searchCriteria.status);
+      }
+      if (searchCriteria.type) {
+        search.type().is(searchCriteria.type);
+      }
+      if (searchCriteria.customerId) {
+        search.customerId().is(searchCriteria.customerId);
+      }
+    });
+    
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (transaction: braintree.Transaction) => {
+        if (transactions.length < limit) {
+          transactions.push({
+            id: transaction.id,
+            type: transaction.type,
+            amount: transaction.amount,
+            status: transaction.status,
+            createdAt: transaction.createdAt,
+            customerId: transaction.customer?.id,
+            customerEmail: transaction.customer?.email,
+            customerFirstName: transaction.customer?.firstName,
+            customerLastName: transaction.customer?.lastName,
+            paymentMethodType: transaction.paymentInstrumentType,
+            cardType: (transaction as any).creditCard?.cardType,
+            lastFour: (transaction as any).creditCard?.last4,
+            subscriptionId: transaction.subscriptionId,
+            planId: transaction.planId,
+            merchantAccountId: transaction.merchantAccountId,
+            processorResponseCode: transaction.processorResponseCode,
+            processorResponseText: transaction.processorResponseText,
+          });
+        }
+      });
+      stream.on('end', () => resolve());
+      stream.on('error', (err: any) => reject(err));
+    });
+    
+    return transactions.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  } catch (error) {
+    console.error('Error searching transactions:', error);
+    throw error;
+  }
+}
+
+export async function getTransactionById(transactionId: string): Promise<braintree.Transaction | null> {
+  const gw = getGateway();
+  
+  try {
+    return await gw.transaction.find(transactionId);
+  } catch (error) {
+    console.error(`Error finding transaction ${transactionId}:`, error);
+    return null;
+  }
+}
+
+export async function getTransactionStats(days: number = 30): Promise<{
+  totalCount: number;
+  totalAmount: number;
+  successCount: number;
+  failedCount: number;
+  refundedCount: number;
+  byStatus: Record<string, number>;
+  byDay: Array<{ date: string; count: number; amount: number }>;
+}> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const transactions = await searchTransactions({
+    startDate,
+    limit: 1000,
+  });
+  
+  const stats = {
+    totalCount: transactions.length,
+    totalAmount: 0,
+    successCount: 0,
+    failedCount: 0,
+    refundedCount: 0,
+    byStatus: {} as Record<string, number>,
+    byDay: [] as Array<{ date: string; count: number; amount: number }>,
+  };
+  
+  const dayMap = new Map<string, { count: number; amount: number }>();
+  
+  for (const tx of transactions) {
+    const amount = parseFloat(tx.amount) || 0;
+    stats.totalAmount += amount;
+    
+    stats.byStatus[tx.status] = (stats.byStatus[tx.status] || 0) + 1;
+    
+    if (tx.status === 'settled' || tx.status === 'submitted_for_settlement') {
+      stats.successCount++;
+    } else if (tx.status === 'failed' || tx.status === 'gateway_rejected' || tx.status === 'processor_declined') {
+      stats.failedCount++;
+    } else if (tx.status === 'voided') {
+      stats.refundedCount++;
+    }
+    
+    const dateKey = new Date(tx.createdAt).toISOString().split('T')[0];
+    const dayData = dayMap.get(dateKey) || { count: 0, amount: 0 };
+    dayData.count++;
+    dayData.amount += amount;
+    dayMap.set(dateKey, dayData);
+  }
+  
+  stats.byDay = Array.from(dayMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  
+  return stats;
+}

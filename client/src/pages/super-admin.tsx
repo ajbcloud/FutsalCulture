@@ -26,6 +26,7 @@ import PlanManagement from "@/pages/super-admin/plan-management";
 import SuperAdminHelpRequests from "@/pages/super-admin/help-requests";
 import SuperAdminInvitations from "@/pages/super-admin/invitations";
 import SuperAdminCredits from "@/pages/super-admin/credits";
+import BraintreeTransactions from "@/pages/super-admin/braintree-transactions";
 
 import { 
   Building2, 
@@ -50,7 +51,8 @@ import {
   Shield,
   Crown,
   HelpCircle,
-  Ticket
+  Ticket,
+  Wallet
 } from "lucide-react";
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
@@ -88,6 +90,7 @@ export default function SuperAdminPage() {
     { name: "Invitations", href: "/super-admin/invitations", icon: Ticket, current: basePath === "/super-admin/invitations" },
     { name: "Credits", href: "/super-admin/credits", icon: CreditCard, current: basePath === "/super-admin/credits" },
     { name: "Platform Billing", href: "/super-admin/platform-billing", icon: CreditCard, current: basePath === "/super-admin/platform-billing" },
+    { name: "Braintree Transactions", href: "/super-admin/braintree-transactions", icon: Wallet, current: basePath === "/super-admin/braintree-transactions" },
     { name: "Payment Recovery", href: "/super-admin/dunning", icon: TrendingUp, current: basePath === "/super-admin/dunning" },
     { name: "Communications", href: "/super-admin/communications", icon: Mail, current: basePath === "/super-admin/communications" },
     { name: "Integrations Health", href: "/super-admin/integrations-health", icon: Webhook, current: basePath === "/super-admin/integrations-health" },
@@ -144,6 +147,8 @@ export default function SuperAdminPage() {
         return <SuperAdminInvitations />;
       case basePath === "/super-admin/credits":
         return <SuperAdminCredits />;
+      case basePath === "/super-admin/braintree-transactions":
+        return <BraintreeTransactions />;
       default:
         return <SuperAdminOverview />;
     }
