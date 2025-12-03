@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Shield,
   UserCheck,
-  Globe,
   UserX,
   Clock,
   Database,
@@ -517,64 +516,6 @@ export default function SuperAdminSettings() {
                         }
                       }}
                     />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Subdomains */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle>Tenant Subdomains</CardTitle>
-                    </div>
-                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
-                  </div>
-                  <CardDescription>Configure custom subdomains for tenants</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Enable subdomains</Label>
-                      <p className="text-sm text-muted-foreground">Allow tenants to use custom subdomains</p>
-                    </div>
-                    <Switch
-                      checked={localPolicies.subdomains.enabled}
-                      onCheckedChange={(checked) => {
-                        handlePolicyChange({ 
-                          subdomains: { ...localPolicies.subdomains, enabled: checked }
-                        });
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Base domain</Label>
-                    <Input
-                      value={localPolicies.subdomains.baseDomain}
-                      onChange={(e) => {
-                        handlePolicyChange({ 
-                          subdomains: { ...localPolicies.subdomains, baseDomain: e.target.value }
-                        });
-                      }}
-                      placeholder="tenants.playhq.app"
-                      disabled={!localPolicies.subdomains.enabled}
-                    />
-                    <div className="flex gap-2">
-                      {localPolicies.subdomains.dnsOk && (
-                        <Badge variant="secondary" className="text-green-600">
-                          <Check className="h-3 w-3 mr-1" />
-                          DNS Verified
-                        </Badge>
-                      )}
-                      {localPolicies.subdomains.sslOk && (
-                        <Badge variant="secondary" className="text-green-600">
-                          <Check className="h-3 w-3 mr-1" />
-                          SSL Verified
-                        </Badge>
-                      )}
-                    </div>
                   </div>
                 </CardContent>
               </Card>
