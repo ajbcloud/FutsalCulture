@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -658,15 +658,14 @@ export default function ConsentTemplateSettings() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="template-content">Initial Content (Optional)</Label>
-                      <Textarea
-                        id="template-content"
-                        value={newTemplateContent}
-                        onChange={(e) => setNewTemplateContent(e.target.value)}
-                        rows={6}
-                        placeholder="Enter HTML content for the consent form (you can edit this later)..."
-                        className="mt-1 font-mono text-sm"
-                      />
+                      <Label>Initial Content (Optional)</Label>
+                      <div className="mt-1">
+                        <RichTextEditor
+                          content={newTemplateContent}
+                          onChange={setNewTemplateContent}
+                          placeholder="Enter content for the consent form (you can edit this later)..."
+                        />
+                      </div>
                     </div>
                     
                     <Button 
@@ -733,15 +732,17 @@ export default function ConsentTemplateSettings() {
                         </AlertDescription>
                       </Alert>
                       <div>
-                        <Label htmlFor={`content-${type.key}`}>Template Content (HTML with Merge Fields)</Label>
-                        <Textarea
-                          id={`content-${type.key}`}
-                          value={customContent[type.key] || ''}
-                          onChange={(e) => setCustomContent({ ...customContent, [type.key]: e.target.value })}
-                          rows={10}
-                          className="font-mono text-sm"
-                          placeholder="Enter HTML content for the consent form..."
-                        />
+                        <Label>Template Content</Label>
+                        <div className="mt-1">
+                          <RichTextEditor
+                            content={customContent[type.key] || ''}
+                            onChange={(content) => setCustomContent({ ...customContent, [type.key]: content })}
+                            placeholder="Enter content for the consent form..."
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          You can type merge fields like {'{{COMPANY_NAME}}'} directly in the content
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button 
