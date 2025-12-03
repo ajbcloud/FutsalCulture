@@ -43,7 +43,7 @@ const adminNavItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
-  { href: "/admin/invitations", label: "Invitations", icon: UserPlus },
+  { href: "/admin/invitations", label: "Promo & Access Codes", icon: Tag },
   { href: "/admin/credits", label: "Credits", icon: CreditCard },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
