@@ -829,12 +829,19 @@ import * as braintreeService from './services/braintreeService';
 // Get Braintree client token for Drop-In UI
 router.get('/billing/braintree/client-token', async (req: any, res) => {
   try {
+    console.log('=== Braintree Client Token Request ===');
+    console.log('Braintree enabled:', braintreeService.isBraintreeEnabled());
+    
     if (!braintreeService.isBraintreeEnabled()) {
+      console.log('Braintree NOT enabled - returning 503');
       return res.status(503).json({ message: 'Braintree is not configured' });
     }
 
     const currentUser = req.currentUser;
+    console.log('Current user:', currentUser?.id, 'Tenant:', currentUser?.tenantId);
+    
     if (!currentUser?.tenantId) {
+      console.log('No tenant ID - returning 400');
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
@@ -847,7 +854,10 @@ router.get('/billing/braintree/client-token', async (req: any, res) => {
     .limit(1);
 
     const customerId = tenant[0]?.braintreeCustomerId || undefined;
+    console.log('Generating client token, customerId:', customerId || 'none (new customer)');
+    
     const clientToken = await braintreeService.generateClientToken(customerId);
+    console.log('Client token generated successfully, length:', clientToken?.length);
 
     res.json({ clientToken });
   } catch (error) {
