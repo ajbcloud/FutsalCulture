@@ -4219,7 +4219,15 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const tenantId = (req as any).currentUser?.tenantId;
+      let tenantId = (req as any).currentUser?.tenantId;
+      const isSuperAdmin = (req as any).currentUser?.isSuperAdmin;
+      
+      // For super admins without tenant context, use the first available tenant
+      if (!tenantId && isSuperAdmin) {
+        const firstTenant = await db.query.tenants.findFirst();
+        tenantId = firstTenant?.id;
+      }
+      
       if (!tenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
