@@ -119,42 +119,43 @@ export default function ClerkBusinessSignup() {
           </p>
         </div>
 
-        <Card className={isDarkMode ? "bg-slate-800 border-slate-700" : ""}>
-          <CardContent className="pt-6 flex justify-center">
-            <SignUp
-              appearance={{
-                elements: {
-                  rootBox: "w-full",
-                  card: "shadow-none p-0 bg-transparent",
-                  headerTitle: "hidden",
-                  headerSubtitle: "hidden",
-                  socialButtonsBlockButton: "hidden",
-                  dividerRow: "hidden",
-                  formFieldInput: isDarkMode 
-                    ? "bg-slate-700 border-slate-600 text-white" 
-                    : "",
-                  formButtonPrimary: "bg-blue-600 hover:bg-blue-700",
-                  footerActionLink: "text-blue-600 hover:text-blue-700",
-                  identityPreviewEditButton: "text-blue-600",
-                },
-                variables: {
-                  colorPrimary: "#2563eb",
-                  colorBackground: isDarkMode ? "#1e293b" : "#ffffff",
-                  colorText: isDarkMode ? "#f1f5f9" : "#0f172a",
-                  colorInputBackground: isDarkMode ? "#334155" : "#ffffff",
-                  colorInputText: isDarkMode ? "#f1f5f9" : "#0f172a",
-                },
-              }}
-              initialValues={{
-                emailAddress: prefill?.email || "",
-                firstName: prefill?.firstName || "",
-                lastName: prefill?.lastName || "",
-              }}
-              signInUrl="/login-business"
-              forceRedirectUrl={`/signup/clerk/callback?token=${token}`}
-            />
-          </CardContent>
-        </Card>
+        <div className="flex justify-center">
+          <SignUp
+            appearance={{
+              elements: {
+                rootBox: "w-full max-w-md",
+                card: `rounded-xl shadow-lg border ${isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-gray-200"}`,
+                headerTitle: "hidden",
+                headerSubtitle: "hidden",
+                socialButtonsBlockButton: "hidden",
+                dividerRow: "hidden",
+                formFieldInput: isDarkMode 
+                  ? "bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" 
+                  : "bg-white border-gray-300",
+                formFieldLabel: isDarkMode ? "text-slate-300" : "text-gray-700",
+                formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white font-medium",
+                footerActionLink: "text-blue-600 hover:text-blue-700",
+                identityPreviewEditButton: "text-blue-600",
+                footer: isDarkMode ? "text-slate-400" : "text-gray-500",
+              },
+              variables: {
+                colorPrimary: "#2563eb",
+                colorBackground: isDarkMode ? "#1e293b" : "#ffffff",
+                colorText: isDarkMode ? "#f1f5f9" : "#0f172a",
+                colorInputBackground: isDarkMode ? "#334155" : "#ffffff",
+                colorInputText: isDarkMode ? "#f1f5f9" : "#0f172a",
+                borderRadius: "0.75rem",
+              },
+            }}
+            initialValues={{
+              emailAddress: prefill?.email || "",
+              firstName: prefill?.firstName || "",
+              lastName: prefill?.lastName || "",
+            }}
+            signInUrl="/login-business"
+            forceRedirectUrl={`/signup/clerk/callback?token=${token}`}
+          />
+        </div>
 
         <div className="text-center mt-6">
           <Button
