@@ -9,12 +9,12 @@ export default function Signup() {
   const [, navigate] = useLocation();
   
   // Check for access code in URL and auto-redirect to consumer signup
+  // (User will enter their club code after signing in via the JoinClubModal)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     if (code) {
-      // Store the code and redirect to consumer signup
-      localStorage.setItem('pendingClubCode', code);
+      // Just redirect to consumer signup - they can join their club after signing up
       navigate('/signup-consumer');
     }
   }, [navigate]);

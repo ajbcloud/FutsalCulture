@@ -207,50 +207,33 @@ export default function Join() {
             </div>
             <CardTitle className="text-2xl">Join a Club</CardTitle>
             <CardDescription>
-              Enter your club's access code to get started
+              Sign in or create an account to join your club
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (formData.code) {
-                // Store the code in localStorage and redirect to consumer signup
-                localStorage.setItem('pendingClubCode', formData.code.toUpperCase());
-                navigate('/signup-consumer');
-              }
-            }} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="code-unauthenticated">Club Access Code *</Label>
-                <Input
-                  id="code-unauthenticated"
-                  value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                  placeholder="e.g., SUMMER2025"
-                  required
-                  autoFocus
-                  data-testid="input-club-code-unauthenticated"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Ask your club administrator for your access code
-                </p>
-              </div>
+          <CardContent className="space-y-4">
+            <div className="text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                You'll be able to enter your club's access code after signing in.
+              </p>
               
-              <Button type="submit" className="w-full" disabled={!formData.code} data-testid="button-continue-with-code">
-                Continue
-              </Button>
-              
-              <div className="text-center text-sm text-muted-foreground pt-2">
-                Already have an account?{' '}
+              <div className="flex flex-col gap-2">
                 <Button 
-                  variant="link" 
-                  className="p-0 h-auto" 
-                  onClick={() => navigate("/login")}
-                  data-testid="link-login-instead"
+                  onClick={() => navigate("/signup-consumer")}
+                  className="w-full"
+                  data-testid="button-signup"
                 >
-                  Sign in
+                  Create Account
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                  className="w-full"
+                  data-testid="button-login"
+                >
+                  Sign In
                 </Button>
               </div>
-            </form>
+            </div>
           </CardContent>
         </Card>
       </div>

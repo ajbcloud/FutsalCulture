@@ -1,28 +1,18 @@
 import { SignIn, useAuth, useUser, useOrganizationList } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function LoginConsumer() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn, isLoaded } = useAuth();
   const { user: clerkUser } = useUser();
-  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
+  const { userMemberships, isLoaded: orgsLoaded, setActive } = useOrganizationList({
     userMemberships: true
   });
   const [, navigate] = useLocation();
-  const { toast } = useToast();
-  
-  const [joiningClub, setJoiningClub] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
-  const [joinSuccess, setJoinSuccess] = useState(false);
-  
-  // Check for pending club code
-  const pendingCode = typeof window !== 'undefined' ? localStorage.getItem('pendingClubCode') : null;
 
   useEffect(() => {
     async function handlePostLogin() {
@@ -30,100 +20,40 @@ export default function LoginConsumer() {
         return;
       }
       
-      // If user already has org memberships and no pending code, go to app
-      if (userMemberships?.data && userMemberships.data.length > 0 && !pendingCode) {
+      // If user has org memberships, set the first one active and go to app
+      if (userMemberships?.data && userMemberships.data.length > 0) {
+        if (setActive) {
+          try {
+            await setActive({ organization: userMemberships.data[0].organization.id });
+          } catch (error) {
+            console.error("Error setting active organization:", error);
+            // Continue anyway - just go to app
+          }
+        }
         navigate("/app");
         return;
       }
       
-      // If there's a pending club code, use it to join
-      if (pendingCode && !joiningClub && !joinSuccess) {
-        setJoiningClub(true);
-        setJoinError(null);
-        
-        try {
-          const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
-            tenant_code: pendingCode,
-            first_name: clerkUser.firstName || '',
-            last_name: clerkUser.lastName || '',
-            role: 'parent'
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            localStorage.removeItem('pendingClubCode');
-            setJoinSuccess(true);
-            toast({
-              title: "Welcome!",
-              description: `You've joined ${result.tenantName}. Redirecting...`,
-            });
-            
-            // Give Clerk a moment to sync the org membership, then redirect
-            setTimeout(() => {
-              window.location.href = "/app";
-            }, 1500);
-          } else {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to join club");
-          }
-        } catch (error) {
-          console.error("Error joining club:", error);
-          setJoinError(error instanceof Error ? error.message : "Failed to join club");
-          localStorage.removeItem('pendingClubCode');
-          setJoiningClub(false);
-        }
-      } else if (!pendingCode && (!userMemberships?.data || userMemberships.data.length === 0)) {
-        // No pending code and no memberships, go to unassigned
-        navigate("/app-unassigned");
-      }
+      // If user has no org memberships, still go to app
+      // The JoinClubModal in the dashboard will prompt them to join a club
+      navigate("/app");
     }
     
     handlePostLogin();
-  }, [isLoaded, orgsLoaded, isSignedIn, clerkUser, userMemberships, pendingCode, joiningClub, joinSuccess, navigate, toast]);
+  }, [isLoaded, orgsLoaded, isSignedIn, clerkUser, userMemberships, setActive, navigate]);
   
-  // Show joining progress
-  if (isLoaded && isSignedIn && (joiningClub || joinSuccess || joinError)) {
+  // Show loading while processing post-login
+  if (isLoaded && isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
         <div className="text-center max-w-md">
-          {joinSuccess ? (
-            <>
-              <CheckCircle className={`h-12 w-12 mx-auto mb-4 text-green-500`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Welcome to your club!
-              </h2>
-              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                Redirecting to your dashboard...
-              </p>
-            </>
-          ) : joinError ? (
-            <>
-              <AlertCircle className={`h-12 w-12 mx-auto mb-4 text-red-500`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Unable to join club
-              </h2>
-              <p className={`mb-4 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                {joinError}
-              </p>
-              <button
-                onClick={() => navigate("/join")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                data-testid="button-try-again"
-              >
-                Try a different code
-              </button>
-            </>
-          ) : (
-            <>
-              <Loader2 className={`h-12 w-12 animate-spin mx-auto mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Joining your club...
-              </h2>
-              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                Setting up your account
-              </p>
-            </>
-          )}
+          <Loader2 className={`h-12 w-12 animate-spin mx-auto mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
+          <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Signing you in...
+          </h2>
+          <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+            Please wait a moment
+          </p>
         </div>
       </div>
     );
@@ -132,16 +62,6 @@ export default function LoginConsumer() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
       <div className="w-full max-w-md">
-        {pendingCode && (
-          <div className={`mb-4 p-3 rounded-lg text-center ${isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-            <p className="text-sm">
-              Club code: <strong>{pendingCode}</strong>
-            </p>
-            <p className="text-xs mt-1 opacity-75">
-              Sign in to join your club
-            </p>
-          </div>
-        )}
         <SignIn 
           routing="path" 
           path="/login-consumer"
@@ -173,21 +93,17 @@ export default function LoginConsumer() {
               formFieldInput: isDarkMode 
                 ? "!bg-slate-700 !border-slate-600 !text-white placeholder:!text-slate-400" 
                 : "",
-              formButtonPrimary: "!bg-blue-600 hover:!bg-blue-700",
-              footerActionLink: isDarkMode ? "!text-blue-400 hover:!text-blue-300" : "",
+              formButtonPrimary: "!bg-blue-600 hover:!bg-blue-700 !text-white",
+              footerActionLink: "!text-blue-500 hover:!text-blue-600",
+              identityPreview: isDarkMode ? "!bg-slate-700 !border-slate-600" : "",
+              identityPreviewText: isDarkMode ? "!text-white" : "",
+              identityPreviewEditButton: isDarkMode ? "!text-blue-400 hover:!text-blue-300" : "",
+              formFieldInputShowPasswordButton: isDarkMode ? "!text-slate-400 hover:!text-slate-300" : "",
               dividerLine: isDarkMode ? "!bg-slate-600" : "",
               dividerText: isDarkMode ? "!text-slate-400" : "",
-              formFieldInputShowPasswordButton: isDarkMode ? "!text-slate-400" : "",
-              identityPreviewText: isDarkMode ? "!text-white" : "",
-              identityPreviewEditButton: isDarkMode ? "!text-blue-400" : "",
-              footer: isDarkMode ? "!bg-[#1e293b]" : "",
-              footerActionText: isDarkMode ? "!text-slate-300" : "",
-            }
+            },
           }}
         />
-        <div className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
-          Have a club code? <a className="underline text-blue-600 dark:text-blue-400" href="/join" data-testid="link-join-club">Join your club</a>
-        </div>
       </div>
     </div>
   );
