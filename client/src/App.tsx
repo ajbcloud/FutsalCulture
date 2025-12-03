@@ -1,5 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { useEffect } from "react";
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { queryClient, setClerkTokenGetter } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -198,24 +200,43 @@ function Router() {
   );
 }
 
+function ClerkTokenSetup({ children }: { children: React.ReactNode }) {
+  const { getToken } = useClerkAuth();
+  
+  useEffect(() => {
+    setClerkTokenGetter(async () => {
+      try {
+        return await getToken();
+      } catch (error) {
+        console.warn('Failed to get Clerk token:', error);
+        return null;
+      }
+    });
+  }, [getToken]);
+  
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <BusinessProvider>
-          <AuthProvider>
-            <TerminologyProvider>
-              <TimezoneProvider>
-                <TooltipProvider>
-                  <ErrorBoundary>
-                    <Toaster />
-                    <Router />
-                  </ErrorBoundary>
-                </TooltipProvider>
-              </TimezoneProvider>
-            </TerminologyProvider>
-          </AuthProvider>
-        </BusinessProvider>
+        <ClerkTokenSetup>
+          <BusinessProvider>
+            <AuthProvider>
+              <TerminologyProvider>
+                <TimezoneProvider>
+                  <TooltipProvider>
+                    <ErrorBoundary>
+                      <Toaster />
+                      <Router />
+                    </ErrorBoundary>
+                  </TooltipProvider>
+                </TimezoneProvider>
+              </TerminologyProvider>
+            </AuthProvider>
+          </BusinessProvider>
+        </ClerkTokenSetup>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -74,6 +74,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync Clerk users to our database - only for API routes
   app.use('/api', syncClerkUser);
 
+  // Debug endpoint to check Clerk auth status
+  app.get('/api/debug/clerk-auth', (req: any, res) => {
+    const { getAuth } = require("@clerk/express");
+    const auth = getAuth(req);
+    const cookies = req.headers.cookie || '';
+    const hasSessionCookie = cookies.includes('__session');
+    const authHeader = req.headers.authorization;
+    
+    console.log("🔍 DEBUG /api/debug/clerk-auth:", {
+      hasSessionCookie,
+      hasAuthHeader: !!authHeader,
+      authUserId: auth?.userId,
+      authSessionId: auth?.sessionId,
+      reqUser: req.user?.id,
+      cookiePreview: cookies.substring(0, 200)
+    });
+    
+    res.json({
+      clerkAuth: {
+        userId: auth?.userId || null,
+        sessionId: auth?.sessionId || null,
+      },
+      hasSessionCookie,
+      hasAuthHeader: !!authHeader,
+      syncedUser: req.user?.id || null,
+      environment: process.env.NODE_ENV,
+    });
+  });
+
   // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)
   app.post('/api/users/self-signup', async (req, res) => {
     try {
