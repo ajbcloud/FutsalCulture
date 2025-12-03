@@ -240,7 +240,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
           role: 'tenant_admin',
           status: 'active',
           clerkUserId: clerk_user_id,
-          emailVerified: true,
+          emailVerifiedAt: new Date(),
         }).returning() as any[];
         currentUser = userResult[0];
       } else {
@@ -252,7 +252,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
             status: 'active'
           })
           .where(eq(users.id, existingUser.id));
-        currentUser = { id: existingUser.id, email: existingUser.email };
+        currentUser = { id: existingUser.id, email: existingUser.email || userEmail };
       }
 
       // Create tenant membership
