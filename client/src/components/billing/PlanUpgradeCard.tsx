@@ -1,4 +1,4 @@
-import { Check, Crown, Rocket, Sparkles, Tag, CreditCard } from 'lucide-react';
+import { Check, Crown, Rocket, Sparkles, Tag, CreditCard, Star, TrendingUp, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Free',
     price: 0,
     description: 'Perfect for getting started',
-    icon: <Sparkles className="h-5 w-5" />,
+    icon: <Star className="h-5 w-5" />,
     features: [
       'Up to 10 players',
       'Basic session management',
@@ -44,7 +44,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
       locations: 1,
       coaches: 1,
     },
-    color: 'text-gray-600',
+    color: 'text-slate-600',
   },
   core: {
     name: 'Core',
@@ -71,7 +71,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Growth',
     price: 199,
     description: 'Advanced features for scaling',
-    icon: <Crown className="h-5 w-5 text-purple-600" />,
+    icon: <TrendingUp className="h-5 w-5" />,
     features: [
       'Up to 500 players',
       'Unlimited sessions',
@@ -93,7 +93,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Elite',
     price: 399,
     description: 'Enterprise-grade features',
-    icon: <Crown className="h-5 w-5 text-yellow-600" />,
+    icon: <Zap className="h-5 w-5" />,
     features: [
       'Unlimited players',
       'Unlimited sessions',
@@ -110,7 +110,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
       locations: -1,
       coaches: -1,
     },
-    color: 'text-yellow-600',
+    color: 'text-amber-600',
   },
 };
 
