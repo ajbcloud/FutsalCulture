@@ -898,7 +898,7 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       return res.status(503).json({ message: 'Braintree is not configured' });
     }
 
-    const { plan, paymentMethodNonce } = req.body;
+    const { plan, paymentMethodNonce, discountCode } = req.body;
     const currentUser = req.currentUser;
 
     if (!currentUser?.tenantId) {
@@ -949,11 +949,32 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       true
     );
 
-    // Create subscription
+    // Look up Braintree discount ID if discount code provided
+    let braintreeDiscountId: string | null = null;
+    if (discountCode) {
+      try {
+        const { getBraintreeDiscountId } = await import('./services/braintreeDiscountService');
+        braintreeDiscountId = await getBraintreeDiscountId(discountCode, currentUser.tenantId);
+        if (braintreeDiscountId) {
+          console.log(`✅ Found Braintree discount ID for code ${discountCode}: ${braintreeDiscountId}`);
+        } else {
+          console.log(`⚠️ No Braintree discount linked to code: ${discountCode}`);
+        }
+      } catch (error) {
+        console.error('Error looking up Braintree discount:', error);
+      }
+    }
+
+    // Create subscription with optional discount
+    const subscriptionOptions = braintreeDiscountId 
+      ? { discountId: braintreeDiscountId }
+      : undefined;
+
     const subscription = await braintreeService.createSubscription(
       currentUser.tenantId,
       plan as 'core' | 'growth' | 'elite',
-      paymentMethod.token
+      paymentMethod.token,
+      subscriptionOptions
     );
 
     // Clear feature access cache
@@ -964,7 +985,8 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       subscriptionId: subscription.id,
       plan,
       status: subscription.status,
-      nextBillingDate: subscription.nextBillingDate
+      nextBillingDate: subscription.nextBillingDate,
+      discountApplied: !!braintreeDiscountId
     });
   } catch (error) {
     console.error('Error creating Braintree subscription:', error);

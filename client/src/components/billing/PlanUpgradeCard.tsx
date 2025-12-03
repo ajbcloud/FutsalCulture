@@ -9,7 +9,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import BraintreeHostedFields, { BraintreeHostedFieldsRef } from '@/components/billing/BraintreeHostedFields';
+import BraintreeHostedFields, { BraintreeHostedFieldsRef, BillingAddress } from '@/components/billing/BraintreeHostedFields';
 
 interface PlanDetails {
   name: string;
@@ -295,7 +295,19 @@ export function PlanUpgradeCard({
 
     setIsLoading(true);
     try {
-      const result = await hostedFieldsRef.current.tokenize();
+      const billingAddress = hostedFieldsRef.current.getBillingAddress();
+      
+      if (!billingAddress.streetAddress) {
+        toast({
+          title: 'Missing Information',
+          description: 'Please enter your street address',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const result = await hostedFieldsRef.current.tokenize(billingAddress);
       await subscribeMutation.mutateAsync(result.nonce);
     } catch (error: any) {
       toast({
@@ -428,7 +440,7 @@ export function PlanUpgradeCard({
                 onError={(error) => {
                   toast({
                     title: 'Payment Error',
-                    description: error,
+                    description: error.message || 'Failed to load payment form',
                     variant: 'destructive',
                   });
                 }}
