@@ -36,7 +36,6 @@ export default function AdminSessionDetail() {
   // Fetch admin settings to get available locations
   const { data: adminSettings } = useQuery({
     queryKey: ['/api/admin/settings'],
-    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
   });
   
   // Convert available locations to a simple array of names for the dropdown

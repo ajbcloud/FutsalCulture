@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -243,10 +244,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuItem 
                   onClick={async () => {
                     try {
-                      await fetch('/api/auth/logout', {
-                        method: 'POST',
-                        credentials: 'include'
-                      });
+                      await apiRequest('POST', '/api/auth/logout');
                       window.location.href = '/';
                     } catch (error) {
                       console.error('Logout error:', error);

@@ -17,7 +17,7 @@ import { Label } from '../../components/ui/label';
 import { useToast } from '../../hooks/use-toast';
 import { format } from 'date-fns';
 import { Check, X, User, Users, CheckSquare, Square } from 'lucide-react';
-import { queryClient } from '../../lib/queryClient';
+import { queryClient, authFetch, apiRequest } from '../../lib/queryClient';
 import { Pagination } from '../../components/pagination';
 
 interface PendingRegistration {
@@ -74,7 +74,7 @@ export default function AdminPendingRegistrations() {
 
   const fetchPendingRegistrations = async () => {
     try {
-      const response = await fetch('/api/admin/pending-registrations');
+      const response = await authFetch('/api/admin/pending-registrations');
       if (!response.ok) throw new Error('Failed to fetch pending registrations');
       const data = await response.json();
       setRegistrations(data);
@@ -94,11 +94,7 @@ export default function AdminPendingRegistrations() {
   const handleApprove = async (id: string, type: string) => {
     setProcessing(id);
     try {
-      const response = await fetch(`/api/admin/registrations/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
-      });
+      const response = await apiRequest('POST', `/api/admin/registrations/${id}/approve`, { type });
 
       if (!response.ok) throw new Error('Failed to approve registration');
 
@@ -138,11 +134,7 @@ export default function AdminPendingRegistrations() {
 
     setProcessing(id);
     try {
-      const response = await fetch(`/api/admin/registrations/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, reason: rejectReason }),
-      });
+      const response = await apiRequest('POST', `/api/admin/registrations/${id}/reject`, { type, reason: rejectReason });
 
       if (!response.ok) throw new Error('Failed to reject registration');
 
@@ -221,11 +213,7 @@ export default function AdminPendingRegistrations() {
         .filter(r => selectedRegistrations.has(r.id))
         .map(r => ({ id: r.id, type: r.type }));
 
-      const response = await fetch('/api/admin/registrations/bulk-approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrations: selectedData }),
-      });
+      const response = await apiRequest('POST', '/api/admin/registrations/bulk-approve', { registrations: selectedData });
 
       if (!response.ok) throw new Error('Failed to bulk approve registrations');
       
@@ -280,13 +268,9 @@ export default function AdminPendingRegistrations() {
         .filter(r => selectedRegistrations.has(r.id))
         .map(r => ({ id: r.id, type: r.type }));
 
-      const response = await fetch('/api/admin/registrations/bulk-reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          registrations: selectedData,
-          reason: bulkRejectReason 
-        }),
+      const response = await apiRequest('POST', '/api/admin/registrations/bulk-reject', { 
+        registrations: selectedData,
+        reason: bulkRejectReason 
       });
 
       if (!response.ok) throw new Error('Failed to bulk reject registrations');

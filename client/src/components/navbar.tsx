@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle, Home } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
@@ -159,10 +160,7 @@ export default function Navbar() {
                   <DropdownMenuItem 
                     onClick={async () => {
                       try {
-                        await fetch('/api/auth/logout', {
-                          method: 'POST',
-                          credentials: 'include'
-                        });
+                        await apiRequest('POST', '/api/auth/logout');
                         window.location.href = '/';
                       } catch (error) {
                         console.error('Logout error:', error);
@@ -244,10 +242,7 @@ export default function Navbar() {
                   <button 
                     onClick={async () => {
                       try {
-                        await fetch('/api/auth/logout', {
-                          method: 'POST',
-                          credentials: 'include'
-                        });
+                        await apiRequest('POST', '/api/auth/logout');
                         window.location.href = '/';
                       } catch (error) {
                         console.error('Logout error:', error);

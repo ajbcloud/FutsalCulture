@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, get } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -81,11 +81,6 @@ export default function Help() {
   // Fetch admin settings for contact information
   const { data: settings } = useQuery({
     queryKey: ["/api/admin/settings"],
-    queryFn: async () => {
-      const response = await fetch("/api/admin/settings");
-      if (!response.ok) throw new Error("Failed to fetch settings");
-      return response.json();
-    },
   });
   
   // Generate random math captcha
@@ -122,12 +117,11 @@ export default function Help() {
           }
           
           // Check if user is a player
-          const playersResponse = await fetch("/api/players");
-          if (playersResponse.ok) {
-            const players = await playersResponse.json();
+          try {
+            const players = await get<any[]>("/api/players");
             const isPlayerUser = players.some((player: any) => player.userId === user.id);
             setIsParent(!isPlayerUser); // If not a player, then is a parent
-          } else {
+          } catch {
             setIsParent(true); // Default to parent if can't determine
           }
         } catch (error) {
@@ -202,15 +196,9 @@ export default function Help() {
     if (user) {
       try {
         // Check if the current user is a player
-        const playersResponse = await fetch("/api/players");
-        if (playersResponse.ok) {
-          const players = await playersResponse.json();
-          const isPlayer = players.some((player: any) => player.userId === user.id);
-          source = isPlayer ? "player_portal" : "parent_portal";
-        } else {
-          // Fallback to parent portal if we can't determine
-          source = "parent_portal";
-        }
+        const players = await get<any[]>("/api/players");
+        const isPlayer = players.some((player: any) => player.userId === user.id);
+        source = isPlayer ? "player_portal" : "parent_portal";
       } catch (error) {
         console.error("Error determining user type:", error);
         // Fallback to parent portal if error occurs

@@ -27,6 +27,7 @@ import { Pagination } from '@/components/pagination';
 import LocationLink from '@/components/LocationLink';
 import { useQuery } from '@tanstack/react-query';
 import { useHasFeature } from '@/hooks/use-feature-flags';
+import { apiRequest, get } from '@/lib/queryClient';
 
 export default function AdminSessions() {
   const [sessions, setSessions] = useState([]);
@@ -77,7 +78,6 @@ export default function AdminSessions() {
   // Fetch admin settings to get available locations
   const { data: adminSettings } = useQuery({
     queryKey: ['/api/admin/settings'],
-    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
   });
   
   // Convert available locations to a simple array of names for the dropdown
@@ -288,38 +288,28 @@ export default function AdminSessions() {
 
     setCreatingGroup(true);
     try {
-      const groupResponse = await fetch('/api/contact-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: groupFormData.name,
-          description: groupFormData.description,
-        }),
+      const groupResult = await apiRequest('POST', '/api/contact-groups', {
+        name: groupFormData.name,
+        description: groupFormData.description,
       });
 
-      if (!groupResponse.ok) throw new Error('Failed to create group');
-      const { group } = await groupResponse.json();
+      const { group } = groupResult as { group: { id: string } };
 
-      const allParticipants = [];
+      const allParticipants: any[] = [];
       const sessionIds = Array.from(selectedSessions);
       for (const sessionId of sessionIds) {
-        const response = await fetch(`/api/admin/sessions/${sessionId}/participants`);
-        if (response.ok) {
-          const { participants } = await response.json();
+        try {
+          const { participants } = await get<{ participants: any[] }>(`/api/admin/sessions/${sessionId}/participants`);
           allParticipants.push(...participants);
+        } catch {
+          // Continue if one session fails
         }
       }
 
       const uniqueUserIds = Array.from(new Set(allParticipants.map((p: any) => p.id)));
 
       if (uniqueUserIds.length > 0) {
-        const bulkResponse = await fetch(`/api/contact-groups/${group.id}/members/bulk`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userIds: uniqueUserIds }),
-        });
-
-        if (!bulkResponse.ok) throw new Error('Failed to add members to group');
+        await apiRequest('POST', `/api/contact-groups/${group.id}/members/bulk`, { userIds: uniqueUserIds });
       }
 
       toast({ 

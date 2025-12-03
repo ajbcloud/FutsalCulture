@@ -21,16 +21,20 @@ import { adminParents, adminPlayers } from '../../lib/adminApi';
 import { useLocation, Link } from 'wouter';
 import { Pagination } from '../../components/pagination';
 import { useQuery } from '@tanstack/react-query';
+import { authFetch } from '../../lib/queryClient';
+
+interface ConsentStatus {
+  completedCount: number;
+  missingCount: number;
+  totalTemplates: number;
+  needsAdultResign: boolean;
+  invalidatedTypes?: string[];
+}
 
 // Consent Status Cell Component for Parents
 function ParentConsentStatusCell({ parentId, parentName }: { parentId: string; parentName: string }) {
-  const { data: consentStatus, isLoading } = useQuery({
-    queryKey: [`/api/admin/parents/${parentId}/consent-status`],
-    queryFn: async () => {
-      const response = await fetch(`/api/admin/parents/${parentId}/consent-status`);
-      if (!response.ok) throw new Error('Failed to fetch consent status');
-      return response.json();
-    },
+  const { data: consentStatus, isLoading } = useQuery<ConsentStatus>({
+    queryKey: ['/api/admin/parents', parentId, 'consent-status'],
     enabled: !!parentId
   });
 
@@ -105,7 +109,7 @@ export default function AdminParents() {
       const queryString = params.toString();
       const url = queryString ? `/api/admin/parents?${queryString}` : '/api/admin/parents';
       
-      const response = await fetch(url);
+      const response = await authFetch(url);
       const data = await response.json();
       
       // Handle error response
@@ -342,7 +346,7 @@ export default function AdminParents() {
       const sendInviteEmails = (document.getElementById('sendInviteEmails') as HTMLInputElement)?.checked;
       formData.append('sendInviteEmails', sendInviteEmails?.toString() || 'false');
       
-      const response = await fetch('/api/admin/imports/parents', {
+      const response = await authFetch('/api/admin/imports/parents', {
         method: 'POST',
         body: formData,
       });

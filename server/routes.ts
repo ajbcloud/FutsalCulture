@@ -204,72 +204,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Duplicate endpoint removed - now using public version above
 
-  // Auth routes
+  // Auth routes - Clerk-only authentication
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      let userId;
-
-      // Priority 1: Check if user was already set by syncClerkUser middleware (Clerk auth)
-      if (req.user?.id) {
-        userId = req.user.id;
-        console.log("✓ Using Clerk-synced user:", userId);
-      }
-      // Priority 2: Check for local session (password-based users)
-      else if (req.session?.userId) {
-        userId = req.session.userId;
-        console.log("✓ Using session user:", userId);
-      }
-      // Priority 3: In development, allow the hardcoded super admin user to bypass auth
-      else if (process.env.NODE_ENV === 'development') {
-        userId = FAILSAFE_SUPER_ADMIN_ID;
-        // IMPORTANT: Set the session so subsequent requests work
-        req.session.userId = userId;
-        await new Promise((resolve) => req.session.save(resolve));
-        console.log("🔧 Development mode: Using failsafe admin ID and creating session");
-      }
-      // No authentication found
-      else {
+      // User must be set by syncClerkUser middleware (Clerk auth via Bearer token)
+      if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      let user = await storage.getUser(userId);
-
-      // Apply failsafe super admin permissions if this is the hardcoded admin
-      if (userId === FAILSAFE_SUPER_ADMIN_ID) {
-        if (user) {
-          // Ensure failsafe admin always has super admin permissions, regardless of database state
-          user = {
-            ...user,
-            isSuperAdmin: true,
-            isAdmin: true,
-          };
-        } else {
-          // If failsafe admin doesn't exist in database, create a minimal user object
-          console.log("⚠️ Failsafe super admin not found in database, creating virtual user");
-          user = {
-            id: userId,
-            username: "failsafe-admin",
-            email: "admin@system.local",
-            firstName: "Admin",
-            lastName: "User",
-            phone: "",
-            isAdmin: true,
-            isSuperAdmin: true,
-            isAssistant: false,
-            tenantId: null, // Super admin can access all tenants
-            stripeCustomerId: null,
-            stripeSubscriptionId: null,
-            planId: 'elite' as const,
-            billingStatus: 'active' as const,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-        }
-        console.log("✓ Failsafe super admin permissions applied:", { id: user.id, isSuperAdmin: user.isSuperAdmin });
-      }
-
-      // Log user for debugging
-      console.log("User fetched:", { id: user?.id, isAdmin: user?.isAdmin, isAssistant: user?.isAssistant, isSuperAdmin: user?.isSuperAdmin });
+      const user = req.user;
 
       // Calculate capabilities for the user based on their role
       const capabilities = ALL_CAPABILITIES.filter(capability => 
@@ -278,39 +221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ ...user, capabilities });
     } catch (error) {
-      // Even if database fails, provide failsafe admin access
-      let userId = req.user?.id;
-      // In development mode, also check for hardcoded admin
-      if (!userId && process.env.NODE_ENV === 'development') {
-        userId = FAILSAFE_SUPER_ADMIN_ID;
-      }
-      if (userId === FAILSAFE_SUPER_ADMIN_ID) {
-        console.log("✓ Database error - providing failsafe super admin access");
-        const failsafeUser = {
-          id: userId,
-          username: "failsafe-admin",
-          email: "admin@system.local",
-          firstName: "Admin",
-          lastName: "User",
-          phone: "",
-          isAdmin: true,
-          isSuperAdmin: true,
-          isAssistant: false,
-          tenantId: null,
-          stripeCustomerId: null,
-          stripeSubscriptionId: null,
-          planId: 'elite' as const,
-          billingStatus: 'active' as const,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        // Calculate capabilities for failsafe user
-        const capabilities = ALL_CAPABILITIES.filter(capability => 
-          userHasCapability(failsafeUser, capability)
-        );
-        return res.json({ ...failsafeUser, capabilities });
-      }
-
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }

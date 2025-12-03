@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { FileText, Upload, Download, Trash2, Eye, Info, Copy, X } from "lucide-react";
 import { ObjectUploader } from "../ObjectUploader";
@@ -313,12 +313,11 @@ export default function ConsentTemplateSettings() {
   // Preview PDF mutation  
   const previewMutation = useMutation({
     mutationFn: async ({ templateType, title }: { templateType: string; title: string }) => {
-      const response = await fetch(`/api/admin/consent-templates/${templateType}/preview`, {
+      const response = await authFetch(`/api/admin/consent-templates/${templateType}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include'
       });
       
       if (!response.ok) {

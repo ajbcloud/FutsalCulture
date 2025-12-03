@@ -64,20 +64,8 @@ export default function AdminPayments() {
   const { hasFeature: hasPaymentsFeature } = useHasFeature(FEATURE_KEYS.PAYMENTS_ENABLED);
   
   // Check active payment processor
-  const { data: paymentProcessor } = useQuery({
+  const { data: paymentProcessor } = useQuery<{ provider: string | null; isConfigured: boolean }>({
     queryKey: ['/api/billing/active-processor'],
-    queryFn: async () => {
-      try {
-        const response = await fetch('/api/billing/active-processor');
-        if (!response.ok) {
-          throw new Error('Failed to fetch payment processor');
-        }
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching payment processor:', error);
-        return null;
-      }
-    },
   });
   
   const isAutomaticPaymentsEnabled = paymentProcessor?.provider && paymentProcessor?.isConfigured;

@@ -3,21 +3,17 @@ import { hasFeature, getEnabledFeatures, checkPlanLimits, PLAN_LIMITS, FEATURE_N
 import type { PlanLevel, FeatureKey } from '@shared/schema';
 import React from 'react';
 
+type PlanFeaturesResponse = {
+  planLevel: PlanLevel;
+  features: Record<FeatureKey, boolean>;
+  limits: typeof PLAN_LIMITS[PlanLevel];
+  playerCount: number;
+};
+
 // Hook to get current tenant's plan level and features
 export function usePlanFeatures() {
-  return useQuery({
+  return useQuery<PlanFeaturesResponse>({
     queryKey: ['/api/tenant/plan-features'],
-    queryFn: async () => {
-      const response = await fetch('/api/tenant/plan-features');
-      if (!response.ok) throw new Error('Failed to fetch plan features');
-      const data = await response.json();
-      return data as {
-        planLevel: PlanLevel;
-        features: Record<FeatureKey, boolean>;
-        limits: typeof PLAN_LIMITS[PlanLevel];
-        playerCount: number;
-      };
-    },
   });
 }
 

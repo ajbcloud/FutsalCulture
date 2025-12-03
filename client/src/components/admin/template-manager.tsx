@@ -109,13 +109,8 @@ export default function TemplateManager() {
     active: true,
   });
 
-  const { data: templatesData, isLoading } = useQuery({
+  const { data: templatesData, isLoading } = useQuery<{ templates: NotificationTemplate[] }>({
     queryKey: ['/api/templates'],
-    queryFn: async () => {
-      const response = await fetch('/api/templates');
-      if (!response.ok) throw new Error('Failed to fetch templates');
-      return response.json();
-    }
   });
 
   const templates = templatesData?.templates || [];

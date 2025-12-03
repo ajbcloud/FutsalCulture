@@ -100,6 +100,20 @@ export async function get<T>(url: string): Promise<T> {
   }
 }
 
+// Drop-in replacement for fetch() that adds auth headers automatically
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...options.headers,
+    },
+    credentials: "include",
+  });
+}
+
 export async function patch<T>(url: string, data: any): Promise<T> {
   const authHeaders = await getAuthHeaders();
   

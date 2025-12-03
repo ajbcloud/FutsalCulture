@@ -21,7 +21,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, authFetch } from '@/lib/queryClient';
 import { Pagination } from './pagination';
 
 interface SessionHistoryItem {
@@ -63,18 +63,13 @@ export function PlayerSessionHistoryDropdown({
 
   // Fetch system settings to get refund cutoff time
   const { data: systemSettings } = useQuery({
-    queryKey: ['system-settings'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/settings');
-      if (!response.ok) throw new Error('Failed to fetch settings');
-      return response.json();
-    },
+    queryKey: ['/api/admin/settings'],
   });
 
   const { data: sessionHistory, isLoading } = useQuery({
     queryKey: ['player-session-history', playerId, currentPage],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/players/${playerId}/session-history?page=${currentPage}&limit=${itemsPerPage}`);
+      const response = await authFetch(`/api/admin/players/${playerId}/session-history?page=${currentPage}&limit=${itemsPerPage}`);
       if (!response.ok) {
         throw new Error('Failed to fetch session history');
       }

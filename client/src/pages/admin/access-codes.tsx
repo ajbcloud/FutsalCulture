@@ -49,13 +49,8 @@ export default function AccessCodes() {
   const queryClient = useQueryClient();
 
   // Fetch all sessions
-  const { data: sessions = [], isLoading } = useQuery({
+  const { data: sessions = [], isLoading } = useQuery<Session[]>({
     queryKey: ['/api/admin/sessions-with-access-codes'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/sessions-with-access-codes');
-      if (!response.ok) throw new Error('Failed to fetch sessions');
-      return response.json();
-    }
   });
 
   // Update session access code mutation

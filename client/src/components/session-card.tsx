@@ -100,7 +100,6 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
   // Fetch admin settings to get location address data
   const { data: adminSettings } = useQuery({
     queryKey: ['/api/admin/settings'],
-    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
   });
 
   const signupsCount = sessionData?.signupsCount || 0;

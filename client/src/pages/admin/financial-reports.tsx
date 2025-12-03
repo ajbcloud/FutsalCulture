@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, authFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -198,7 +198,7 @@ export default function FinancialReports() {
       if (typeFilter !== 'all') params.append('type', typeFilter);
       if (syncStatusFilter !== 'all') params.append('syncStatus', syncStatusFilter);
       
-      const response = await fetch(`/api/admin/integrations/quickbooks/reports/transactions?${params}`);
+      const response = await authFetch(`/api/admin/integrations/quickbooks/reports/transactions?${params}`);
       if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();
     },
@@ -266,7 +266,7 @@ export default function FinancialReports() {
         endDate: endDate.toISOString(),
       });
       
-      const response = await fetch(`/api/admin/integrations/quickbooks/reports/export?${params}`);
+      const response = await authFetch(`/api/admin/integrations/quickbooks/reports/export?${params}`);
       if (!response.ok) throw new Error('Failed to export CSV');
       
       const blob = await response.blob();
@@ -300,7 +300,7 @@ export default function FinancialReports() {
         endDate: endDate.toISOString(),
       });
       
-      const response = await fetch(`/api/admin/integrations/quickbooks/reports/export?${params}`);
+      const response = await authFetch(`/api/admin/integrations/quickbooks/reports/export?${params}`);
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Failed to export PDF');

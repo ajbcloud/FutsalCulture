@@ -107,7 +107,6 @@ export default function HouseholdSection() {
 
   const { data: agePolicyData } = useQuery<AgePolicy>({
     queryKey: ["/api/tenant/age-policy"],
-    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
     enabled: isAuthenticated,
   });
 
