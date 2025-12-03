@@ -951,17 +951,26 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
 
     // Look up Braintree discount ID if discount code provided
     let braintreeDiscountId: string | null = null;
-    if (discountCode) {
+    if (discountCode && typeof discountCode === 'string' && discountCode.trim()) {
       try {
-        const { getBraintreeDiscountId } = await import('./services/braintreeDiscountService');
-        braintreeDiscountId = await getBraintreeDiscountId(discountCode, currentUser.tenantId);
+        const { getBraintreeDiscountId, validateBraintreeDiscountId } = await import('./services/braintreeDiscountService');
+        braintreeDiscountId = await getBraintreeDiscountId(discountCode.trim(), currentUser.tenantId);
+        
         if (braintreeDiscountId) {
-          console.log(`✅ Found Braintree discount ID for code ${discountCode}: ${braintreeDiscountId}`);
+          // Validate the discount still exists in Braintree
+          const validation = await validateBraintreeDiscountId(currentUser.tenantId, braintreeDiscountId);
+          if (validation.valid) {
+            console.log(`✅ Braintree discount validated for tenant ${currentUser.tenantId}: code=${discountCode}, discountId=${braintreeDiscountId}`);
+          } else {
+            console.warn(`⚠️ Braintree discount no longer valid for tenant ${currentUser.tenantId}: ${validation.error}`);
+            braintreeDiscountId = null;
+          }
         } else {
-          console.log(`⚠️ No Braintree discount linked to code: ${discountCode}`);
+          console.log(`ℹ️ No Braintree discount linked to code "${discountCode}" for tenant ${currentUser.tenantId}`);
         }
       } catch (error) {
-        console.error('Error looking up Braintree discount:', error);
+        console.error(`Error looking up Braintree discount for tenant ${currentUser.tenantId}:`, error);
+        braintreeDiscountId = null;
       }
     }
 

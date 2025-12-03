@@ -297,10 +297,18 @@ export function PlanUpgradeCard({
     try {
       const billingAddress = hostedFieldsRef.current.getBillingAddress();
       
-      if (!billingAddress.streetAddress) {
+      const missingFields: string[] = [];
+      if (!billingAddress.streetAddress?.trim()) {
+        missingFields.push('street address');
+      }
+      if (!billingAddress.postalCode?.trim()) {
+        missingFields.push('postal code');
+      }
+      
+      if (missingFields.length > 0) {
         toast({
-          title: 'Missing Information',
-          description: 'Please enter your street address',
+          title: 'Missing Billing Information',
+          description: `Please enter your ${missingFields.join(' and ')} to complete payment.`,
           variant: 'destructive',
         });
         setIsLoading(false);
