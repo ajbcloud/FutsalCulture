@@ -2477,13 +2477,13 @@ export async function setupAdminRoutes(app: any) {
       }, {} as any);
 
       // Use tenant's actual organization name and admin email as defaults
-      const defaultBusinessName = tenantInfo?.name || "Your Organization";
+      const tenantName = tenantInfo?.name || "Your Organization";
       const defaultContactEmail = currentUser?.email || "admin@example.com";
 
       // Default settings if none exist
       const defaultSettings = {
         autoApproveRegistrations: true,
-        businessName: defaultBusinessName,
+        businessName: tenantName, // Will be overridden below if saved value exists
         businessLogo: "",
         contactEmail: defaultContactEmail,
         supportEmail: defaultContactEmail,
@@ -2509,6 +2509,11 @@ export async function setupAdminRoutes(app: any) {
         enableHelpRequests: true, // Default to enabled for existing tenants
         ...settingsMap
       };
+      
+      // Always fall back to tenant name if businessName is empty or not set
+      if (!defaultSettings.businessName || defaultSettings.businessName === '' || defaultSettings.businessName === 'Your Organization') {
+        defaultSettings.businessName = tenantName;
+      }
       
       // Convert legacy paymentReminderHours to paymentReminderMinutes if it exists
       if (settingsMap.paymentReminderHours && !settingsMap.paymentReminderMinutes) {
