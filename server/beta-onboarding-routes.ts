@@ -4,6 +4,7 @@ import {
   tenants, 
   tenantMemberships,
   invites,
+  inviteCodes,
   emailVerifications, 
   subscriptions,
   auditEvents,
@@ -51,6 +52,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
         tenantCode,
         contactName: contact_name,
         contactEmail: contact_email,
+        inviteCode: slug.toUpperCase(), // Legacy field - use slug as invite code
         planLevel: "free", // Always start new tenants on free plan
       }).returning() as any[];
       const tenant = tenantResult[0];
@@ -72,6 +74,16 @@ export function setupBetaOnboardingRoutes(app: Express) {
         planCode: "free",
         since: new Date(),
         until: null
+      });
+
+      // Create default invite code using the slug
+      await db.insert(inviteCodes).values({
+        tenantId: tenant.id,
+        code: slug.toUpperCase(),
+        codeType: "invite",
+        description: "Default organization invite code",
+        isDefault: true,
+        isActive: true,
       });
 
       // Record audit event
@@ -182,6 +194,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
         tenantCode,
         contactName: contact_name,
         contactEmail: userEmail,
+        inviteCode: slug.toUpperCase(), // Legacy field - use slug as invite code
         planLevel: "free",
       }).returning() as any[];
       const tenant = tenantResult[0];
@@ -198,6 +211,16 @@ export function setupBetaOnboardingRoutes(app: Express) {
         planCode: "free",
         since: new Date(),
         until: null
+      });
+
+      // Create default invite code using the slug
+      await db.insert(inviteCodes).values({
+        tenantId: tenant.id,
+        code: slug.toUpperCase(),
+        codeType: "invite",
+        description: "Default organization invite code",
+        isDefault: true,
+        isActive: true,
       });
 
       // Create or find user with Clerk ID
