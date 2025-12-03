@@ -183,79 +183,36 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
-    let userId;
+    let user = null;
     
-    // Session validation for authentication
-    
-    // Check for local session first (password-based users)  
-    if ((req as any).session?.userId) {
-      userId = (req as any).session.userId;
+    // PRIORITY 1: Check if user was already set by Clerk's syncClerkUser middleware
+    if ((req as any).user?.id) {
+      user = (req as any).user;
     }
-    // Check direct user.id format (local auth)
-    else if ((req as any).user?.id) {
-      userId = (req as any).user.id;
+    // PRIORITY 2: Check for local session (password-based users)
+    else if ((req as any).session?.userId) {
+      user = await storage.getUser((req as any).session.userId);
     }
-    // Check if user is authenticated via isAuthenticated() passport method
+    // PRIORITY 3: Check if user is authenticated via isAuthenticated() passport method
     else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
-      userId = (req as any).user.id;
-    }
-    // In development, always allow the hardcoded super admin user to bypass auth
-    if (process.env.NODE_ENV === 'development' && !userId) {
-      userId = 'ajosephfinch';
-      // IMPORTANT: Set the session so subsequent requests work
-      if ((req as any).session) {
-        (req as any).session.userId = userId;
-        await new Promise((resolve) => (req as any).session.save(resolve));
-      }
-      // Development failsafe admin access
+      user = (req as any).user;
     }
     
     // Authentication validation complete
     
-    if (!userId) {
+    if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
-    }
-    
-    // Check user's admin status directly from database
-    let user = await storage.getUser(userId);
-    
-    // Apply failsafe super admin permissions if this is the hardcoded admin
-    if (userId === 'ajosephfinch') {
-      if (user) {
-        // Ensure failsafe admin always has super admin permissions
-        user = {
-          ...user,
-          isSuperAdmin: true,
-          isAdmin: true,
-        };
-        // Enhanced failsafe admin permissions
-      } else {
-        // If failsafe admin doesn't exist in database, create a minimal user object
-        // Failsafe super admin virtual user - no tenant assignment
-        user = {
-          id: userId,
-          email: "ajosephfinch@gmail.com",
-          tenantId: null,
-          tenant_id: null,
-          isAdmin: true,
-          isSuperAdmin: true,
-          isAssistant: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
     }
     
     // Final user permissions validation
     
-    if (!user?.isAdmin && !user?.isAssistant) {
+    if (!user?.isAdmin && !user?.isSuperAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
     
     // Attach user to request for convenience
     (req as any).currentUser = user;
     (req as any).adminTenantId = user?.tenantId;
-    (req as any).user = { ...((req as any).user || {}), id: userId };
     next();
   } catch (error) {
     console.error("Error checking admin access:", error);
@@ -266,24 +223,23 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
 // Middleware to require full admin (not assistant)
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
-    let userId;
+    let user = null;
     
-    // Check for local session first (password-based users)
-    if ((req as any).session?.userId) {
-      userId = (req as any).session.userId;
+    // PRIORITY 1: Check if user was already set by Clerk's syncClerkUser middleware
+    if ((req as any).user?.id) {
+      user = (req as any).user;
     }
-    // Check direct req.user.id format
-    else if ((req as any).user?.id) {
-      userId = (req as any).user.id;
+    // PRIORITY 2: Check for local session (password-based users)
+    else if ((req as any).session?.userId) {
+      user = await storage.getUser((req as any).session.userId);
     }
     
-    if (!userId) {
+    if (!user) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
-    // Check user's admin status directly from database
-    const user = await storage.getUser(userId);
-    if (!user?.isAdmin) {
+    // Check user's admin status
+    if (!user?.isAdmin && !user?.isSuperAdmin) {
       return res.status(403).json({ message: "Full admin access required" });
     }
     
