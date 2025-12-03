@@ -1,134 +1,23 @@
-import { SignUp, useAuth, useUser, useOrganizationList } from "@clerk/clerk-react";
+import { SignUp, useAuth } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
 export default function SignupConsumer() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn, isLoaded } = useAuth();
-  const { user: clerkUser } = useUser();
-  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
-    userMemberships: true
-  });
   const [, navigate] = useLocation();
-  const { toast } = useToast();
-  
-  const [joiningClub, setJoiningClub] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
-  const [joinSuccess, setJoinSuccess] = useState(false);
   
   // Check for pending club code
   const pendingCode = typeof window !== 'undefined' ? localStorage.getItem('pendingClubCode') : null;
 
   useEffect(() => {
-    async function handlePostSignup() {
-      if (!isLoaded || !orgsLoaded || !isSignedIn || !clerkUser) {
-        return;
-      }
-      
-      // If user already has org memberships, they're already set up
-      if (userMemberships?.data && userMemberships.data.length > 0) {
-        localStorage.removeItem('pendingClubCode');
-        navigate("/app");
-        return;
-      }
-      
-      // If there's a pending club code, use it to join
-      if (pendingCode && !joiningClub && !joinSuccess) {
-        setJoiningClub(true);
-        setJoinError(null);
-        
-        try {
-          const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
-            tenant_code: pendingCode,
-            first_name: clerkUser.firstName || '',
-            last_name: clerkUser.lastName || '',
-            role: 'parent'
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            localStorage.removeItem('pendingClubCode');
-            setJoinSuccess(true);
-            toast({
-              title: "Welcome!",
-              description: `You've joined ${result.tenantName}. Redirecting...`,
-            });
-            
-            // Give Clerk a moment to sync the org membership, then redirect
-            setTimeout(() => {
-              window.location.href = "/app";
-            }, 1500);
-          } else {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to join club");
-          }
-        } catch (error) {
-          console.error("Error joining club:", error);
-          setJoinError(error instanceof Error ? error.message : "Failed to join club");
-          localStorage.removeItem('pendingClubCode');
-          setJoiningClub(false);
-        }
-      } else if (!pendingCode) {
-        // No pending code, redirect to unassigned or join page
-        navigate("/app-unassigned");
-      }
+    // If user is already signed in, redirect to auth callback to process
+    if (isLoaded && isSignedIn) {
+      navigate("/auth-callback");
     }
-    
-    handlePostSignup();
-  }, [isLoaded, orgsLoaded, isSignedIn, clerkUser, userMemberships, pendingCode, joiningClub, joinSuccess, navigate, toast]);
-  
-  // Show joining progress
-  if (isLoaded && isSignedIn && (joiningClub || joinSuccess)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
-        <div className="text-center max-w-md">
-          {joinSuccess ? (
-            <>
-              <CheckCircle className={`h-12 w-12 mx-auto mb-4 text-green-500`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Welcome to your club!
-              </h2>
-              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                Redirecting to your dashboard...
-              </p>
-            </>
-          ) : joinError ? (
-            <>
-              <AlertCircle className={`h-12 w-12 mx-auto mb-4 text-red-500`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Unable to join club
-              </h2>
-              <p className={`mb-4 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                {joinError}
-              </p>
-              <button
-                onClick={() => navigate("/join")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                data-testid="button-try-again"
-              >
-                Try a different code
-              </button>
-            </>
-          ) : (
-            <>
-              <Loader2 className={`h-12 w-12 animate-spin mx-auto mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
-              <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Joining your club...
-              </h2>
-              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                Setting up your account
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
+  }, [isLoaded, isSignedIn, navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
@@ -147,7 +36,8 @@ export default function SignupConsumer() {
           routing="path" 
           path="/signup-consumer"
           signInUrl="/login-consumer"
-          forceRedirectUrl="/signup-consumer"
+          forceRedirectUrl="/auth-callback"
+          fallbackRedirectUrl="/auth-callback"
           appearance={{
             variables: {
               colorPrimary: "#3b82f6",
