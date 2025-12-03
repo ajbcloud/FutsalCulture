@@ -43,13 +43,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async () => {
     try {
+      // Get Clerk token - this validates the user is properly signed in
       const token = await getToken();
+      
+      console.log("🔐 AuthContext.fetchUser:", { 
+        hasToken: !!token,
+        tokenPreview: token ? token.substring(0, 50) + '...' : 'null',
+        isSignedIn
+      });
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn("⚠️ No Clerk token available - user may not be properly authenticated");
       }
       
       const response = await fetch('/api/auth/user', {
@@ -57,10 +67,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: 'include'
       });
       
+      console.log("🔐 AuthContext.fetchUser response:", { 
+        status: response.status,
+        ok: response.ok 
+      });
+      
       if (response.ok) {
         const userData = await response.json();
+        console.log("✅ AuthContext user loaded:", { 
+          id: userData.id, 
+          email: userData.email,
+          tenantId: userData.tenantId 
+        });
         setUser(userData);
       } else {
+        console.warn("❌ Failed to fetch user, status:", response.status);
         setUser(null);
       }
     } catch (error) {

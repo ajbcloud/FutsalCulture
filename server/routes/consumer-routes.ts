@@ -2,13 +2,20 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { tenants, users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-import { clerkClient } from '@clerk/express';
+import { clerkClient, getAuth } from '@clerk/express';
 
 const router = Router();
 
 router.post('/join', async (req: Request, res: Response) => {
   try {
-    const clerkUserId = (req as any).auth?.userId;
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    
+    console.log("🔍 Consumer join - auth check:", {
+      hasAuth: !!auth,
+      userId: clerkUserId,
+      authHeader: !!req.headers.authorization,
+    });
     
     if (!clerkUserId) {
       return res.status(401).json({ error: "Not authenticated" });
