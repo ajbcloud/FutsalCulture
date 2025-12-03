@@ -214,7 +214,9 @@ export default function Join() {
             <form onSubmit={(e) => {
               e.preventDefault();
               if (formData.code) {
-                navigate(`/signup?code=${encodeURIComponent(formData.code)}`);
+                // Store the code in localStorage and redirect to consumer signup
+                localStorage.setItem('pendingClubCode', formData.code.toUpperCase());
+                navigate('/signup-consumer');
               }
             }} className="space-y-4">
               <div className="space-y-2">

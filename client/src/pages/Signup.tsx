@@ -1,10 +1,23 @@
 import { useTheme } from "@/contexts/ThemeContext";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Building2, Users } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Signup() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const [, navigate] = useLocation();
+  
+  // Check for access code in URL and auto-redirect to consumer signup
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      // Store the code and redirect to consumer signup
+      localStorage.setItem('pendingClubCode', code);
+      navigate('/signup-consumer');
+    }
+  }, [navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
