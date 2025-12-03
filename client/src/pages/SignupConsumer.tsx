@@ -7,17 +7,37 @@ export default function SignupConsumer() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn, isLoaded } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   
   // Check for pending club code
   const pendingCode = typeof window !== 'undefined' ? localStorage.getItem('pendingClubCode') : null;
+  
+  // Detect if we're on Clerk's task sub-path and redirect to our custom handler
+  const isOnTaskPath = typeof window !== 'undefined' && 
+    (window.location.pathname.includes('/tasks/') || location.includes('/tasks/'));
 
   useEffect(() => {
-    // If user is already signed in, redirect to auth callback to process
-    if (isLoaded && isSignedIn) {
-      navigate("/auth-callback");
+    // If on task path (like /signup-consumer/tasks/choose-organization), 
+    // redirect to our custom onboarding page
+    if (isOnTaskPath) {
+      window.location.href = "/onboarding/choose-organization";
+      return;
     }
-  }, [isLoaded, isSignedIn, navigate]);
+    
+    // If user is already signed in, redirect to onboarding to handle org selection
+    if (isLoaded && isSignedIn) {
+      window.location.href = "/onboarding/choose-organization";
+    }
+  }, [isLoaded, isSignedIn, isOnTaskPath]);
+  
+  // Show loading while redirecting from task path
+  if (isOnTaskPath) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
