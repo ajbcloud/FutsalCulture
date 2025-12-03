@@ -26,6 +26,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { PlanUpgradeCard } from "@/components/billing/PlanUpgradeCard";
+import { FeatureGrid } from "@/components/billing/FeatureGrid";
 import { useTenantPlan } from "@/hooks/useTenantPlan";
 
 interface PaymentHistoryItem {
@@ -211,6 +212,9 @@ export default function AdminBilling() {
                 </Card>
               )}
             </div>
+
+            {/* Feature Comparison Grid */}
+            <FeatureGrid currentPlan={currentPlan} />
           </TabsContent>
 
           <TabsContent value="history" className="mt-6 space-y-6">
