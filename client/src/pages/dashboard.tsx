@@ -106,14 +106,7 @@ export default function Dashboard() {
   });
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery<FutsalSession[]>({
-    queryKey: ["/api/sessions", "includePast"],
-    queryFn: async () => {
-      const response = await fetch("/api/sessions?includePast=true");
-      if (!response.ok) {
-        throw new Error("Failed to fetch sessions");
-      }
-      return response.json();
-    },
+    queryKey: ["/api/sessions?includePast=true"],
     enabled: isAuthenticated,
   });
 
@@ -130,8 +123,7 @@ export default function Dashboard() {
 
   const { data: agePolicy } = useQuery<AgePolicy>({
     queryKey: ["/api/tenant/age-policy"],
-    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!user?.tenantId,
   });
 
   // Fetch households to check if user has a household
