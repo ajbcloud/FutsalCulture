@@ -1,26 +1,96 @@
-import { SignIn, useAuth, useOrganizationList } from "@clerk/clerk-react";
+import { SignIn, useAuth, useUser } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { Loader2 } from "lucide-react";
+
+interface ResolveUserResponse {
+  success: boolean;
+  found: boolean;
+  linked?: boolean;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    tenantId: string | null;
+    isAdmin: boolean;
+    role: string;
+  };
+  tenant?: {
+    id: string;
+    name: string;
+    subdomain: string;
+  } | null;
+  message?: string;
+}
 
 export default function LoginBusiness() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const { isSignedIn, isLoaded } = useAuth();
-  const { userMemberships, isLoaded: orgsLoaded } = useOrganizationList({
-    userMemberships: true
-  });
+  const { isSignedIn, isLoaded, userId } = useAuth();
+  const { user: clerkUser } = useUser();
   const [, navigate] = useLocation();
+  const [resolving, setResolving] = useState(false);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && orgsLoaded && isSignedIn) {
-      if (userMemberships?.data && userMemberships.data.length > 0) {
-        navigate("/admin/dashboard");
-      } else {
+    async function resolveUser() {
+      if (!isLoaded || !isSignedIn || !userId || resolving || resolved) {
+        return;
+      }
+
+      setResolving(true);
+
+      try {
+        const email = clerkUser?.primaryEmailAddress?.emailAddress;
+        
+        const response = await fetch('/api/auth/resolve-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            clerkUserId: userId,
+            email: email,
+          }),
+        });
+
+        const data: ResolveUserResponse = await response.json();
+
+        if (data.success && data.found) {
+          if (data.user?.isAdmin || data.user?.role === 'tenant_admin') {
+            navigate("/admin/dashboard");
+          } else if (data.user?.tenantId) {
+            navigate("/");
+          } else {
+            navigate("/get-started");
+          }
+        } else {
+          navigate("/get-started");
+        }
+        
+        setResolved(true);
+      } catch (error) {
+        console.error('Error resolving user:', error);
         navigate("/get-started");
+        setResolved(true);
       }
     }
-  }, [isLoaded, orgsLoaded, isSignedIn, userMemberships, navigate]);
+
+    resolveUser();
+  }, [isLoaded, isSignedIn, userId, clerkUser, resolving, resolved, navigate]);
+
+  if (isLoaded && isSignedIn && (resolving || resolved)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629]">
+        <div className="text-center">
+          <Loader2 className={`h-8 w-8 animate-spin mx-auto mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
+          <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Setting up your account...
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">

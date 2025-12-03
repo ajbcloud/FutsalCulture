@@ -380,4 +380,115 @@ router.post('/business-signup/attach', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/resolve-user', async (req: Request, res: Response) => {
+  try {
+    const { clerkUserId, email } = req.body;
+
+    if (!clerkUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Clerk user ID is required',
+      });
+    }
+
+    let user = await db.select()
+      .from(users)
+      .where(eq(users.clerkUserId, clerkUserId))
+      .limit(1);
+
+    if (user.length > 0) {
+      const foundUser = user[0];
+      let tenant = null;
+      if (foundUser.tenantId) {
+        const [t] = await db.select()
+          .from(tenants)
+          .where(eq(tenants.id, foundUser.tenantId))
+          .limit(1);
+        tenant = t;
+      }
+
+      return res.json({
+        success: true,
+        found: true,
+        user: {
+          id: foundUser.id,
+          email: foundUser.email,
+          firstName: foundUser.firstName,
+          lastName: foundUser.lastName,
+          tenantId: foundUser.tenantId,
+          isAdmin: foundUser.isAdmin,
+          role: foundUser.role,
+        },
+        tenant: tenant ? {
+          id: tenant.id,
+          name: tenant.name,
+          subdomain: tenant.subdomain,
+        } : null,
+      });
+    }
+
+    if (email) {
+      const existingByEmail = await db.select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingByEmail.length > 0) {
+        const existingUser = existingByEmail[0];
+        
+        await db.update(users)
+          .set({ 
+            clerkUserId: clerkUserId,
+            authProvider: 'clerk',
+          })
+          .where(eq(users.id, existingUser.id));
+
+        let tenant = null;
+        if (existingUser.tenantId) {
+          const [t] = await db.select()
+            .from(tenants)
+            .where(eq(tenants.id, existingUser.tenantId))
+            .limit(1);
+          tenant = t;
+        }
+
+        console.log(`Linked existing user ${existingUser.id} (${email}) to Clerk user ${clerkUserId}`);
+
+        return res.json({
+          success: true,
+          found: true,
+          linked: true,
+          user: {
+            id: existingUser.id,
+            email: existingUser.email,
+            firstName: existingUser.firstName,
+            lastName: existingUser.lastName,
+            tenantId: existingUser.tenantId,
+            isAdmin: existingUser.isAdmin,
+            role: existingUser.role,
+          },
+          tenant: tenant ? {
+            id: tenant.id,
+            name: tenant.name,
+            subdomain: tenant.subdomain,
+          } : null,
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      found: false,
+      message: 'No existing user found. Please complete the signup process.',
+    });
+
+  } catch (error: any) {
+    console.error('Resolve user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to resolve user.',
+    });
+  }
+});
+
 export default router;
