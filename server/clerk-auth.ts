@@ -13,19 +13,24 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     
     // Handle cases where auth is null or userId is not present
     if (!auth || !auth.userId) {
+      console.log("🔍 syncClerkUser: No Clerk auth found for request to", req.path);
       return next();
     }
 
     const clerkUserId = auth.userId;
+    console.log("🔍 syncClerkUser: Found Clerk user", clerkUserId, "for request to", req.path);
     
     // First, check if user exists in our database
     let user = await storage.getUserByClerkId(clerkUserId);
     
     if (user) {
+      console.log("✅ syncClerkUser: Found existing user", user.id, "for Clerk ID", clerkUserId);
       (req as any).user = user;
       (req as any).userId = user.id;
       return next();
     }
+    
+    console.log("🆕 syncClerkUser: No existing user for Clerk ID", clerkUserId, "- will create new user");
     
     // User doesn't exist in our DB, need to fetch from Clerk and create
     if (!process.env.CLERK_SECRET_KEY) {
@@ -77,9 +82,10 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         lastName: lastName || existingUserByEmail.lastName,
         profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
       });
-      console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
+      console.log(`✅ Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
     } else {
       // Create new user
+      console.log(`🆕 Creating new user for Clerk user ${clerkUserId} with email:`, email);
       user = await storage.upsertUser({
         email,
         clerkUserId,
@@ -90,7 +96,11 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         isApproved: false,
         registrationStatus: 'pending',
       });
-      console.log(`Created new user for Clerk user ${clerkUserId}`);
+      console.log(`✅ Created new user ${user?.id} for Clerk user ${clerkUserId}`);
+    }
+
+    if (!user) {
+      console.error("❌ syncClerkUser: Failed to create/find user for Clerk ID", clerkUserId);
     }
 
     (req as any).user = user;
