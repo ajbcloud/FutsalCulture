@@ -32,13 +32,7 @@ export default function Join() {
     }
   }, [inviteToken, isSignedIn]);
 
-  useEffect(() => {
-    if (!authLoaded) return;
-    
-    if (!isSignedIn && !inviteToken) {
-      navigate("/login");
-    }
-  }, [authLoaded, isSignedIn, inviteToken, navigate]);
+  // No longer auto-redirect to login - let users enter code first
 
   async function handleInviteAccept() {
     if (!inviteToken) return;
@@ -206,10 +200,57 @@ export default function Join() {
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Redirecting to sign in...</p>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Users className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Join a Club</CardTitle>
+            <CardDescription>
+              Enter your club's access code to get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (formData.code) {
+                navigate(`/signup?code=${encodeURIComponent(formData.code)}`);
+              }
+            }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code-unauthenticated">Club Access Code *</Label>
+                <Input
+                  id="code-unauthenticated"
+                  value={formData.code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  placeholder="e.g., SUMMER2025"
+                  required
+                  autoFocus
+                  data-testid="input-club-code-unauthenticated"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ask your club administrator for your access code
+                </p>
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={!formData.code} data-testid="button-continue-with-code">
+                Continue
+              </Button>
+              
+              <div className="text-center text-sm text-muted-foreground pt-2">
+                Already have an account?{' '}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto" 
+                  onClick={() => navigate("/login")}
+                  data-testid="link-login-instead"
+                >
+                  Sign in
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
