@@ -23,9 +23,17 @@ const braintreeEnabled = !!(
 );
 
 if (braintreeEnabled) {
-  const environment = process.env.NODE_ENV === 'production' 
+  const envSetting = (process.env.BRAINTREE_ENVIRONMENT || 'sandbox').toLowerCase().trim();
+  const environment = envSetting === 'production' 
     ? Environment.Production 
     : Environment.Sandbox;
+  
+  const isValidEnv = envSetting === 'sandbox' || envSetting === 'production';
+  console.log(`🔧 Braintree config: environment=${isValidEnv ? envSetting : 'sandbox (defaulted)'}, merchantId=${process.env.BRAINTREE_MERCHANT_ID?.substring(0, 8)}...`);
+  
+  if (!isValidEnv) {
+    console.warn(`⚠️ BRAINTREE_ENVIRONMENT should be 'sandbox' or 'production', got: '${envSetting.substring(0, 10)}...' - defaulting to sandbox`);
+  }
   
   gateway = new braintree.BraintreeGateway({
     environment,
@@ -33,7 +41,7 @@ if (braintreeEnabled) {
     publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
     privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
   });
-  console.log('✅ Braintree gateway initialized');
+  console.log('✅ Braintree gateway initialized (using Sandbox mode)');
 } else {
   console.warn('⚠️ Braintree not configured - missing credentials');
 }
