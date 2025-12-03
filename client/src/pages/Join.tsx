@@ -89,22 +89,20 @@ export default function Join() {
 
     setLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
-        tenant_code: formData.code,
-        first_name: clerkUser.firstName || '',
-        last_name: clerkUser.lastName || '',
-        role: formData.role
+      // Use the new simplified /api/consumer/join endpoint with tenant slug
+      const response = await apiRequest("POST", "/api/consumer/join", {
+        club_code: formData.code.toLowerCase().trim()
       });
 
       if (response.ok) {
         const result = await response.json();
         toast({
           title: "Successfully joined!",
-          description: `Welcome to ${result.tenantName}. Please sign in again to continue.`,
+          description: result.message || `Welcome to your club! Please sign in again to continue.`,
         });
         
         await signOut();
-        setTimeout(() => navigate("/login"), 1500);
+        setTimeout(() => navigate("/login-consumer"), 1500);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to join with code");
@@ -272,22 +270,9 @@ export default function Join() {
                 autoFocus
                 data-testid="input-club-code"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a *</Label>
-              <select
-                id="role"
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                required
-                data-testid="select-role"
-              >
-                <option value="parent">Parent/Guardian</option>
-                <option value="player">Player</option>
-                <option value="coach">Coach</option>
-              </select>
+              <p className="text-xs text-muted-foreground">
+                This is usually your club's name in lowercase (e.g., "futsal-culture")
+              </p>
             </div>
 
             <Button 
