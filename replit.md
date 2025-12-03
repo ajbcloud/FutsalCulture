@@ -19,7 +19,7 @@ Preferred communication style: Simple, everyday language.
 ### Technical Implementations
 - **Backend**: Node.js with Express and TypeScript.
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
-- **Authentication**: Clerk-hosted authentication with dual-auth support for migration, role-based access control (parent, admin, Super-Admin), and PostgreSQL-backed session store for legacy features.
+- **Authentication**: Clerk-hosted authentication using Authorization Bearer headers (required for Replit dev environment where cookies don't work cross-site). Middleware chain: `clerkMiddleware()` → `syncClerkUser` → route handlers. Use `getAuth(req)` to access Clerk user ID. Dual-auth support for legacy migration, role-based access control (parent, admin, Super-Admin).
 - **Authorization**: Capability-Based Access Control for fine-grained permissions.
 - **State Management**: TanStack Query for server state.
 - **Form Handling**: React Hook Form with Zod for type-safe validation.
