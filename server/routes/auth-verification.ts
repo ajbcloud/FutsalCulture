@@ -204,10 +204,6 @@ authVerificationRouter.post("/signup", async (req, res) => {
       counter++;
     }
 
-    // Generate tenant invite code  
-    const { generateInviteCode } = await import('../utils/invite-helpers');
-    const inviteCode = generateInviteCode();
-    
     // Determine initial tenant status based on policies
     const tenantStatus = autoApprove ? 'active' : 'pending';
     const billingStatus = autoApprove ? 'trial' : 'pending_approval';
@@ -227,7 +223,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
       country: country || null,
       contactName: contact_name,
       contactEmail: contact_email.toLowerCase(),
-      inviteCode,
+      inviteCode: subdomain.toUpperCase(), // Legacy field - use subdomain as invite code
       planLevel: "free", // Base plan level
       status: tenantStatus,
       billingStatus: billingStatus,
