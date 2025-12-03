@@ -3132,6 +3132,179 @@ export async function setupAdminRoutes(app: any) {
     }
   });
 
+  // Braintree discount management endpoints
+  app.get('/api/admin/braintree/discounts', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { fetchBraintreeDiscounts, isTenantBraintreeConfigured } = await import('./services/braintreeDiscountService');
+      
+      const isConfigured = await isTenantBraintreeConfigured(tenantId);
+      if (!isConfigured) {
+        return res.status(400).json({ 
+          message: "Braintree not configured", 
+          configured: false,
+          discounts: [] 
+        });
+      }
+
+      const discounts = await fetchBraintreeDiscounts(tenantId);
+      res.json({ configured: true, discounts });
+    } catch (error) {
+      console.error("Error fetching Braintree discounts:", error);
+      res.status(500).json({ message: "Failed to fetch Braintree discounts" });
+    }
+  });
+
+  app.post('/api/admin/braintree/test-connection', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      const { testBraintreeConnection } = await import('./services/braintreeDiscountService');
+      const result = await testBraintreeConnection(tenantId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing Braintree connection:", error);
+      res.status(500).json({ success: false, error: "Failed to test connection" });
+    }
+  });
+
+  app.post('/api/admin/invite-codes/:id/link-braintree', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { braintreeDiscountId } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      if (!braintreeDiscountId) {
+        return res.status(400).json({ message: "Braintree discount ID is required" });
+      }
+
+      // Verify the code belongs to the tenant
+      const existingCode = await storage.getInviteCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Invite code not found" });
+      }
+
+      const { linkInviteCodeToBraintreeDiscount } = await import('./services/braintreeDiscountService');
+      const result = await linkInviteCodeToBraintreeDiscount(id, braintreeDiscountId, tenantId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      const updatedCode = await storage.getInviteCode(id);
+      res.json(updatedCode);
+    } catch (error) {
+      console.error("Error linking invite code to Braintree:", error);
+      res.status(500).json({ message: "Failed to link to Braintree discount" });
+    }
+  });
+
+  app.post('/api/admin/invite-codes/:id/unlink-braintree', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Verify the code belongs to the tenant
+      const existingCode = await storage.getInviteCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Invite code not found" });
+      }
+
+      const { unlinkFromBraintree } = await import('./services/braintreeDiscountService');
+      const result = await unlinkFromBraintree(id, 'invite', tenantId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      const updatedCode = await storage.getInviteCode(id);
+      res.json(updatedCode);
+    } catch (error) {
+      console.error("Error unlinking invite code from Braintree:", error);
+      res.status(500).json({ message: "Failed to unlink from Braintree discount" });
+    }
+  });
+
+  app.post('/api/admin/discount-codes/:id/link-braintree', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { braintreeDiscountId } = req.body;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      if (!braintreeDiscountId) {
+        return res.status(400).json({ message: "Braintree discount ID is required" });
+      }
+
+      // Verify the code belongs to the tenant
+      const existingCode = await storage.getDiscountCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+
+      const { linkDiscountCodeToBraintree } = await import('./services/braintreeDiscountService');
+      const result = await linkDiscountCodeToBraintree(id, braintreeDiscountId, tenantId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      const updatedCode = await storage.getDiscountCode(id);
+      res.json(updatedCode);
+    } catch (error) {
+      console.error("Error linking discount code to Braintree:", error);
+      res.status(500).json({ message: "Failed to link to Braintree discount" });
+    }
+  });
+
+  app.post('/api/admin/discount-codes/:id/unlink-braintree', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+
+      // Verify the code belongs to the tenant
+      const existingCode = await storage.getDiscountCode(id);
+      if (!existingCode || existingCode.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+
+      const { unlinkFromBraintree } = await import('./services/braintreeDiscountService');
+      const result = await unlinkFromBraintree(id, 'discount', tenantId);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      const updatedCode = await storage.getDiscountCode(id);
+      res.json(updatedCode);
+    } catch (error) {
+      console.error("Error unlinking discount code from Braintree:", error);
+      res.status(500).json({ message: "Failed to unlink from Braintree discount" });
+    }
+  });
+
   // Credit management endpoints
   app.get('/api/admin/credits', requireAdmin, async (req: Request, res: Response) => {
     try {

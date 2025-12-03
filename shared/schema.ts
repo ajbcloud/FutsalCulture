@@ -679,6 +679,8 @@ export const discountCodes = pgTable("discount_codes", {
   // Stripe integration
   stripeCouponId: varchar("stripe_coupon_id"), // Stripe coupon ID for this discount
   stripePromotionCodeId: varchar("stripe_promotion_code_id"), // Stripe promotion code ID
+  // Braintree integration
+  braintreeDiscountId: varchar("braintree_discount_id"), // Synced Braintree discount ID
   createdBy: varchar("created_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -706,6 +708,7 @@ export const inviteCodes = pgTable("invite_codes", {
   // Discount functionality
   discountType: varchar("discount_type"), // 'percentage', 'fixed', 'full'
   discountValue: integer("discount_value"), // percentage (0-100) or cents amount
+  braintreeDiscountId: varchar("braintree_discount_id"), // Linked Braintree discount ID
   // Usage and time limits
   maxUses: integer("max_uses"), // null = unlimited
   currentUses: integer("current_uses").default(0),
