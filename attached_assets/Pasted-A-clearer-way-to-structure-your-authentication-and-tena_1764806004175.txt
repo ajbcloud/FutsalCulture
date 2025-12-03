@@ -1,0 +1,153 @@
+A clearer way to structure your authentication and tenant flow
+
+Your logic is solid. The improvement comes from tightening the ownership model, making the join flow predictable, and reducing friction for parents and players. Below is the recommended way these flows should work in a modern multi tenant app that uses Clerk as the identity provider and your database as the authority on tenants and membership.
+
+High level model
+
+Your app has two identity layers.
+
+Clerk
+
+Handles all authentication, identity, and session management.
+
+Your database
+
+Handles tenants, user roles, invite codes, and permissions.
+
+This is the correct division of responsibilities.
+
+Clean explanation of the correct end to end flow
+Step 1. Club or coach signs up and becomes a tenant owner
+
+Coach creates an account through Clerk on your signup page.
+Clerk returns the user ID and profile data.
+
+Your backend creates a tenant row.
+Fields include
+• tenant name
+• tenant slug
+• invite code which equals the slug
+• owner user ID
+• timestamps
+
+Your backend creates your internal user record.
+Fields include
+• internal user ID
+• clerk user ID
+• tenant ID
+• role set to owner or coach
+• name, email, phone
+
+This makes the coach authenticated in Clerk and fully mapped inside your app.
+
+This is the correct pattern for creating a tenant owner.
+
+Step 2. Parent or player creates a basic account
+
+Parent signs up through Clerk.
+Your backend creates a user row with
+• tenant ID set to null
+• role set to parent or player
+
+When they land in the app you check the user record.
+If tenant ID is null, you show the join tenant modal.
+
+This modal can be closed and reopened through the settings page.
+
+This pattern is common for consumer to business multi tenant apps.
+
+Step 3. User enters the invite code
+
+The invite code is the slug.
+
+Backend steps
+• Look up the tenant where slug matches the code
+• If it does not exist, return invalid code
+• If it exists, update the user row to set the tenant ID and role
+• Return the updated user and tenant
+
+This is the correct pattern for joining a tenant by invite code.
+
+Step 4. What happens after joining
+
+You can refresh the user session in two ways.
+
+Option A. Sign out and sign back in
+
+The user signs out.
+They log back in.
+Clerk loads their identity again with the updated tenant ID.
+
+This is simple but adds friction.
+
+Option B. No sign out
+
+Your backend returns the updated user record.
+The frontend updates its state and rerenders the tenant specific interface.
+Clerk keeps the same identity.
+
+This is the preferred method in most SaaS apps.
+
+Step 5. What you need to build
+Required tables
+
+Users
+• id
+• clerk user id
+• tenant id
+• role
+• name
+• email
+• phone
+
+Tenants
+• id
+• name
+• slug
+• invite code
+• owner user id
+• created at
+
+Required backend routes
+
+POST /api/auth/club signup
+• Creates the Clerk user
+• Creates tenant
+• Creates user row
+• Returns tenant and user
+
+POST /api/auth/create basic user
+• Creates user row with tenant set to null
+• Returns user
+
+POST /api/tenant join
+• Validates invite code
+• Updates user tenant
+• Returns tenant and user
+
+Required frontend logic
+
+After Clerk login
+• Call backend to load the app user
+• If tenant ID is null, show join modal
+• After join, update state or trigger logout depending on your choice
+
+Step 6. Clean summary for the agent
+
+(You can copy this directly into Replit)
+
+We have two user types. Clubs and coaches create an account which creates a tenant in our database. The tenant gets a slug which is also the invite code. The coach user is stored in the Users table and linked to Clerk through clerk user id.
+
+Parents or players create a basic account in Clerk and the backend creates a Users row with tenant id set to null.
+
+When a user with no tenant logs in, the frontend shows a modal asking for their invite code. The code equals the tenant slug. When the user enters the code, the backend finds the tenant and updates the Users table to assign the tenant id. After this update, the frontend either refreshes session state or requires a logout and login.
+
+Clerk is the identity provider. The database is the authority for tenants, membership, and roles.
+
+The app loads tenant content only after the user has a tenant associated with their record.
+
+If you want, I can also create
+• the full backend route definitions
+• database schema for Drizzle
+• Replit agent ready instructions for implementation
+• full frontend flow and modal logic
