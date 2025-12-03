@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 
 type TerminologyPolicy = {
   audienceMode: "youth_only" | "mixed" | "adult_only";
@@ -29,10 +30,14 @@ type TerminologyContextType = {
 const TerminologyContext = createContext<TerminologyContextType | undefined>(undefined);
 
 export function TerminologyProvider({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useClerkAuth();
+  
+  // Only fetch terminology when user is authenticated
   const { data: policy, isLoading } = useQuery<TerminologyPolicy>({
     queryKey: ['/api/terminology/policy'],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled: isLoaded && isSignedIn, // Only fetch when authenticated
     retry: (failureCount, error) => {
       if (error instanceof Error && 'status' in error) {
         const status = (error as any).status;

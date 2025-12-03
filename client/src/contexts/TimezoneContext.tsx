@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { setSystemTimezone } from '@/lib/dateUtils';
 
 interface TimezoneContextType {
@@ -17,12 +18,24 @@ interface TimezoneProviderProps {
 
 export function TimezoneProvider({ children }: TimezoneProviderProps) {
   const [timezone, setTimezone] = useState<string>('America/New_York'); // Default timezone
+  const { isSignedIn, isLoaded, getToken } = useClerkAuth();
 
-  // Load timezone from system settings on mount
+  // Load timezone from system settings only when authenticated
   useEffect(() => {
     const fetchTimezone = async () => {
+      // Don't fetch until Clerk is loaded and user is signed in
+      if (!isLoaded || !isSignedIn) {
+        return;
+      }
+      
       try {
-        const response = await fetch('/api/admin/settings');
+        const token = await getToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch('/api/admin/settings', { headers });
         if (response.ok) {
           const settings = await response.json();
           if (settings.timezone) {
@@ -36,7 +49,7 @@ export function TimezoneProvider({ children }: TimezoneProviderProps) {
     };
 
     fetchTimezone();
-  }, []);
+  }, [isLoaded, isSignedIn, getToken]);
 
   const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) => {
     return new Intl.DateTimeFormat('en-US', {
