@@ -2163,6 +2163,8 @@ export type TenantPlanHistorySelect = typeof tenantPlanHistory.$inferSelect;
 
 export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   id: true,
+  tenantId: true,
+  createdBy: true,
   currentUses: true,
   createdAt: true,
   updatedAt: true,
@@ -2172,14 +2174,20 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
     .max(50, "Code must be less than 50 characters")
     .regex(/^[A-Z0-9_-]+$/, "Code can only contain uppercase letters, numbers, underscores, and hyphens"),
   discountType: z.enum(['percentage', 'fixed', 'full']),
-  discountValue: z.number().int().optional(),
-  maxUses: z.number().int().positive().optional(),
-  lockedToPlayerId: z.string().optional(),
-  lockedToParentId: z.string().optional(),
+  discountValue: z.number().int().nullable().optional(),
+  maxUses: z.number().int().positive().nullable().optional(),
+  lockedToPlayerId: z.string().nullable().optional(),
+  lockedToParentId: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  validFrom: z.string().nullable().optional(),
+  validUntil: z.string().nullable().optional(),
+  braintreeDiscountId: z.string().nullable().optional(),
 });
 
 export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
   id: true,
+  tenantId: true,
+  createdBy: true,
   currentUses: true,
   createdAt: true,
   updatedAt: true,
@@ -2188,10 +2196,18 @@ export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
     .min(3, "Code must be at least 3 characters")
     .max(50, "Code must be less than 50 characters"),
   codeType: z.enum(['invite', 'access', 'discount']),
-  discountType: z.enum(['percentage', 'fixed', 'full']).optional(),
-  discountValue: z.number().int().optional(),
-  maxUses: z.number().int().positive().optional(),
-  metadata: z.record(z.any()).optional(),
+  discountType: z.enum(['percentage', 'fixed', 'full']).nullable().optional(),
+  discountValue: z.number().int().nullable().optional(),
+  maxUses: z.number().int().positive().nullable().optional(),
+  metadata: z.record(z.any()).nullable().optional(),
+  description: z.string().nullable().optional(),
+  ageGroup: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  club: z.string().nullable().optional(),
+  validFrom: z.string().nullable().optional(),
+  validUntil: z.string().nullable().optional(),
+  braintreeDiscountId: z.string().nullable().optional(),
 });
 
 export type InviteCodeInsert = z.infer<typeof insertInviteCodeSchema>;
