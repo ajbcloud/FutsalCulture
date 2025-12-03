@@ -27,7 +27,13 @@ if (posthogKey && posthogHost && !posthog.__loaded) {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider 
+      publishableKey={PUBLISHABLE_KEY} 
+      afterSignOutUrl="/"
+      taskUrls={{
+        'choose-organization': '/onboarding/choose-organization',
+      }}
+    >
       {posthogKey && posthogHost ? (
         <PostHogProvider client={posthog}>
           <App />

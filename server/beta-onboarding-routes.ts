@@ -705,6 +705,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
       }
 
       // Add user to tenant's Clerk organization (create org if needed)
+      let finalClerkOrgId: string | null = null;
       try {
         const { addMemberToOrganization, isClerkEnabled, createOrganizationForTenant: createClerkOrg } = await import('./services/clerkOrganizationService');
         if (isClerkEnabled()) {
@@ -727,13 +728,16 @@ export function setupBetaOnboardingRoutes(app: Express) {
               role === 'tenant_admin' ? 'admin' : 'basic_member'
             );
             console.log(`✅ Added Clerk user ${clerk_user_id} to org ${clerkOrgId}`);
+            finalClerkOrgId = clerkOrgId;
           }
         }
       } catch (clerkError: any) {
-        // Ignore "already a member" errors
+        // Ignore "already a member" errors but still capture the orgId
         if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
           console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
         }
+        // Still try to return the org ID even if "already a member"
+        finalClerkOrgId = tenant.clerkOrganizationId || null;
       }
 
       // Record audit event
@@ -749,7 +753,8 @@ export function setupBetaOnboardingRoutes(app: Express) {
         success: true, 
         tenantId: tenant.id,
         tenantName: tenant.name,
-        userId: currentUser.id
+        userId: currentUser.id,
+        clerkOrgId: finalClerkOrgId
       });
 
     } catch (error) {
