@@ -91,9 +91,6 @@ export async function createCustomer(
     firstName: firstName || undefined,
     lastName: lastName || undefined,
     company: company || undefined,
-    customFields: {
-      tenant_id: tenantId,
-    },
   });
   
   if (!result.success || !result.customer) {
