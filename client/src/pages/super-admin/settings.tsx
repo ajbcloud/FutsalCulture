@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Shield,
   UserCheck,
-  Key,
   Globe,
   UserX,
   Clock,
@@ -246,9 +245,6 @@ export default function SuperAdminSettings() {
     const riskyChanges = [];
     if (updates.maintenance?.enabled && !localPolicies.maintenance.enabled) {
       riskyChanges.push('Enable maintenance mode');
-    }
-    if (updates.mfa?.requireSuperAdmins && !localPolicies.mfa.requireSuperAdmins) {
-      riskyChanges.push('Require MFA for Super Admins');
     }
     if (updates.impersonation && !updates.impersonation.allow && localPolicies.impersonation.allow) {
       riskyChanges.push('Disable impersonation');
@@ -519,51 +515,6 @@ export default function SuperAdminSettings() {
                             autoApproveTenants: true
                           });
                         }
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* MFA Policy */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Key className="h-5 w-5 text-muted-foreground" />
-                      <CardTitle>Multi-Factor Authentication</CardTitle>
-                    </div>
-                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
-                  </div>
-                  <CardDescription>Enforce MFA requirements for different user roles</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Require MFA for Super Admins</Label>
-                      <p className="text-sm text-muted-foreground">Enforce MFA for all Super Admin accounts</p>
-                    </div>
-                    <Switch
-                      checked={localPolicies.mfa.requireSuperAdmins}
-                      onCheckedChange={(checked) => {
-                        handlePolicyChange({ 
-                          mfa: { ...localPolicies.mfa, requireSuperAdmins: checked }
-                        });
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Require MFA for Tenant Admins</Label>
-                      <p className="text-sm text-muted-foreground">Enforce MFA for all Tenant Admin accounts</p>
-                    </div>
-                    <Switch
-                      checked={localPolicies.mfa.requireTenantAdmins}
-                      onCheckedChange={(checked) => {
-                        handlePolicyChange({ 
-                          mfa: { ...localPolicies.mfa, requireTenantAdmins: checked }
-                        });
                       }}
                     />
                   </div>
@@ -1647,7 +1598,7 @@ export default function SuperAdminSettings() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-muted-foreground" />
+                  <Lock className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>Authentication (Replit OAuth)</CardTitle>
                 </div>
                 <Badge variant="default">Active</Badge>
