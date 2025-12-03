@@ -9,6 +9,11 @@ import {
 } from '../services/braintreeService';
 import { clearCapabilitiesCache } from '../middleware/featureAccess';
 import { syncOrganizationMemberLimit, isClerkEnabled } from '../services/clerkOrganizationService';
+import { 
+  handlePaymentFailed, 
+  handlePaymentSucceeded, 
+  handleSubscriptionCanceled 
+} from '../services/dunningService';
 
 const router = Router();
 
@@ -167,6 +172,10 @@ router.post('/', async (req: Request, res: Response) => {
                 ? new Date(subscription.nextBillingDate) 
                 : null,
               braintreeFailureCount: 0,
+              billingStatus: 'active',
+              gracePeriodEndsAt: null,
+              gracePeriodReason: null,
+              gracePeriodNotificationsSent: 0,
             })
             .where(eq(tenants.id, tenantId));
 
@@ -181,6 +190,13 @@ router.post('/', async (req: Request, res: Response) => {
           });
         });
 
+        // Trigger dunning service for payment recovery notification
+        await handlePaymentSucceeded({
+          tenantId,
+          subscriptionId: subscription.id,
+          transactionId: subscription.transactions?.[0]?.id,
+        });
+
         console.log(`✅ Subscription ${subscription.id} charged successfully`);
         break;
       }
@@ -192,18 +208,30 @@ router.post('/', async (req: Request, res: Response) => {
         if (!tenantId) break;
 
         await db.transaction(async (tx) => {
-          const [currentTenant] = await tx.select({ failureCount: tenants.braintreeFailureCount })
+          const [currentTenant] = await tx.select({ 
+            failureCount: tenants.braintreeFailureCount,
+            gracePeriodEndsAt: tenants.gracePeriodEndsAt 
+          })
             .from(tenants)
             .where(eq(tenants.id, tenantId))
             .limit(1);
 
           const newFailureCount = (currentTenant?.failureCount || 0) + 1;
+          const isFirstFailure = !currentTenant?.gracePeriodEndsAt;
+          
+          // Set grace period on first failure (10 days)
+          const gracePeriodEndsAt = isFirstFailure 
+            ? new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) 
+            : currentTenant?.gracePeriodEndsAt;
           
           await tx.update(tenants)
             .set({
               braintreeStatus: newFailureCount >= 3 ? 'past_due' : 'active',
               braintreeLastFailureAt: new Date(),
               braintreeFailureCount: newFailureCount,
+              billingStatus: newFailureCount >= 3 ? 'past_due' : 'grace_period',
+              gracePeriodEndsAt,
+              gracePeriodReason: 'payment_failed',
             })
             .where(eq(tenants.id, tenantId));
 
@@ -219,6 +247,14 @@ router.post('/', async (req: Request, res: Response) => {
 
           console.log(`❌ Subscription ${subscription.id} charge failed (attempt ${newFailureCount})`);
         });
+
+        // Trigger dunning service for payment failure notifications
+        await handlePaymentFailed({
+          tenantId,
+          subscriptionId: subscription.id,
+          failureReason: 'Subscription charge failed',
+        });
+
         break;
       }
 
@@ -240,6 +276,9 @@ router.post('/', async (req: Request, res: Response) => {
               planLevel: 'free',
               lastPlanChangeAt: new Date(),
               lastPlanLevel: currentTenant?.planLevel as any,
+              billingStatus: 'inactive',
+              gracePeriodEndsAt: null,
+              gracePeriodReason: null,
             })
             .where(eq(tenants.id, tenantId));
 
@@ -254,6 +293,12 @@ router.post('/', async (req: Request, res: Response) => {
         });
 
         clearCapabilitiesCache(tenantId);
+        
+        // Trigger dunning service for cancellation notification
+        await handleSubscriptionCanceled({
+          tenantId,
+          subscriptionId: subscription.id,
+        });
         
         // Sync Clerk organization to free plan limits
         if (isClerkEnabled()) {
@@ -286,6 +331,9 @@ router.post('/', async (req: Request, res: Response) => {
               planLevel: 'free',
               lastPlanChangeAt: new Date(),
               lastPlanLevel: currentTenant?.planLevel as any,
+              billingStatus: 'inactive',
+              gracePeriodEndsAt: null,
+              gracePeriodReason: null,
             })
             .where(eq(tenants.id, tenantId));
 
@@ -300,6 +348,12 @@ router.post('/', async (req: Request, res: Response) => {
         });
 
         clearCapabilitiesCache(tenantId);
+        
+        // Trigger dunning service for expiration notification
+        await handleSubscriptionCanceled({
+          tenantId,
+          subscriptionId: subscription.id,
+        });
         
         // Sync Clerk organization to free plan limits
         if (isClerkEnabled()) {
@@ -329,6 +383,11 @@ router.post('/', async (req: Request, res: Response) => {
               braintreeNextBillingDate: subscription.nextBillingDate 
                 ? new Date(subscription.nextBillingDate) 
                 : null,
+              braintreeFailureCount: 0,
+              billingStatus: 'active',
+              gracePeriodEndsAt: null,
+              gracePeriodReason: null,
+              gracePeriodNotificationsSent: 0,
               ...(planLevel && { planLevel }),
             })
             .where(eq(tenants.id, tenantId));
@@ -341,6 +400,12 @@ router.post('/', async (req: Request, res: Response) => {
             processorEventId: timestamp?.toString(),
             triggeredBy: 'webhook',
           });
+        });
+
+        // Send payment recovery notification if tenant was in grace period
+        await handlePaymentSucceeded({
+          tenantId,
+          subscriptionId: subscription.id,
         });
 
         if (planLevel) {
@@ -367,9 +432,21 @@ router.post('/', async (req: Request, res: Response) => {
         if (!tenantId) break;
 
         await db.transaction(async (tx) => {
+          // Set grace period if not already set (10 days from now)
+          const [currentTenant] = await tx.select({ gracePeriodEndsAt: tenants.gracePeriodEndsAt })
+            .from(tenants)
+            .where(eq(tenants.id, tenantId))
+            .limit(1);
+
+          const gracePeriodEndsAt = currentTenant?.gracePeriodEndsAt 
+            || new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
           await tx.update(tenants)
             .set({
               braintreeStatus: 'past_due',
+              billingStatus: 'past_due',
+              gracePeriodEndsAt,
+              gracePeriodReason: 'payment_failed',
             })
             .where(eq(tenants.id, tenantId));
 
@@ -381,6 +458,13 @@ router.post('/', async (req: Request, res: Response) => {
             processorEventId: timestamp?.toString(),
             triggeredBy: 'webhook',
           });
+        });
+
+        // Trigger dunning service for past due notifications
+        await handlePaymentFailed({
+          tenantId,
+          subscriptionId: subscription.id,
+          failureReason: 'Subscription went past due',
         });
 
         console.log(`⚠️ Subscription ${subscription.id} went past due`);
