@@ -729,13 +729,13 @@ export default function AdminSettings() {
   const { hasFeature: hasAutoPromotion } = useHasFeature(FEATURE_KEYS.WAITLIST_AUTO_PROMOTE);
   const planLimits = usePlanLimits();
 
-  // Check if Twilio integration is enabled
-  const isTwilioEnabled = integrations.some(
-    integration => integration.provider.toLowerCase() === 'twilio' && integration.enabled
+  // Check if Telnyx integration is enabled
+  const isTelnyxEnabled = integrations.some(
+    integration => integration.provider.toLowerCase() === 'telnyx' && integration.enabled
   );
 
-  // Combined SMS availability check (requires both plan feature and Twilio integration)
-  const canUseSms = hasSmsFeature && isTwilioEnabled;
+  // Combined SMS availability check (requires both plan feature and Telnyx integration)
+  const canUseSms = hasSmsFeature && isTelnyxEnabled;
 
   useEffect(() => {
     // Check for payment success parameter
@@ -1841,27 +1841,27 @@ export default function AdminSettings() {
 
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className={`${!isTwilioEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <Label className={`${!isTelnyxEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
                           SMS Notifications
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          {isTwilioEnabled 
+                          {isTelnyxEnabled 
                             ? 'Send SMS notifications for urgent waitlist updates'
-                            : 'Requires Twilio integration to be configured'
+                            : 'Requires Telnyx integration to be configured'
                           }
                         </p>
-                        {!isTwilioEnabled && (
+                        {!isTelnyxEnabled && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                            Configure Twilio in the Integrations tab to enable SMS notifications
+                            Configure Telnyx in the Integrations tab to enable SMS notifications
                           </p>
                         )}
                       </div>
                       <Switch
-                        checked={settings.waitlistNotificationSMS && isTwilioEnabled}
+                        checked={settings.waitlistNotificationSMS && isTelnyxEnabled}
                         onCheckedChange={(checked) => 
                           setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
                         }
-                        disabled={!isTwilioEnabled}
+                        disabled={!isTelnyxEnabled}
                       />
                     </div>
 
@@ -2173,9 +2173,9 @@ export default function AdminSettings() {
                   <p className="text-sm text-muted-foreground">
                     {!hasSmsFeature 
                       ? 'SMS notifications are available on Growth and Elite plans'
-                      : isTwilioEnabled 
+                      : isTelnyxEnabled 
                         ? 'Receive SMS notifications for urgent events'
-                        : 'Requires Twilio integration to be configured'
+                        : 'Requires Telnyx integration to be configured'
                     }
                   </p>
                   {!hasSmsFeature ? (
@@ -2184,9 +2184,9 @@ export default function AdminSettings() {
                       className="mt-2"
                       targetPlan="growth"
                     />
-                  ) : !isTwilioEnabled && (
+                  ) : !isTelnyxEnabled && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Configure Twilio in the Integrations tab to enable SMS notifications
+                      Configure Telnyx in the Integrations tab to enable SMS notifications
                     </p>
                   )}
                 </div>

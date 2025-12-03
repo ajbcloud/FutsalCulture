@@ -7,7 +7,9 @@
 - [ ] `SESSION_SECRET` - Secure random string for session encryption
 - [ ] `STRIPE_SECRET_KEY` - Stripe secret key for payments
 - [ ] `VITE_STRIPE_PUBLIC_KEY` - Stripe publishable key
-- [ ] `SENDGRID_API_KEY` - SendGrid API key for emails
+- [ ] `RESEND_API_KEY` - Resend API key for emails (via Replit integration)
+- [ ] `TELNYX_API_KEY` - Telnyx API key for SMS
+- [ ] `TELNYX_FROM_NUMBER` - Telnyx phone number for SMS
 - [ ] `REPL_ID` - Replit environment ID
 - [ ] `ISSUER_URL` - OpenID Connect issuer URL
 
@@ -116,6 +118,7 @@ Cloudflare will automatically provide SSL certificates. Ensure:
 
 - The app supports multi-tenant architecture with Super Admin capabilities
 - Default Super Admin access requires `isSuperAdmin: true` in user record
-- All payments are processed through Stripe
-- Email notifications use SendGrid
+- All payments are processed through Stripe or Braintree
+- Email notifications use Resend
+- SMS notifications use Telnyx
 - Database migrations are handled through Drizzle ORM

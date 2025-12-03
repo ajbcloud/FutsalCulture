@@ -35,7 +35,6 @@ import { setupBetaOnboardingRoutes } from './beta-onboarding-routes';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import unifiedInvitationRoutes from './routes/unified-invitations';
 import { superAdminEmailRouter } from './routes/super-admin-email';
-import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { resendWebhookRouter } from './routes/resend-webhooks';
 import { telnyxWebhookRouter } from './routes/telnyx-webhooks';
 import { braintreeWebhookRouter } from './routes/braintree-webhooks';
@@ -3255,8 +3254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Webhook routes (SendGrid for SMS only, Resend for email)
-  app.use('/api/webhooks', sendgridWebhookRouter);
+  // Webhook routes (Resend for email)
   app.use('/api/webhooks', resendWebhookRouter);
   app.use('/api/communications', communicationTestRouter);
 

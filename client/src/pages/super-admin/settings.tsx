@@ -130,8 +130,8 @@ export default function SuperAdminSettings() {
   
   // UI visibility states
   const [showResendKey, setShowResendKey] = useState(false);
-  const [showTwilioSid, setShowTwilioSid] = useState(false);
-  const [showTwilioToken, setShowTwilioToken] = useState(false);
+  const [showTelnyxKey, setShowTelnyxKey] = useState(false);
+  const [showTelnyxNumber, setShowTelnyxNumber] = useState(false);
   
   // Loading states
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
@@ -1390,7 +1390,7 @@ export default function SuperAdminSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>SMS Service (Twilio)</CardTitle>
+                  <CardTitle>SMS Service (Telnyx)</CardTitle>
                 </div>
                 <Badge variant={smsConfig?.accountSid ? "default" : "secondary"}>
                   {smsConfig?.accountSid ? "Configured" : "Not Configured"}
@@ -1402,41 +1402,41 @@ export default function SuperAdminSettings() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="twilio-account-sid">Account SID</Label>
+                    <Label htmlFor="telnyx-api-key">API Key</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="twilio-account-sid"
-                        type={showTwilioSid ? "text" : "password"}
-                        placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        id="telnyx-api-key"
+                        type={showTelnyxKey ? "text" : "password"}
+                        placeholder="KEY0123456789..."
                         value={smsConfig?.accountSid || ''}
                         onChange={(e) => setSmsConfig({ ...smsConfig, accountSid: e.target.value })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowTwilioSid(!showTwilioSid)}
+                        onClick={() => setShowTelnyxKey(!showTelnyxKey)}
                       >
-                        {showTwilioSid ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showTelnyxKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="twilio-auth-token">Auth Token</Label>
+                    <Label htmlFor="telnyx-phone">From Phone Number</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="twilio-auth-token"
-                        type={showTwilioToken ? "text" : "password"}
-                        placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                        value={smsConfig?.authToken || ''}
-                        onChange={(e) => setSmsConfig({ ...smsConfig, authToken: e.target.value })}
+                        id="telnyx-phone"
+                        type="tel"
+                        placeholder="+1234567890"
+                        value={smsConfig?.phoneNumber || ''}
+                        onChange={(e) => setSmsConfig({ ...smsConfig, phoneNumber: e.target.value })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowTwilioToken(!showTwilioToken)}
+                        onClick={() => setShowTelnyxNumber(!showTelnyxNumber)}
                       >
-                        {showTwilioToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showTelnyxNumber ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -1444,21 +1444,10 @@ export default function SuperAdminSettings() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="twilio-phone">From Phone Number</Label>
+                    <Label htmlFor="telnyx-messaging-profile">Messaging Profile ID (Optional)</Label>
                     <Input
-                      id="twilio-phone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      value={smsConfig?.phoneNumber || ''}
-                      onChange={(e) => setSmsConfig({ ...smsConfig, phoneNumber: e.target.value })}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="twilio-messaging-service">Messaging Service SID (Optional)</Label>
-                    <Input
-                      id="twilio-messaging-service"
-                      placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      id="telnyx-messaging-profile"
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                       value={smsConfig?.messagingServiceSid || ''}
                       onChange={(e) => setSmsConfig({ ...smsConfig, messagingServiceSid: e.target.value })}
                     />

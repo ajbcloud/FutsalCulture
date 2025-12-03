@@ -117,7 +117,8 @@ The entire application is mobile-responsive with:
 
 ## 📧 Communication Features
 
-- SendGrid email integration configured
+- Resend email integration configured
+- Telnyx SMS integration for notifications
 - Help request system with reply tracking
 - Payment reminder notifications
 - User invitation system

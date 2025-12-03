@@ -2353,7 +2353,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         id: '2',
-        name: 'Twilio',
+        name: 'Telnyx',
         type: 'sms',
         enabled: false,
         status: 'disconnected',
@@ -3101,9 +3101,9 @@ export class DatabaseStorage implements IStorage {
           verified: true
         },
         sms: {
-          provider: 'twilio',
-          accountSid: 'AC***',
-          authToken: '***',
+          provider: 'telnyx',
+          apiKey: '***',
+          fromNumber: '+1***',
           verified: false
         },
         payment: {

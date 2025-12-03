@@ -37,16 +37,10 @@ function getTimeAgo(date: Date): string {
 // Integration helper functions
 function maskCredentials(provider: string, credentials: any): any {
   switch (provider) {
-    case 'twilio':
-      return {
-        accountSid: credentials.accountSid ? `***${credentials.accountSid.slice(-4)}` : '',
-        authToken: credentials.authToken ? '***' : '',
-        fromNumber: credentials.fromNumber,
-      };
-    case 'sendgrid':
+    case 'telnyx':
       return {
         apiKey: credentials.apiKey ? `***${credentials.apiKey.slice(-4)}` : '',
-        verifiedSender: credentials.verifiedSender,
+        fromNumber: credentials.fromNumber,
       };
     case 'resend':
       return {
@@ -99,14 +93,9 @@ function maskCredentials(provider: string, credentials: any): any {
 
 function validateCredentials(provider: string, credentials: any): string | null {
   switch (provider) {
-    case 'twilio':
-      if (!credentials.accountSid || !credentials.authToken || !credentials.fromNumber) {
-        return 'Twilio requires Account SID, Auth Token, and From Number';
-      }
-      break;
-    case 'sendgrid':
-      if (!credentials.apiKey || !credentials.verifiedSender) {
-        return 'SendGrid requires API Key and Verified Sender Address';
+    case 'telnyx':
+      if (!credentials.apiKey || !credentials.fromNumber) {
+        return 'Telnyx requires API Key and From Number';
       }
       break;
     case 'resend':
@@ -153,11 +142,8 @@ function validateCredentials(provider: string, credentials: any): string | null 
 async function testIntegration(integration: any): Promise<{ success: boolean; error?: string }> {
   try {
     switch (integration.provider) {
-      case 'twilio':
-        // Test Twilio connection - placeholder for now
-        return { success: true };
-      case 'sendgrid':
-        // Test SendGrid connection - placeholder for now
+      case 'telnyx':
+        // Test Telnyx connection - placeholder for now
         return { success: true };
       case 'resend':
         // Test Resend connection using email provider abstraction
@@ -5072,9 +5058,8 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const testResults = {
         stripe: { success: true, message: "Stripe connection verified successfully" },
         braintree: { success: true, message: "Braintree connection verified successfully" },
-        sendgrid: { success: true, message: "SendGrid email service connected successfully" },
         resend: { success: true, message: "Resend email service connected successfully" },
-        twilio: { success: true, message: "Twilio SMS service connected successfully" },
+        telnyx: { success: true, message: "Telnyx SMS service connected successfully" },
         mailchimp: { success: true, message: "Mailchimp API connection verified" },
         google: { success: true, message: "Google Workspace integration verified" },
         microsoft: { success: true, message: "Microsoft 365 integration verified" },

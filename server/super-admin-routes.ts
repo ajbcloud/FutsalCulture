@@ -1274,8 +1274,8 @@ export function setupSuperAdminRoutes(app: Express) {
       if (!apiKey) {
         return res.status(400).json({ error: 'API key is required' });
       }
-      // Test SendGrid connection
-      res.json({ success: true, message: 'SendGrid connection successful' });
+      // Test Resend connection
+      res.json({ success: true, message: 'Resend connection successful' });
     } catch (error) {
       console.error("Error testing email integration:", error);
       res.status(500).json({ error: "Failed to test email integration" });
@@ -1285,12 +1285,12 @@ export function setupSuperAdminRoutes(app: Express) {
   // Test SMS integration
   app.post('/api/super-admin/integrations/sms/test', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
-      const { accountSid, authToken } = req.body;
-      if (!accountSid || !authToken) {
-        return res.status(400).json({ error: 'Account SID and Auth Token are required' });
+      const { apiKey, fromNumber } = req.body;
+      if (!apiKey || !fromNumber) {
+        return res.status(400).json({ error: 'API Key and From Number are required' });
       }
-      // Test Twilio connection
-      res.json({ success: true, message: 'Twilio connection successful' });
+      // Test Telnyx connection
+      res.json({ success: true, message: 'Telnyx connection successful' });
     } catch (error) {
       console.error("Error testing SMS integration:", error);
       res.status(500).json({ error: "Failed to test SMS integration" });
