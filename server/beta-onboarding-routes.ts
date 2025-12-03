@@ -763,6 +763,207 @@ export function setupBetaOnboardingRoutes(app: Express) {
     }
   });
 
+  // Join by code for pending Clerk sessions (when session is in pending state)
+  // This endpoint verifies the Clerk token directly, which works even for pending sessions
+  app.post('/api/beta/pending-session-join', async (req, res) => {
+    try {
+      // Extract Bearer token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Authorization token required" });
+      }
+      
+      const token = authHeader.replace('Bearer ', '');
+      
+      if (!process.env.CLERK_SECRET_KEY) {
+        return res.status(500).json({ error: "Server configuration error" });
+      }
+      
+      // Verify the token using Clerk's backend SDK - works even for pending sessions
+      let clerkUserId: string;
+      try {
+        const { verifyToken } = await import('@clerk/backend');
+        const verifiedToken = await verifyToken(token, {
+          secretKey: process.env.CLERK_SECRET_KEY,
+        });
+        
+        // The 'sub' claim contains the user ID
+        clerkUserId = verifiedToken.sub;
+        
+        if (!clerkUserId) {
+          return res.status(401).json({ error: "Invalid token: no user ID" });
+        }
+        
+        console.log(`✅ Verified pending session token for Clerk user: ${clerkUserId}`);
+      } catch (verifyError: any) {
+        console.error('Token verification failed:', verifyError);
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+      
+      const { tenant_code, first_name, last_name, role = 'parent' } = req.body;
+      
+      if (!tenant_code) {
+        return res.status(400).json({ error: "Missing tenant code" });
+      }
+      
+      // Fetch user email from Clerk API
+      let userEmail: string | null = null;
+      try {
+        const response = await fetch(`https://api.clerk.com/v1/users/${clerkUserId}`, {
+          headers: {
+            Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+          },
+        });
+        if (response.ok) {
+          const clerkUser = await response.json();
+          userEmail = clerkUser.email_addresses?.[0]?.email_address;
+        }
+      } catch (e) {
+        console.error('Error fetching Clerk user:', e);
+      }
+      
+      if (!userEmail) {
+        return res.status(400).json({ error: "Could not determine email address" });
+      }
+
+      // Find tenant by code (case-insensitive, try tenantCode first, then inviteCode)
+      const normalizedCode = tenant_code.toLowerCase().trim();
+      let tenant = await db.query.tenants.findFirst({
+        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
+      });
+      
+      if (!tenant) {
+        tenant = await db.query.tenants.findFirst({
+          where: sql`LOWER(${tenants.inviteCode}) = ${normalizedCode}`
+        });
+      }
+
+      if (!tenant) {
+        return res.status(404).json({ error: "Organization not found. Please check your code and try again." });
+      }
+
+      // Check if user already exists by clerkUserId
+      const { users } = await import('@shared/schema');
+      let user = await db.query.users.findFirst({
+        where: eq(users.clerkUserId, clerkUserId)
+      });
+
+      // If not, check by email
+      if (!user) {
+        user = await db.query.users.findFirst({
+          where: eq(users.email, userEmail.toLowerCase())
+        });
+      }
+
+      let currentUser: typeof user;
+
+      if (!user) {
+        // Create new user
+        const [newUser] = await db.insert(users).values({
+          email: userEmail.toLowerCase(),
+          firstName: first_name || '',
+          lastName: last_name || '',
+          clerkUserId: clerkUserId,
+          tenantId: tenant.id,
+          role: role as any,
+          authProvider: 'clerk',
+          emailVerifiedAt: new Date(),
+        }).returning();
+        currentUser = newUser;
+      } else {
+        currentUser = user;
+        // Update existing user with clerkUserId if not set
+        if (!currentUser.clerkUserId) {
+          await db.update(users)
+            .set({ clerkUserId: clerkUserId })
+            .where(eq(users.id, currentUser.id));
+        }
+        // Update tenantId if not set
+        if (!currentUser.tenantId) {
+          await db.update(users)
+            .set({ tenantId: tenant.id })
+            .where(eq(users.id, currentUser.id));
+        }
+      }
+
+      // Check if already a member
+      const existingMembership = await db.query.tenantMemberships.findFirst({
+        where: and(
+          eq(tenantMemberships.tenantId, tenant.id),
+          eq(tenantMemberships.userId, currentUser.id)
+        )
+      });
+
+      if (!existingMembership) {
+        // Create tenant membership
+        await db.insert(tenantMemberships).values({
+          tenantId: tenant.id,
+          userId: currentUser.id,
+          role: role as any,
+          status: 'active'
+        });
+      }
+
+      // Add user to tenant's Clerk organization (create org if needed)
+      let finalClerkOrgId: string | null = null;
+      try {
+        const { addMemberToOrganization, isClerkEnabled, createOrganizationForTenant: createClerkOrg } = await import('./services/clerkOrganizationService');
+        if (isClerkEnabled()) {
+          let clerkOrgId = tenant.clerkOrganizationId;
+          
+          // Create Clerk org if tenant doesn't have one yet
+          if (!clerkOrgId) {
+            console.log(`⚠️ Tenant ${tenant.name} has no Clerk org, creating one...`);
+            const createdOrg = await createClerkOrg(tenant.id);
+            clerkOrgId = createdOrg?.id || null;
+            if (clerkOrgId) {
+              console.log(`✅ Created Clerk org ${clerkOrgId} for tenant ${tenant.name}`);
+            }
+          }
+          
+          if (clerkOrgId) {
+            await addMemberToOrganization(
+              clerkOrgId, 
+              clerkUserId,
+              role === 'tenant_admin' ? 'admin' : 'basic_member'
+            );
+            console.log(`✅ Added Clerk user ${clerkUserId} to org ${clerkOrgId}`);
+            finalClerkOrgId = clerkOrgId;
+          }
+        }
+      } catch (clerkError: any) {
+        // Ignore "already a member" errors but still capture the orgId
+        if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
+          console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
+        }
+        finalClerkOrgId = tenant.clerkOrganizationId || null;
+      }
+
+      // Record audit event
+      await db.insert(auditEvents).values({
+        tenantId: tenant.id,
+        userId: currentUser.id,
+        action: "join",
+        resourceType: "membership",
+        details: { email: userEmail, role, clerkUserId: clerkUserId, pendingSession: true }
+      });
+
+      console.log(`✅ Pending session join successful: user ${currentUser.id} joined tenant ${tenant.name}`);
+
+      res.json({ 
+        success: true, 
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        userId: currentUser.id,
+        clerkOrgId: finalClerkOrgId
+      });
+
+    } catch (error) {
+      console.error("Pending session join error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Switch active tenant
   app.post('/api/beta/switch-tenant', async (req, res) => {
     try {

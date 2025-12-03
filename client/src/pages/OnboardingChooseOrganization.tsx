@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useUser, useOrganizationList, useClerk } from "@clerk/clerk-react";
+import { useUser, useOrganizationList, useClerk, useSession } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Loader2, CheckCircle, AlertCircle, Building2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ export default function OnboardingChooseOrganization() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { user: clerkUser, isLoaded: userLoaded } = useUser();
+  const { session, isLoaded: sessionLoaded } = useSession();
   const { setActive, userMemberships, isLoaded: orgListLoaded } = useOrganizationList({
     userMemberships: { infinite: true }
   });
@@ -30,7 +30,8 @@ export default function OnboardingChooseOrganization() {
 
   useEffect(() => {
     async function handleAutoJoin() {
-      if (!userLoaded || !orgListLoaded) {
+      // Wait for all Clerk resources to be fully loaded before proceeding
+      if (!userLoaded || !orgListLoaded || !sessionLoaded) {
         return;
       }
       
@@ -57,15 +58,36 @@ export default function OnboardingChooseOrganization() {
       }
       
       if (pendingCode) {
+        // Only attempt join if we have a session - if not, wait for it to load
+        if (!session) {
+          console.log("Session not ready yet, waiting...");
+          return;
+        }
+        
         hasAttemptedJoin.current = true;
         setStatus('joining');
         
         try {
-          const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
-            tenant_code: pendingCode,
-            first_name: clerkUser.firstName || '',
-            last_name: clerkUser.lastName || '',
-            role: 'parent'
+          // Get the session token to authenticate with the pending-session-join endpoint
+          const sessionToken = await session.getToken();
+          
+          if (!sessionToken) {
+            throw new Error("Could not get session token. Please try signing in again.");
+          }
+          
+          // Use the pending-session-join endpoint which works even for pending sessions
+          const response = await fetch("/api/beta/pending-session-join", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              tenant_code: pendingCode,
+              first_name: clerkUser.firstName || '',
+              last_name: clerkUser.lastName || '',
+              role: 'parent'
+            }),
           });
           
           if (response.ok) {
@@ -107,19 +129,34 @@ export default function OnboardingChooseOrganization() {
     }
     
     handleAutoJoin();
-  }, [userLoaded, orgListLoaded, clerkUser, pendingCode, userMemberships, setActive, navigate, toast]);
+  }, [userLoaded, orgListLoaded, sessionLoaded, clerkUser, pendingCode, userMemberships, setActive, navigate, toast, session]);
 
   const handleManualJoin = async () => {
-    if (!clubCode.trim() || !clerkUser) return;
+    if (!clubCode.trim() || !clerkUser || !session) return;
     
     setManualJoining(true);
     
     try {
-      const response = await apiRequest("POST", "/api/beta/clerk-join-by-code", {
-        tenant_code: clubCode.trim().toUpperCase(),
-        first_name: clerkUser.firstName || '',
-        last_name: clerkUser.lastName || '',
-        role: 'parent'
+      // Get the session token to authenticate with the pending-session-join endpoint
+      const sessionToken = await session.getToken();
+      
+      if (!sessionToken) {
+        throw new Error("Could not get session token. Please try signing in again.");
+      }
+      
+      // Use the pending-session-join endpoint which works even for pending sessions
+      const response = await fetch("/api/beta/pending-session-join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          tenant_code: clubCode.trim().toUpperCase(),
+          first_name: clerkUser.firstName || '',
+          last_name: clerkUser.lastName || '',
+          role: 'parent'
+        }),
       });
       
       if (response.ok) {
@@ -231,10 +268,10 @@ export default function OnboardingChooseOrganization() {
               />
               <Button 
                 onClick={handleManualJoin}
-                disabled={!clubCode.trim() || manualJoining}
+                disabled={!clubCode.trim() || manualJoining || !session}
                 data-testid="button-join-club"
               >
-                {manualJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Join'}
+                {manualJoining || !session ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Join'}
               </Button>
             </div>
           </div>
@@ -280,14 +317,14 @@ export default function OnboardingChooseOrganization() {
             />
             <Button 
               onClick={handleManualJoin}
-              disabled={!clubCode.trim() || manualJoining}
+              disabled={!clubCode.trim() || manualJoining || !session}
               className="w-full"
               data-testid="button-join-club-main"
             >
-              {manualJoining ? (
+              {manualJoining || !session ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Joining...
+                  {!session ? 'Loading...' : 'Joining...'}
                 </>
               ) : (
                 'Join Club'
