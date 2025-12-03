@@ -37,13 +37,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
+  const { isSignedIn, isLoaded: clerkLoaded, getToken } = useClerkAuth();
   const { user: clerkUser } = useClerkUser();
   const { signOut } = useClerk();
 
   const fetchUser = async () => {
     try {
+      const token = await getToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/auth/user', {
+        headers,
         credentials: 'include'
       });
       

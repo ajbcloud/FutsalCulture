@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getSession } from "./auth";
 import { clerkMiddleware, syncClerkUser, requireClerkAuth } from "./clerk-auth";
+import { getAuth } from "@clerk/express";
 import { 
   insertPlayerSchema, 
   insertSessionSchema, 
@@ -76,7 +77,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Debug endpoint to check Clerk auth status
   app.get('/api/debug/clerk-auth', (req: any, res) => {
-    const { getAuth } = require("@clerk/express");
     const auth = getAuth(req);
     const cookies = req.headers.cookie || '';
     const hasSessionCookie = cookies.includes('__session');
