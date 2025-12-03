@@ -2816,6 +2816,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup beta onboarding routes
   setupBetaOnboardingRoutes(app);
 
+  // Setup consumer routes (join club, etc.)
+  const consumerRoutes = await import('./routes/consumer-routes');
+  app.use('/api/consumer', isAuthenticated, consumerRoutes.default);
+
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');
   app.use('/api', isAuthenticated, featureRoutes.default);

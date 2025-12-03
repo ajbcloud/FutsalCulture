@@ -14,6 +14,7 @@ import WaitlistOffers from "@/components/waitlist-offers";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
 import { ParentSessionHistoryDropdown } from "@/components/parent-session-history-dropdown";
 import HouseholdSection from "@/components/household-section";
+import JoinClubModal from "@/components/JoinClubModal";
 
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,21 @@ export default function Dashboard() {
     player: Player;
     signup: any;
   } | null>(null);
+  
+  // Join club modal state - show if user has no tenantId and hasn't dismissed it
+  const [joinClubModalDismissed, setJoinClubModalDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('joinClubModalDismissed') === 'true';
+    }
+    return false;
+  });
+  
+  const showJoinClubModal = !!(isAuthenticated && !isLoading && user && !user.tenantId && !joinClubModalDismissed);
+  
+  const handleDismissJoinClubModal = () => {
+    setJoinClubModalDismissed(true);
+    localStorage.setItem('joinClubModalDismissed', 'true');
+  };
 
   // Sync tab state with URL query params - MUST be with other hooks before any computed values
   const searchString = useSearch();
@@ -854,6 +870,12 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Join Club Modal - shows for users without a club */}
+      <JoinClubModal
+        isOpen={showJoinClubModal}
+        onClose={handleDismissJoinClubModal}
+      />
     </div>
   );
 }
