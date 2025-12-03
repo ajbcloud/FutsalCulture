@@ -14,6 +14,14 @@ router.use(async (req: any, res, next) => {
     const { storage } = await import('./storage');
     const user = await storage.getUser(req.user.id);
     (req as any).currentUser = user;
+    
+    // For Super Admin without tenant context, use the first available tenant
+    if (user && !user.tenantId && user.isSuperAdmin) {
+      const firstTenant = await db.query.tenants.findFirst();
+      if (firstTenant) {
+        (req as any).currentUser = { ...user, tenantId: firstTenant.id };
+      }
+    }
   }
   next();
 });
