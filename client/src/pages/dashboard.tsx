@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus, Home } from "lucide-react";
+import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus, Home, Building2, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { players, signups, futsalSessions, NotificationPreferences } from "@shared/schema";
 
@@ -346,9 +346,41 @@ export default function Dashboard() {
   const paidSessionsCount = signups.filter(s => s.paid).length;
   const pendingPayments = upcomingSignups.filter(s => !s.paid).length;
 
+  // Check if user is unaffiliated (no club membership)
+  const isUnaffiliated = user?.isUnaffiliated === true;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Navbar />
+      
+      {/* Unaffiliated User Banner - Join a Club CTA */}
+      {isUnaffiliated && (
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-b border-primary/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="p-3 rounded-full bg-primary/20">
+                  <Building2 className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h3 className="font-semibold text-foreground">Join a Futsal Club</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Have an invite code? Join a club to start booking sessions and accessing training programs.
+                </p>
+              </div>
+              <Button 
+                onClick={() => setLocation('/join')}
+                className="gap-2 flex-shrink-0"
+                data-testid="button-join-club-cta"
+              >
+                <KeyRound className="w-4 h-4" />
+                Enter Invite Code
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Dashboard Tab Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
@@ -377,14 +409,16 @@ export default function Dashboard() {
               </h1>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
-                <span>Welcome back</span>
+                <span>{isUnaffiliated ? 'Welcome to PlayHQ' : 'Welcome back'}</span>
               </div>
               <p className="text-lg text-muted-foreground max-w-xl">
-                Ready to book today's training sessions? Let's get your players on the field.
+                {isUnaffiliated 
+                  ? "Set up your household and add your players. When you're ready, join a club to start booking sessions."
+                  : "Ready to book today's training sessions? Let's get your players on the field."}
               </p>
             </div>
             
-            {/* Quick Stats */}
+            {/* Quick Stats - Show different stats for unaffiliated users */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto mb-2">
@@ -393,32 +427,73 @@ export default function Dashboard() {
                 <p className="text-2xl font-bold text-foreground tabular-nums">{players.length}</p>
                 <p className="text-xs text-muted-foreground">Players</p>
               </div>
-              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10 text-green-500 mx-auto mb-2">
-                  <Calendar className="w-5 h-5" />
+              {!isUnaffiliated && (
+                <>
+                  <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10 text-green-500 mx-auto mb-2">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{paidSessionsCount}</p>
+                    <p className="text-xs text-muted-foreground">Sessions Booked</p>
+                  </div>
+                  <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors col-span-2 sm:col-span-1">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 mx-auto mb-2">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{pendingPayments}</p>
+                    <p className="text-xs text-muted-foreground">Pending Payment</p>
+                  </div>
+                </>
+              )}
+              {isUnaffiliated && (
+                <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 mx-auto mb-2">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <p className="text-2xl font-bold text-foreground tabular-nums">0</p>
+                  <p className="text-xs text-muted-foreground">Clubs Joined</p>
                 </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{paidSessionsCount}</p>
-                <p className="text-xs text-muted-foreground">Sessions Booked</p>
-              </div>
-              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-4 text-center hover:border-primary/30 transition-colors col-span-2 sm:col-span-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 mx-auto mb-2">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{pendingPayments}</p>
-                <p className="text-xs text-muted-foreground">Pending Payment</p>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Waitlist Offers Section */}
-      <section className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-        <WaitlistOffers />
-      </section>
+      {/* Waitlist Offers Section - Only show for club members */}
+      {!isUnaffiliated && (
+        <section className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <WaitlistOffers />
+        </section>
+      )}
 
-      {/* Today's Sessions Section */}
-      <section className="py-8 sm:py-12">
+      {/* Today's Sessions Section - Only show for club members */}
+      {isUnaffiliated ? (
+        <section className="py-8 sm:py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Card className="border-dashed border-2 bg-card/50">
+              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Building2 className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Join a Club to Book Sessions</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm">
+                  To book training sessions, you'll need to join a futsal club first. Ask your club for an invite code.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="gap-2"
+                  onClick={() => setLocation('/join')}
+                  data-testid="button-join-club-sessions"
+                >
+                  <KeyRound className="w-5 h-5" />
+                  Enter Invite Code
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      ) : (
+        <section className="py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div className="space-y-1">
@@ -546,6 +621,7 @@ export default function Dashboard() {
           )}
         </div>
       </section>
+      )}
 
       {/* Player Management Section */}
       <section className="py-8 sm:py-12 bg-muted/30">

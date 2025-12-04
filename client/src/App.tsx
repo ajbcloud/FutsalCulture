@@ -71,6 +71,7 @@ import CheckoutSuccess from "./pages/checkout-success";
 import ClubSignup from "./pages/ClubSignup";
 import ClubSetup from "./pages/ClubSetup";
 import JoinSetup from "./pages/JoinSetup";
+import UnaffiliatedSignup, { UnaffiliatedSignupComplete } from "./pages/UnaffiliatedSignup";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -97,6 +98,8 @@ function Router() {
         <Route path="/join/:rest*" component={Join} />
         <Route path="/join-setup" component={JoinSetup} />
         <Route path="/signup" component={PersonalSignup} />
+        <Route path="/signup/unaffiliated" component={UnaffiliatedSignup} />
+        <Route path="/signup/unaffiliated/complete" component={UnaffiliatedSignupComplete} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
         <Route path="/login/:rest*" component={Login} />
