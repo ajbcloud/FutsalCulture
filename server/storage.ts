@@ -751,8 +751,12 @@ export class DatabaseStorage implements IStorage {
     return newSession;
   }
 
-  async updateSession(id: string, session: Partial<InsertSession>): Promise<FutsalSession> {
-    const [updatedSession] = await db.update(futsalSessions).set(session).where(eq(futsalSessions.id, id)).returning();
+  async updateSession(id: string, session: Partial<InsertSession>, tenantId?: string): Promise<FutsalSession> {
+    // When tenantId is provided, enforce tenant isolation for admin operations
+    const whereCondition = tenantId 
+      ? and(eq(futsalSessions.id, id), eq(futsalSessions.tenantId, tenantId))
+      : eq(futsalSessions.id, id);
+    const [updatedSession] = await db.update(futsalSessions).set(session).where(whereCondition).returning();
     return updatedSession;
   }
 

@@ -1113,6 +1113,11 @@ export async function setupAdminRoutes(app: any) {
   app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+      
       const updateData = { ...req.body };
       
       // Convert datetime strings to Date objects if they exist
@@ -1123,8 +1128,18 @@ export async function setupAdminRoutes(app: any) {
         updateData.endTime = new Date(updateData.endTime);
       }
       
+      // Verify session belongs to tenant before updating
+      const [existingSession] = await db.select()
+        .from(futsalSessions)
+        .where(and(eq(futsalSessions.id, id), eq(futsalSessions.tenantId, tenantId)))
+        .limit(1);
+      
+      if (!existingSession) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
       console.log('Updating session with data:', { id, updateData });
-      const session = await storage.updateSession(id, updateData);
+      const session = await storage.updateSession(id, updateData, tenantId);
       res.json(session);
     } catch (error) {
       console.error("Error updating session:", error);
@@ -3345,11 +3360,21 @@ export async function setupAdminRoutes(app: any) {
     }
   });
 
-  // Session management endpoints
+  // Session management endpoints - individual GET by ID (with tenant verification)
   app.get('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const session = await storage.getSession(id);
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+      
+      // Verify session belongs to tenant
+      const [session] = await db.select()
+        .from(futsalSessions)
+        .where(and(eq(futsalSessions.id, id), eq(futsalSessions.tenantId, tenantId)))
+        .limit(1);
+        
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
@@ -3360,38 +3385,7 @@ export async function setupAdminRoutes(app: any) {
     }
   });
 
-  app.post('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const sessionData = req.body;
-      const session = await storage.createSession(sessionData);
-      res.json(session);
-    } catch (error) {
-      console.error("Error creating session:", error);
-      res.status(500).json({ message: "Failed to create session" });
-    }
-  });
-
-  app.patch('/api/admin/sessions/:id', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const updateData = { ...req.body };
-      
-      // Convert datetime strings to Date objects if they exist
-      if (updateData.startTime && typeof updateData.startTime === 'string') {
-        updateData.startTime = new Date(updateData.startTime);
-      }
-      if (updateData.endTime && typeof updateData.endTime === 'string') {
-        updateData.endTime = new Date(updateData.endTime);
-      }
-      
-      console.log('Updating session with data:', { id, updateData });
-      const session = await storage.updateSession(id, updateData);
-      res.json(session);
-    } catch (error) {
-      console.error("Error updating session:", error);
-      res.status(500).json({ message: "Failed to update session" });
-    }
-  });
+  // NOTE: Duplicate session POST/PATCH routes removed - see lines ~1077 and ~1116 for the tenant-verified versions
 
   // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
@@ -4333,9 +4327,15 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.put('/api/admin/parents/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
+      
       const { firstName, lastName, email, phone, isAdmin, isAssistant } = req.body;
       
-      await db.update(users).set({
+      // Verify parent belongs to tenant before updating
+      const [updated] = await db.update(users).set({
         firstName,
         lastName,
         email,
@@ -4343,7 +4343,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         isAdmin,
         isAssistant,
         updatedAt: new Date()
-      }).where(eq(users.id, id));
+      }).where(and(eq(users.id, id), eq(users.tenantId, tenantId))).returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Parent not found" });
+      }
 
       res.json({ success: true });
     } catch (error) {
@@ -4355,17 +4359,27 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.delete('/api/admin/parents/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
       
-      // Delete associated signups first
+      // Verify parent belongs to tenant before deleting
+      const [parent] = await db.select().from(users).where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
+      if (!parent) {
+        return res.status(404).json({ error: "Parent not found" });
+      }
+      
+      // Delete associated signups first (only for players belonging to this tenant)
       await db.delete(signups).where(
-        sql`${signups.playerId} IN (SELECT id FROM ${players} WHERE ${players.parentId} = ${id})`
+        sql`${signups.playerId} IN (SELECT id FROM ${players} WHERE ${players.parentId} = ${id} AND ${players.tenantId} = ${tenantId})`
       );
       
-      // Delete associated players 
-      await db.delete(players).where(eq(players.parentId, id));
+      // Delete associated players (only for this tenant)
+      await db.delete(players).where(and(eq(players.parentId, id), eq(players.tenantId, tenantId)));
       
-      // Delete the parent
-      await db.delete(users).where(eq(users.id, id));
+      // Delete the parent (only if belongs to tenant)
+      await db.delete(users).where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
 
       res.json({ success: true });
     } catch (error) {
