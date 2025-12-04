@@ -91,10 +91,6 @@ externalPort = 4200
 localPort = 44827
 externalPort = 3000
 
-[[ports]]
-localPort = 46827
-externalPort = 9000
-
 [agent]
 integrations = ["javascript_sendgrid==1.0.0:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0"]
 

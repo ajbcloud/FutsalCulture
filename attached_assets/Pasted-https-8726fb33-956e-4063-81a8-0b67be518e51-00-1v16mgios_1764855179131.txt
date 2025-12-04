@@ -1,0 +1,43 @@
+https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/api/admin/invite-codes 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=209e1b0d:879
+run @ @tanstack_react-query.js?v=209e1b0d:507
+start @ @tanstack_react-query.js?v=209e1b0d:550
+fetch @ @tanstack_react-query.js?v=209e1b0d:918
+executeFetch_fn @ @tanstack_react-query.js?v=209e1b0d:2280
+onSubscribe @ @tanstack_react-query.js?v=209e1b0d:1976
+subscribe @ @tanstack_react-query.js?v=209e1b0d:24
+(anonymous) @ @tanstack_react-query.js?v=209e1b0d:3147
+subscribeToStore @ chunk-XQLYTHWV.js?v=209e1b0d:11984
+commitHookEffectListMount @ chunk-XQLYTHWV.js?v=209e1b0d:16915
+commitPassiveMountOnFiber @ chunk-XQLYTHWV.js?v=209e1b0d:18156
+commitPassiveMountEffects_complete @ chunk-XQLYTHWV.js?v=209e1b0d:18129
+commitPassiveMountEffects_begin @ chunk-XQLYTHWV.js?v=209e1b0d:18119
+commitPassiveMountEffects @ chunk-XQLYTHWV.js?v=209e1b0d:18109
+flushPassiveEffectsImpl @ chunk-XQLYTHWV.js?v=209e1b0d:19490
+flushPassiveEffects @ chunk-XQLYTHWV.js?v=209e1b0d:19447
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=209e1b0d:18868
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=209e1b0d:9119
+commitRootImpl @ chunk-XQLYTHWV.js?v=209e1b0d:19432
+commitRoot @ chunk-XQLYTHWV.js?v=209e1b0d:19277
+finishConcurrentRender @ chunk-XQLYTHWV.js?v=209e1b0d:18805
+performConcurrentWorkOnRoot @ chunk-XQLYTHWV.js?v=209e1b0d:18718
+workLoop @ chunk-XQLYTHWV.js?v=209e1b0d:197
+flushWork @ chunk-XQLYTHWV.js?v=209e1b0d:176
+performWorkUntilDeadline @ chunk-XQLYTHWV.js?v=209e1b0d:384Understand this error
+settings.tsx:878  GET https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev/api/admin/integrations 404 (Not Found)
+fetchIntegrations @ settings.tsx:878
+(anonymous) @ settings.tsx:749
+commitHookEffectListMount @ chunk-XQLYTHWV.js?v=209e1b0d:16915
+invokePassiveEffectMountInDEV @ chunk-XQLYTHWV.js?v=209e1b0d:18324
+invokeEffectsInDev @ chunk-XQLYTHWV.js?v=209e1b0d:19701
+commitDoubleInvokeEffectsInDEV @ chunk-XQLYTHWV.js?v=209e1b0d:19686
+flushPassiveEffectsImpl @ chunk-XQLYTHWV.js?v=209e1b0d:19503
+flushPassiveEffects @ chunk-XQLYTHWV.js?v=209e1b0d:19447
+commitRootImpl @ chunk-XQLYTHWV.js?v=209e1b0d:19416
+commitRoot @ chunk-XQLYTHWV.js?v=209e1b0d:19277
+performSyncWorkOnRoot @ chunk-XQLYTHWV.js?v=209e1b0d:18895
+flushSyncCallbacks @ chunk-XQLYTHWV.js?v=209e1b0d:9119
+(anonymous) @ chunk-XQLYTHWV.js?v=209e1b0d:18627Understand this error
+installHook.js:1 Error fetching integrations: Error: Failed to fetch integrations
+    at fetchIntegrations (settings.tsx:879:31)
