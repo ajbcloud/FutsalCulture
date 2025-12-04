@@ -201,7 +201,7 @@ export interface IStorage {
 
   // Help request operations
   createHelpRequest(helpRequest: InsertHelpRequest): Promise<HelpRequest>;
-  getHelpRequests(): Promise<HelpRequest[]>;
+  getHelpRequests(tenantId: string): Promise<HelpRequest[]>;
 
   // Notification preferences
   getNotificationPreferences(parentId: string): Promise<NotificationPreferences | undefined>;
@@ -1317,8 +1317,8 @@ export class DatabaseStorage implements IStorage {
     return setting?.value || null;
   }
 
-  async getHelpRequests(tenantId?: string): Promise<any[]> {
-    let query = db.select({
+  async getHelpRequests(tenantId: string): Promise<any[]> {
+    const requests = await db.select({
       id: helpRequests.id,
       tenantId: helpRequests.tenantId,
       status: helpRequests.status,
@@ -1338,13 +1338,9 @@ export class DatabaseStorage implements IStorage {
       replyHistory: helpRequests.replyHistory,
       createdAt: helpRequests.createdAt,
     })
-    .from(helpRequests);
-
-    if (tenantId) {
-      query = query.where(eq(helpRequests.tenantId, tenantId));
-    }
-
-    const requests = await query.orderBy(desc(helpRequests.createdAt));
+    .from(helpRequests)
+    .where(eq(helpRequests.tenantId, tenantId))
+    .orderBy(desc(helpRequests.createdAt));
 
     // For each request, check if email matches a parent or player
     const requestsWithUserLinks = await Promise.all(
@@ -1362,7 +1358,7 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(and(
           eq(users.email, request.email),
-          tenantId ? eq(users.tenantId, tenantId) : sql`true`
+          eq(users.tenantId, tenantId)
         ))
         .limit(1);
 
@@ -1380,7 +1376,7 @@ export class DatabaseStorage implements IStorage {
           .from(players)
           .where(and(
             eq(players.email, request.email),
-            tenantId ? eq(players.tenantId, tenantId) : sql`true`
+            eq(players.tenantId, tenantId)
           ))
           .limit(1);
 

@@ -2748,7 +2748,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const helpRequests = await storage.getHelpRequests();
+      const tenantId = user.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
+      const helpRequests = await storage.getHelpRequests(tenantId);
       res.json(helpRequests);
     } catch (error) {
       console.error("Error fetching help requests:", error);
