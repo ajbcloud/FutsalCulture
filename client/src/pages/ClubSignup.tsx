@@ -21,7 +21,8 @@ export default function ClubSignup() {
           routing="path" 
           path="/club-signup"
           signInUrl="/login"
-          forceRedirectUrl="/club-setup"
+          afterSignUpUrl="/dashboard"
+          afterSignInUrl="/dashboard"
           appearance={{
             variables: {
               colorPrimary: "#3b82f6",
