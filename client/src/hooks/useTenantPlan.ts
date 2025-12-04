@@ -21,8 +21,8 @@ interface TenantInfo {
   // Billing information
   billingStatus: 'active' | 'trialing' | 'past_due' | 'cancelled' | 'none';
   renewalDate: string | null;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
+  paymentCustomerId: string | null;
+  paymentSubscriptionId: string | null;
   
   // Trial information
   trialStartedAt: string | null;

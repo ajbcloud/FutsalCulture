@@ -813,7 +813,7 @@ export default function AdminSettings() {
         throw new Error(error.message || error.error || 'Failed to save integration');
       }
 
-      const isPaymentProcessor = configureDialog === 'stripe' || configureDialog === 'braintree';
+      const isPaymentProcessor = configureDialog === 'braintree';
       const message = isPaymentProcessor 
         ? `${configureDialog} integration saved successfully. Other payment processors have been automatically disabled.`
         : "Integration saved successfully";

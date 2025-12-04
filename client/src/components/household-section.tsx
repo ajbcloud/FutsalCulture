@@ -62,6 +62,33 @@ type CreditHistoryItem = {
   isUsed: boolean;
 };
 
+type ConsentDocument = {
+  id: string;
+  templateType: string;
+  documentTitle: string;
+  signedAt: string;
+  signedByParentId: string;
+};
+
+type MissingForm = {
+  templateId: string;
+  templateType: string;
+  title: string;
+};
+
+type PlayerConsentData = {
+  player: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    isAdult: boolean;
+    birthYear: number | null;
+  };
+  documents: ConsentDocument[];
+  missingForms: MissingForm[];
+  hasCompletedConsent: boolean;
+};
+
 export default function HouseholdSection() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -109,6 +136,11 @@ export default function HouseholdSection() {
     queryKey: ["/api/tenant/age-policy"],
     queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
     enabled: isAuthenticated,
+  });
+
+  const { data: consentDocuments = [], isLoading: consentLoading } = useQuery<PlayerConsentData[]>({
+    queryKey: ["/api/household/consent-documents"],
+    enabled: isAuthenticated && !!user?.id,
   });
 
   const isConsentRequired = agePolicyData?.requireConsent === true || 
@@ -537,6 +569,110 @@ export default function HouseholdSection() {
               </div>
             </CardContent>
           </Card>
+
+          {isConsentRequired && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileCheck className="h-5 w-5" />
+                  Consent Forms
+                </CardTitle>
+                <CardDescription>
+                  Consent documents for your {term.players}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {consentLoading ? (
+                  <div className="text-center py-4 text-muted-foreground">Loading consent forms...</div>
+                ) : consentDocuments.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No {term.players} registered yet
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {consentDocuments.map((playerData) => (
+                      <div key={playerData.player.id} className="border rounded-lg p-4" data-testid={`consent-player-${playerData.player.id}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">
+                              {playerData.player.firstName} {playerData.player.lastName}
+                            </span>
+                            {playerData.player.isAdult && (
+                              <Badge variant="secondary" className="text-xs">Adult</Badge>
+                            )}
+                          </div>
+                          {playerData.hasCompletedConsent ? (
+                            <Badge variant="default" className="bg-green-600" data-testid={`consent-status-complete-${playerData.player.id}`}>
+                              <FileCheck className="h-3 w-3 mr-1" />
+                              Complete
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" data-testid={`consent-status-pending-${playerData.player.id}`}>
+                              {playerData.missingForms.length} Pending
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {playerData.documents.length > 0 && (
+                          <div className="mb-3">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Signed Document</TableHead>
+                                  <TableHead>Date</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {playerData.documents.map((doc) => (
+                                  <TableRow key={doc.id}>
+                                    <TableCell className="font-medium">
+                                      <div className="flex items-center gap-2">
+                                        <FileCheck className="h-4 w-4 text-green-600" />
+                                        {doc.documentTitle}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      <div className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {new Date(doc.signedAt).toLocaleDateString()}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                        
+                        {playerData.missingForms.length > 0 && (
+                          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+                            <div className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                              Missing Required Forms:
+                            </div>
+                            <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                              {playerData.missingForms.map((form) => (
+                                <li key={form.templateId} className="flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                                  {form.title}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {playerData.documents.length === 0 && playerData.missingForms.length === 0 && (
+                          <div className="text-sm text-muted-foreground text-center py-2">
+                            No consent forms required
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {currentUserMember?.role !== 'primary' && (
             <Card className="border-destructive/50">

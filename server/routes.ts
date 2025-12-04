@@ -1206,6 +1206,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get consent documents for household players (for household tab display)
+  app.get('/api/household/consent-documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.tenantId) {
+        return res.status(400).json({ message: "User tenant not found" });
+      }
+
+      // Get all players the user has access to (as parent)
+      const players = await storage.getPlayersByParent(userId);
+      
+      // Get required consent templates for comparison
+      const requiredTemplates = await storage.getRequiredConsentTemplates(user.tenantId);
+      const requiredTypes = new Set(requiredTemplates.map(t => t.templateType));
+      
+      // Get consent documents for each player with player info
+      const playerConsentData = await Promise.all(
+        players.map(async (player: any) => {
+          const documents = await storage.getConsentDocumentsByPlayer(player.id, user.tenantId);
+          
+          // Calculate if player is adult (18+)
+          const currentYear = new Date().getFullYear();
+          const isAdult = player.dateOfBirth 
+            ? (currentYear - new Date(player.dateOfBirth).getFullYear()) >= 18
+            : player.birthYear 
+              ? (currentYear - player.birthYear) >= 18
+              : false;
+
+          // Check which required templates are signed
+          const signedTypes = new Set(documents.map((doc: any) => doc.templateType));
+          const missingTemplates = requiredTemplates.filter(t => !signedTypes.has(t.templateType));
+          
+          // Completion is based on all required templates being signed
+          const hasCompletedConsent = missingTemplates.length === 0 && requiredTemplates.length > 0;
+
+          return {
+            player: {
+              id: player.id,
+              firstName: player.firstName,
+              lastName: player.lastName,
+              isAdult,
+              birthYear: player.birthYear || null,
+            },
+            documents: documents.map((doc: any) => ({
+              id: doc.id,
+              templateType: doc.templateType,
+              documentTitle: doc.documentTitle,
+              signedAt: doc.signedAt,
+              signedByParentId: doc.parentId,
+            })),
+            missingForms: missingTemplates.map(t => ({
+              templateId: t.id,
+              templateType: t.templateType,
+              title: t.title,
+            })),
+            hasCompletedConsent,
+          };
+        })
+      );
+
+      res.json(playerConsentData);
+    } catch (error) {
+      console.error("Error fetching household consent documents:", error);
+      res.status(500).json({ message: "Failed to fetch consent documents" });
+    }
+  });
+
   // Admin session history endpoint for players
   app.get('/api/admin/players/:id/session-history', isAuthenticated, async (req: any, res) => {
     try {
@@ -1895,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Process remaining amount with Stripe
+      // Process remaining amount with Braintree
       if (!paymentMethodId) {
         return res.json({
           success: false,
@@ -1906,47 +1975,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Import Stripe if needed
-      let Stripe;
-      try {
-        Stripe = (await import('stripe')).default;
-      } catch (error) {
-        return res.status(500).json({ message: "Payment processing not available" });
+      // Import Braintree service
+      const { processSaleTransaction, isBraintreeEnabled } = await import('./services/braintreeService');
+
+      if (!isBraintreeEnabled()) {
+        return res.status(500).json({ message: "Payment processing not configured. Please contact support." });
       }
 
-      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeSecretKey) {
-        return res.status(500).json({ message: "Payment processing not configured" });
-      }
-
-      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' as any });
-
-      // Create payment intent for remaining amount
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(remainingAmount * 100), // Convert to cents
-        currency: 'usd',
-        payment_method: paymentMethodId,
-        confirm: true,
+      // Process payment with Braintree sale transaction
+      const amountCents = Math.round(remainingAmount * 100);
+      const paymentResult = await processSaleTransaction(amountCents, paymentMethodId, {
+        orderId: signupId,
         description: `Session booking for ${signup.player.firstName} ${signup.player.lastName}`,
         metadata: {
-          signupId,
-          sessionId: signup.sessionId,
-          playerId: signup.playerId,
-          creditsUsed: creditsUsed.toString(),
+          signup_id: signupId,
+          session_id: signup.sessionId,
+          player_id: signup.playerId,
+          credits_used: creditsUsed.toString(),
         }
       });
 
-      if (paymentIntent.status === 'succeeded') {
+      if (paymentResult.success && paymentResult.transactionId) {
         // Mark signup as paid
         await storage.updateSignupPaymentStatus(signupId, true);
         
         // Create payment record
         await storage.createPayment({
           signupId,
-          amount: Math.round(remainingAmount * 100),
+          amount: amountCents,
           creditsUsed: Math.round(creditsUsed * 100),
-          paymentMethod: 'stripe',
-          paymentIntentId: paymentIntent.id,
+          paymentMethod: 'braintree',
+          paymentIntentId: paymentResult.transactionId,
           status: 'succeeded',
           tenantId: user.tenantId,
         });
@@ -1956,14 +2015,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Payment successful",
           creditsUsed,
           amountCharged: remainingAmount,
-          paymentIntentId: paymentIntent.id,
+          transactionId: paymentResult.transactionId,
           signup
         });
       } else {
         return res.status(400).json({
           success: false,
-          message: "Payment failed",
-          status: paymentIntent.status
+          message: paymentResult.message || "Payment failed",
+          status: paymentResult.status
         });
       }
     } catch (error) {

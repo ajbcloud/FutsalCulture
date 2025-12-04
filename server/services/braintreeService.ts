@@ -749,6 +749,75 @@ async function logSubscriptionEventTx(
   }
 }
 
+export async function processSaleTransaction(
+  amountCents: number,
+  paymentMethodNonce: string,
+  options: {
+    customerId?: string;
+    orderId?: string;
+    description?: string;
+    metadata?: Record<string, string>;
+  } = {}
+): Promise<{
+  success: boolean;
+  transactionId?: string;
+  status?: string;
+  message?: string;
+}> {
+  if (!isBraintreeEnabled()) {
+    return {
+      success: false,
+      message: 'Braintree payment processing is not configured. Please contact support.',
+    };
+  }
+
+  const gw = getGateway();
+  const amountDollars = (amountCents / 100).toFixed(2);
+
+  try {
+    const transactionRequest: braintree.TransactionRequest = {
+      amount: amountDollars,
+      paymentMethodNonce,
+      options: {
+        submitForSettlement: true,
+      },
+    };
+
+    if (options.customerId) {
+      transactionRequest.customerId = options.customerId;
+    }
+
+    if (options.orderId) {
+      transactionRequest.orderId = options.orderId;
+    }
+
+    if (options.metadata) {
+      transactionRequest.customFields = options.metadata;
+    }
+
+    const result = await gw.transaction.sale(transactionRequest);
+
+    if (!result.success || !result.transaction) {
+      return {
+        success: false,
+        message: result.message || 'Payment failed. Please try again.',
+      };
+    }
+
+    return {
+      success: true,
+      transactionId: result.transaction.id,
+      status: result.transaction.status,
+    };
+  } catch (error) {
+    console.error('Braintree sale transaction error:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Payment processing failed',
+    };
+  }
+}
+
 export async function checkCooldownPeriod(tenantId: string): Promise<{
   allowed: boolean;
   remainingHours?: number;

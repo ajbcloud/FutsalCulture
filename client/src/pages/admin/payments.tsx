@@ -660,7 +660,7 @@ export default function AdminPayments() {
                   {payment.transactionId ? (
                     <div className="flex items-center gap-1">
                       <span className="text-xs bg-zinc-800 px-2 py-1 rounded border">
-                        {payment.paymentProvider === 'stripe' ? 'Stripe' : payment.paymentProvider === 'braintree' ? 'Braintree' : 'Unknown'}
+                        {payment.paymentProvider === 'braintree' ? 'Braintree' : payment.paymentProvider || 'Manual'}
                       </span>
                       <span className="truncate max-w-[120px]" title={payment.transactionId}>
                         {payment.transactionId}

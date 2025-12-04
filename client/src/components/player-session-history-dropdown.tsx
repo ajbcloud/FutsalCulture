@@ -32,7 +32,7 @@ interface SessionHistoryItem {
   paid: boolean;
   refunded?: boolean;
   paymentId?: string;
-  paymentProvider?: 'stripe' | 'braintree';
+  paymentProvider?: 'braintree';
   refundReason?: string;
   refundedAt?: string;
   createdAt: string;

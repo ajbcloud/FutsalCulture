@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { db } from './db';
 import { futsalSessions, signups, players, tenants, integrations, systemSettings } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import Stripe from 'stripe';
 import braintree from 'braintree';
 import { format } from 'date-fns';
 
@@ -46,35 +45,46 @@ async function generateBraintreeClientToken(credentials: any, userId?: string): 
         const user = await storage.getUser(userId);
         
         if (user?.email) {
-          // Try to find existing customer by email
-          const searchResponse = await new Promise<any>((resolve, reject) => {
-            gateway.customer.search((search: any) => {
-              search.email().is(user.email);
-            }, (err: any, response: any) => {
-              if (err) reject(err);
-              else resolve(response);
+          // Try to find existing customer by email using stream search
+          try {
+            const searchStream = gateway.customer.search((search: any) => {
+              search.email().is(user.email!);
             });
-          });
-          
-          if (searchResponse.success && searchResponse.customers.length > 0) {
-            customerId = searchResponse.customers[0].id;
-            console.log('Found existing Braintree customer:', customerId);
-          } else {
-            // Create new customer
-            const customerResponse = await new Promise<any>((resolve, reject) => {
-              gateway.customer.create({
+            
+            const customers: any[] = [];
+            for await (const customer of searchStream) {
+              customers.push(customer);
+              break; // Only need the first match
+            }
+            
+            if (customers.length > 0) {
+              customerId = customers[0].id;
+              console.log('Found existing Braintree customer:', customerId);
+            } else {
+              // Create new customer using promise-based API
+              const customerResponse = await gateway.customer.create({
                 email: user.email,
                 firstName: user.firstName || '',
                 lastName: user.lastName || '',
-              }, (err: any, result: any) => {
-                if (err) reject(err);
-                else resolve(result);
               });
+              
+              if (customerResponse.success && customerResponse.customer) {
+                customerId = customerResponse.customer.id;
+                console.log('Created new Braintree customer:', customerId);
+              }
+            }
+          } catch (searchError) {
+            console.warn('Customer search/create failed, creating new customer:', searchError);
+            // Fallback: Create a new customer directly
+            const customerResponse = await gateway.customer.create({
+              email: user.email,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
             });
             
-            if (customerResponse.success) {
+            if (customerResponse.success && customerResponse.customer) {
               customerId = customerResponse.customer.id;
-              console.log('Created new Braintree customer:', customerId);
+              console.log('Created new Braintree customer (fallback):', customerId);
             }
           }
         }
@@ -94,15 +104,7 @@ async function generateBraintreeClientToken(credentials: any, userId?: string): 
       };
     }
     
-    const response = await new Promise<any>((resolve, reject) => {
-      gateway.clientToken.generate(tokenOptions, (err: any, result: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
+    const response = await gateway.clientToken.generate(tokenOptions);
     
     console.log('Braintree response received:', {
       hasResponse: !!response,
@@ -110,12 +112,11 @@ async function generateBraintreeClientToken(credentials: any, userId?: string): 
       responseKeys: Object.keys(response || {}),
       clientTokenType: typeof response?.clientToken,
       clientTokenLength: response?.clientToken?.length,
-      responseSuccess: response?.success,
       fullResponse: response
     });
     
     // Check for the actual token in the response
-    const token = response?.clientToken || response?.client_token;
+    const token = response?.clientToken;
     
     if (!token) {
       console.error('Braintree client token is missing from response:', response);
@@ -124,14 +125,14 @@ async function generateBraintreeClientToken(credentials: any, userId?: string): 
     
     console.log('Braintree client token generated successfully, token preview:', token.substring(0, 50) + '...');
     return token;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating Braintree client token:', error);
     console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
     });
-    throw new Error('Failed to generate Braintree client token: ' + error.message);
+    throw new Error('Failed to generate Braintree client token: ' + (error?.message || 'Unknown error'));
   }
 }
 
@@ -176,29 +177,24 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
       return res.status(400).json({ message: 'No payment processor configured' });
     }
 
-    // Return only the necessary client-side configuration
+    // Return only the necessary client-side configuration (Braintree only)
     let config: any = { provider };
     
-    if (provider === 'stripe') {
-      config.publishableKey = credentials?.publishableKey || process.env.VITE_STRIPE_PUBLIC_KEY;
-    } else if (provider === 'braintree') {
-      try {
-        const clientToken = await generateBraintreeClientToken(credentials, userId);
-        console.log('Braintree client token generated successfully, length:', clientToken?.length);
-        config.clientToken = clientToken;
-        console.log('Config after setting client token:', { 
-          hasClientToken: !!config.clientToken,
-          clientTokenPreview: config.clientToken?.substring(0, 20) + '...'
-        });
-      } catch (error) {
-        console.error('Failed to generate Braintree client token:', error);
-        return res.status(500).json({ message: 'Failed to initialize Braintree payment' });
-      }
+    try {
+      const clientToken = await generateBraintreeClientToken(credentials, userId);
+      console.log('Braintree client token generated successfully, length:', clientToken?.length);
+      config.clientToken = clientToken;
+      console.log('Config after setting client token:', { 
+        hasClientToken: !!config.clientToken,
+        clientTokenPreview: config.clientToken?.substring(0, 20) + '...'
+      });
+    } catch (error) {
+      console.error('Failed to generate Braintree client token:', error);
+      return res.status(500).json({ message: 'Failed to initialize Braintree payment' });
     }
 
     console.log('Returning payment config:', { 
       provider: config.provider, 
-      hasPublishableKey: !!config.publishableKey,
       hasClientToken: !!config.clientToken,
       clientTokenLength: config.clientToken?.length
     });
@@ -215,41 +211,54 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
   }
 });
 
-// Helper function to get active payment processor
-async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider: 'stripe' | 'braintree' | null, credentials: any }> {
+// Helper function to get active payment processor (Braintree only)
+async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider: 'braintree' | null, credentials: any }> {
   try {
-    console.log('Checking for active payment processors...');
+    console.log('Checking for active Braintree payment processor...');
     
-    // Check for enabled payment processors (Stripe or Braintree)
+    // Check for enabled Braintree payment processor
     // Look for tenant-specific integrations first, then global ones
     const activeProcessor = await db.select()
       .from(integrations)
       .where(and(
         eq(integrations.enabled, true),
-        sql`${integrations.provider} IN ('stripe', 'braintree')`,
+        sql`${integrations.provider} = 'braintree'`,
         // Allow both tenant-specific and global integrations (tenant_id is null)
         tenantId ? sql`(${integrations.tenantId} IS NULL OR ${integrations.tenantId} = ${tenantId})` : sql`${integrations.tenantId} IS NULL`
       ))
       .orderBy(sql`CASE WHEN ${integrations.tenantId} IS NOT NULL THEN 0 ELSE 1 END`) // Prefer tenant-specific
       .limit(1);
 
-    console.log('Found active processors:', activeProcessor.length);
+    console.log('Found active Braintree processor:', activeProcessor.length);
 
     if (activeProcessor.length > 0) {
-      console.log('Using configured processor:', activeProcessor[0].provider);
+      console.log('Using configured Braintree processor');
       const rawCredentials = activeProcessor[0].credentials;
       console.log('Raw credentials type:', typeof rawCredentials);
       
       // Parse credentials if they're stored as JSON string
-      let parsedCredentials = rawCredentials;
+      let parsedCredentials: {
+        environment?: string;
+        merchantId?: string;
+        publicKey?: string;
+        privateKey?: string;
+      } | null = null;
+      
       if (typeof rawCredentials === 'string') {
         try {
           parsedCredentials = JSON.parse(rawCredentials);
           console.log('Parsed credentials from JSON string');
         } catch (e) {
           console.error('Failed to parse credentials JSON:', e);
-          parsedCredentials = rawCredentials;
+          parsedCredentials = null;
         }
+      } else if (rawCredentials && typeof rawCredentials === 'object') {
+        parsedCredentials = rawCredentials as {
+          environment?: string;
+          merchantId?: string;
+          publicKey?: string;
+          privateKey?: string;
+        };
       }
       
       console.log('Final credentials structure:', {
@@ -261,7 +270,7 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
       });
       
       return {
-        provider: activeProcessor[0].provider as 'stripe' | 'braintree',
+        provider: 'braintree',
         credentials: parsedCredentials
       };
     }
@@ -287,19 +296,7 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
       };
     }
 
-    // Fallback to environment-based Stripe if available
-    if (process.env.STRIPE_SECRET_KEY && process.env.VITE_STRIPE_PUBLIC_KEY) {
-      console.log('Using environment-based Stripe configuration');
-      return {
-        provider: 'stripe',
-        credentials: {
-          secretKey: process.env.STRIPE_SECRET_KEY,
-          publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
-        }
-      };
-    }
-
-    console.log('No payment processor found');
+    console.log('No Braintree payment processor found');
     return { provider: null, credentials: null };
   } catch (error) {
     console.error('Error getting active payment processor:', error);
@@ -357,63 +354,25 @@ router.post('/session-billing/session-checkout', async (req: any, res) => {
     const playerData = player[0];
     const amount = 2500; // Default $25.00 in cents - sessions don't have price field yet
 
-    if (provider === 'stripe') {
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY);
+    // Braintree-only checkout - generate client token
+    try {
+      const clientToken = await generateBraintreeClientToken(credentials);
       
-      // Create checkout session for one-time payment
-      const checkoutSession = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `Futsal Session - ${sessionData.location}`,
-                description: `Session on ${new Date(sessionData.startTime).toLocaleDateString()} at ${new Date(sessionData.startTime).toLocaleTimeString()}`,
-              },
-              unit_amount: amount,
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/admin/dashboard?payment=success&session=${sessionId}&player=${playerId}`,
-        cancel_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://your-domain.com'}/admin/dashboard?payment=cancelled`,
-        metadata: {
-          sessionId: sessionData.id,
-          playerId: playerData.id,
-          tenantId: currentUser.tenantId,
-          type: 'session_booking'
+      res.json({
+        provider: 'braintree',
+        clientToken: clientToken,
+        amount: amount / 100, // Convert cents to dollars for Braintree
+        sessionDetails: {
+          id: sessionData.id,
+          location: sessionData.location,
+          startTime: sessionData.startTime,
+          playerName: `${playerData.firstName} ${playerData.lastName}`
         },
+        redirectUrl: `/parent/dashboard?payment=braintree&session=${sessionId}&player=${playerId}`
       });
-
-      res.json({ 
-        url: checkoutSession.url,
-        provider: 'stripe',
-        sessionId: checkoutSession.id
-      });
-
-    } else if (provider === 'braintree') {
-      // Generate real Braintree client token
-      try {
-        const clientToken = await generateBraintreeClientToken(credentials);
-        
-        res.json({
-          provider: 'braintree',
-          clientToken: clientToken,
-          amount: amount / 100, // Convert cents to dollars for Braintree
-          sessionDetails: {
-            id: sessionData.id,
-            location: sessionData.location,
-            startTime: sessionData.startTime,
-            playerName: `${playerData.firstName} ${playerData.lastName}`
-          },
-          redirectUrl: `/parent/dashboard?payment=braintree&session=${sessionId}&player=${playerId}`
-        });
-      } catch (error) {
-        console.error('Error generating Braintree client token:', error);
-        res.status(500).json({ message: 'Failed to initialize Braintree payment' });
-      }
+    } catch (error) {
+      console.error('Error generating Braintree client token:', error);
+      res.status(500).json({ message: 'Failed to initialize Braintree payment' });
     }
   } catch (error) {
     console.error('Error creating session checkout:', error);
@@ -436,20 +395,10 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    // Verify payment based on provider
+    // Verify Braintree payment only
     let paymentVerified = false;
     
-    if (provider === 'stripe' && paymentId) {
-      const { credentials } = await getActivePaymentProcessor();
-      const stripe = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY);
-      
-      try {
-        const session = await stripe.checkout.sessions.retrieve(paymentId);
-        paymentVerified = session.payment_status === 'paid';
-      } catch (error) {
-        console.error('Error verifying Stripe payment:', error);
-      }
-    } else if (provider === 'braintree' && paymentId) {
+    if (provider === 'braintree' && paymentId) {
       // Verify Braintree transaction
       try {
         const { credentials: braintreeCredentials } = await getActivePaymentProcessor();
@@ -470,6 +419,9 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
         console.error('Error verifying Braintree payment:', error);
         paymentVerified = false;
       }
+    } else if (provider !== 'braintree') {
+      console.log('Unsupported payment provider for verification:', provider);
+      return res.status(400).json({ message: 'Use Braintree for checkout. See /api/billing/braintree/ endpoints.' });
     }
 
     if (!paymentVerified) {
@@ -521,7 +473,7 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
   }
 });
 
-// Process payment endpoint for both Stripe and Braintree
+// Process payment endpoint (Braintree only)
 router.post('/session-billing/process-payment', async (req: any, res) => {
   try {
     const { signupId, sessionId, playerId, amount, paymentMethodId, provider, useCredits } = req.body;
@@ -561,45 +513,12 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
         return res.status(400).json({ message: 'No payment processor configured' });
       }
 
-      // Validate the provider matches the request
-      if (provider && provider !== activeProvider) {
-        return res.status(400).json({ message: `Payment processor mismatch. Expected ${activeProvider}, got ${provider}` });
+      // Validate that Braintree is being used
+      if (provider && provider !== 'braintree') {
+        return res.status(400).json({ message: 'Use Braintree for checkout. See /api/billing/braintree/ endpoints.' });
       }
     
-      if (activeProvider === 'stripe') {
-      // Process Stripe payment
-      const stripe = new Stripe(credentials?.secretKey || process.env.STRIPE_SECRET_KEY!);
-
-      try {
-        // Create and confirm payment intent
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(remainingAmount), // Use remaining amount after credits
-          currency: 'usd',
-          payment_method: paymentMethodId,
-          confirmation_method: 'manual',
-          confirm: true,
-          return_url: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5000'}/parent/dashboard`,
-        });
-
-        if (paymentIntent.status === 'succeeded') {
-          paymentResult = {
-            success: true,
-            paymentId: paymentIntent.id,
-            provider: 'stripe'
-          };
-        } else {
-          return res.status(400).json({ 
-            message: 'Payment requires additional action',
-            client_secret: paymentIntent.client_secret
-          });
-        }
-      } catch (stripeError: any) {
-        console.error('Stripe payment error:', stripeError);
-        return res.status(400).json({ message: stripeError.message || 'Payment failed' });
-      }
-      
-    } else if (activeProvider === 'braintree') {
-      // Process Braintree payment
+      // Process Braintree payment only
       try {
         const { paymentMethodNonce } = req.body;
         if (!paymentMethodNonce) {
@@ -653,9 +572,6 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
       } catch (braintreeError: any) {
         console.error('Braintree payment error:', braintreeError);
         return res.status(400).json({ message: braintreeError.message || 'Payment failed' });
-      }
-      } else {
-        return res.status(400).json({ message: 'Unsupported payment processor' });
       }
     } else if (creditsToUse > 0) {
       // Payment fully covered by credits

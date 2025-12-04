@@ -58,19 +58,10 @@ export async function retry(req: Request, res: Response) {
     if (!row) return res.status(404).json({ error:'not_found' });
     
     try {
-      // Use real payment gateway adapters
-      const provider = process.env.PAYMENTS_PROVIDER || 'stripe';
-      let adapter;
+      // Use Braintree for payment processing
+      const bt = await import('../../gateways/braintree');
       
-      if (provider === 'braintree') {
-        const bt = await import('../gateways/braintree');
-        adapter = bt;
-      } else {
-        const s = await import('../gateways/stripe');
-        adapter = s;
-      }
-      
-      const r = await adapter.chargeInvoice(row.id, row.tenant_id, Number(row.total_cents||0));
+      const r = await bt.chargeInvoice(row.id, row.tenant_id, Number(row.total_cents||0));
       
       await db.execute(sql`
         insert into dunning_events (invoice_id, attempt_no, status, reason)

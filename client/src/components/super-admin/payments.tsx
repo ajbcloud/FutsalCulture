@@ -20,7 +20,7 @@ interface Payment {
   sessionTitle: string;
   tenantName: string;
   tenantId: string;
-  stripePaymentId?: string;
+  braintreePaymentId?: string;
 }
 
 export default function SuperAdminPayments() {
@@ -51,14 +51,14 @@ export default function SuperAdminPayments() {
           id: "1",
           amount: 2500,
           status: "completed",
-          method: "stripe",
+          method: "braintree",
           date: "2025-07-28T10:30:00Z",
           playerName: "Alex Johnson",
           parentName: "Sarah Johnson",
           sessionTitle: "Morning Training",
           tenantName: "Futsal Culture",
           tenantId: "tenant1",
-          stripePaymentId: "pi_3OB1234567890"
+          braintreePaymentId: "bt_3OB1234567890"
         },
         {
           id: "2",
@@ -76,27 +76,27 @@ export default function SuperAdminPayments() {
           id: "3",
           amount: 2500,
           status: "failed",
-          method: "stripe",
+          method: "braintree",
           date: "2025-07-27T14:20:00Z",
           playerName: "Tyler Wilson",
           parentName: "Jennifer Wilson",
           sessionTitle: "Weekend Skills",
           tenantName: "Futsal Culture",
           tenantId: "tenant1",
-          stripePaymentId: "pi_3OB9876543210"
+          braintreePaymentId: "bt_3OB9876543210"
         },
         {
           id: "4",
           amount: 2500,
           status: "completed",
-          method: "stripe",
+          method: "braintree",
           date: "2025-07-27T09:15:00Z",
           playerName: "Maya Patel",
           parentName: "Raj Patel",
           sessionTitle: "Morning Training",
           tenantName: "Futsal Culture",
           tenantId: "tenant1",
-          stripePaymentId: "pi_3OB1122334455"
+          braintreePaymentId: "bt_3OB1122334455"
         }
       ].filter(payment => {
         if (selectedTenant !== "all" && payment.tenantId !== selectedTenant) return false;
@@ -129,10 +129,10 @@ export default function SuperAdminPayments() {
 
   const getMethodBadge = (method: string) => {
     switch (method) {
-      case "stripe":
-        return <Badge variant="outline" className="text-purple-600">Stripe</Badge>;
+      case "braintree":
+        return <Badge variant="outline" className="text-blue-600">Braintree</Badge>;
       case "venmo":
-        return <Badge variant="outline" className="text-blue-600">Venmo</Badge>;
+        return <Badge variant="outline" className="text-purple-600">Venmo</Badge>;
       case "cash":
         return <Badge variant="outline" className="text-green-600">Cash</Badge>;
       default:
@@ -267,7 +267,7 @@ export default function SuperAdminPayments() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Methods</SelectItem>
-                <SelectItem value="stripe">Stripe</SelectItem>
+                <SelectItem value="braintree">Braintree</SelectItem>
                 <SelectItem value="venmo">Venmo</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
@@ -330,8 +330,8 @@ export default function SuperAdminPayments() {
                   <TableCell>
                     <div>
                       <p className="font-medium">#{payment.id}</p>
-                      {payment.stripePaymentId && (
-                        <p className="text-xs text-muted-foreground">{payment.stripePaymentId}</p>
+                      {payment.braintreePaymentId && (
+                        <p className="text-xs text-muted-foreground">{payment.braintreePaymentId}</p>
                       )}
                     </div>
                   </TableCell>

@@ -94,17 +94,6 @@ const providerConfigs: Record<string, ProviderConfig> = {
       { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
     ],
   },
-  stripe: {
-    name: 'Stripe',
-    icon: <CreditCard className="w-4 h-4" />,
-    description: 'Payment processing and subscription management',
-    category: 'payment',
-    fields: [
-      { key: 'publishableKey', label: 'Publishable Key', type: 'text', placeholder: 'pk_test_...', required: true },
-      { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', required: true },
-      { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', required: false },
-    ],
-  },
   mailchimp: {
     name: 'Mailchimp',
     icon: <Mail className="w-4 h-4" />,
@@ -234,7 +223,7 @@ export default function AdminIntegrations() {
       }
 
       // Check if this is a payment processor that might have disabled another
-      const isPaymentProcessor = configureDialog === 'stripe' || configureDialog === 'braintree';
+      const isPaymentProcessor = configureDialog === 'braintree';
       const message = isPaymentProcessor 
         ? `${configureDialog} integration saved successfully. Other payment processors have been automatically disabled.`
         : "Integration saved successfully";
@@ -411,12 +400,6 @@ export default function AdminIntegrations() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                {activeProcessor?.provider === 'stripe' && (
-                  <>
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-white font-medium">Stripe Active</span>
-                  </>
-                )}
                 {activeProcessor?.provider === 'braintree' && (
                   <>
                     <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
@@ -426,9 +409,7 @@ export default function AdminIntegrations() {
                 {!activeProcessor?.provider && (
                   <>
                     <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-zinc-400">
-                      {activeProcessor?.hasFallback ? 'Environment Stripe Fallback' : 'No Payment Processor'}
-                    </span>
+                    <span className="text-zinc-400">No Payment Processor Configured</span>
                   </>
                 )}
               </div>

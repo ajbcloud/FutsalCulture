@@ -9,8 +9,6 @@ import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet } from
 import { useToast } from "@/hooks/use-toast";
 import { useUserTerminology } from "@/hooks/use-user-terminology";
 import { apiRequest } from "@/lib/queryClient";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 type CreditBalanceResponse = {
   balance: number;
@@ -43,113 +41,7 @@ interface SessionPaymentModalProps {
   };
 }
 
-// Stripe Form Component
-function StripePaymentForm({ session, player, signup, useCredits, finalAmount, onSuccess, onError }: {
-  session: any;
-  player: any;
-  signup: any;
-  useCredits: boolean;
-  finalAmount: number;
-  onSuccess: () => void;
-  onError: (error: string) => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    const card = elements.getElement(CardElement);
-    if (!card) {
-      onError("Card element not found");
-      setIsProcessing(false);
-      return;
-    }
-
-    // Create payment method
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card,
-      billing_details: {
-        name: `${player.firstName} ${player.lastName}`,
-      },
-    });
-
-    if (error) {
-      onError(error.message || "Payment failed");
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-      // Process payment through backend
-      const response = await apiRequest('POST', '/api/session-billing/process-payment', {
-        signupId: signup.id,
-        sessionId: session.id,
-        playerId: player.id,
-        amount: finalAmount,
-        paymentMethodId: paymentMethod.id,
-        provider: 'stripe',
-        useCredits
-      });
-
-      if (response.ok) {
-        onSuccess();
-      } else {
-        const errorData = await response.json();
-        onError(errorData.message || "Payment failed");
-      }
-    } catch (err: any) {
-      onError(err.message || "Payment processing failed");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 border rounded-lg">
-        <CardElement
-          options={{
-            style: {
-              base: {
-                fontSize: '16px',
-                color: '#424770',
-                '::placeholder': {
-                  color: '#aab7c4',
-                },
-              },
-            },
-          }}
-        />
-      </div>
-      <Button 
-        type="submit" 
-        disabled={!stripe || isProcessing} 
-        className="w-full"
-        data-testid="button-complete-stripe-payment"
-      >
-        {isProcessing ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Processing...
-          </>
-        ) : (
-          `Pay $${(finalAmount / 100).toFixed(2)}`
-        )}
-      </Button>
-    </form>
-  );
-}
-
-// Braintree Form Component (placeholder)
+// Braintree Form Component
 function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount, onSuccess, onError }: {
   session: any;
   player: any;
@@ -563,8 +455,7 @@ function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount
 }
 
 interface PaymentConfig {
-  provider: 'stripe' | 'braintree';
-  publishableKey?: string;
+  provider: 'braintree';
   clientToken?: string;
 }
 
@@ -790,27 +681,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                   Payment configuration error. Please contact support.
                 </p>
               </div>
-            ) : paymentConfig?.provider === 'stripe' ? (
-              paymentConfig.publishableKey ? (
-                <Elements stripe={loadStripe(paymentConfig.publishableKey)}>
-                  <StripePaymentForm
-                    session={session}
-                    player={player}
-                    signup={signup}
-                    useCredits={useCredits}
-                    finalAmount={finalAmount}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                  />
-                </Elements>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-red-600 dark:text-red-400">
-                    Stripe configuration incomplete. Please contact support.
-                  </p>
-                </div>
-              )
-            ) : paymentConfig?.provider === 'braintree' ? (
+            ) : paymentConfig?.provider === 'braintree' && paymentConfig?.clientToken ? (
               <BraintreePaymentForm
                 session={session}
                 player={player}
@@ -823,7 +694,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
             ) : (
               <div className="text-center py-8">
                 <p className="text-yellow-600 dark:text-yellow-400">
-                  No payment processor configured. Please contact support.
+                  Braintree payment processor not configured. Please contact support.
                 </p>
               </div>
             )}

@@ -1124,7 +1124,7 @@ export default function SuperAdminSettings() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Switch defaultChecked />
-                          <Label className="font-normal text-sm">Stripe integration</Label>
+                          <Label className="font-normal text-sm">Braintree integration</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Switch />
