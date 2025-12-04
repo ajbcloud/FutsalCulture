@@ -791,4 +791,105 @@ router.get('/billing/braintree/payment-history', async (req: any, res) => {
   }
 });
 
+// Validate discount code and return pricing details
+router.post('/billing/validate-discount', async (req: any, res) => {
+  try {
+    const { code, planId } = req.body;
+    
+    if (!code || !planId) {
+      return res.json({ valid: false, error: 'Missing code or plan' });
+    }
+
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.json({ valid: false, error: 'Authentication required' });
+    }
+
+    // Get the invite code using storage
+    const { storage } = await import('./storage');
+    const inviteCode = await storage.getInviteCodeByCode(code.toUpperCase(), currentUser.tenantId);
+    
+    if (!inviteCode) {
+      return res.json({ valid: false, error: 'Invalid discount code' });
+    }
+
+    // Check if it's a discount code
+    if (inviteCode.codeType !== 'discount') {
+      return res.json({ valid: false, error: 'This code is not a discount code' });
+    }
+
+    // Check if the code is active
+    if (!inviteCode.isActive) {
+      return res.json({ valid: false, error: 'This code is no longer active' });
+    }
+
+    // Check if within valid date range
+    const now = new Date();
+    if (inviteCode.validFrom && new Date(inviteCode.validFrom) > now) {
+      return res.json({ valid: false, error: 'This code is not yet valid' });
+    }
+    if (inviteCode.validUntil && new Date(inviteCode.validUntil) < now) {
+      return res.json({ valid: false, error: 'This code has expired' });
+    }
+
+    // Check usage limits (use maxUses check only)
+    if (inviteCode.maxUses) {
+      // Get current usage count from storage
+      const usageCount = await storage.getInviteCodeUsageCount(inviteCode.id);
+      if (usageCount >= inviteCode.maxUses) {
+        return res.json({ valid: false, error: 'This code has reached its maximum uses' });
+      }
+    }
+
+    // Check discount value exists
+    const discountValue = inviteCode.discountValue;
+    if (!discountValue && discountValue !== 0) {
+      return res.json({ valid: false, error: 'Invalid discount configuration' });
+    }
+
+    // Calculate discount amount based on plan
+    const planPricesCents: Record<string, number> = {
+      core: 1999,    // $19.99
+      growth: 4999,  // $49.99
+      elite: 9999,   // $99.99
+    };
+
+    const originalPriceCents = planPricesCents[planId] || 0;
+    if (originalPriceCents === 0) {
+      return res.json({ valid: false, error: 'Invalid plan' });
+    }
+
+    let discountAmountCents = 0;
+    
+    switch (inviteCode.discountType) {
+      case 'percentage':
+        discountAmountCents = Math.round(originalPriceCents * (discountValue / 100));
+        break;
+      case 'fixed':
+        discountAmountCents = discountValue; // Already in cents
+        break;
+      case 'full':
+        discountAmountCents = originalPriceCents;
+        break;
+    }
+
+    const finalPriceCents = Math.max(0, originalPriceCents - discountAmountCents);
+
+    res.json({
+      valid: true,
+      code: inviteCode.code,
+      discountType: inviteCode.discountType,
+      discountValue: discountValue,
+      discountDuration: inviteCode.discountDuration || 'one_time',
+      originalPriceCents,
+      discountAmountCents,
+      finalPriceCents,
+      isPlatform: inviteCode.isPlatform || false,
+    });
+  } catch (error) {
+    console.error('Error validating discount code:', error);
+    res.json({ valid: false, error: 'Failed to validate discount code' });
+  }
+});
+
 export default router;

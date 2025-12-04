@@ -1976,4 +1976,105 @@ export function setupSuperAdminRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to delete invitation' });
     }
   });
+
+  // Apply discount code to existing tenant subscription
+  app.post('/api/super-admin/tenants/:tenantId/apply-discount', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const { code } = req.body;
+      const superAdminUserId = (req as any).user?.id || 'super-admin';
+
+      if (!code) {
+        return res.status(400).json({ error: 'Discount code is required' });
+      }
+
+      // Get the invite code - use tenant ID or platform-wide
+      const inviteCode = await storage.getInviteCodeByCode(code.toUpperCase(), tenantId);
+      
+      if (!inviteCode) {
+        return res.status(404).json({ error: 'Discount code not found' });
+      }
+
+      if (inviteCode.codeType !== 'discount') {
+        return res.status(400).json({ error: 'This code is not a discount code' });
+      }
+
+      if (!inviteCode.isActive) {
+        return res.status(400).json({ error: 'This code is no longer active' });
+      }
+
+      // Check if within valid date range
+      const now = new Date();
+      if (inviteCode.validFrom && new Date(inviteCode.validFrom) > now) {
+        return res.status(400).json({ error: 'This code is not yet valid' });
+      }
+      if (inviteCode.validUntil && new Date(inviteCode.validUntil) < now) {
+        return res.status(400).json({ error: 'This code has expired' });
+      }
+
+      // Apply the discount using braintree service
+      const { applyDiscountToSubscription } = await import('./services/braintreeService');
+      
+      const result = await applyDiscountToSubscription(tenantId, {
+        codeId: inviteCode.id,
+        code: inviteCode.code,
+        discountType: inviteCode.discountType as 'percentage' | 'fixed' | 'full',
+        discountValue: inviteCode.discountValue || 0,
+        discountDuration: inviteCode.discountDuration || 'one_time',
+        isPlatform: inviteCode.isPlatform || false,
+        appliedBy: superAdminUserId,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // Increment usage count
+      await storage.incrementInviteCodeUsage(inviteCode.id);
+
+      res.json({
+        message: result.message,
+        appliedDiscount: result.appliedDiscount,
+      });
+    } catch (error: any) {
+      console.error('Error applying discount to tenant:', error);
+      res.status(500).json({ error: 'Failed to apply discount' });
+    }
+  });
+
+  // Remove discount from tenant subscription
+  app.delete('/api/super-admin/tenants/:tenantId/discount', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+
+      const { removeDiscountFromSubscription } = await import('./services/braintreeService');
+      
+      const result = await removeDiscountFromSubscription(tenantId, 'super_admin_removal');
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      res.json({ message: result.message });
+    } catch (error: any) {
+      console.error('Error removing discount from tenant:', error);
+      res.status(500).json({ error: 'Failed to remove discount' });
+    }
+  });
+
+  // Get tenant's current discount status
+  app.get('/api/super-admin/tenants/:tenantId/discount-status', isAuthenticated, isSuperAdmin, async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+
+      const { getNextBillingAmount } = await import('./services/braintreeService');
+      
+      const status = await getNextBillingAmount(tenantId);
+
+      res.json(status);
+    } catch (error: any) {
+      console.error('Error getting tenant discount status:', error);
+      res.status(500).json({ error: 'Failed to get discount status' });
+    }
+  });
 }

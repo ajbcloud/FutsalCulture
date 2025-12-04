@@ -238,6 +238,7 @@ export interface IStorage {
   setDefaultInviteCode(id: string, tenantId: string): Promise<InviteCode>;
   deleteInviteCode(id: string): Promise<void>;
   incrementInviteCodeUsage(id: string): Promise<void>;
+  getInviteCodeUsageCount(id: string): Promise<number>;
   
   // Super Admin invite code operations
   getSuperAdminInviteCodes(filters: { 
@@ -1767,6 +1768,15 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(inviteCodes.id, id));
+  }
+
+  async getInviteCodeUsageCount(id: string): Promise<number> {
+    const [result] = await db
+      .select({ currentUses: inviteCodes.currentUses })
+      .from(inviteCodes)
+      .where(eq(inviteCodes.id, id))
+      .limit(1);
+    return result?.currentUses || 0;
   }
 
   // Super Admin invite code operations

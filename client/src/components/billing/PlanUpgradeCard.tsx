@@ -1,17 +1,40 @@
-import { Check, Crown, Rocket, Sparkles, Tag, CreditCard } from 'lucide-react';
+import { Check, Crown, Rocket, Sparkles, Tag, CreditCard, Percent, Clock, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useTenantPlan } from '@/hooks/useTenantPlan';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import BraintreeHostedFields, { BraintreeHostedFieldsRef } from '@/components/billing/BraintreeHostedFields';
 import { plans as planConfigs, PlanConfig } from '@/config/plans.config';
 import { getPlan } from '@/lib/planUtils';
+
+interface DiscountValidationResult {
+  valid: boolean;
+  code?: string;
+  discountType?: 'percentage' | 'fixed' | 'full';
+  discountValue?: number;
+  discountDuration?: string;
+  originalPriceCents?: number;
+  discountAmountCents?: number;
+  finalPriceCents?: number;
+  error?: string;
+}
+
+const formatDurationLabel = (duration: string | undefined): string => {
+  switch (duration) {
+    case 'one_time': return '1st Month';
+    case 'months_3': return '3 Months';
+    case 'months_6': return '6 Months';
+    case 'months_12': return '12 Months';
+    case 'indefinite': return 'Forever';
+    default: return '1st Month';
+  }
+};
 
 interface PlanDetails {
   name: string;
@@ -118,6 +141,8 @@ export function PlanUpgradeCard({
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [clientToken, setClientToken] = useState<string | null>(null);
   const hostedFieldsRef = useRef<BraintreeHostedFieldsRef>(null);
+  const [validatedDiscount, setValidatedDiscount] = useState<DiscountValidationResult | null>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
 
   const currentPlan = tenantPlanData?.planId || 'free';
   const hasActiveSubscription = tenantPlanData?.billingStatus === 'active';
@@ -125,6 +150,45 @@ export function PlanUpgradeCard({
   const planOrder: Record<string, number> = { free: 0, core: 1, growth: 2, elite: 3 };
   const isUpgrade = planOrder[planKey] > planOrder[currentPlan];
   const isDowngrade = planOrder[planKey] < planOrder[currentPlan];
+
+  // Validate discount code when it changes
+  useEffect(() => {
+    const validateDiscount = async () => {
+      if (!discountCode || discountCode.length < 3) {
+        setValidatedDiscount(null);
+        return;
+      }
+
+      setIsValidatingDiscount(true);
+      try {
+        const res = await apiRequest('POST', '/api/billing/validate-discount', {
+          code: discountCode,
+          planId: planKey,
+        });
+        const result = await res.json();
+        setValidatedDiscount(result);
+      } catch (error: any) {
+        setValidatedDiscount({
+          valid: false,
+          error: error.message || 'Failed to validate code',
+        });
+      } finally {
+        setIsValidatingDiscount(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(validateDiscount, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [discountCode, planKey]);
+
+  // Clear discount when closing checkout dialog
+  const handleCloseCheckout = (open: boolean) => {
+    setShowCheckoutDialog(open);
+    if (!open) {
+      setDiscountCode('');
+      setValidatedDiscount(null);
+    }
+  };
 
   // Braintree upgrade mutation - immediate plan upgrade for existing subscriptions
   const upgradeMutation = useMutation({
@@ -359,14 +423,62 @@ export function PlanUpgradeCard({
                 </button>
                 
                 {showDiscountInput && (
-                  <Input
-                    type="text"
-                    placeholder="Enter discount code"
-                    value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                    className="w-full"
-                    data-testid="input-discount-code"
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter discount code"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      className={`w-full ${validatedDiscount?.valid ? 'border-green-500' : validatedDiscount?.error ? 'border-red-500' : ''}`}
+                      data-testid="input-discount-code"
+                    />
+                    
+                    {isValidatingDiscount && (
+                      <p className="text-xs text-muted-foreground">Validating code...</p>
+                    )}
+                    
+                    {validatedDiscount?.valid && (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium mb-1">
+                          <Check className="h-4 w-4" />
+                          Code Applied!
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Original price:</span>
+                            <span className="line-through text-muted-foreground">
+                              ${((validatedDiscount.originalPriceCents || 0) / 100).toFixed(2)}/mo
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-green-600 dark:text-green-400">Discount:</span>
+                            <span className="text-green-600 dark:text-green-400">
+                              -{validatedDiscount.discountType === 'percentage' 
+                                ? `${validatedDiscount.discountValue}%` 
+                                : `$${((validatedDiscount.discountAmountCents || 0) / 100).toFixed(2)}`}
+                            </span>
+                          </div>
+                          <div className="flex justify-between font-bold">
+                            <span>You pay:</span>
+                            <span className="text-green-600 dark:text-green-400">
+                              ${((validatedDiscount.finalPriceCents || 0) / 100).toFixed(2)}/mo
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            Discount valid for: {formatDurationLabel(validatedDiscount.discountDuration)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {validatedDiscount?.error && (
+                      <div className="flex items-center gap-2 text-red-500 text-sm">
+                        <XCircle className="h-4 w-4" />
+                        {validatedDiscount.error}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -397,7 +509,7 @@ export function PlanUpgradeCard({
       </Card>
 
       {/* Checkout Dialog for New Subscriptions */}
-      <Dialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
+      <Dialog open={showCheckoutDialog} onOpenChange={handleCloseCheckout}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -405,20 +517,58 @@ export function PlanUpgradeCard({
               Subscribe to {planName}
             </DialogTitle>
             <DialogDescription>
-              Enter your payment details to start your ${planPrice}/month subscription.
+              {validatedDiscount?.valid 
+                ? `Enter your payment details. You'll pay $${((validatedDiscount.finalPriceCents || 0) / 100).toFixed(2)}/month.`
+                : `Enter your payment details to start your $${planPrice}/month subscription.`
+              }
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="bg-muted/50 rounded-lg p-4">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="font-medium">{planName} Plan</span>
-                <span className="text-xl font-bold">${planPrice}/mo</span>
+                {validatedDiscount?.valid ? (
+                  <div className="text-right">
+                    <span className="line-through text-muted-foreground text-sm">${planPrice}/mo</span>
+                    <span className="ml-2 text-xl font-bold text-green-600">
+                      ${((validatedDiscount.finalPriceCents || 0) / 100).toFixed(2)}/mo
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xl font-bold">${planPrice}/mo</span>
+                )}
               </div>
-              {discountCode && (
-                <div className="mt-2 text-sm text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" />
-                  Discount code: {discountCode}
+              
+              {validatedDiscount?.valid && (
+                <>
+                  <div className="border-t pt-2 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Discount code:</span>
+                      <span className="font-mono bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
+                        {discountCode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Savings:</span>
+                      <span>
+                        -{validatedDiscount.discountType === 'percentage' 
+                          ? `${validatedDiscount.discountValue}%` 
+                          : `$${((validatedDiscount.discountAmountCents || 0) / 100).toFixed(2)}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Valid for: {formatDurationLabel(validatedDiscount.discountDuration)}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {discountCode && !validatedDiscount?.valid && !isValidatingDiscount && (
+                <div className="text-sm text-amber-600 flex items-center gap-1">
+                  <XCircle className="h-3 w-3" />
+                  {validatedDiscount?.error || 'Invalid discount code'}
                 </div>
               )}
             </div>
@@ -447,7 +597,11 @@ export function PlanUpgradeCard({
               disabled={isLoading || subscribeMutation.isPending || !clientToken}
               data-testid="button-confirm-subscription"
             >
-              {isLoading || subscribeMutation.isPending ? 'Processing...' : `Subscribe - $${planPrice}/month`}
+              {isLoading || subscribeMutation.isPending 
+                ? 'Processing...' 
+                : validatedDiscount?.valid 
+                  ? `Subscribe - $${((validatedDiscount.finalPriceCents || 0) / 100).toFixed(2)}/month`
+                  : `Subscribe - $${planPrice}/month`}
             </Button>
           </div>
         </DialogContent>
