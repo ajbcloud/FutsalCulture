@@ -194,16 +194,27 @@ export default function Join() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0f1629] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Users className="h-12 w-12 text-blue-600" />
-          </div>
-          <CardTitle className="text-2xl">Join Your Club</CardTitle>
-          <CardDescription>
-            Enter the invite code from your club to get started
-          </CardDescription>
-        </CardHeader>
+      <div className="w-full max-w-md">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/dashboard")}
+          className="mb-4"
+          data-testid="button-back-dashboard"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Button>
+        
+        <Card>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Users className="h-12 w-12 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl">Join Your Club</CardTitle>
+            <CardDescription>
+              Enter the invite code from your club to get started
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleValidateCode} className="space-y-4">
             <div className="space-y-2">
@@ -241,7 +252,8 @@ export default function Join() {
             </p>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
