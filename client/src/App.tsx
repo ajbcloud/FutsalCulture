@@ -102,6 +102,7 @@ function Router() {
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/signup/unaffiliated" component={UnaffiliatedSignup} />
         <Route path="/signup/unaffiliated/complete" component={UnaffiliatedSignupComplete} />
+        <Route path="/signup/unaffiliated/:rest*" component={UnaffiliatedSignup} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
         <Route path="/login/:rest*" component={Login} />
