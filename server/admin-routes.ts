@@ -194,77 +194,71 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
   }
 }
 
-// Middleware to require admin access
+// Middleware to require admin access (Clerk-only enforcement)
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
-    let userId;
+    // First check if user is already attached by Clerk sync middleware
+    const user = (req as any).user;
     
-    // Check for local session first (password-based users)  
-    if ((req as any).session?.userId) {
-      userId = (req as any).session.userId;
-    }
-    // Check direct user.id format (local auth or Clerk-synced)
-    else if ((req as any).user?.id) {
-      userId = (req as any).user.id;
-    }
-    // Check if user is authenticated via isAuthenticated() passport method
-    else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
-      userId = (req as any).user.id;
-    }
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    // If user object exists from Clerk sync with full data, use it directly
+    if (user && user.id && (typeof user.isAdmin !== 'undefined')) {
+      // User is already synced from Clerk - verify admin status
+      if (!user.isAdmin && !user.isAssistant) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      // Attach user to request for convenience
+      (req as any).currentUser = user;
+      (req as any).adminTenantId = user.tenantId;
+      return next();
     }
     
-    // Check user's admin status directly from database
-    const user = await storage.getUser(userId);
+    // No synced user - check if Clerk middleware ran
+    const { getAuth } = await import('@clerk/express');
+    const auth = getAuth(req);
     
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    // If Clerk middleware ran but no userId, the session is expired/invalid
+    if (auth && !auth.userId) {
+      return res.status(401).json({ message: "Session expired. Please sign in again." });
     }
     
-    if (!user.isAdmin && !user.isAssistant) {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    
-    // Attach user to request for convenience
-    (req as any).currentUser = user;
-    (req as any).adminTenantId = user.tenantId;
-    (req as any).user = { ...((req as any).user || {}), id: userId };
-    next();
+    // No Clerk auth at all - require authentication
+    return res.status(401).json({ message: "Authentication required" });
   } catch (error) {
     console.error("Error checking admin access:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
 
-// Middleware to require full admin (not assistant)
+// Middleware to require full admin (not assistant) - Clerk-only enforcement
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
-    let userId;
+    // First check if user is already attached by Clerk sync middleware
+    const user = (req as any).user;
     
-    // Check for local session first (password-based users)
-    if ((req as any).session?.userId) {
-      userId = (req as any).session.userId;
-    }
-    // Check direct req.user.id format
-    else if ((req as any).user?.id) {
-      userId = (req as any).user.id;
-    }
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
-    // Check user's admin status directly from database
-    const user = await storage.getUser(userId);
-    if (!user?.isAdmin) {
-      return res.status(403).json({ message: "Full admin access required" });
+    // If user object exists from Clerk sync with full data, use it directly
+    if (user && user.id && (typeof user.isAdmin !== 'undefined')) {
+      if (!user.isAdmin) {
+        return res.status(403).json({ message: "Full admin access required" });
+      }
+      
+      // Attach user to request for convenience
+      (req as any).currentUser = user;
+      (req as any).adminTenantId = user.tenantId;
+      return next();
     }
     
-    // Attach user to request for convenience
-    (req as any).currentUser = user;
-    next();
+    // No synced user - check if Clerk middleware ran
+    const { getAuth } = await import('@clerk/express');
+    const auth = getAuth(req);
+    
+    // If Clerk middleware ran but no userId, the session is expired/invalid
+    if (auth && !auth.userId) {
+      return res.status(401).json({ message: "Session expired. Please sign in again." });
+    }
+    
+    // No Clerk auth at all - require authentication
+    return res.status(401).json({ message: "Authentication required" });
   } catch (error) {
     console.error("Error checking admin access:", error);
     return res.status(500).json({ message: "Internal server error" });

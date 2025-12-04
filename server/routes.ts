@@ -26,7 +26,6 @@ import { z } from "zod";
 import { setupAdminRoutes } from './admin-routes';
 import { setupSuperAdminRoutes } from './super-admin-routes';
 import { nanoid } from 'nanoid';
-import { stripeWebhookRouter } from './stripe-webhooks';
 import publicIngestionRoutes from './routes/publicIngestion';
 import { impersonationContext } from './middleware/impersonation';
 import * as impersonationController from './controllers/impersonation';
@@ -52,9 +51,6 @@ const isAuthenticated = requireClerkAuth;
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public ingestion endpoints (BEFORE auth middleware since they're public)
   app.use('/api/public', publicIngestionRoutes);
-
-  // Stripe webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
-  app.use('/api/stripe', stripeWebhookRouter);
 
   // Telnyx webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
   app.use('/api/webhooks/telnyx', telnyxWebhookRouter);

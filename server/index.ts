@@ -34,7 +34,6 @@ import { superAdminEmailRouter } from './routes/super-admin-email';
 import authVerificationRouter from './routes/auth-verification';
 import userRouter from './routes/user';
 import authRedirectRouter from './routes/auth-redirect';
-import { stripeWebhookRouter } from './stripe-webhooks';
 import creditsRouter from './routes/credits';
 import templatesRouter from './routes/templates';
 import notificationsRouter from './routes/notifications';
@@ -69,9 +68,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
-// Webhook needs raw body parsing before JSON middleware
-app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -117,8 +113,6 @@ app.use((req, res, next) => {
 
   // Mount auth redirect to handle legacy /api/login URLs
   app.use('/api', authRedirectRouter);
-  
-  // Stripe webhook routes are already mounted in registerRoutes - removing duplicate
   
   // Mount auth verification routes FIRST to avoid any conflicts
   app.use('/api/auth', authVerificationRouter);
