@@ -44,6 +44,7 @@ import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
 import quickbooksRoutes from './routes/quickbooks';
+import { terminologyRouter } from './routes/terminology';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -1143,7 +1144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process consent signatures if provided
       if (consentSignatures && Array.isArray(consentSignatures) && consentSignatures.length > 0) {
         try {
-          const { signedConsentDocuments, consentTemplates } = await import('@shared/schema');
+          const { consentRecords } = await import('@shared/schema');
           const { db } = await import('./db');
           
           // Get players for this household to associate consent
@@ -1151,17 +1152,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           for (const sig of consentSignatures) {
             // For each consent signature, record it for the parent
-            await db.insert(signedConsentDocuments).values({
-              id: `consent_${parent2.id}_${sig.templateType}_${Date.now()}`,
-              tenantId: parent1.tenantId || 'default',
-              playerId: players[0]?.id || null, // Associate with first player if available
-              parentId: parent2.id,
-              templateId: sig.templateId,
-              templateType: sig.templateType,
-              version: 1,
-              signatureData: JSON.stringify(sig.signatureData),
-              signedAt: new Date(sig.signedAt || Date.now()),
-            }).onConflictDoNothing();
+            if (players[0]?.id) {
+              await db.insert(consentRecords).values({
+                playerId: players[0].id,
+                parentId: parent2.id,
+                consentType: sig.templateType || 'registration',
+                consentGiven: true,
+                consentDate: new Date(sig.signedAt || Date.now()),
+              }).onConflictDoNothing();
+            }
           }
         } catch (consentError) {
           console.error('Error recording consent signatures:', consentError);
@@ -1924,7 +1923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Payment processing not configured" });
       }
 
-      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' as any });
 
       // Create payment intent for remaining amount
       const paymentIntent = await stripe.paymentIntents.create({
@@ -3175,6 +3174,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/webhooks', sendgridWebhookRouter);
   app.use('/api/webhooks', resendWebhookRouter);
   app.use('/api/communications', communicationTestRouter);
+  
+  // Terminology routes for dynamic UI labels
+  app.use('/api', terminologyRouter);
 
   const httpServer = createServer(app);
   return httpServer;
