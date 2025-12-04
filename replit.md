@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Feature Specifications
 - **Core Booking**: Session management (creation, filtering by age/gender/location), interactive calendar, time-restricted booking (8 AM day-of rule, bookable until start time), real-time capacity monitoring, and automatic session closure.
-- **Payment & Credits**: Complete Stripe integration for payment processing, including webhooks and subscription management. Upgrade/downgrade flow uses embedded Stripe checkout with `client_reference_id` for proper tenant tracking. Supports discount codes via Stripe coupons/promotion codes. A comprehensive user credit system replaces refunds, automatically issuing credits upon session cancellation, with FIFO application and automatic checkout integration. Subscription management includes immediate upgrades, end-of-period downgrades, abuse prevention (24-hour cooldown), and proration disabled.
+- **Payment & Credits**: Braintree-only payment processing (Stripe fully removed). Upgrade/downgrade flow uses Braintree Drop-In UI. A comprehensive user credit system replaces refunds, automatically issuing credits upon session cancellation, with FIFO application and automatic checkout integration. Subscription management includes immediate upgrades, end-of-period downgrades, abuse prevention (24-hour cooldown), and proration disabled.
 - **Signup & Registration**: Role-based signup flow where users explicitly select whether they're registering as a Player or Parent/Guardian. The system combines role selection with age-gating logic to route users to appropriate signup flows and determine portal access. Age policy evaluation remains independent of role selection.
 - **Admin & User Dashboards**: Parent dashboard for player/booking history. Admin panel for session management, analytics, user management, discount codes, help requests, and system settings.
 - **Multi-tenancy**: Super Admin portal for managing multiple organizations, including tenant defaults and policy settings.
@@ -35,7 +35,7 @@ Preferred communication style: Simple, everyday language.
 - **SaaS & Feature Control**: 3-Tier SaaS pricing structure (Core, Growth, Elite) with plan-based feature access control, enforced by a feature flag system (backend middleware, frontend hooks, database-driven feature management, and tenant overrides).
 - **Communication System**: Template-based email/SMS notification system with automated triggers, manual bulk sending, template management UI, variable replacement, consent management, and custom contact groups (SendGrid/Twilio integration).
 - **Invitation System**: Unified invitation code system (`inviteCodes` table) supporting invite, access, and discount codes with pre-fill metadata, custom JSON, usage tracking, and full CRUD admin UI.
-- **Trial Experience**: Client-facing trial status indicator in bottom-left corner showing real-time countdown, color-coded urgency (green/yellow/red), trial extension capability, and upgrade CTAs with direct Stripe checkout integration. Trial management enforces Super Admin-configured settings for duration, extensions, and grace periods.
+- **Trial Experience**: Client-facing trial status indicator in bottom-left corner showing real-time countdown, color-coded urgency (green/yellow/red), trial extension capability, and upgrade CTAs with direct Braintree checkout integration. Trial management enforces Super Admin-configured settings for duration, extensions, and grace periods.
 
 ### System Design Choices
 - **Development Environment**: Vite for fast development.
@@ -46,7 +46,7 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 - **Neon Database**: PostgreSQL hosting.
-- **Stripe**: Payment processing (transitioning to Braintree).
+- **Braintree**: Payment processing (sole provider - Stripe fully removed).
 - **Clerk**: User authentication (hosted auth UI and session management).
 - **Resend**: Email communication (migrated from SendGrid).
 - **Telnyx**: SMS communication (migrated from Twilio/SendGrid).
@@ -87,8 +87,9 @@ Preferred communication style: Simple, everyday language.
   - Auto-recharge settings
 
 ### Payment Migration (Phase 3 - Complete)
-- Stripe made fully optional with graceful degradation
-- Full Braintree integration implemented with dual-processor support:
+- Stripe completely removed from codebase (all files, routes, and UI)
+- Braintree is now the sole payment processor
+- Legacy Stripe schema fields (stripeCustomerId, stripeSubscriptionId) retained for historical data backward compatibility but no longer populated
 
 #### Braintree Schema Changes
 - Added `payment_processor` enum (`stripe`, `braintree`) to track active processor per tenant
