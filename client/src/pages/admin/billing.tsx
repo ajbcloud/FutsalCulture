@@ -18,8 +18,12 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  DollarSign
+  DollarSign,
+  Sparkles,
+  ArrowUpRight
 } from "lucide-react";
+import { PlanUpgradeCard } from "@/components/billing/PlanUpgradeCard";
+import { FeatureGrid } from "@/components/billing/FeatureGrid";
 
 interface PaymentHistoryItem {
   id: string;
@@ -101,9 +105,9 @@ export default function AdminBilling() {
     <AdminLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold">Payment History</h1>
+          <h1 className="text-3xl font-bold">Billing & Plans</h1>
           <p className="text-muted-foreground mt-1">
-            View your billing history and payment records
+            Manage your subscription, compare plans, and view payment history
           </p>
         </div>
 
@@ -147,6 +151,40 @@ export default function AdminBilling() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Plan Comparison Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-bold">Choose Your Plan</h2>
+          </div>
+          <p className="text-muted-foreground mb-6">
+            Select the plan that best fits your needs. Upgrade anytime to unlock more features.
+            {currentPlan !== 'free' && ' Have a discount code? Click on a plan to apply it during checkout.'}
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <PlanUpgradeCard 
+              planKey="free" 
+              isCurrentPlan={currentPlan === 'free'}
+            />
+            <PlanUpgradeCard 
+              planKey="core" 
+              isCurrentPlan={currentPlan === 'core'}
+            />
+            <PlanUpgradeCard 
+              planKey="growth" 
+              isCurrentPlan={currentPlan === 'growth'}
+            />
+            <PlanUpgradeCard 
+              planKey="elite" 
+              isCurrentPlan={currentPlan === 'elite'}
+            />
+          </div>
+        </div>
+
+        {/* Feature Comparison Grid */}
+        <FeatureGrid currentPlan={currentPlan} />
 
         {/* Payment History Table */}
         <Card>
