@@ -98,32 +98,46 @@ export default function UnaffiliatedSignup() {
             Back
           </Button>
           
-          <Card>
+          <Card className={isDarkMode ? "bg-slate-800 border-slate-700" : ""}>
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-xl">Create your account</CardTitle>
-              <CardDescription>
+              <CardTitle className={`text-xl ${isDarkMode ? "text-white" : ""}`}>Create your account</CardTitle>
+              <CardDescription className={isDarkMode ? "text-slate-300" : ""}>
                 Signing up as a {selectedRole === "parent" ? "Parent/Guardian" : "Player"}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <SignUp
                 appearance={{
+                  variables: {
+                    colorPrimary: "#3b82f6",
+                    colorBackground: isDarkMode ? "#1e293b" : "#ffffff",
+                    colorInputBackground: isDarkMode ? "#334155" : "#f8fafc",
+                    colorInputText: isDarkMode ? "#ffffff" : "#0f172a",
+                    colorText: isDarkMode ? "#ffffff" : "#0f172a",
+                    colorTextSecondary: isDarkMode ? "#cbd5e1" : "#64748b",
+                    colorNeutral: isDarkMode ? "#cbd5e1" : "#64748b",
+                    colorTextOnPrimaryBackground: "#ffffff",
+                  },
                   elements: {
                     rootBox: "w-full",
-                    card: "shadow-none p-0 w-full",
+                    card: isDarkMode 
+                      ? "shadow-none p-0 w-full !bg-transparent"
+                      : "shadow-none p-0 w-full",
                     headerTitle: "hidden",
                     headerSubtitle: "hidden",
                     socialButtonsBlockButton: isDarkMode 
-                      ? "border-gray-600 hover:bg-gray-700 text-white" 
+                      ? "!bg-slate-700 !border-slate-600 !text-white hover:!bg-slate-600" 
                       : "",
                     formButtonPrimary: "bg-primary hover:bg-primary/90",
                     footerAction: "hidden",
                     formFieldInput: isDarkMode 
-                      ? "bg-gray-800 border-gray-600 text-white" 
+                      ? "!bg-slate-700 !border-slate-600 !text-white" 
                       : "",
-                    formFieldLabel: isDarkMode ? "text-gray-300" : "",
-                    identityPreviewEditButton: isDarkMode ? "text-gray-300" : "",
-                    formResendCodeLink: isDarkMode ? "text-primary" : "",
+                    formFieldLabel: isDarkMode ? "!text-slate-300" : "",
+                    identityPreviewEditButton: isDarkMode ? "!text-slate-300" : "",
+                    formResendCodeLink: isDarkMode ? "!text-primary" : "",
+                    dividerLine: isDarkMode ? "!bg-slate-600" : "",
+                    dividerText: isDarkMode ? "!text-slate-400" : "",
                   },
                 }}
                 signInUrl="/login"
