@@ -1462,27 +1462,35 @@ export class DatabaseStorage implements IStorage {
     return prefs;
   }
 
-  async getAnalytics(): Promise<{
+  async getAnalytics(tenantId?: string): Promise<{
     totalPlayers: number;
     monthlyRevenue: number;
     avgFillRate: number;
     activeSessions: number;
   }> {
-    const [playerCount] = await db.select({ count: count() }).from(players);
+    // Filter by tenantId for proper multi-tenant isolation
+    const playerConditions = tenantId ? eq(players.tenantId, tenantId) : sql`true`;
+    const [playerCount] = await db.select({ count: count() }).from(players).where(playerConditions);
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
+    const paymentConditions = tenantId 
+      ? and(gte(payments.paidAt, startOfMonth), eq(payments.tenantId, tenantId))
+      : gte(payments.paidAt, startOfMonth);
     const [monthlyPayments] = await db
       .select({ total: count() })
       .from(payments)
-      .where(gte(payments.paidAt, startOfMonth));
+      .where(paymentConditions);
 
+    const sessionConditions = tenantId
+      ? and(eq(futsalSessions.status, "open"), eq(futsalSessions.tenantId, tenantId))
+      : eq(futsalSessions.status, "open");
     const [activeSessionsCount] = await db
       .select({ count: count() })
       .from(futsalSessions)
-      .where(eq(futsalSessions.status, "open"));
+      .where(sessionConditions);
 
     return {
       totalPlayers: playerCount.count,

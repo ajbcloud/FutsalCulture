@@ -2684,7 +2684,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const analytics = await storage.getAnalytics();
+      // Pass tenantId for proper multi-tenant isolation
+      const analytics = await storage.getAnalytics(user.tenantId || undefined);
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching analytics:", error);
