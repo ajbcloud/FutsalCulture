@@ -1985,6 +1985,7 @@ export type ServiceBillingSelect = typeof serviceBilling.$inferSelect;
 export const updateUserSchema = createInsertSchema(users).omit({
   id: true,
   isAdmin: true,
+  isSuperAdmin: true, // SECURITY: Super admin can ONLY be set directly in database
   customerId: true,
   createdAt: true,
   updatedAt: true,
