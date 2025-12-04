@@ -1,11 +1,106 @@
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { db } from "./db";
+import { tenants, subscriptions, tenantPlanAssignments, users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { slugify, generateTenantCode } from "@shared/utils";
+import { nanoid } from "nanoid";
 
 export { clerkMiddleware };
 
 const clerkUserCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Auto-create a tenant for a new user signing up
+// First user becomes admin of their auto-generated club
+async function autoCreateTenantForUser(userData: {
+  email: string;
+  clerkUserId: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+}): Promise<{ tenant: typeof tenants.$inferSelect; user: typeof users.$inferSelect }> {
+  const { email, clerkUserId, firstName, lastName, profileImageUrl } = userData;
+  
+  // Generate a unique tenant name based on email or name
+  const baseName = firstName && lastName 
+    ? `${firstName}'s Club` 
+    : email 
+      ? `${email.split('@')[0]}'s Club`
+      : `New Club`;
+  
+  // Generate unique slug
+  let baseSlug = slugify(baseName);
+  let slug = baseSlug;
+  let counter = 1;
+  
+  // Ensure slug uniqueness
+  while (true) {
+    const existingTenant = await db.query.tenants.findFirst({
+      where: eq(tenants.slug, slug)
+    });
+    
+    if (!existingTenant) break;
+    
+    slug = `${baseSlug}-${nanoid(4)}`;
+    counter++;
+    
+    if (counter > 10) {
+      // Fallback to fully random slug
+      slug = `club-${nanoid(8)}`;
+      break;
+    }
+  }
+  
+  // Use transaction for atomic creation
+  return await db.transaction(async (tx) => {
+    // Create tenant with auto-generated name (can be edited later)
+    const [tenant] = await tx.insert(tenants).values({
+      name: baseName,
+      slug: slug,
+      subdomain: slug,
+      inviteCode: slug,
+      contactName: firstName && lastName ? `${firstName} ${lastName}` : null,
+      contactEmail: email,
+      planLevel: "free",
+    }).returning();
+    
+    // Create subscription
+    await tx.insert(subscriptions).values({
+      tenantId: tenant.id,
+      planKey: "free",
+      status: "inactive"
+    });
+    
+    // Create plan assignment
+    await tx.insert(tenantPlanAssignments).values({
+      tenantId: tenant.id,
+      planCode: "free",
+      since: new Date(),
+      until: null
+    });
+    
+    // Create user as admin of this tenant
+    // IMPORTANT: isAdmin=true for tenant creator, isSuperAdmin is NEVER set in code
+    const [user] = await tx.insert(users).values({
+      email,
+      clerkUserId,
+      authProvider: 'clerk',
+      tenantId: tenant.id,
+      isAdmin: true, // First user is admin of their club
+      isSuperAdmin: false, // NEVER set to true in code
+      isApproved: true,
+      registrationStatus: 'approved',
+      approvedAt: new Date(),
+      firstName: firstName || null,
+      lastName: lastName || null,
+      profileImageUrl: profileImageUrl || null,
+    }).returning();
+    
+    return { tenant, user };
+  });
+}
 
 export async function syncClerkUser(req: Request, res: Response, next: NextFunction) {
   try {
@@ -79,20 +174,17 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
       });
       console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
     } else {
-      // Create new user with NO tenant association
-      // User must join a tenant via invite code after signup
-      user = await storage.upsertUser({
+      // Create new user and auto-create their tenant
+      // The first user who signs up automatically becomes admin of their own club
+      const result = await autoCreateTenantForUser({
         email,
         clerkUserId,
-        authProvider: 'clerk',
         firstName,
         lastName,
         profileImageUrl,
-        tenantId: null, // Explicitly null - user must join a tenant
-        isApproved: false,
-        registrationStatus: 'pending',
       });
-      console.log(`Created new user for Clerk user ${clerkUserId} (no tenant - must join via code)`);
+      user = result.user;
+      console.log(`Created new user ${user.id} with auto-generated tenant "${result.tenant.name}" (admin: true)`);
     }
 
     (req as any).user = user;
