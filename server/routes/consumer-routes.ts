@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { tenants, users } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { tenants, users, tenantMemberships } from '@shared/schema';
+import { eq, sql, and } from 'drizzle-orm';
 import { clerkClient, getAuth } from '@clerk/express';
 
 const router = Router();
@@ -73,24 +73,56 @@ router.post('/join', async (req: Request, res: Response) => {
         });
       }
       
-      await db.update(users)
-        .set({ 
-          tenantId: tenant.id,
-          clerkUserId: clerkUserId,
-        })
-        .where(eq(users.id, user.id));
+      // Update user and create membership in a transaction
+      await db.transaction(async (tx) => {
+        await tx.update(users)
+          .set({ 
+            tenantId: tenant.id,
+            clerkUserId: clerkUserId,
+          })
+          .where(eq(users.id, user!.id));
+        
+        // Check if membership already exists
+        const existingMembership = await tx.query.tenantMemberships.findFirst({
+          where: and(
+            eq(tenantMemberships.tenantId, tenant.id),
+            eq(tenantMemberships.userId, user!.id)
+          )
+        });
+        
+        if (!existingMembership) {
+          await tx.insert(tenantMemberships).values({
+            tenantId: tenant.id,
+            userId: user!.id,
+            role: 'parent',
+            status: 'active',
+          });
+          console.log(`✅ Created tenant_membership for user ${user!.id} in tenant ${tenant.id}`);
+        }
+      });
     } else {
-      const [newUser] = await db.insert(users).values({
-        email: userEmail.toLowerCase(),
-        firstName: clerkUser.firstName || '',
-        lastName: clerkUser.lastName || '',
-        clerkUserId: clerkUserId,
-        tenantId: tenant.id,
-        role: 'parent',
-        authProvider: 'clerk',
-        emailVerifiedAt: new Date(),
-      }).returning();
-      user = newUser;
+      // Create new user and membership in a transaction
+      await db.transaction(async (tx) => {
+        const [newUser] = await tx.insert(users).values({
+          email: userEmail.toLowerCase(),
+          firstName: clerkUser.firstName || '',
+          lastName: clerkUser.lastName || '',
+          clerkUserId: clerkUserId,
+          tenantId: tenant.id,
+          role: 'parent',
+          authProvider: 'clerk',
+          emailVerifiedAt: new Date(),
+        }).returning();
+        user = newUser;
+        
+        await tx.insert(tenantMemberships).values({
+          tenantId: tenant.id,
+          userId: newUser.id,
+          role: 'parent',
+          status: 'active',
+        });
+        console.log(`✅ Created tenant_membership for new user ${newUser.id} in tenant ${tenant.id}`);
+      });
     }
     
     if (tenant.clerkOrganizationId) {
@@ -106,7 +138,7 @@ router.post('/join', async (req: Request, res: Response) => {
       }
     }
     
-    console.log(`✅ User ${user.id} joined club ${tenant.name} (${tenant.id})`);
+    console.log(`✅ User ${user!.id} joined club ${tenant.name} (${tenant.id})`);
     
     return res.status(200).json({
       success: true,
