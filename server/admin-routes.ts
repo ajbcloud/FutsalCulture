@@ -1921,8 +1921,11 @@ export async function setupAdminRoutes(app: any) {
   app.get('/api/admin/help-requests', requireAdmin, async (req: Request, res: Response) => {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
-      const helpRequests = await storage.getHelpRequests(tenantId);
-      res.json(helpRequests);
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+      const helpRequestsData = await storage.getHelpRequests(tenantId);
+      res.json(helpRequestsData);
     } catch (error) {
       console.error("Error fetching help requests:", error);
       res.status(500).json({ message: "Failed to fetch help requests" });
@@ -1931,6 +1934,10 @@ export async function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/help-requests/:id/resolve', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const { id } = req.params;
       const { resolutionNote } = req.body;
       const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
@@ -1945,7 +1952,7 @@ export async function setupAdminRoutes(app: any) {
         return res.status(401).json({ message: "Admin authentication required" });
       }
 
-      // Update help request with resolution details
+      // Update help request with resolution details - verify tenant ownership
       const [updatedRequest] = await db.update(helpRequests)
         .set({
           resolved: true,
@@ -1954,7 +1961,7 @@ export async function setupAdminRoutes(app: any) {
           resolutionNote: resolutionNote.trim(),
           resolvedAt: new Date()
         })
-        .where(eq(helpRequests.id, id))
+        .where(and(eq(helpRequests.id, id), eq(helpRequests.tenantId, tenantId)))
         .returning();
 
       if (!updatedRequest) {
@@ -1973,6 +1980,10 @@ export async function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/help-requests/:id/reply', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const { id } = req.params;
       const { message } = req.body;
       const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
@@ -1985,8 +1996,10 @@ export async function setupAdminRoutes(app: any) {
         return res.status(400).json({ message: "Reply message is required" });
       }
 
-      // Get current help request to append to reply history
-      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
+      // Get current help request to append to reply history - verify tenant ownership
+      const [currentRequest] = await db.select().from(helpRequests).where(
+        and(eq(helpRequests.id, id), eq(helpRequests.tenantId, tenantId))
+      );
       
       if (!currentRequest) {
         return res.status(404).json({ message: "Help request not found" });
@@ -2007,7 +2020,7 @@ export async function setupAdminRoutes(app: any) {
           status: 'replied',
           replyHistory: updatedReplyHistory
         })
-        .where(eq(helpRequests.id, id))
+        .where(and(eq(helpRequests.id, id), eq(helpRequests.tenantId, tenantId)))
         .returning();
 
       if (!updatedRequest) {
@@ -2028,6 +2041,10 @@ export async function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/help-requests/:id/reply-and-resolve', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const { id } = req.params;
       const { message, resolutionNote } = req.body;
       const adminUserId = (req as any).user?.claims?.sub || (req as any).user?.id;
@@ -2040,8 +2057,10 @@ export async function setupAdminRoutes(app: any) {
         return res.status(400).json({ message: "Reply message is required" });
       }
 
-      // Get current help request to append to reply history
-      const [currentRequest] = await db.select().from(helpRequests).where(eq(helpRequests.id, id));
+      // Get current help request to append to reply history - verify tenant ownership
+      const [currentRequest] = await db.select().from(helpRequests).where(
+        and(eq(helpRequests.id, id), eq(helpRequests.tenantId, tenantId))
+      );
       
       if (!currentRequest) {
         return res.status(404).json({ message: "Help request not found" });
@@ -2066,7 +2085,7 @@ export async function setupAdminRoutes(app: any) {
           resolvedAt: new Date(),
           replyHistory: updatedReplyHistory
         })
-        .where(eq(helpRequests.id, id))
+        .where(and(eq(helpRequests.id, id), eq(helpRequests.tenantId, tenantId)))
         .returning();
 
       if (!updatedRequest) {
@@ -2879,7 +2898,11 @@ export async function setupAdminRoutes(app: any) {
   // Discount Code Management
   app.get('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
     try {
-      const codes = await storage.getDiscountCodes();
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+      const codes = await storage.getDiscountCodes(tenantId);
       res.json(codes);
     } catch (error) {
       console.error("Error fetching discount codes:", error);
@@ -2889,9 +2912,14 @@ export async function setupAdminRoutes(app: any) {
 
   app.post('/api/admin/discount-codes', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const adminUserId = (req as any).currentUser?.id;
       const discountData = {
         ...req.body,
+        tenantId,
         createdBy: adminUserId,
       };
       
@@ -2961,10 +2989,14 @@ export async function setupAdminRoutes(app: any) {
 
   app.put('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const { id } = req.params;
       
-      // Get existing discount code
-      const existingCode = await storage.getDiscountCode(id);
+      // Get existing discount code - verify tenant ownership
+      const existingCode = await storage.getDiscountCodeById(id, tenantId);
       
       if (!existingCode) {
         return res.status(404).json({ message: "Discount code not found" });
@@ -3061,12 +3093,20 @@ export async function setupAdminRoutes(app: any) {
 
   app.delete('/api/admin/discount-codes/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       const { id } = req.params;
       
-      // Get the discount code to retrieve Stripe IDs
-      const discountCode = await storage.getDiscountCode(id);
+      // Get the discount code to retrieve Stripe IDs - verify tenant ownership
+      const discountCode = await storage.getDiscountCodeById(id, tenantId);
       
-      if (discountCode && process.env.STRIPE_SECRET_KEY) {
+      if (!discountCode) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+      
+      if (process.env.STRIPE_SECRET_KEY) {
         // Delete Stripe coupon if it exists
         if (discountCode.stripeCouponId) {
           try {

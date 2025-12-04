@@ -220,8 +220,9 @@ export interface IStorage {
   upsertServiceBilling(billing: ServiceBillingInsert): Promise<ServiceBillingSelect>;
 
   // Discount code operations
-  getDiscountCodes(): Promise<DiscountCode[]>;
+  getDiscountCodes(tenantId: string): Promise<DiscountCode[]>;
   getDiscountCode(code: string): Promise<DiscountCode | undefined>;
+  getDiscountCodeById(id: string, tenantId: string): Promise<DiscountCode | undefined>;
   createDiscountCode(discountCode: InsertDiscountCode): Promise<DiscountCode>;
   updateDiscountCode(id: string, discountCode: Partial<InsertDiscountCode>): Promise<DiscountCode>;
   deleteDiscountCode(id: string): Promise<void>;
@@ -1531,8 +1532,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Discount code operations
-  async getDiscountCodes(): Promise<DiscountCode[]> {
-    return await db.select().from(discountCodes).orderBy(desc(discountCodes.createdAt));
+  async getDiscountCodes(tenantId: string): Promise<DiscountCode[]> {
+    return await db.select().from(discountCodes)
+      .where(eq(discountCodes.tenantId, tenantId))
+      .orderBy(desc(discountCodes.createdAt));
   }
 
   async getDiscountCode(code: string): Promise<DiscountCode | undefined> {
@@ -1540,6 +1543,17 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(discountCodes)
       .where(eq(discountCodes.code, code));
+    return discount;
+  }
+
+  async getDiscountCodeById(id: string, tenantId: string): Promise<DiscountCode | undefined> {
+    const [discount] = await db
+      .select()
+      .from(discountCodes)
+      .where(and(
+        eq(discountCodes.id, id),
+        eq(discountCodes.tenantId, tenantId)
+      ));
     return discount;
   }
 

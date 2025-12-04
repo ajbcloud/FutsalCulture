@@ -1,0 +1,93 @@
+Build an onboarding system for the admin panel of the PlayHQ application.
+Follow these instructions exactly.
+
+Create a persistent onboarding bubble that appears in the bottom right corner of the screen on all admin pages.
+The bubble must be movable and minimizable but cannot be dismissed until every onboarding checklist item has been manually checked off.
+Store the checklist status in the database tied to the organization.
+When all steps are completed, remove the bubble.
+
+Inside the bubble show an ordered checklist. The steps must be:
+
+Complete Organization Setup
+
+Create Default Invite Code
+
+Set Business Schedule and Fiscal Year
+
+Configure Registration Settings
+
+Configure Sessions and Schedule Settings
+
+Create Locations
+
+Configure Communication Settings
+
+Complete Age Policy Setup
+
+Review Billing and Plan Upgrades
+
+Each item must expand inside the bubble to show a description explaining what is required. Admins must manually check off completion. Do not auto complete any item.
+
+Build the following backend and frontend logic for each step.
+
+Step One Organization Setup
+Create a settings screen where admins can enter
+organization name, logo, support email, support phone, support hours, business location, and time zone.
+Provide form fields and save all values to the organization settings table.
+Mark the step complete only when the admin checks the box.
+
+Step Two Invite Code Setup
+Create a field for a default invite code.
+Also provide a Manage Invite Codes page to create additional invite codes.
+Save codes in an invite codes table.
+Mark the step complete when the admin checks the box.
+
+Step Three Business Schedule and Fiscal Year
+Add fields for start day of week and fiscal year type.
+Save these values to organization settings.
+
+Step Four Registration Settings
+Add toggles for
+auto approve new parent or player signups
+manual approval
+show help request navigation menu on client dashboard
+
+Step Five Sessions and Schedule
+Add fields for
+session capacity warning threshold
+payment submission time
+waitlist toggle
+auto promotion toggle
+payment reminder toggle
+refund cut off toggle
+
+Add logic for auto promotion if the plan level supports it.
+Move waitlist message templates to the Communications tab.
+Fix SMS notification settings to remove Twilio references.
+
+Step Six Locations
+Create a screen where admins can add and manage locations.
+Move this section above session settings in the UI.
+
+Step Seven Communications
+Consolidate all messaging settings into a single Communications tab.
+Include email templates, SMS templates, waitlist templates, and reminder templates.
+Remove the text about white label emails.
+
+Step Eight Age Policy
+Add fields for minimum age, maximum age, and teen self signup age.
+Combine require adult account and teen self signup fields if possible.
+Audit the enforce age gating toggle and either document its function or remove it.
+Consent forms must be fully editable with the ability to enable or disable individual forms and create new ones.
+
+Step Nine Billing
+Add a simple section that links to plan upgrade options.
+
+The onboarding bubble must read from and write to the onboarding status table.
+Use a boolean field for each step.
+
+Build clean UI components that work with the existing design.
+Use a light card layout inside the bubble with clear checkboxes and progress count.
+The bubble must remain visible until all steps are finished.
+
+End of prompt.
