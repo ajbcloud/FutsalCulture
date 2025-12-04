@@ -1583,6 +1583,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const player = await storage.createPlayer(validatedData);
+      
+      // Auto-link player to household if user has one
+      if (hasHousehold && userHouseholds[0]?.householdId) {
+        try {
+          // Check if player is already a member of this household to avoid duplicate constraint errors
+          const existingMember = await db.select()
+            .from(householdMembers)
+            .where(and(
+              eq(householdMembers.householdId, userHouseholds[0].householdId),
+              eq(householdMembers.playerId, player.id)
+            ))
+            .limit(1);
+          
+          if (existingMember.length === 0) {
+            await db.insert(householdMembers).values({
+              tenantId,
+              householdId: userHouseholds[0].householdId,
+              playerId: player.id,
+              role: 'player',
+            });
+          }
+        } catch (linkError) {
+          console.log("Note: Could not auto-link player to household:", linkError);
+          // Don't fail the request - player was created successfully
+        }
+      }
+      
       res.json(player);
     } catch (error) {
       console.error("Error creating player:", error);

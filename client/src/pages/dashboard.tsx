@@ -364,7 +364,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex-1 text-center sm:text-left">
-                <h3 className="font-semibold text-foreground">Join a Futsal Club</h3>
+                <h3 className="font-semibold text-foreground">Join a Club</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Have an invite code? Join a club to start booking sessions and accessing training programs.
                 </p>
@@ -477,7 +477,7 @@ export default function Dashboard() {
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">Join a Club to Book Sessions</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm">
-                  To book training sessions, you'll need to join a futsal club first. Ask your club for an invite code.
+                  To book training sessions, you'll need to join a club first. Ask your club for an invite code.
                 </p>
                 <Button 
                   size="lg" 

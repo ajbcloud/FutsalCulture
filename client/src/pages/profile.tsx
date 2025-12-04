@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCookieConsent } from "@/hooks/useCookieConsent";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatPhoneInput, formatPhoneE164, formatPhoneDisplay, isValidE164 } from "@/lib/phone-utils";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,18 +74,25 @@ export default function Profile() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Format and validate phone to E.164 before saving
+      const formattedPhone = data.phone ? formatPhoneE164(data.phone) : null;
+      const phoneIsValid = formattedPhone ? isValidE164(formattedPhone) : false;
+      
+      // Only save validated phone, null otherwise
+      const phoneToSave = phoneIsValid ? formattedPhone : null;
+      
       // Update user profile
       await apiRequest("PUT", "/api/auth/user", {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        phone: data.phone,
+        phone: phoneToSave,
       });
       
-      // Update notification preferences - only save if contact info is available
+      // Update notification preferences - SMS only allowed with valid phone
       await apiRequest("PUT", "/api/notification-preferences", {
         email: data.email?.trim() ? data.emailReminder : false,
-        sms: data.phone?.trim() ? data.smsReminder : false,
+        sms: phoneIsValid ? data.smsReminder : false,
       });
     },
     onSuccess: () => {
@@ -266,7 +274,6 @@ export default function Profile() {
                   { key: "firstName", label: "First Name", type: "text" },
                   { key: "lastName", label: "Last Name", type: "text" },
                   { key: "email", label: "Email Address", type: "email" },
-                  { key: "phone", label: "Phone Number", type: "tel" },
                 ].map((field) => (
                   <div key={field.key} className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">
@@ -292,6 +299,37 @@ export default function Profile() {
                     )}
                   </div>
                 ))}
+                
+                {/* Phone Number with E.164 formatting */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Phone Number
+                  </Label>
+                  {isEditing ? (
+                    <div className="space-y-1">
+                      <Input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => {
+                          const formatted = formatPhoneInput(e.target.value);
+                          setFormData({ ...formData, phone: formatted });
+                        }}
+                        className="bg-input border-border text-foreground focus:border-primary"
+                        placeholder="+1 (234) 567-8912"
+                        data-testid="input-phone"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Format: +1 (234) 567-8912
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="w-full bg-input border border-border rounded-md px-3 py-2 text-foreground min-h-[40px] flex items-center">
+                      {formData.phone ? formatPhoneDisplay(formData.phone) : (
+                        <span className="text-muted-foreground italic">Not provided</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar } from "lucide-react";
-import { Link } from "wouter";
+import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar, Building2, KeyRound } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
 import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
 import PlayerForm from "@/components/player-form";
@@ -93,6 +93,7 @@ export default function HouseholdSection() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { term } = useUserTerminology();
+  const [, setLocation] = useLocation();
   const [householdName, setHouseholdName] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -103,6 +104,9 @@ export default function HouseholdSection() {
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [showJoinClubModal, setShowJoinClubModal] = useState(false);
+
+  const isUnaffiliated = user?.isUnaffiliated === true;
 
   // Super admins without tenantId can still access households (backend resolves tenant)
   const canAccessHouseholds = isAuthenticated && (!!user?.tenantId || user?.isSuperAdmin);
@@ -347,23 +351,33 @@ export default function HouseholdSection() {
               <User className="h-5 w-5" />
               Players
             </CardTitle>
-            <Dialog open={isAddPlayerDialogOpen} onOpenChange={setIsAddPlayerDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-new-player">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Player
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                </DialogHeader>
-                <PlayerForm onSuccess={() => {
-                  setIsAddPlayerDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ["/api/players"] });
-                }} />
-              </DialogContent>
-            </Dialog>
+            {isUnaffiliated ? (
+              <Button 
+                onClick={() => setShowJoinClubModal(true)}
+                data-testid="button-add-new-player"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Player
+              </Button>
+            ) : (
+              <Dialog open={isAddPlayerDialogOpen} onOpenChange={setIsAddPlayerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-new-player">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Player
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Add New Player</DialogTitle>
+                  </DialogHeader>
+                  <PlayerForm onSuccess={() => {
+                    setIsAddPlayerDialogOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+                  }} />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -371,7 +385,17 @@ export default function HouseholdSection() {
             <div className="text-center py-8">
               <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">No players registered yet</p>
-              <Button variant="outline" onClick={() => setIsAddPlayerDialogOpen(true)} data-testid="button-add-first-player">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (isUnaffiliated) {
+                    setShowJoinClubModal(true);
+                  } else {
+                    setIsAddPlayerDialogOpen(true);
+                  }
+                }} 
+                data-testid="button-add-first-player"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Player
               </Button>
@@ -383,7 +407,7 @@ export default function HouseholdSection() {
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-semibold">{player.firstName} {player.lastName}</h4>
+                        <h4 className="font-semibold text-foreground">{player.firstName} {player.lastName}</h4>
                         {player.birthYear && (
                           <p className="text-sm text-muted-foreground">
                             Born {player.birthYear}
@@ -407,7 +431,13 @@ export default function HouseholdSection() {
                         variant="outline"
                         size="sm"
                         className="w-full mt-3"
-                        onClick={() => handleAddPlayer(player.id)}
+                        onClick={() => {
+                          if (isUnaffiliated) {
+                            setShowJoinClubModal(true);
+                          } else {
+                            handleAddPlayer(player.id);
+                          }
+                        }}
                         disabled={addPlayerMutation.isPending}
                         data-testid={`button-link-player-${player.id}`}
                       >
@@ -582,7 +612,22 @@ export default function HouseholdSection() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {consentLoading ? (
+                {isUnaffiliated ? (
+                  <div className="text-center py-8">
+                    <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      Consent forms will be available after you join a club. Each club has specific forms you'll need to complete for your players.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setLocation('/join')}
+                      data-testid="button-join-club-consent"
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Join a Club
+                    </Button>
+                  </div>
+                ) : consentLoading ? (
                   <div className="text-center py-4 text-muted-foreground">Loading consent forms...</div>
                 ) : consentDocuments.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
@@ -764,6 +809,43 @@ export default function HouseholdSection() {
           onComplete={handleConsentComplete}
         />
       )}
+
+      <Dialog open={showJoinClubModal} onOpenChange={setShowJoinClubModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-primary" />
+              </div>
+              <DialogTitle className="text-xl">Join a Club First</DialogTitle>
+            </div>
+            <DialogDescription className="text-base pt-2">
+              Before you can add players, you'll need to join a club. Each club has their own consent forms and requirements that players need to complete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pt-4">
+            <Button 
+              className="w-full gap-2" 
+              size="lg"
+              onClick={() => {
+                setShowJoinClubModal(false);
+                setLocation('/join');
+              }}
+              data-testid="button-go-join-club"
+            >
+              <KeyRound className="w-5 h-5" />
+              Join a Club
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full mt-2"
+              onClick={() => setShowJoinClubModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

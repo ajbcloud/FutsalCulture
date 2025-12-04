@@ -163,7 +163,7 @@ export default function UnaffiliatedSignup() {
         <div className="text-center space-y-2 mb-6">
           <h1 className="text-3xl font-bold text-foreground">Join PlayHQ</h1>
           <p className="text-muted-foreground">
-            Create your account to manage players and join futsal clubs
+            Create your account to manage players and join clubs
           </p>
         </div>
 
@@ -188,7 +188,7 @@ export default function UnaffiliatedSignup() {
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">I'm a Parent/Guardian</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Register to manage your children's futsal activities, book sessions, and handle payments.
+                  Register to manage your children's activities, book sessions, and handle payments.
                 </p>
               </div>
               {selectedRole === "parent" && (
@@ -217,7 +217,7 @@ export default function UnaffiliatedSignup() {
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">I'm a Player (18+)</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Register as an adult player to book sessions and manage your own futsal activities.
+                  Register as an adult player to book sessions and manage your own activities.
                 </p>
               </div>
               {selectedRole === "player" && (
