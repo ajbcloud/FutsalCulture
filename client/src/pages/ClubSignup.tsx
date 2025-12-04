@@ -1,13 +1,27 @@
 import { SignUp } from "@clerk/clerk-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function ClubSignup() {
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
+  const [, navigate] = useLocation();
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/get-started")}
+          className="mb-2"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        
         <div className="text-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
             Create Your Club
