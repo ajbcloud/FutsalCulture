@@ -239,7 +239,7 @@ export default function AdminBilling() {
                         {getStatusBadge(payment.status)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${(payment.amount / 100).toFixed(2)}
+                        ${payment.amount.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
