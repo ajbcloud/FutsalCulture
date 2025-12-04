@@ -31,7 +31,7 @@ export default function Navbar() {
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             
-            <Link href="/" className="flex-shrink-0">
+            <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex-shrink-0">
               <BusinessBranding 
                 variant="default" 
                 textClassName="text-green-400"
