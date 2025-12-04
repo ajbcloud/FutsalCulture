@@ -580,23 +580,41 @@ export default function HouseholdSection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4">
-                <Input
-                  type="email"
-                  placeholder="Email address"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1"
-                  data-testid="input-invite-email"
-                />
-                <Button
-                  onClick={() => inviteParentMutation.mutate(inviteEmail)}
-                  disabled={!inviteEmail.trim() || inviteParentMutation.isPending}
-                  data-testid="button-send-invite"
-                >
-                  Send Invite
-                </Button>
-              </div>
+              {isUnaffiliated ? (
+                <div className="text-center py-6">
+                  <Building2 className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-4 text-sm">
+                    You'll be able to invite other parents after joining a club.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setLocation('/join')}
+                    data-testid="button-join-club-invite"
+                  >
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    Join a Club
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-4">
+                  <Input
+                    type="email"
+                    placeholder="Email address"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1"
+                    data-testid="input-invite-email"
+                  />
+                  <Button
+                    onClick={() => inviteParentMutation.mutate(inviteEmail)}
+                    disabled={!inviteEmail.trim() || inviteParentMutation.isPending}
+                    data-testid="button-send-invite"
+                  >
+                    Send Invite
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

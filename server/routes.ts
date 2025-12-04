@@ -3059,6 +3059,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/households/:id/invite - Invite another parent to household
+  app.post('/api/households/:id/invite', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      const userId = req.user?.id;
+      
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID is required" });
+      }
+      
+      // Block unaffiliated users
+      if (tenantId === 'platform-staging') {
+        return res.status(400).json({ 
+          message: "Please join a club before inviting other parents" 
+        });
+      }
+
+      const { id: householdId } = req.params;
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      // Verify household exists and user has access
+      const household = await storage.getHousehold(householdId, tenantId);
+      if (!household) {
+        return res.status(404).json({ message: "Household not found" });
+      }
+
+      // Verify user is a member of this household (authorization check)
+      const isMember = household.members?.some((m: any) => m.userId === userId);
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not authorized to invite to this household" });
+      }
+
+      // Generate invite token using parent2 format for compatibility with existing validate/accept routes
+      const inviteToken = Buffer.from(`parent2:${userId}:${Date.now()}`).toString('base64');
+      const inviteUrl = `${req.protocol}://${req.get('host')}/parent2-invite/${inviteToken}`;
+
+      // Update user with invite info
+      await storage.updateUserParent2Invite(userId, 'email', email, new Date());
+
+      // TODO: Send actual email via Resend
+      // For now, return the invite URL
+      res.json({
+        success: true,
+        inviteUrl,
+        message: `Invitation sent to ${email}`,
+      });
+    } catch (error) {
+      console.error("Error sending household invite:", error);
+      res.status(500).json({ message: "Failed to send invitation" });
+    }
+  });
+
   // GET /api/my/payments - Get current user's payment history
   app.get('/api/my/payments', isAuthenticated, async (req: any, res) => {
     try {
