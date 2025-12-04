@@ -524,23 +524,15 @@ export default function Dashboard() {
                     <p className="text-muted-foreground mb-6 max-w-sm">
                       Get started by adding a player to your household. You'll then see all available sessions they're eligible for.
                     </p>
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="lg" className="gap-2" data-testid="button-add-first-player">
-                          <Plus className="w-5 h-5" />
-                          Add Player
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-card border-border">
-                        <DialogHeader>
-                          <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                        </DialogHeader>
-                        <PlayerForm onSuccess={() => {
-                          setIsAddDialogOpen(false);
-                          setEditingPlayer(null);
-                        }} />
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      size="lg" 
+                      className="gap-2" 
+                      onClick={() => handleTabChange("household")}
+                      data-testid="button-add-first-player"
+                    >
+                      <Home className="w-5 h-5" />
+                      {userHasHousehold ? "Add Player" : "Go to Household"}
+                    </Button>
                   </>
                 ) : (
                   <>
@@ -631,35 +623,14 @@ export default function Dashboard() {
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Your Players</h2>
               <p className="text-muted-foreground">Manage your household players and their bookings</p>
             </div>
-            {needsHouseholdFirst ? (
-              <Button 
-                className="gap-2" 
-                variant="outline"
-                onClick={() => handleTabChange("household")}
-                data-testid="button-create-household-first"
-              >
-                <Home className="w-4 h-4" />
-                Create Household First
-              </Button>
-            ) : (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2" data-testid="button-add-player">
-                    <Plus className="w-4 h-4" />
-                    Add Player
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                  </DialogHeader>
-                  <PlayerForm onSuccess={() => {
-                    setIsAddDialogOpen(false);
-                    setEditingPlayer(null);
-                  }} />
-                </DialogContent>
-              </Dialog>
-            )}
+            <Button 
+              className="gap-2" 
+              onClick={() => handleTabChange("household")}
+              data-testid="button-add-player"
+            >
+              <Plus className="w-4 h-4" />
+              Add Player
+            </Button>
           </div>
 
           {/* Show household requirement notice if needed */}
@@ -685,7 +656,7 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {players.length === 0 && !needsHouseholdFirst ? (
+          {players.length === 0 ? (
             <Card className="border-dashed border-2 bg-card/50">
               <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
@@ -693,45 +664,19 @@ export default function Dashboard() {
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">No Players Yet</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm">
-                  Add your first player to start booking training sessions.
-                </p>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="lg" className="gap-2" data-testid="button-add-first-player-section">
-                      <Plus className="w-5 h-5" />
-                      Add Your First Player
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-card border-border">
-                    <DialogHeader>
-                      <DialogTitle className="text-foreground">Add New Player</DialogTitle>
-                    </DialogHeader>
-                    <PlayerForm onSuccess={() => {
-                      setIsAddDialogOpen(false);
-                      setEditingPlayer(null);
-                    }} />
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-          ) : players.length === 0 && needsHouseholdFirst ? (
-            <Card className="border-dashed border-2 bg-card/50">
-              <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-6">
-                  <Home className="w-8 h-8 text-amber-500" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Create Your Household First</h3>
-                <p className="text-muted-foreground mb-6 max-w-sm">
-                  This organization requires a household before you can add players. Create your household to get started.
+                  {userHasHousehold 
+                    ? "Add players to your household to start booking training sessions."
+                    : "Create your household first, then add players to start booking sessions."
+                  }
                 </p>
                 <Button 
                   size="lg" 
                   className="gap-2" 
                   onClick={() => handleTabChange("household")}
-                  data-testid="button-go-to-household"
+                  data-testid="button-add-first-player-section"
                 >
                   <Home className="w-5 h-5" />
-                  Go to Household
+                  {userHasHousehold ? "Add Players" : "Go to Household"}
                 </Button>
               </CardContent>
             </Card>
