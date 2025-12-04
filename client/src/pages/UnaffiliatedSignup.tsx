@@ -93,7 +93,7 @@ export default function UnaffiliatedSignup() {
   if (step === "signup") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
-        <div className="w-full max-w-md space-y-4">
+        <div className="w-full max-w-md">
           <Button
             variant="ghost"
             onClick={() => urlRole ? navigate("/get-started") : setStep("role_select")}
@@ -104,80 +104,69 @@ export default function UnaffiliatedSignup() {
             Back
           </Button>
           
-          <Card className={isDarkMode ? "bg-slate-800 border-slate-700" : ""}>
-            <CardHeader className="text-center pb-2">
-              <CardTitle className={`text-xl ${isDarkMode ? "text-white" : ""}`}>Create your account</CardTitle>
-              <CardDescription className={isDarkMode ? "text-slate-300" : ""}>
-                Signing up as a {selectedRole === "parent" ? "Parent/Guardian" : "Player"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <SignUp
-                appearance={{
-                  variables: {
-                    colorPrimary: "#3b82f6",
-                    colorBackground: isDarkMode ? "#1e293b" : "#ffffff",
-                    colorInputBackground: isDarkMode ? "#334155" : "#f8fafc",
-                    colorInputText: isDarkMode ? "#ffffff" : "#0f172a",
-                    colorText: isDarkMode ? "#ffffff" : "#0f172a",
-                    colorTextSecondary: isDarkMode ? "#cbd5e1" : "#64748b",
-                    colorNeutral: isDarkMode ? "#cbd5e1" : "#64748b",
-                    colorTextOnPrimaryBackground: "#ffffff",
-                  },
-                  elements: {
-                    rootBox: "w-full",
-                    card: isDarkMode 
-                      ? "shadow-none p-0 w-full !bg-transparent"
-                      : "shadow-none p-0 w-full",
-                    headerTitle: "hidden",
-                    headerSubtitle: "hidden",
-                    socialButtonsBlockButton: isDarkMode 
-                      ? "!bg-slate-700 !border-slate-600 !text-white hover:!bg-slate-600" 
-                      : "",
-                    formButtonPrimary: "bg-primary hover:bg-primary/90",
-                    footerAction: "hidden",
-                    formFieldInput: isDarkMode 
-                      ? "!bg-slate-700 !border-slate-600 !text-white" 
-                      : "",
-                    formFieldLabel: isDarkMode ? "!text-slate-300" : "",
-                    identityPreviewEditButton: isDarkMode ? "!text-slate-300" : "",
-                    formResendCodeLink: isDarkMode ? "!text-primary" : "",
-                    dividerLine: isDarkMode ? "!bg-slate-600" : "",
-                    dividerText: isDarkMode ? "!text-slate-400" : "",
-                  },
-                }}
-                signInUrl="/login"
-                redirectUrl={`/signup/unaffiliated/complete?role=${selectedRole}`}
-                unsafeMetadata={{
-                  signupType: "unaffiliated",
-                  role: selectedRole,
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          <div className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Button 
-              variant="link" 
-              className="p-0 h-auto font-semibold"
-              onClick={() => navigate("/login")}
-              data-testid="link-login"
-            >
-              Sign in
-            </Button>
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+              Create your account
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Signing up as a {selectedRole === "parent" ? "Parent/Guardian" : "Player"}
+            </p>
           </div>
+          
+          <SignUp
+            routing="path"
+            path="/signup/unaffiliated"
+            signInUrl="/login"
+            afterSignUpUrl={`/signup/unaffiliated/complete?role=${selectedRole}`}
+            afterSignInUrl="/dashboard"
+            appearance={{
+              variables: {
+                colorPrimary: "#3b82f6",
+                colorBackground: isDarkMode ? "#1e293b" : "#ffffff",
+                colorInputBackground: isDarkMode ? "#334155" : "#f8fafc",
+                colorInputText: isDarkMode ? "#ffffff" : "#0f172a",
+                colorText: isDarkMode ? "#ffffff" : "#0f172a",
+                colorTextSecondary: isDarkMode ? "#cbd5e1" : "#64748b",
+                colorNeutral: isDarkMode ? "#cbd5e1" : "#64748b",
+                colorTextOnPrimaryBackground: "#ffffff",
+              },
+              elements: {
+                rootBox: "mx-auto",
+                card: isDarkMode 
+                  ? "shadow-lg rounded-xl !bg-[#1e293b] border border-slate-700" 
+                  : "shadow-lg rounded-xl",
+                headerTitle: isDarkMode ? "!text-white" : "",
+                headerSubtitle: isDarkMode ? "!text-slate-300" : "",
+                socialButtonsBlockButton: isDarkMode 
+                  ? "!bg-slate-700 !border-slate-600 !text-white hover:!bg-slate-600" 
+                  : "",
+                socialButtonsBlockButtonText: isDarkMode ? "!text-white" : "",
+                formFieldLabel: isDarkMode ? "!text-slate-300" : "",
+                formFieldInput: isDarkMode 
+                  ? "!bg-slate-700 !border-slate-600 !text-white placeholder:!text-slate-400" 
+                  : "",
+                formButtonPrimary: "!bg-blue-600 hover:!bg-blue-700",
+                footerActionLink: isDarkMode ? "!text-blue-400 hover:!text-blue-300" : "",
+                dividerLine: isDarkMode ? "!bg-slate-600" : "",
+                dividerText: isDarkMode ? "!text-slate-400" : "",
+                formFieldInputShowPasswordButton: isDarkMode ? "!text-slate-400" : "",
+                identityPreviewText: isDarkMode ? "!text-white" : "",
+                identityPreviewEditButton: isDarkMode ? "!text-blue-400" : "",
+                footer: isDarkMode ? "!bg-[#1e293b]" : "",
+                footerActionText: isDarkMode ? "!text-slate-300" : "",
+              },
+            }}
+            unsafeMetadata={{
+              signupType: "unaffiliated",
+              role: selectedRole,
+            }}
+          />
 
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
             Have an invite code?{" "}
-            <Button 
-              variant="link" 
-              className="p-0 h-auto font-semibold"
-              onClick={() => navigate("/join")}
-              data-testid="link-join-club"
-            >
+            <a className="underline text-blue-600 dark:text-blue-400" href="/join">
               Join a club
-            </Button>
+            </a>
           </div>
         </div>
       </div>
