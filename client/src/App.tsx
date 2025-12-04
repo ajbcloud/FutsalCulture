@@ -70,6 +70,7 @@ import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
 import ClubSignup from "./pages/ClubSignup";
 import ClubSetup from "./pages/ClubSetup";
+import JoinSetup from "./pages/JoinSetup";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -93,6 +94,8 @@ function Router() {
         <Route path="/club-signup/:rest*" component={ClubSignup} />
         <Route path="/club-setup" component={ClubSetup} />
         <Route path="/join" component={Join} />
+        <Route path="/join/:rest*" component={Join} />
+        <Route path="/join-setup" component={JoinSetup} />
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
