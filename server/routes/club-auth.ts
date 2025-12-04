@@ -4,9 +4,12 @@ import { tenants, users, tenantPlanAssignments, subscriptions, auditEvents } fro
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { slugify } from "../../shared/utils";
-import { getAuth } from "@clerk/express";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 
 export const clubAuthRouter = Router();
+
+// Apply Clerk middleware to all routes in this router
+clubAuthRouter.use(clerkMiddleware());
 
 const clubSignupSchema = z.object({
   org_name: z.string().min(2, "Organization name must be at least 2 characters"),
@@ -84,7 +87,7 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
       }
       
       // Create tenant
-      const tenantResult = await tx.insert(tenants).values({
+      const [tenant] = await tx.insert(tenants).values({
         name: validatedData.org_name,
         slug: slug,
         subdomain: slug,
@@ -96,7 +99,6 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
         country: validatedData.country,
         planLevel: "free",
       }).returning();
-      const tenant = tenantResult[0];
       
       // Create subscription
       await tx.insert(subscriptions).values({
@@ -114,10 +116,10 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
       });
       
       // Create or update user
-      let user: any;
+      let user: typeof users.$inferSelect;
       
       if (existingUser) {
-        const userResult = await tx.update(users)
+        const [updatedUser] = await tx.update(users)
           .set({
             tenantId: tenant.id,
             isAdmin: true,
@@ -129,9 +131,9 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
           })
           .where(eq(users.id, existingUser.id))
           .returning();
-        user = userResult[0];
+        user = updatedUser;
       } else {
-        const userResult = await tx.insert(users).values({
+        const [newUser] = await tx.insert(users).values({
           email: clerkEmail,
           clerkUserId: clerkUserId,
           authProvider: 'clerk',
@@ -143,7 +145,7 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
           firstName: clerkFirstName,
           lastName: clerkLastName,
         }).returning();
-        user = userResult[0];
+        user = newUser;
       }
       
       // Create audit event
@@ -300,7 +302,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
         where: eq(users.clerkUserId, clerkUserId)
       });
       
-      let user: any;
+      let user: typeof users.$inferSelect;
       
       if (existingUser) {
         // User exists - check if already in a tenant
@@ -313,7 +315,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
           user = existingUser;
         } else {
           // Update user with tenant
-          const userResult = await tx.update(users)
+          const [updatedUser] = await tx.update(users)
             .set({
               tenantId: tenant.id,
               role: validRole,
@@ -322,11 +324,11 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
             })
             .where(eq(users.id, existingUser.id))
             .returning();
-          user = userResult[0];
+          user = updatedUser;
         }
       } else {
         // Create new user
-        const userResult = await tx.insert(users).values({
+        const [newUser] = await tx.insert(users).values({
           email: clerkEmail,
           clerkUserId: clerkUserId,
           authProvider: 'clerk',
@@ -337,7 +339,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
           firstName: clerkFirstName,
           lastName: clerkLastName,
         }).returning();
-        user = userResult[0];
+        user = newUser;
       }
       
       // Create audit event

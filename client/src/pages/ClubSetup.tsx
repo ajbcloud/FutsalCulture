@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,8 @@ const usStates = [
 ];
 
 export default function ClubSetup() {
-  const { isSignedIn, isLoaded, userId } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   
@@ -77,6 +78,20 @@ export default function ClubSetup() {
     country: "US"
   });
   const [loading, setLoading] = useState(false);
+  
+  // Prefill form with Clerk user data when available
+  useEffect(() => {
+    if (user) {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      const primaryEmail = user.primaryEmailAddress?.emailAddress || '';
+      
+      setFormData(prev => ({
+        ...prev,
+        contact_name: prev.contact_name || fullName,
+        contact_email: prev.contact_email || primaryEmail,
+      }));
+    }
+  }, [user]);
   
   if (!isLoaded) {
     return (
