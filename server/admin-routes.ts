@@ -199,13 +199,11 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
   try {
     let userId;
     
-    // Session validation for authentication
-    
     // Check for local session first (password-based users)  
     if ((req as any).session?.userId) {
       userId = (req as any).session.userId;
     }
-    // Check direct user.id format (local auth)
+    // Check direct user.id format (local auth or Clerk-synced)
     else if ((req as any).user?.id) {
       userId = (req as any).user.id;
     }
@@ -213,62 +211,25 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
     else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
       userId = (req as any).user.id;
     }
-    // In development, always allow the hardcoded super admin user to bypass auth
-    if (process.env.NODE_ENV === 'development' && !userId) {
-      userId = 'ajosephfinch';
-      // IMPORTANT: Set the session so subsequent requests work
-      if ((req as any).session) {
-        (req as any).session.userId = userId;
-        await new Promise((resolve) => (req as any).session.save(resolve));
-      }
-      // Development failsafe admin access
-    }
-    
-    // Authentication validation complete
     
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
     // Check user's admin status directly from database
-    let user = await storage.getUser(userId);
+    const user = await storage.getUser(userId);
     
-    // Apply failsafe super admin permissions if this is the hardcoded admin
-    if (userId === 'ajosephfinch') {
-      if (user) {
-        // Ensure failsafe admin always has super admin permissions
-        user = {
-          ...user,
-          isSuperAdmin: true,
-          isAdmin: true,
-        };
-        // Enhanced failsafe admin permissions
-      } else {
-        // If failsafe admin doesn't exist in database, create a minimal user object
-        // Failsafe super admin virtual user - no tenant assignment
-        user = {
-          id: userId,
-          email: "ajosephfinch@gmail.com",
-          tenantId: null,
-          tenant_id: null,
-          isAdmin: true,
-          isSuperAdmin: true,
-          isAssistant: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
     
-    // Final user permissions validation
-    
-    if (!user?.isAdmin && !user?.isAssistant) {
+    if (!user.isAdmin && !user.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
     
     // Attach user to request for convenience
     (req as any).currentUser = user;
-    (req as any).adminTenantId = user?.tenantId;
+    (req as any).adminTenantId = user.tenantId;
     (req as any).user = { ...((req as any).user || {}), id: userId };
     next();
   } catch (error) {
