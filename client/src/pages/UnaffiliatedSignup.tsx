@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 type Step = "role_select" | "signup" | "completing";
 
 const ROLE_STORAGE_KEY = "unaffiliatedSignupRole";
+const FROM_GET_STARTED_KEY = "unaffiliatedFromGetStarted";
 
 function getInitialRole(): "parent" | "player" {
   const searchParams = new URLSearchParams(window.location.search);
@@ -18,6 +19,7 @@ function getInitialRole(): "parent" | "player" {
   
   if (urlRole) {
     sessionStorage.setItem(ROLE_STORAGE_KEY, urlRole);
+    sessionStorage.setItem(FROM_GET_STARTED_KEY, "true");
     return urlRole;
   }
   
@@ -43,6 +45,12 @@ function getInitialStep(role: "parent" | "player" | null): Step {
   }
   
   return "role_select";
+}
+
+function cameFromGetStarted(): boolean {
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlRole = searchParams.get("role");
+  return !!urlRole || sessionStorage.getItem(FROM_GET_STARTED_KEY) === "true";
 }
 
 export default function UnaffiliatedSignup() {
@@ -87,6 +95,9 @@ export default function UnaffiliatedSignup() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        sessionStorage.removeItem(ROLE_STORAGE_KEY);
+        sessionStorage.removeItem(FROM_GET_STARTED_KEY);
+        
         toast({
           title: "Account created!",
           description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
@@ -132,8 +143,14 @@ export default function UnaffiliatedSignup() {
           <Button
             variant="ghost"
             onClick={() => {
-              sessionStorage.removeItem(ROLE_STORAGE_KEY);
-              navigate("/get-started");
+              if (cameFromGetStarted()) {
+                sessionStorage.removeItem(ROLE_STORAGE_KEY);
+                sessionStorage.removeItem(FROM_GET_STARTED_KEY);
+                navigate("/get-started");
+              } else {
+                sessionStorage.removeItem(ROLE_STORAGE_KEY);
+                setStep("role_select");
+              }
             }}
             className="mb-2"
             data-testid="button-back-role"
