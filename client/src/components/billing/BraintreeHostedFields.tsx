@@ -3,8 +3,9 @@ import * as braintree from "braintree-web";
 import type { Client, HostedFields, HostedFieldsEvent, HostedFieldsStateObject } from "braintree-web";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { CreditCard, Calendar, Lock, AlertCircle, MapPin, Home } from "lucide-react";
+import { CreditCard, Calendar, Lock, AlertCircle, MapPin } from "lucide-react";
 
 export interface BraintreeHostedFieldsRef {
   tokenize: () => Promise<{ nonce: string; cardType?: string; lastFour?: string }>;
@@ -31,7 +32,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
       expirationDate: { isValid: false, isEmpty: true, isFocused: false },
       cvv: { isValid: false, isEmpty: true, isFocused: false },
       postalCode: { isValid: false, isEmpty: true, isFocused: false },
-      streetAddress: { isValid: false, isEmpty: true, isFocused: false },
     });
     const [initError, setInitError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -86,11 +86,7 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
               container: "#postal-code",
               placeholder: "12345",
             },
-            streetAddress: {
-              container: "#street-address",
-              placeholder: "123 Main St",
-            },
-          } as any,
+          },
         });
       }).then((instance) => {
         hostedFieldsInstanceRef.current = instance;
@@ -114,21 +110,19 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
 
         hostedFieldsInstance.on("validityChange", (event) => {
           const field = event.emittedBy as keyof typeof fieldStates;
-          const fields = event.fields as any;
           setFieldStates((prev) => {
             const updated = {
               ...prev,
               [field]: {
                 ...prev[field],
-                isValid: fields[field]?.isValid ?? false,
-                isEmpty: fields[field]?.isEmpty ?? true,
+                isValid: event.fields[field]?.isValid ?? false,
+                isEmpty: event.fields[field]?.isEmpty ?? true,
               },
             };
             const allValid = updated.number.isValid && 
                            updated.expirationDate.isValid && 
                            updated.cvv.isValid &&
-                           updated.postalCode.isValid &&
-                           updated.streetAddress.isValid;
+                           updated.postalCode.isValid;
             onValidityChange?.(allValid);
             return updated;
           });
@@ -183,7 +177,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
           hostedFieldsInstance.clear("expirationDate");
           hostedFieldsInstance.clear("cvv");
           hostedFieldsInstance.clear("postalCode");
-          hostedFieldsInstance.clear("streetAddress");
         }
       },
     }));
@@ -254,18 +247,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
               data-testid="input-cvv"
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="street-address" className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            Billing Address
-          </Label>
-          <div
-            id="street-address"
-            className={getFieldClassName("streetAddress")}
-            data-testid="input-street-address"
-          />
         </div>
 
         <div className="space-y-2">
