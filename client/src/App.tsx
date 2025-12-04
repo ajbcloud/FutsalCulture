@@ -45,7 +45,6 @@ import NotFound from "@/pages/not-found";
 import SignupStart from "@/pages/SignupStart";
 import SignupParentFlow from "@/pages/SignupParentFlow";
 import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
-import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
 import Login from "@/pages/Login";
@@ -90,7 +89,6 @@ function Router() {
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
         <Route path="/signups" component={SignupStart} />
-        <Route path="/get-started" component={GetStarted} />
         <Route path="/club-signup" component={ClubSignup} />
         <Route path="/club-signup/:rest*" component={ClubSignup} />
         <Route path="/club-setup" component={ClubSetup} />
