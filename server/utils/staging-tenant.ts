@@ -8,6 +8,7 @@ const STAGING_TENANT_NAME = 'PlayHQ Platform';
 const STAGING_TENANT_SUBDOMAIN = 'platform-staging';
 
 export async function getOrCreateStagingTenant() {
+  // First try to get existing tenant
   const existingTenant = await db.select()
     .from(tenants)
     .where(eq(tenants.id, STAGING_TENANT_ID))
@@ -17,28 +18,39 @@ export async function getOrCreateStagingTenant() {
     return existingTenant[0];
   }
 
-  const inviteCode = `PLAT${nanoid(8).toUpperCase()}`;
+  // Try to create, but handle race condition where another request created it first
+  try {
+    const inviteCode = `PLAT${nanoid(8).toUpperCase()}`;
 
-  const result = await db.insert(tenants).values({
-    id: STAGING_TENANT_ID,
-    name: STAGING_TENANT_NAME,
-    displayName: STAGING_TENANT_NAME,
-    subdomain: STAGING_TENANT_SUBDOMAIN,
-    inviteCode: inviteCode,
-    isStaging: true,
-    planLevel: 'free',
-    billingStatus: 'none',
-  }).returning();
-  
-  const newTenant = result[0];
+    const [newTenant] = await db.insert(tenants).values({
+      id: STAGING_TENANT_ID,
+      name: STAGING_TENANT_NAME,
+      displayName: STAGING_TENANT_NAME,
+      subdomain: STAGING_TENANT_SUBDOMAIN,
+      inviteCode: inviteCode,
+      isStaging: true,
+      planLevel: 'free',
+      billingStatus: 'none',
+    }).returning();
 
-  console.log('✅ Created platform staging tenant:', {
-    id: newTenant.id,
-    name: newTenant.name,
-    inviteCode: inviteCode
-  });
+    console.log('✅ Created platform staging tenant:', {
+      id: newTenant.id,
+      name: newTenant.name,
+      inviteCode: inviteCode
+    });
 
-  return newTenant;
+    return newTenant;
+  } catch (error: any) {
+    // Handle duplicate key error - another request created it first
+    if (error?.code === '23505' && error?.constraint === 'tenants_pkey') {
+      const [tenant] = await db.select()
+        .from(tenants)
+        .where(eq(tenants.id, STAGING_TENANT_ID))
+        .limit(1);
+      return tenant;
+    }
+    throw error;
+  }
 }
 
 export function getStagingTenantId() {

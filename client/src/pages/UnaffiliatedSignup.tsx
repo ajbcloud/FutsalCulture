@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignUp, useUser, useAuth } from "@clerk/clerk-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { SignUp, useUser } from "@clerk/clerk-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, Users, ArrowRight, Home, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
-import { apiRequest } from "@/lib/queryClient";
 
-type Step = "role_select" | "signup" | "completing";
+type Step = "role_select" | "signup";
 
 const ROLE_STORAGE_KEY = "unaffiliatedSignupRole";
 const FROM_GET_STARTED_KEY = "unaffiliatedFromGetStarted";
@@ -55,11 +54,8 @@ function cameFromGetStarted(): boolean {
 
 export default function UnaffiliatedSignup() {
   const [, navigate] = useLocation();
-  const { toast } = useToast();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
-  const { isSignedIn, user } = useUser();
-  const { getToken } = useAuth();
   
   const [selectedRole, setSelectedRole] = useState<"parent" | "player">(getInitialRole);
   const [step, setStep] = useState<Step>(() => getInitialStep(selectedRole));
@@ -68,73 +64,6 @@ export default function UnaffiliatedSignup() {
     setSelectedRole(role);
     sessionStorage.setItem(ROLE_STORAGE_KEY, role);
   };
-
-  async function completeUnaffiliatedSignup() {
-    if (!user) return;
-    
-    setStep("completing");
-    
-    try {
-      const token = await getToken();
-      
-      const response = await fetch("/api/auth/unaffiliated-signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email: user.primaryEmailAddress?.emailAddress,
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          clerkUserId: user.id,
-          role: selectedRole,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        sessionStorage.removeItem(ROLE_STORAGE_KEY);
-        sessionStorage.removeItem(FROM_GET_STARTED_KEY);
-        
-        toast({
-          title: "Account created!",
-          description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
-        });
-        
-        navigate("/dashboard");
-      } else {
-        throw new Error(data.error || "Failed to complete signup");
-      }
-    } catch (error) {
-      console.error("Error completing signup:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to complete registration. Please try again.",
-        variant: "destructive",
-      });
-      setStep("signup");
-    }
-  }
-
-  if (step === "completing") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Setting up your account...</CardTitle>
-            <CardDescription>
-              Please wait while we complete your registration.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (step === "signup") {
     return (
@@ -355,79 +284,24 @@ export default function UnaffiliatedSignup() {
 export function UnaffiliatedSignupComplete() {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
   const { toast } = useToast();
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const hasAttemptedRef = { current: false };
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const role = (searchParams.get("role") as "parent" | "player") || 
-               sessionStorage.getItem(ROLE_STORAGE_KEY) as "parent" | "player" || 
-               "parent";
-
-  async function completeSignup() {
-    if (!user || isCompleting || completed || hasAttemptedRef.current) return;
-    
-    hasAttemptedRef.current = true;
-    setIsCompleting(true);
-    setError(null);
-    
-    try {
-      const token = await getToken();
-      
-      const response = await fetch("/api/auth/unaffiliated-signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email: user.primaryEmailAddress?.emailAddress,
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          clerkUserId: user.id,
-          role,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setCompleted(true);
-        sessionStorage.removeItem(ROLE_STORAGE_KEY);
-        sessionStorage.removeItem(FROM_GET_STARTED_KEY);
-        
-        toast({
-          title: "Account created!",
-          description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
-        });
-        
-        setTimeout(() => navigate("/dashboard"), 1500);
-      } else {
-        throw new Error(data.error || "Failed to complete signup");
-      }
-    } catch (err) {
-      console.error("Error completing signup:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to complete registration. Please try again.";
-      setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      hasAttemptedRef.current = false;
-    } finally {
-      setIsCompleting(false);
-    }
-  }
 
   useEffect(() => {
-    if (isLoaded && user && !completed && !isCompleting && !hasAttemptedRef.current) {
-      completeSignup();
+    if (isLoaded && user) {
+      // Clear session storage and redirect to dashboard
+      // The syncClerkUser middleware will automatically create the user
+      sessionStorage.removeItem(ROLE_STORAGE_KEY);
+      sessionStorage.removeItem(FROM_GET_STARTED_KEY);
+      
+      toast({
+        title: "Account created!",
+        description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
+      });
+      
+      // Small delay to show the welcome message, then redirect
+      setTimeout(() => navigate("/dashboard"), 500);
     }
-  }, [isLoaded, user, completed, isCompleting]);
+  }, [isLoaded, user, navigate, toast]);
 
   if (!isLoaded) {
     return (
@@ -472,39 +346,16 @@ export function UnaffiliatedSignupComplete() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            {completed ? (
-              <CheckCircle2 className="h-12 w-12 text-green-600" />
-            ) : error ? (
-              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                <span className="text-red-600 dark:text-red-400 text-2xl">!</span>
-              </div>
-            ) : (
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            )}
+            <CheckCircle2 className="h-12 w-12 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">
-            {completed 
-              ? "Welcome to PlayHQ!" 
-              : error 
-                ? "Something went wrong" 
-                : "Completing your registration..."}
-          </CardTitle>
+          <CardTitle className="text-2xl">Welcome to PlayHQ!</CardTitle>
           <CardDescription>
-            {completed 
-              ? "Your account is ready. Redirecting to your dashboard..." 
-              : error
-                ? error
-                : "Please wait while we set up your account."
-            }
+            Your account is ready. Redirecting to your dashboard...
           </CardDescription>
         </CardHeader>
-        {error && !isCompleting && (
-          <CardFooter className="justify-center">
-            <Button onClick={completeSignup} data-testid="button-retry-signup">
-              Try Again
-            </Button>
-          </CardFooter>
-        )}
+        <CardContent className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        </CardContent>
       </Card>
     </div>
   );
