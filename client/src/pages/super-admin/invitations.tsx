@@ -106,6 +106,7 @@ interface InvitationCode {
   description: string;
   discountType?: "percentage" | "fixed";
   discountValue?: number;
+  discountDuration?: "one_time" | "months_3" | "months_6" | "months_12" | "indefinite";
   maxUses?: number;
   usedCount: number;
   validFrom?: string;
@@ -140,6 +141,7 @@ const invitationSchema = z.object({
   description: z.string().min(1, "Description is required"),
   discountType: z.enum(["percentage", "fixed"]).optional(),
   discountValue: z.number().min(0).optional(),
+  discountDuration: z.enum(["one_time", "months_3", "months_6", "months_12", "indefinite"]).optional(),
   maxUses: z.number().min(0).optional().nullable(),
   validFrom: z.date().optional().nullable(),
   validUntil: z.date().optional().nullable(),
@@ -334,6 +336,7 @@ export default function SuperAdminInvitations() {
         description: code.description,
         discountType: code.discountType,
         discountValue: code.discountValue,
+        discountDuration: code.discountDuration || "one_time",
         maxUses: code.maxUses || undefined,
         validFrom: code.validFrom ? new Date(code.validFrom) : undefined,
         validUntil: code.validUntil ? new Date(code.validUntil) : undefined,
@@ -352,6 +355,7 @@ export default function SuperAdminInvitations() {
         preFillFields: {},
         discountType: undefined,
         discountValue: undefined,
+        discountDuration: "one_time",
         maxUses: undefined,
         validFrom: undefined,
         validUntil: undefined,
@@ -637,13 +641,22 @@ export default function SuperAdminInvitations() {
                       </TableCell>
                       <TableCell>
                         {code.type === "discount" && code.discountValue ? (
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {code.discountType === "percentage" ? (
-                              <span>{code.discountValue}%</span>
-                            ) : (
-                              <span>${code.discountValue}</span>
-                            )}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              {code.discountType === "percentage" ? (
+                                <span>{code.discountValue}%</span>
+                              ) : (
+                                <span>${code.discountValue}</span>
+                              )}
+                            </div>
+                            <Badge variant="outline" className="text-xs w-fit">
+                              {code.discountDuration === "one_time" ? "1 Month" :
+                               code.discountDuration === "months_3" ? "3 Months" :
+                               code.discountDuration === "months_6" ? "6 Months" :
+                               code.discountDuration === "months_12" ? "12 Months" :
+                               code.discountDuration === "indefinite" ? "Forever" : "1 Month"}
+                            </Badge>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -806,49 +819,79 @@ export default function SuperAdminInvitations() {
 
               {/* Discount fields */}
               {codeType === "discount" && (
-                <div className="grid grid-cols-2 gap-4">
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="discountType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discount Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-discount-type">
+                                <SelectValue placeholder="Select discount type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="percentage">Percentage</SelectItem>
+                              <SelectItem value="fixed">Fixed Amount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="discountValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discount Value</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                              placeholder="Enter value"
+                              data-testid="input-discount-value"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="discountType"
+                    name="discountDuration"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Discount Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>Discount Duration</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value || "one_time"}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-discount-type">
-                              <SelectValue placeholder="Select discount type" />
+                            <SelectTrigger data-testid="select-discount-duration">
+                              <SelectValue placeholder="Select duration" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="percentage">Percentage</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount</SelectItem>
+                            <SelectItem value="one_time">First Month Only</SelectItem>
+                            <SelectItem value="months_3">3 Months</SelectItem>
+                            <SelectItem value="months_6">6 Months</SelectItem>
+                            <SelectItem value="months_12">12 Months (1 Year)</SelectItem>
+                            <SelectItem value="indefinite">Forever (Until Removed)</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          How long the discount applies to the subscription
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="discountValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount Value</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                            placeholder="Enter value"
-                            data-testid="input-discount-value"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                </>
               )}
 
               <FormField
