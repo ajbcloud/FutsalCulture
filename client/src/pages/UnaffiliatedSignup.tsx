@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignUp, useUser } from "@clerk/clerk-react";
+import { SignUp, useUser, useAuth } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, Users, ArrowRight, Home, CheckCircle2, ArrowLeft } from "lucide-react";
@@ -284,24 +284,53 @@ export default function UnaffiliatedSignup() {
 export function UnaffiliatedSignupComplete() {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const { toast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && user) {
-      // Clear session storage and redirect to dashboard
-      // The syncClerkUser middleware will automatically create the user
-      sessionStorage.removeItem(ROLE_STORAGE_KEY);
-      sessionStorage.removeItem(FROM_GET_STARTED_KEY);
-      
-      toast({
-        title: "Account created!",
-        description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
-      });
-      
-      // Small delay to show the welcome message, then redirect
-      setTimeout(() => navigate("/dashboard"), 500);
+    if (!isLoaded || !user || isSyncing) return;
+    
+    setIsSyncing(true);
+    
+    // Make a simple authenticated API call to trigger user sync
+    // This ensures the syncClerkUser middleware creates the user before we redirect
+    async function syncAndRedirect() {
+      try {
+        const token = await getToken();
+        
+        // Call /api/user which will trigger syncClerkUser middleware
+        // This ensures the user exists in our DB before redirecting
+        const response = await fetch("/api/user", {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          // User is synced, safe to redirect
+          sessionStorage.removeItem(ROLE_STORAGE_KEY);
+          sessionStorage.removeItem(FROM_GET_STARTED_KEY);
+          
+          toast({
+            title: "Account created!",
+            description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
+          });
+          
+          navigate("/dashboard");
+        } else {
+          // Retry after a short delay
+          setTimeout(syncAndRedirect, 500);
+        }
+      } catch (error) {
+        console.error("Error syncing user:", error);
+        // Retry after a short delay
+        setTimeout(syncAndRedirect, 500);
+      }
     }
-  }, [isLoaded, user, navigate, toast]);
+    
+    syncAndRedirect();
+  }, [isLoaded, user, isSyncing, getToken, navigate, toast]);
 
   if (!isLoaded) {
     return (

@@ -302,29 +302,41 @@ async function createUnaffiliatedUser(userData: {
   // Get or create the staging tenant
   const stagingTenant = await getOrCreateStagingTenant();
   
-  // Create user assigned to staging tenant
-  const userResult = await db.insert(users).values({
-    email,
-    clerkUserId,
-    authProvider: 'clerk',
-    tenantId: stagingTenant.id,
-    isAdmin: false, // Unaffiliated users are never admins
-    isSuperAdmin: false,
-    isApproved: true, // Auto-approve unaffiliated users
-    registrationStatus: 'approved',
-    approvedAt: new Date(),
-    firstName: firstName || null,
-    lastName: lastName || null,
-    profileImageUrl: profileImageUrl || null,
-    role: role || 'parent',
-    isUnaffiliated: true, // Mark as unaffiliated user
-    dateOfBirth: dateOfBirth || null,
-  }).returning();
-  const user = (userResult as any[])[0];
-  
-  console.log(`✅ Created unaffiliated user ${user.id} assigned to staging tenant "${stagingTenant.name}"`);
-  
-  return { user };
+  try {
+    // Create user assigned to staging tenant
+    const [user] = await db.insert(users).values({
+      email,
+      clerkUserId,
+      authProvider: 'clerk',
+      tenantId: stagingTenant.id,
+      isAdmin: false, // Unaffiliated users are never admins
+      isSuperAdmin: false,
+      isApproved: true, // Auto-approve unaffiliated users
+      registrationStatus: 'approved',
+      approvedAt: new Date(),
+      firstName: firstName || null,
+      lastName: lastName || null,
+      profileImageUrl: profileImageUrl || null,
+      role: role || 'parent',
+      isUnaffiliated: true, // Mark as unaffiliated user
+      dateOfBirth: dateOfBirth || null,
+    }).returning();
+    
+    console.log(`✅ Created unaffiliated user ${user.id} assigned to staging tenant "${stagingTenant.name}"`);
+    
+    return { user };
+  } catch (error: any) {
+    // Handle race condition - user was created by another request
+    if (error?.code === '23505') {
+      // Duplicate key - fetch the existing user
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        console.log(`✅ Found existing unaffiliated user ${existingUser.id} (created by parallel request)`);
+        return { user: existingUser };
+      }
+    }
+    throw error;
+  }
 }
 
 // Check if a user is unaffiliated (in staging tenant)
