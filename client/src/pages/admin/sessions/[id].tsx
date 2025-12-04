@@ -13,13 +13,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List } from 'lucide-react';
 import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 import { useQuery } from '@tanstack/react-query';
 import { useHasFeature } from '@/hooks/use-feature-flags';
+import type { InviteCodeSelect } from '@shared/schema';
 
 export default function AdminSessionDetail() {
   const [match, params] = useRoute('/admin/sessions/:id');
@@ -37,6 +38,17 @@ export default function AdminSessionDetail() {
     queryKey: ['/api/admin/settings'],
     queryFn: () => fetch('/api/admin/settings').then(res => res.json())
   });
+  
+  // Fetch access codes for the dropdown
+  const { data: accessCodesData } = useQuery<InviteCodeSelect[]>({
+    queryKey: ['/api/admin/invite-codes'],
+    queryFn: () => fetch('/api/admin/invite-codes').then(res => res.json())
+  });
+  
+  // Filter to only get active access codes (codeType = 'access')
+  const availableAccessCodes = (accessCodesData || []).filter(
+    (code) => code.codeType === 'access' && code.isActive
+  );
   
   // Convert available locations to a simple array of names for the dropdown
   const availableLocationNames = (adminSettings?.availableLocations || []).map((loc: any) => 
@@ -602,7 +614,8 @@ export default function AdminSessionDetail() {
             <div className="flex items-center space-x-3">
               <Switch
                 checked={formData.hasAccessCode}
-                onCheckedChange={(checked) => setFormData({...formData, hasAccessCode: checked})}
+                onCheckedChange={(checked) => setFormData({...formData, hasAccessCode: checked, accessCode: checked ? formData.accessCode : ''})}
+                data-testid="switch-access-code"
               />
               <Label className="text-foreground flex items-center">
                 {formData.hasAccessCode ? (
@@ -614,9 +627,59 @@ export default function AdminSessionDetail() {
             </div>
 
             {formData.hasAccessCode && (
-              <div className="space-y-3 pl-6">
+              <div className="space-y-4 pl-6">
+                {/* Dropdown for existing access codes */}
+                {availableAccessCodes.length > 0 && (
+                  <div>
+                    <Label className="text-muted-foreground flex items-center mb-2">
+                      <List className="w-4 h-4 mr-2" />
+                      Select from existing access codes
+                    </Label>
+                    <Select
+                      value={availableAccessCodes.find(c => c.code === formData.accessCode)?.id || ''}
+                      onValueChange={(codeId) => {
+                        const selectedCode = availableAccessCodes.find(c => c.id === codeId);
+                        if (selectedCode) {
+                          setFormData({...formData, accessCode: selectedCode.code});
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="bg-input border-border text-foreground" data-testid="select-access-code">
+                        <SelectValue placeholder="Choose an access code..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableAccessCodes.map((code) => (
+                          <SelectItem key={code.id} value={code.id} data-testid={`option-access-code-${code.id}`}>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-mono font-medium">{code.code}</span>
+                              {code.description && (
+                                <span className="text-muted-foreground text-sm ml-2">- {code.description}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select an existing access code from your codes library
+                    </p>
+                  </div>
+                )}
+
+                {/* Divider when both options are available */}
+                {availableAccessCodes.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 border-t border-border"></div>
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <div className="flex-1 border-t border-border"></div>
+                  </div>
+                )}
+
+                {/* Manual entry option */}
                 <div>
-                  <Label htmlFor="accessCode" className="text-muted-foreground">Access Code</Label>
+                  <Label htmlFor="accessCode" className="text-muted-foreground">
+                    {availableAccessCodes.length > 0 ? 'Enter a custom code' : 'Access Code'}
+                  </Label>
                   <div className="flex space-x-2 mt-1">
                     <Input
                       id="accessCode"
@@ -624,7 +687,8 @@ export default function AdminSessionDetail() {
                       onChange={(e) => setFormData({...formData, accessCode: e.target.value.toUpperCase()})}
                       className="bg-input border-border text-foreground font-mono"
                       placeholder="Enter access code"
-                      maxLength={8}
+                      maxLength={20}
+                      data-testid="input-access-code"
                     />
                     <Button
                       type="button"
@@ -633,6 +697,7 @@ export default function AdminSessionDetail() {
                         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
                         setFormData({...formData, accessCode: code});
                       }}
+                      data-testid="button-generate-access-code"
                     >
                       Generate
                     </Button>
@@ -649,6 +714,18 @@ export default function AdminSessionDetail() {
                       <code className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded font-mono">
                         {formData.accessCode}
                       </code>
+                    </p>
+                  </div>
+                )}
+
+                {availableAccessCodes.length === 0 && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Tip:</strong> You can create reusable access codes in the{' '}
+                      <Link href="/admin/invite-codes" className="underline hover:no-underline">
+                        Codes section
+                      </Link>{' '}
+                      to easily apply them to multiple sessions.
                     </p>
                   </div>
                 )}
