@@ -295,7 +295,7 @@ router.post('/admin/send-invitation', isAuthenticated, async (req, res) => {
     const { sendInvitationEmail } = require('../utils/email-service');
     
     // Generate invitation token and create invitation
-    const adminUserId = (req as any).currentUser?.id || 'ajosephfinch';
+    const adminUserId = (req as any).currentUser?.id;
     const adminTenantId = (req as any).currentUser?.tenantId;
     
     if (!adminTenantId) {

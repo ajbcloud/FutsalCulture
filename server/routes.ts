@@ -286,8 +286,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get tenant ID from various sources
-      // For new registrations, don't use existing user ID
-      const isNewRegistration = !(req as any).user?.id || (req as any).user?.id === 'ajosephfinch';
+      // For new registrations, check if user exists
+      const isNewRegistration = !(req as any).user?.id;
       
       // Get tenant ID from the request body first, fallback to invite code lookup
       const targetTenantId = tenantId;

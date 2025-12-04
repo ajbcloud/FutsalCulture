@@ -83,7 +83,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
       const [batch] = await db.insert(invitationBatches)
         .values({
           tenantId: adminTenantId,
-          createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
+          createdBy: req.user?.id || null,
           totalInvitations: validatedData.recipients.length,
           status: 'processing',
           metadata: validatedData.metadata || {},
@@ -109,7 +109,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
               customMessage: validatedData.customMessage,
               metadata: { ...validatedData.metadata, ...recipient.metadata },
               expiresAt,
-              createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
+              createdBy: req.user?.id || null,
             })
             .returning();
 
@@ -189,7 +189,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
           customMessage: validatedData.customMessage,
           metadata: validatedData.metadata || {},
           expiresAt,
-          createdBy: (req.user?.id === 'ajosephfinch') ? null : req.user?.id, // Virtual admin uses null
+          createdBy: req.user?.id || null,
         })
         .returning();
 

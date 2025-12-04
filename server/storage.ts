@@ -3137,8 +3137,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSuperAdminUsers(filters?: any): Promise<any[]> {
-    const FAILSAFE_SUPER_ADMIN_ID = "ajosephfinch"; // Hardcoded failsafe admin
-
     // Get super admin users from database
     let query = db.select({
       id: users.id,
@@ -3176,29 +3174,7 @@ export class DatabaseStorage implements IStorage {
 
     const dbUsers = await query.orderBy(desc(users.createdAt));
 
-    // Always include failsafe super admin if not already in results
-    const failsafeExists = dbUsers.some(user => user.id === FAILSAFE_SUPER_ADMIN_ID);
-
-    const allUsers = [...dbUsers];
-
-    if (!failsafeExists && (!filters?.search ||
-        'ajosephfinch'.includes(filters.search.toLowerCase()) ||
-        'failsafe admin'.includes(filters.search.toLowerCase()))) {
-
-      // Add virtual failsafe admin user
-      allUsers.unshift({
-        id: FAILSAFE_SUPER_ADMIN_ID,
-        firstName: "Failsafe",
-        lastName: "Admin",
-        email: "ajosephfinch@replit.com",
-        role: "super-admin",
-        status: "active",
-        lastLogin: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    return allUsers;
+    return dbUsers;
   }
 
   // Waitlist operations
