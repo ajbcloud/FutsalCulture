@@ -78,14 +78,15 @@ export async function createCustomer(
 ): Promise<braintree.Customer> {
   const gw = getGateway();
   
+  // Note: We store tenant-customer relationship in our database rather than 
+  // using Braintree custom fields (which require manual configuration in 
+  // Braintree Control Panel). The tenants.braintreeCustomerId column provides
+  // the association we need.
   const result = await gw.customer.create({
     email,
     firstName: firstName || undefined,
     lastName: lastName || undefined,
     company: company || undefined,
-    customFields: {
-      tenant_id: tenantId,
-    },
   });
   
   if (!result.success || !result.customer) {
