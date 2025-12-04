@@ -212,6 +212,17 @@ export const tenants = pgTable("tenants", {
   smsCreditsLastPurchasedAt: timestamp("sms_credits_last_purchased_at"),
   smsCreditsAutoRecharge: boolean("sms_credits_auto_recharge").default(false),
   smsCreditsAutoRechargeAmount: integer("sms_credits_auto_recharge_amount"), // Package to auto-buy when low
+
+  // Applied Discount Tracking - tracks active discount on subscription
+  appliedDiscountCodeId: varchar("applied_discount_code_id"), // References inviteCodes.id
+  appliedDiscountCode: varchar("applied_discount_code"), // The code string for display
+  appliedDiscountType: varchar("applied_discount_type"), // 'percentage', 'fixed', 'full'
+  appliedDiscountValue: integer("applied_discount_value"), // percentage (0-100) or cents amount
+  appliedDiscountDuration: varchar("applied_discount_duration"), // 'one_time', 'months_3', 'months_6', 'months_12', 'indefinite'
+  appliedDiscountRemainingCycles: integer("applied_discount_remaining_cycles"), // null = indefinite, 0 = expired
+  appliedDiscountStartedAt: timestamp("applied_discount_started_at"),
+  appliedDiscountAppliedBy: varchar("applied_discount_applied_by"), // user who applied it (super admin or self)
+  appliedDiscountIsPlatform: boolean("applied_discount_is_platform").default(false), // Was this a platform-wide code?
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
@@ -645,6 +656,15 @@ export const discountCodes = pgTable("discount_codes", {
   index("discount_codes_locked_to_parent_idx").on(table.lockedToParentId),
 ]);
 
+// Discount duration type enum for recurring discounts
+export const discountDurationTypeEnum = pgEnum("discount_duration_type", [
+  "one_time",      // First billing cycle only
+  "months_3",      // 3 months
+  "months_6",      // 6 months
+  "months_12",     // 12 months (1 year)
+  "indefinite"     // Forever until manually removed or downgrade
+]);
+
 // Unified Invite/Access Codes table - supports invite, access, and discount codes
 export const inviteCodes = pgTable("invite_codes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -663,6 +683,7 @@ export const inviteCodes = pgTable("invite_codes", {
   // Discount functionality
   discountType: varchar("discount_type"), // 'percentage', 'fixed', 'full'
   discountValue: integer("discount_value"), // percentage (0-100) or cents amount
+  discountDuration: discountDurationTypeEnum("discount_duration").default("one_time"), // How long the discount applies
   // Usage and time limits
   maxUses: integer("max_uses"), // null = unlimited
   currentUses: integer("current_uses").default(0),
