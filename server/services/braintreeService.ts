@@ -4,9 +4,9 @@ import { tenants, tenantSubscriptionEvents } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 
 const BRAINTREE_PLAN_MAP: Record<string, string> = {
-  core: process.env.BRAINTREE_PLAN_CORE || 'playhq_core',
-  growth: process.env.BRAINTREE_PLAN_GROWTH || 'playhq_growth',
-  elite: process.env.BRAINTREE_PLAN_ELITE || 'playhq_elite',
+  core: process.env.BRAINTREE_PLAN_CORE || 'plan_core_123',
+  growth: process.env.BRAINTREE_PLAN_GROWTH || 'plan_growth_123',
+  elite: process.env.BRAINTREE_PLAN_ELITE || 'plan_elite_123',
 };
 
 const PLAN_LEVEL_MAP: Record<string, 'free' | 'core' | 'growth' | 'elite'> = {
