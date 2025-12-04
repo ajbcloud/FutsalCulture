@@ -295,8 +295,9 @@ export function PlanUpgradeCard({
 
     setIsLoading(true);
     try {
-      const nonce = await hostedFieldsRef.current.tokenize();
-      await subscribeMutation.mutateAsync(nonce);
+      const result = await hostedFieldsRef.current.tokenize();
+      // Extract just the nonce string from the tokenize result
+      await subscribeMutation.mutateAsync(result.nonce);
     } catch (error: any) {
       toast({
         title: 'Payment Error',
@@ -428,7 +429,7 @@ export function PlanUpgradeCard({
                 onError={(error) => {
                   toast({
                     title: 'Payment Error',
-                    description: error,
+                    description: error.message || 'An error occurred',
                     variant: 'destructive',
                   });
                 }}
