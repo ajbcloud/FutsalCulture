@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { SignUp, useUser, useAuth } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -10,6 +10,41 @@ import { apiRequest } from "@/lib/queryClient";
 
 type Step = "role_select" | "signup" | "completing";
 
+const ROLE_STORAGE_KEY = "unaffiliatedSignupRole";
+
+function getInitialRole(): "parent" | "player" {
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlRole = searchParams.get("role") as "parent" | "player" | null;
+  
+  if (urlRole) {
+    sessionStorage.setItem(ROLE_STORAGE_KEY, urlRole);
+    return urlRole;
+  }
+  
+  const storedRole = sessionStorage.getItem(ROLE_STORAGE_KEY) as "parent" | "player" | null;
+  return storedRole || "parent";
+}
+
+function getInitialStep(role: "parent" | "player" | null): Step {
+  const pathname = window.location.pathname;
+  const isClerkSubRoute = pathname.startsWith("/signup/unaffiliated/") && 
+                          !pathname.includes("/complete");
+  
+  if (isClerkSubRoute) {
+    return "signup";
+  }
+  
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlRole = searchParams.get("role");
+  const storedRole = sessionStorage.getItem(ROLE_STORAGE_KEY);
+  
+  if (urlRole || storedRole) {
+    return "signup";
+  }
+  
+  return "role_select";
+}
+
 export default function UnaffiliatedSignup() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -18,13 +53,13 @@ export default function UnaffiliatedSignup() {
   const { isSignedIn, user } = useUser();
   const { getToken } = useAuth();
   
-  // Check for role in URL query params
-  const searchParams = new URLSearchParams(window.location.search);
-  const urlRole = searchParams.get("role") as "parent" | "player" | null;
+  const [selectedRole, setSelectedRole] = useState<"parent" | "player">(getInitialRole);
+  const [step, setStep] = useState<Step>(() => getInitialStep(selectedRole));
   
-  // If role is in URL, skip role selection step
-  const [step, setStep] = useState<Step>(urlRole ? "signup" : "role_select");
-  const [selectedRole, setSelectedRole] = useState<"parent" | "player">(urlRole || "parent");
+  const handleRoleSelect = (role: "parent" | "player") => {
+    setSelectedRole(role);
+    sessionStorage.setItem(ROLE_STORAGE_KEY, role);
+  };
 
   async function completeUnaffiliatedSignup() {
     if (!user) return;
@@ -96,7 +131,10 @@ export default function UnaffiliatedSignup() {
         <div className="w-full max-w-md">
           <Button
             variant="ghost"
-            onClick={() => urlRole ? navigate("/get-started") : setStep("role_select")}
+            onClick={() => {
+              sessionStorage.removeItem(ROLE_STORAGE_KEY);
+              navigate("/get-started");
+            }}
             className="mb-2"
             data-testid="button-back-role"
           >
@@ -190,7 +228,7 @@ export default function UnaffiliatedSignup() {
                 ? "ring-2 ring-primary border-primary" 
                 : "hover:border-primary/50"
             }`}
-            onClick={() => setSelectedRole("parent")}
+            onClick={() => handleRoleSelect("parent")}
             data-testid="card-role-parent"
           >
             <CardContent className="flex items-start gap-4 p-6">
@@ -219,7 +257,7 @@ export default function UnaffiliatedSignup() {
                 ? "ring-2 ring-primary border-primary" 
                 : "hover:border-primary/50"
             }`}
-            onClick={() => setSelectedRole("player")}
+            onClick={() => handleRoleSelect("player")}
             data-testid="card-role-player"
           >
             <CardContent className="flex items-start gap-4 p-6">
@@ -246,7 +284,10 @@ export default function UnaffiliatedSignup() {
         <Button 
           className="w-full mt-6"
           size="lg"
-          onClick={() => setStep("signup")}
+          onClick={() => {
+            sessionStorage.setItem(ROLE_STORAGE_KEY, selectedRole);
+            setStep("signup");
+          }}
           data-testid="button-continue-signup"
         >
           Continue
