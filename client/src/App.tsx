@@ -72,6 +72,7 @@ import ClubSignup from "./pages/ClubSignup";
 import ClubSetup from "./pages/ClubSetup";
 import JoinSetup from "./pages/JoinSetup";
 import UnaffiliatedSignup, { UnaffiliatedSignupComplete } from "./pages/UnaffiliatedSignup";
+import GetStarted from "./pages/GetStarted";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -90,6 +91,7 @@ function Router() {
         <Route path="/" component={HomePlayHQ} />
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
+        <Route path="/get-started" component={GetStarted} />
         <Route path="/signups" component={SignupStart} />
         <Route path="/club-signup" component={ClubSignup} />
         <Route path="/club-signup/:rest*" component={ClubSignup} />

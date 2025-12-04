@@ -28,7 +28,7 @@ export default function HomePlayHQ() {
           <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent">
             Log in
           </a>
-          <a href="/club-signup" className="rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700">
+          <a href="/get-started" className="rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700">
             Sign Up
           </a>
         </nav>
@@ -48,7 +48,7 @@ export default function HomePlayHQ() {
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <a
-                  href="/club-signup"
+                  href="/get-started"
                   className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-lg"
                 >
                   Get started free

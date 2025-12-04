@@ -11,14 +11,20 @@ import { apiRequest } from "@/lib/queryClient";
 type Step = "role_select" | "signup" | "completing";
 
 export default function UnaffiliatedSignup() {
-  const [step, setStep] = useState<Step>("role_select");
-  const [selectedRole, setSelectedRole] = useState<"parent" | "player">("parent");
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn, user } = useUser();
   const { getToken } = useAuth();
+  
+  // Check for role in URL query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlRole = searchParams.get("role") as "parent" | "player" | null;
+  
+  // If role is in URL, skip role selection step
+  const [step, setStep] = useState<Step>(urlRole ? "signup" : "role_select");
+  const [selectedRole, setSelectedRole] = useState<"parent" | "player">(urlRole || "parent");
 
   async function completeUnaffiliatedSignup() {
     if (!user) return;
@@ -90,7 +96,7 @@ export default function UnaffiliatedSignup() {
         <div className="w-full max-w-md space-y-4">
           <Button
             variant="ghost"
-            onClick={() => setStep("role_select")}
+            onClick={() => urlRole ? navigate("/get-started") : setStep("role_select")}
             className="mb-2"
             data-testid="button-back-role"
           >
