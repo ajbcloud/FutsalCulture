@@ -4,6 +4,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getOrCreateStagingTenant, getStagingTenantId } from '../utils/staging-tenant';
 import { z } from 'zod';
+import { getAuth } from '@clerk/express';
 
 const router = Router();
 
@@ -18,6 +19,12 @@ const unaffiliatedSignupSchema = z.object({
 });
 
 router.post('/api/auth/unaffiliated-signup', async (req, res) => {
+  // Verify the Clerk session to ensure this is an authenticated request
+  const auth = getAuth(req);
+  if (!auth?.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
   try {
     const validation = unaffiliatedSignupSchema.safeParse(req.body);
     
@@ -29,6 +36,13 @@ router.post('/api/auth/unaffiliated-signup', async (req, res) => {
     }
 
     const { email, firstName, lastName, clerkUserId, role, dateOfBirth, phone } = validation.data;
+    
+    // Verify the clerkUserId in the body matches the authenticated session
+    if (clerkUserId !== auth.userId) {
+      return res.status(403).json({ 
+        error: 'User ID mismatch - cannot create account for another user' 
+      });
+    }
 
     const existingUser = await db.select()
       .from(users)
