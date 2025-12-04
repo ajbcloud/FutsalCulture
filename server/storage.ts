@@ -1663,16 +1663,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInviteCodeByCode(code: string, tenantId: string): Promise<InviteCode | undefined> {
-    const [inviteCode] = await db
+    // First, try to find a tenant-specific code (these take priority)
+    const [tenantCode] = await db
       .select()
       .from(inviteCodes)
       .where(
         and(
           eq(inviteCodes.code, code),
-          eq(inviteCodes.tenantId, tenantId)
+          eq(inviteCodes.tenantId, tenantId),
+          eq(inviteCodes.isPlatform, false)
         )
       );
-    return inviteCode;
+    
+    if (tenantCode) {
+      return tenantCode;
+    }
+
+    // If no tenant-specific code found, look for a platform-wide code
+    // Platform codes work across all tenants
+    const [platformCode] = await db
+      .select()
+      .from(inviteCodes)
+      .where(
+        and(
+          eq(inviteCodes.code, code),
+          eq(inviteCodes.isPlatform, true),
+          eq(inviteCodes.isActive, true)
+        )
+      );
+    
+    return platformCode;
   }
 
   async getTenantDefaultCode(tenantId: string): Promise<InviteCode | undefined> {
