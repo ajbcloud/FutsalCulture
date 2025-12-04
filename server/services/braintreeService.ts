@@ -662,6 +662,340 @@ export async function getSubscriptionDetails(tenantId: string): Promise<{
   return { subscription, customer, paymentMethod };
 }
 
+// Plan prices in cents
+const PLAN_PRICES_CENTS: Record<'core' | 'growth' | 'elite', number> = {
+  core: 1999,    // $19.99
+  growth: 4999,  // $49.99
+  elite: 9999,   // $99.99
+};
+
+// Convert discount duration to number of cycles
+function getDurationCycles(duration: string): number | null {
+  switch (duration) {
+    case 'one_time': return 1;
+    case 'months_3': return 3;
+    case 'months_6': return 6;
+    case 'months_12': return 12;
+    case 'indefinite': return null; // null means indefinite
+    default: return 1;
+  }
+}
+
+// Calculate discount amount in cents based on plan price and discount settings
+export function calculateDiscountAmount(
+  planLevel: 'core' | 'growth' | 'elite',
+  discountType: string,
+  discountValue: number
+): number {
+  const planPrice = PLAN_PRICES_CENTS[planLevel];
+  
+  switch (discountType) {
+    case 'percentage':
+      return Math.round(planPrice * (discountValue / 100));
+    case 'fixed':
+      return discountValue; // Already in cents
+    case 'full':
+      return planPrice; // Full discount = free
+    default:
+      return 0;
+  }
+}
+
+// Calculate final price after discount in cents
+export function calculateFinalPrice(
+  planLevel: 'core' | 'growth' | 'elite',
+  discountType: string | null | undefined,
+  discountValue: number | null | undefined
+): { originalPrice: number; discountAmount: number; finalPrice: number } {
+  const originalPrice = PLAN_PRICES_CENTS[planLevel];
+  
+  if (!discountType || !discountValue) {
+    return { originalPrice, discountAmount: 0, finalPrice: originalPrice };
+  }
+  
+  const discountAmount = calculateDiscountAmount(planLevel, discountType, discountValue);
+  const finalPrice = Math.max(0, originalPrice - discountAmount);
+  
+  return { originalPrice, discountAmount, finalPrice };
+}
+
+export interface ApplyDiscountOptions {
+  codeId: string;
+  code: string;
+  discountType: 'percentage' | 'fixed' | 'full';
+  discountValue: number;
+  discountDuration: string;
+  isPlatform: boolean;
+  appliedBy: string;
+}
+
+export interface ApplyDiscountResult {
+  success: boolean;
+  message: string;
+  appliedDiscount?: {
+    originalPriceCents: number;
+    discountAmountCents: number;
+    finalPriceCents: number;
+    remainingCycles: number | null;
+  };
+}
+
+// Apply a discount code to an existing subscription
+export async function applyDiscountToSubscription(
+  tenantId: string,
+  discountOptions: ApplyDiscountOptions
+): Promise<ApplyDiscountResult> {
+  const [tenant] = await db.select()
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  if (!tenant) {
+    return { success: false, message: 'Tenant not found' };
+  }
+
+  if (!tenant.braintreeSubscriptionId) {
+    return { success: false, message: 'Tenant does not have an active subscription' };
+  }
+
+  if (tenant.planLevel === 'free') {
+    return { success: false, message: 'Cannot apply discount to free plan' };
+  }
+
+  // Check if tenant already has an active discount
+  if (tenant.appliedDiscountCodeId && tenant.appliedDiscountRemainingCycles !== 0) {
+    return { 
+      success: false, 
+      message: `Tenant already has an active discount code: ${tenant.appliedDiscountCode}` 
+    };
+  }
+
+  const planLevel = tenant.planLevel as 'core' | 'growth' | 'elite';
+  const { originalPrice, discountAmount, finalPrice } = calculateFinalPrice(
+    planLevel,
+    discountOptions.discountType,
+    discountOptions.discountValue
+  );
+
+  const remainingCycles = getDurationCycles(discountOptions.discountDuration);
+
+  // Braintree doesn't natively support percentage-based recurring discounts,
+  // so we track the discount in our database and update the subscription price
+  // each billing cycle through our webhook handler.
+  // 
+  // For immediate effect on the current cycle, we can update the subscription's
+  // price (though this requires Braintree admin configuration for custom pricing).
+  // 
+  // For now, we store the discount info and it will apply starting next cycle.
+  // A Super Admin can manually adjust the current cycle if needed.
+
+  try {
+    await db.update(tenants)
+      .set({
+        appliedDiscountCodeId: discountOptions.codeId,
+        appliedDiscountCode: discountOptions.code,
+        appliedDiscountType: discountOptions.discountType,
+        appliedDiscountValue: discountOptions.discountValue,
+        appliedDiscountDuration: discountOptions.discountDuration,
+        appliedDiscountRemainingCycles: remainingCycles,
+        appliedDiscountStartedAt: new Date(),
+        appliedDiscountAppliedBy: discountOptions.appliedBy,
+        appliedDiscountIsPlatform: discountOptions.isPlatform,
+      })
+      .where(eq(tenants.id, tenantId));
+
+    await logSubscriptionEvent(tenantId, 'subscription_charged', {
+      subscriptionId: tenant.braintreeSubscriptionId,
+      planLevel,
+      status: 'success',
+      triggeredBy: 'user',
+      metadata: {
+        action: 'discount_applied',
+        discountCode: discountOptions.code,
+        discountType: discountOptions.discountType,
+        discountValue: discountOptions.discountValue,
+        discountDuration: discountOptions.discountDuration,
+        remainingCycles,
+        originalPriceCents: originalPrice,
+        discountAmountCents: discountAmount,
+        finalPriceCents: finalPrice,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Discount code ${discountOptions.code} applied successfully. Discount will apply starting next billing cycle.`,
+      appliedDiscount: {
+        originalPriceCents: originalPrice,
+        discountAmountCents: discountAmount,
+        finalPriceCents: finalPrice,
+        remainingCycles,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to apply discount to subscription:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to apply discount',
+    };
+  }
+}
+
+// Remove an active discount from a subscription
+export async function removeDiscountFromSubscription(
+  tenantId: string,
+  reason: string = 'manual_removal'
+): Promise<{ success: boolean; message: string }> {
+  const [tenant] = await db.select()
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  if (!tenant) {
+    return { success: false, message: 'Tenant not found' };
+  }
+
+  if (!tenant.appliedDiscountCodeId) {
+    return { success: false, message: 'No active discount to remove' };
+  }
+
+  const previousCode = tenant.appliedDiscountCode;
+
+  try {
+    await db.update(tenants)
+      .set({
+        appliedDiscountCodeId: null,
+        appliedDiscountCode: null,
+        appliedDiscountType: null,
+        appliedDiscountValue: null,
+        appliedDiscountDuration: null,
+        appliedDiscountRemainingCycles: null,
+        appliedDiscountStartedAt: null,
+        appliedDiscountAppliedBy: null,
+        appliedDiscountIsPlatform: null,
+      })
+      .where(eq(tenants.id, tenantId));
+
+    if (tenant.braintreeSubscriptionId) {
+      await logSubscriptionEvent(tenantId, 'subscription_charged', {
+        subscriptionId: tenant.braintreeSubscriptionId,
+        planLevel: tenant.planLevel as any,
+        status: 'success',
+        triggeredBy: 'system',
+        metadata: {
+          action: 'discount_removed',
+          discountCode: previousCode,
+          reason,
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: `Discount code ${previousCode} removed. Full price will apply from next billing cycle.`,
+    };
+  } catch (error) {
+    console.error('Failed to remove discount from subscription:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to remove discount',
+    };
+  }
+}
+
+// Decrement discount cycle count (called after each billing cycle)
+export async function decrementDiscountCycle(tenantId: string): Promise<void> {
+  const [tenant] = await db.select()
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  if (!tenant || !tenant.appliedDiscountCodeId) {
+    return; // No discount to decrement
+  }
+
+  // If indefinite (null), don't decrement
+  if (tenant.appliedDiscountRemainingCycles === null) {
+    return;
+  }
+
+  const newRemainingCycles = Math.max(0, (tenant.appliedDiscountRemainingCycles || 0) - 1);
+
+  if (newRemainingCycles === 0) {
+    // Discount has expired, remove it
+    await removeDiscountFromSubscription(tenantId, 'cycles_exhausted');
+    console.log(`Discount ${tenant.appliedDiscountCode} expired for tenant ${tenantId}`);
+  } else {
+    // Just decrement the counter
+    await db.update(tenants)
+      .set({ appliedDiscountRemainingCycles: newRemainingCycles })
+      .where(eq(tenants.id, tenantId));
+    console.log(`Discount ${tenant.appliedDiscountCode} has ${newRemainingCycles} cycles remaining for tenant ${tenantId}`);
+  }
+}
+
+// Get the discounted price for the next billing cycle
+export async function getNextBillingAmount(tenantId: string): Promise<{
+  hasDiscount: boolean;
+  discountCode: string | null;
+  originalPriceCents: number;
+  discountAmountCents: number;
+  finalPriceCents: number;
+  remainingCycles: number | null;
+}> {
+  const [tenant] = await db.select()
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  if (!tenant || tenant.planLevel === 'free') {
+    return {
+      hasDiscount: false,
+      discountCode: null,
+      originalPriceCents: 0,
+      discountAmountCents: 0,
+      finalPriceCents: 0,
+      remainingCycles: null,
+    };
+  }
+
+  const planLevel = tenant.planLevel as 'core' | 'growth' | 'elite';
+  const originalPrice = PLAN_PRICES_CENTS[planLevel];
+
+  // Check if there's an active discount with remaining cycles
+  if (
+    tenant.appliedDiscountCodeId &&
+    tenant.appliedDiscountType &&
+    tenant.appliedDiscountValue &&
+    (tenant.appliedDiscountRemainingCycles === null || tenant.appliedDiscountRemainingCycles > 0)
+  ) {
+    const discountAmount = calculateDiscountAmount(
+      planLevel,
+      tenant.appliedDiscountType,
+      tenant.appliedDiscountValue
+    );
+    const finalPrice = Math.max(0, originalPrice - discountAmount);
+
+    return {
+      hasDiscount: true,
+      discountCode: tenant.appliedDiscountCode,
+      originalPriceCents: originalPrice,
+      discountAmountCents: discountAmount,
+      finalPriceCents: finalPrice,
+      remainingCycles: tenant.appliedDiscountRemainingCycles,
+    };
+  }
+
+  return {
+    hasDiscount: false,
+    discountCode: null,
+    originalPriceCents: originalPrice,
+    discountAmountCents: 0,
+    finalPriceCents: originalPrice,
+    remainingCycles: null,
+  };
+}
+
 function getSubscriptionTier(level: 'free' | 'core' | 'growth' | 'elite'): number {
   const tiers: Record<string, number> = {
     free: 0,

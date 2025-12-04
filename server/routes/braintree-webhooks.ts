@@ -5,7 +5,9 @@ import { eq } from 'drizzle-orm';
 import { 
   isBraintreeEnabled, 
   getGateway, 
-  getPlanLevelFromPlanId 
+  getPlanLevelFromPlanId,
+  decrementDiscountCycle,
+  removeDiscountFromSubscription
 } from '../services/braintreeService';
 import { clearCapabilitiesCache } from '../middleware/featureAccess';
 
@@ -180,6 +182,14 @@ router.post('/', async (req: Request, res: Response) => {
           });
         });
 
+        // Decrement the discount cycle count after successful charge
+        // This will automatically remove the discount when cycles are exhausted
+        try {
+          await decrementDiscountCycle(tenantId);
+        } catch (error) {
+          console.error(`Failed to decrement discount cycle for tenant ${tenantId}:`, error);
+        }
+
         console.log(`✅ Subscription ${subscription.id} charged successfully`);
         break;
       }
@@ -252,6 +262,13 @@ router.post('/', async (req: Request, res: Response) => {
           });
         });
 
+        // Remove any active discount when subscription is canceled
+        try {
+          await removeDiscountFromSubscription(tenantId, 'subscription_canceled');
+        } catch (error) {
+          console.error(`Failed to remove discount for canceled subscription ${tenantId}:`, error);
+        }
+
         clearCapabilitiesCache(tenantId);
         console.log(`🚫 Subscription ${subscription.id} canceled`);
         break;
@@ -287,6 +304,13 @@ router.post('/', async (req: Request, res: Response) => {
             triggeredBy: 'webhook',
           });
         });
+
+        // Remove any active discount when subscription expires
+        try {
+          await removeDiscountFromSubscription(tenantId, 'subscription_expired');
+        } catch (error) {
+          console.error(`Failed to remove discount for expired subscription ${tenantId}:`, error);
+        }
 
         clearCapabilitiesCache(tenantId);
         console.log(`⏰ Subscription ${subscription.id} expired`);
