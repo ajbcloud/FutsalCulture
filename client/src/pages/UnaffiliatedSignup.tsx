@@ -359,14 +359,20 @@ export function UnaffiliatedSignupComplete() {
   const { toast } = useToast();
   const [isCompleting, setIsCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasAttemptedRef = { current: false };
 
   const searchParams = new URLSearchParams(window.location.search);
-  const role = (searchParams.get("role") as "parent" | "player") || "parent";
+  const role = (searchParams.get("role") as "parent" | "player") || 
+               sessionStorage.getItem(ROLE_STORAGE_KEY) as "parent" | "player" || 
+               "parent";
 
   async function completeSignup() {
-    if (!user || isCompleting || completed) return;
+    if (!user || isCompleting || completed || hasAttemptedRef.current) return;
     
+    hasAttemptedRef.current = true;
     setIsCompleting(true);
+    setError(null);
     
     try {
       const token = await getToken();
@@ -390,26 +396,38 @@ export function UnaffiliatedSignupComplete() {
 
       if (response.ok && data.success) {
         setCompleted(true);
+        sessionStorage.removeItem(ROLE_STORAGE_KEY);
+        sessionStorage.removeItem(FROM_GET_STARTED_KEY);
+        
         toast({
           title: "Account created!",
           description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
         });
         
-        setTimeout(() => navigate("/dashboard"), 1000);
+        setTimeout(() => navigate("/dashboard"), 1500);
       } else {
         throw new Error(data.error || "Failed to complete signup");
       }
-    } catch (error) {
-      console.error("Error completing signup:", error);
+    } catch (err) {
+      console.error("Error completing signup:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to complete registration. Please try again.";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to complete registration. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+      hasAttemptedRef.current = false;
     } finally {
       setIsCompleting(false);
     }
   }
+
+  useEffect(() => {
+    if (isLoaded && user && !completed && !isCompleting && !hasAttemptedRef.current) {
+      completeSignup();
+    }
+  }, [isLoaded, user, completed, isCompleting]);
 
   if (!isLoaded) {
     return (
@@ -456,27 +474,37 @@ export function UnaffiliatedSignupComplete() {
           <div className="flex justify-center mb-4">
             {completed ? (
               <CheckCircle2 className="h-12 w-12 text-green-600" />
+            ) : error ? (
+              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                <span className="text-red-600 dark:text-red-400 text-2xl">!</span>
+              </div>
             ) : (
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             )}
           </div>
           <CardTitle className="text-2xl">
-            {completed ? "Welcome to PlayHQ!" : "Completing your registration..."}
+            {completed 
+              ? "Welcome to PlayHQ!" 
+              : error 
+                ? "Something went wrong" 
+                : "Completing your registration..."}
           </CardTitle>
           <CardDescription>
             {completed 
               ? "Your account is ready. Redirecting to your dashboard..." 
-              : "Please wait while we set up your account."
+              : error
+                ? error
+                : "Please wait while we set up your account."
             }
           </CardDescription>
         </CardHeader>
-        <CardFooter className="justify-center">
-          {!isCompleting && !completed && (
-            <Button onClick={completeSignup} data-testid="button-complete-signup">
-              Complete Signup
+        {error && !isCompleting && (
+          <CardFooter className="justify-center">
+            <Button onClick={completeSignup} data-testid="button-retry-signup">
+              Try Again
             </Button>
-          )}
-        </CardFooter>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

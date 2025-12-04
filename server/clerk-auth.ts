@@ -403,6 +403,12 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     const firstName = clerkUser.first_name;
     const lastName = clerkUser.last_name;
     const profileImageUrl = clerkUser.image_url;
+    
+    // Check Clerk user's unsafe_metadata for signup type
+    const unsafeMetadata = clerkUser.unsafe_metadata || {};
+    const signupType = unsafeMetadata.signupType as string | undefined;
+    const role = unsafeMetadata.role as 'parent' | 'player' | undefined;
+    const isUnaffiliatedSignup = signupType === 'unaffiliated';
 
     // Check if user exists by email (for migrating existing users)
     const existingUserByEmail = email ? await storage.getUserByEmail(email) : null;
@@ -419,6 +425,30 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
           profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
         });
         console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId} (already has tenant)`);
+      } else if (isUnaffiliatedSignup) {
+        // Existing user with no tenant, but this is an unaffiliated signup
+        // Assign them to staging tenant instead of creating a new club
+        const stagingTenant = await getOrCreateStagingTenant();
+        const [updatedUser] = await db.update(users)
+          .set({
+            clerkUserId,
+            authProvider: 'clerk',
+            tenantId: stagingTenant.id,
+            isAdmin: false,
+            isUnaffiliated: true,
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            role: role || 'parent',
+            firstName: firstName || existingUserByEmail.firstName,
+            lastName: lastName || existingUserByEmail.lastName,
+            profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUserByEmail.id))
+          .returning();
+        user = updatedUser;
+        console.log(`Linked existing user ${existingUserByEmail.id} to staging tenant as unaffiliated (signupType: unaffiliated)`);
       } else {
         // Existing user has no tenant - create one and make them admin
         // This handles users who existed but never got a club set up
@@ -431,6 +461,18 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         user = result.user;
         console.log(`Created tenant "${result.tenant.name}" for existing user ${user.id} (admin: true)`);
       }
+    } else if (isUnaffiliatedSignup) {
+      // New user with unaffiliated signup - create them in staging tenant
+      const result = await createUnaffiliatedUser({
+        email,
+        clerkUserId,
+        firstName,
+        lastName,
+        profileImageUrl,
+        role: role || 'parent',
+      });
+      user = result.user;
+      console.log(`Created unaffiliated user ${user.id} in staging tenant (signupType: unaffiliated, role: ${role || 'parent'})`);
     } else {
       // Create new user and auto-create their tenant
       // The first user who signs up automatically becomes admin of their own club
