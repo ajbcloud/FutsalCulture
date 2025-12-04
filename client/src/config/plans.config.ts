@@ -20,7 +20,7 @@ export const plans: PlanConfig[] = [
     id: 'free',
     name: 'Free',
     price: 0,
-    playerLimit: 50,
+    playerLimit: 10,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Manual only', status: 'included' },
       parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
@@ -48,7 +48,7 @@ export const plans: PlanConfig[] = [
     id: 'core',
     name: 'Core',
     price: 99,
-    playerLimit: 250,
+    playerLimit: 50,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring', status: 'included' },
       parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },
@@ -76,7 +76,7 @@ export const plans: PlanConfig[] = [
     id: 'growth',
     name: 'Growth',
     price: 199,
-    playerLimit: 1000,
+    playerLimit: 250,
     features: {
       sessionManagement: { name: 'Session Management', description: 'Recurring + Bulk', status: 'included' },
       parentPlayerBooking: { name: 'Adult/Player Booking', status: 'included' },

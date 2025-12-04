@@ -63,17 +63,17 @@ export default function Landing(){
               <PriceCard 
                 name="Free" 
                 price="$0" 
-                features={["Up to 50 players","Email notifications","Basic calendar"]} 
+                features={["Up to 10 players","Manual sessions","Basic support"]} 
               />
               <PriceCard 
                 name="Core" 
                 price="$99" 
-                features={["Up to 250 players","Recurring sessions","Online payments"]} 
+                features={["Up to 50 players","Recurring sessions","Email notifications"]} 
               />
               <PriceCard 
                 name="Growth" 
                 price="$199" 
-                features={["Up to 1,000 players","SMS notifications","Advanced analytics"]} 
+                features={["Up to 250 players","SMS notifications","Advanced analytics"]} 
                 popular={true}
               />
               <PriceCard 

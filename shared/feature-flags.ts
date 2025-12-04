@@ -1,4 +1,6 @@
-import { PlanLevel, type FeatureKey } from './schema';
+// Define types locally since pgEnum doesn't export TypeScript types directly
+export type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
+export type FeatureKey = typeof FEATURE_KEYS[keyof typeof FEATURE_KEYS];
 
 // Feature key constants
 export const FEATURE_KEYS = {
@@ -139,17 +141,17 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
 // Plan limits and configurations
 export const PLAN_LIMITS = {
   free: {
-    maxPlayers: null, // No specific player limit, but total user limit applies
-    maxUsers: 10, // Maximum 10 total users (parents + players combined)
+    maxPlayers: 10, // Limited to 10 players
+    maxUsers: null, // No separate user limit
     maxSessions: null, // No session limit, but manual creation only
     maxLocations: 1,
     price: 0,
     billingPeriod: 'monthly' as const,
     name: 'Free Plan',
-    description: 'Basic features with user and functionality restrictions',
+    description: 'Basic features with player and functionality restrictions',
   },
   core: {
-    maxPlayers: 150,
+    maxPlayers: 50, // Up to 50 players
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
     maxLocations: 3,
@@ -159,7 +161,7 @@ export const PLAN_LIMITS = {
     description: 'Perfect for small clubs getting started with digital management',
   },
   growth: {
-    maxPlayers: 500,
+    maxPlayers: 250, // Up to 250 players
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
     maxLocations: 10,
@@ -173,7 +175,7 @@ export const PLAN_LIMITS = {
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
     maxLocations: null, // unlimited
-    price: 499,
+    price: 399,
     billingPeriod: 'monthly' as const,
     name: 'Elite',
     description: 'Enterprise-grade features for multi-location organizations',

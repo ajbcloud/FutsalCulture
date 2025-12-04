@@ -387,7 +387,7 @@ async function calculateDiscount(discountCode: string | undefined, planPrice: nu
   }
   
   // Check max uses
-  if (code.maxUses !== null && code.usageCount !== null && code.usageCount >= code.maxUses) {
+  if (code.maxUses !== null && code.currentUses !== null && code.currentUses >= code.maxUses) {
     return { valid: false, error: 'This discount code has reached its maximum uses' };
   }
   

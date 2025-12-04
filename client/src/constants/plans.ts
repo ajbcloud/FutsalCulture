@@ -49,7 +49,7 @@ export const PLANS = {
     name: 'Core',
     price: 99,
     features: {
-      maxPlayers: 150,
+      maxPlayers: 50,
       manualSessions: false, // Core doesn't include manual session creation
       parentPlayerBooking: false, // Core doesn't include basic booking functionality
       emailSmsNotifications: false, // Core only has email, no SMS
@@ -74,7 +74,7 @@ export const PLANS = {
     name: 'Growth',
     price: 199,
     features: {
-      maxPlayers: 500,
+      maxPlayers: 250,
       manualSessions: false, // Growth doesn't include basic manual sessions
       parentPlayerBooking: false, // Growth doesn't include basic booking (only Free has this)
       emailSmsNotifications: true, // Growth includes both email and SMS
@@ -97,7 +97,7 @@ export const PLANS = {
   elite: {
     id: 'elite',
     name: 'Elite',
-    price: 499,
+    price: 399,
     features: {
       maxPlayers: 'unlimited' as const,
       manualSessions: false, // Elite doesn't include basic manual sessions (only Free has this)
