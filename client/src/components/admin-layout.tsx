@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -68,7 +69,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
   
-  const planName = tenantPlan?.planId ? tenantPlan.planId.charAt(0).toUpperCase() + tenantPlan.planId.slice(1) : 'Free';
+  const planId = tenantPlan?.planId || 'free';
+  const planName = planId.charAt(0).toUpperCase() + planId.slice(1);
+  
+  const getPlanBadgeStyles = (plan: string) => {
+    switch (plan.toLowerCase()) {
+      case 'core':
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30';
+      case 'growth':
+        return 'bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30';
+      case 'elite':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30';
+      default: // free
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30 hover:bg-gray-500/30';
+    }
+  };
 
   // Filter navigation items based on feature access
   const visibleNavItems = adminNavItems.filter(item => {
@@ -175,14 +190,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       </p>
                     )}
                     {!user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                        data-testid="badge-plan-level"
+                      >
                         {planName} Plan
-                      </p>
+                      </Badge>
                     )}
                     {user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground truncate">
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
+                      >
                         Super Admin
-                      </p>
+                      </Badge>
                     )}
                     {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground truncate">
@@ -202,14 +224,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       </p>
                     )}
                     {!user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground">
+                      <Badge 
+                        variant="outline" 
+                        className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                      >
                         {planName} Plan
-                      </p>
+                      </Badge>
                     )}
                     {user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground">
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
+                      >
                         Super Admin
-                      </p>
+                      </Badge>
                     )}
                     {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
                       <p className="text-xs text-muted-foreground">
