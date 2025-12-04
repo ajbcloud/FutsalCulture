@@ -419,9 +419,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const planLevelNum = { free: 0, core: 1, growth: 2, elite: 3 }[planCode] || 0;
 
       // Return tenant info in expected format
+      // Use displayName for UI (falls back to name if not set)
       res.json({
         id: tenant.id,
-        name: tenant.name || 'Your Organization',
+        name: tenant.displayName || tenant.name || 'Your Organization',
         contactName: tenant.contactName || '',
         contactEmail: tenant.contactEmail || '',
         location: {

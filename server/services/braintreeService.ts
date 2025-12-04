@@ -162,6 +162,7 @@ export async function createSubscription(
     trialDurationUnit?: 'day' | 'month';
     discountId?: string;
     discountAmount?: number;
+    firstBillingAmount?: string; // Discounted price for first billing cycle
   }
 ): Promise<braintree.Subscription> {
   const gw = getGateway();
@@ -193,6 +194,13 @@ export async function createSubscription(
     subscriptionRequest.discounts = {
       add: [{ inheritedFromId: options.discountId }],
     };
+  }
+  
+  // Apply first billing amount discount if provided
+  // This allows us to apply a discounted price for the first month without
+  // needing to pre-configure discounts in the Braintree Control Panel
+  if (options?.firstBillingAmount) {
+    (subscriptionRequest as any).firstBillingAmount = options.firstBillingAmount;
   }
   
   const result = await gw.subscription.create(subscriptionRequest);

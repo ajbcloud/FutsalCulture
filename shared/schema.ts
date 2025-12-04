@@ -130,7 +130,8 @@ export const sessions = pgTable(
 // Tenants table for multi-tenant architecture
 export const tenants = pgTable("tenants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
+  name: text("name").notNull(), // Unique internal name (may have suffix for duplicates)
+  displayName: text("display_name"), // Original user-entered name (shown in UI)
   subdomain: varchar("subdomain").unique().notNull(),
   customDomain: varchar("custom_domain").unique(),
   planLevel: planLevelEnum("plan_level").default("free"),

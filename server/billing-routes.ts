@@ -291,6 +291,132 @@ router.get('/billing/braintree/cooldown-check', async (req: any, res) => {
   }
 });
 
+// Validate discount code and calculate discount amount
+router.post('/billing/braintree/validate-discount', async (req: any, res) => {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const { discountCode, plan } = req.body;
+    
+    if (!discountCode) {
+      return res.status(400).json({ message: 'Discount code is required' });
+    }
+    
+    if (!plan || !['core', 'growth', 'elite'].includes(plan)) {
+      return res.status(400).json({ message: 'Valid plan is required (core, growth, or elite)' });
+    }
+
+    const planPrice = PLAN_PRICES[plan];
+    const discountResult = await calculateDiscount(discountCode, planPrice, currentUser.tenantId);
+    
+    if (!discountResult.valid) {
+      return res.status(400).json({ 
+        valid: false, 
+        message: discountResult.error 
+      });
+    }
+    
+    if (discountResult.discountAmount && discountResult.discountAmount > 0) {
+      const discountedPrice = Math.max(0, planPrice - discountResult.discountAmount);
+      res.json({
+        valid: true,
+        code: discountCode.toUpperCase(),
+        discountAmount: discountResult.discountAmount,
+        discountDescription: discountResult.discountDescription,
+        originalPrice: planPrice,
+        finalPrice: discountedPrice
+      });
+    } else {
+      res.json({
+        valid: true,
+        code: discountCode.toUpperCase(),
+        discountAmount: 0,
+        discountDescription: null,
+        originalPrice: planPrice,
+        finalPrice: planPrice
+      });
+    }
+  } catch (error) {
+    console.error('Error validating discount code:', error);
+    res.status(500).json({ message: 'Failed to validate discount code' });
+  }
+});
+
+// Plan prices in dollars for discount calculation
+const PLAN_PRICES: Record<string, number> = {
+  core: 99,
+  growth: 199,
+  elite: 399,
+};
+
+// Helper to validate and calculate discount from code
+async function calculateDiscount(discountCode: string | undefined, planPrice: number, tenantId: string): Promise<{
+  valid: boolean;
+  discountAmount?: number;
+  discountDescription?: string;
+  codeId?: string;
+  error?: string;
+}> {
+  if (!discountCode) {
+    return { valid: true }; // No discount code provided is valid
+  }
+
+  const { storage } = await import('./storage');
+  
+  // Look up the discount code (case-insensitive)
+  const code = await storage.getInviteCodeByCode(discountCode.toUpperCase(), tenantId);
+  
+  if (!code) {
+    return { valid: false, error: 'Invalid discount code' };
+  }
+  
+  if (!code.isActive) {
+    return { valid: false, error: 'This discount code is no longer active' };
+  }
+  
+  if (code.codeType !== 'discount') {
+    return { valid: false, error: 'This is not a valid discount code' };
+  }
+  
+  // Check expiration
+  if (code.validUntil && new Date(code.validUntil) < new Date()) {
+    return { valid: false, error: 'This discount code has expired' };
+  }
+  
+  // Check max uses
+  if (code.maxUses !== null && code.usageCount !== null && code.usageCount >= code.maxUses) {
+    return { valid: false, error: 'This discount code has reached its maximum uses' };
+  }
+  
+  // Calculate the discount amount
+  let discountAmount = 0;
+  let discountDescription = '';
+  
+  if (code.discountType === 'percentage' && code.discountValue) {
+    // Braintree only supports fixed amounts, so convert percentage to dollars
+    discountAmount = Math.round((planPrice * code.discountValue / 100) * 100) / 100; // Round to 2 decimal places
+    discountDescription = `${code.discountValue}% off`;
+  } else if (code.discountType === 'fixed' && code.discountValue) {
+    // discountValue is stored in cents for fixed amounts
+    discountAmount = code.discountValue / 100;
+    discountDescription = `$${discountAmount.toFixed(2)} off`;
+  } else if (code.discountType === 'full') {
+    // Full discount = first month free
+    discountAmount = planPrice;
+    discountDescription = 'First month free';
+  }
+  
+  return {
+    valid: true,
+    discountAmount,
+    discountDescription,
+    codeId: code.id,
+  };
+}
+
 // Create or update Braintree subscription
 router.post('/billing/braintree/subscribe', async (req: any, res) => {
   try {
@@ -298,7 +424,7 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       return res.status(503).json({ message: 'Braintree is not configured' });
     }
 
-    const { plan, paymentMethodNonce } = req.body;
+    const { plan, paymentMethodNonce, discountCode } = req.body;
     const currentUser = req.currentUser;
 
     if (!currentUser?.tenantId) {
@@ -323,6 +449,14 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       });
     }
 
+    // Validate and calculate discount if provided
+    const planPrice = PLAN_PRICES[plan];
+    const discountResult = await calculateDiscount(discountCode, planPrice, currentUser.tenantId);
+    
+    if (!discountResult.valid) {
+      return res.status(400).json({ message: discountResult.error });
+    }
+
     // Get tenant info
     const [tenant] = await db.select()
       .from(tenants)
@@ -339,7 +473,7 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       currentUser.email,
       currentUser.firstName,
       currentUser.lastName,
-      tenant.name
+      tenant.displayName || tenant.name
     );
 
     // Create payment method from nonce
@@ -349,12 +483,32 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       true
     );
 
+    // Create subscription with optional discount
+    // Note: For Braintree, discounts must be pre-created in the Control Panel
+    // We pass the calculated amount which will be applied as a first-billing-cycle discount
+    const subscriptionOptions: any = {};
+    
+    if (discountResult.discountAmount && discountResult.discountAmount > 0) {
+      // Apply discount as a first billing cycle price reduction
+      // Note: This requires a discount ID to be configured in Braintree Control Panel
+      // For now, we'll use firstBillingAmount to apply the discount directly
+      const discountedPrice = Math.max(0, planPrice - discountResult.discountAmount);
+      subscriptionOptions.firstBillingAmount = discountedPrice.toFixed(2);
+    }
+
     // Create subscription
     const subscription = await braintreeService.createSubscription(
       currentUser.tenantId,
       plan as 'core' | 'growth' | 'elite',
-      paymentMethod.token
+      paymentMethod.token,
+      subscriptionOptions
     );
+    
+    // Update discount code usage if one was applied
+    if (discountResult.codeId) {
+      const { storage } = await import('./storage');
+      await storage.incrementInviteCodeUsage(discountResult.codeId);
+    }
 
     // Clear feature access cache
     clearCapabilitiesCache(currentUser.tenantId);
@@ -364,7 +518,13 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       subscriptionId: subscription.id,
       plan,
       status: subscription.status,
-      nextBillingDate: subscription.nextBillingDate
+      nextBillingDate: subscription.nextBillingDate,
+      discount: discountResult.discountAmount ? {
+        applied: true,
+        amount: discountResult.discountAmount,
+        description: discountResult.discountDescription,
+        firstBillingAmount: subscriptionOptions.firstBillingAmount
+      } : undefined
     });
   } catch (error) {
     console.error('Error creating Braintree subscription:', error);

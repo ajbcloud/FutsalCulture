@@ -12,6 +12,41 @@ export { clerkMiddleware };
 const clerkUserCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Generate a unique tenant name by checking for duplicates and adding a 4-digit suffix if needed
+async function generateUniqueTenantName(baseName: string, tx?: any): Promise<string> {
+  const dbContext = tx || db;
+  
+  // Check if the base name already exists
+  const existing = await dbContext.select({ name: tenants.name })
+    .from(tenants)
+    .where(eq(tenants.name, baseName))
+    .limit(1);
+  
+  if (existing.length === 0) {
+    // Base name is unique, use it
+    return baseName;
+  }
+  
+  // Name exists, need to add a unique suffix
+  // Try up to 50 times to find an available name with 4-digit suffix
+  for (let i = 0; i < 50; i++) {
+    const suffix = Math.floor(1000 + Math.random() * 9000); // 4-digit random number (1000-9999)
+    const uniqueName = `${baseName} (${suffix})`;
+    
+    const check = await dbContext.select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.name, uniqueName))
+      .limit(1);
+    
+    if (check.length === 0) {
+      return uniqueName;
+    }
+  }
+  
+  // Fallback: use nanoid for guaranteed uniqueness
+  return `${baseName} (${nanoid(6)})`;
+}
+
 // Create a tenant for an existing user who doesn't have one yet
 // Updates the existing user to be admin of the new tenant
 async function createTenantForExistingUser(
@@ -57,9 +92,13 @@ async function createTenantForExistingUser(
       const inviteCode = generateTenantCode() + (attempt >= 3 ? nanoid(4) : '');
       
       return await db.transaction(async (tx) => {
-        // Create tenant
+        // Generate unique name with suffix if duplicate exists
+        const uniqueName = await generateUniqueTenantName(baseName, tx);
+        
+        // Create tenant with displayName for UI and unique name for DB
         const tenantResult = await tx.insert(tenants).values({
-          name: baseName,
+          name: uniqueName, // Unique internal name
+          displayName: baseName, // Original user-entered name for display
           slug: slug,
           subdomain: slug,
           tenantCode: tenantCode,
@@ -172,9 +211,13 @@ async function autoCreateTenantForUser(userData: {
       
       // Use transaction for atomic creation with optimistic uniqueness
       return await db.transaction(async (tx) => {
-        // Create tenant with auto-generated name (can be edited later)
+        // Generate unique name with suffix if duplicate exists
+        const uniqueName = await generateUniqueTenantName(baseName, tx);
+        
+        // Create tenant with displayName for UI and unique name for DB
         const tenantResult = await tx.insert(tenants).values({
-          name: baseName,
+          name: uniqueName, // Unique internal name
+          displayName: baseName, // Original user-entered name for display
           slug: slug,
           subdomain: slug,
           tenantCode: tenantCode,
