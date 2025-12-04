@@ -223,6 +223,9 @@ export const tenants = pgTable("tenants", {
   appliedDiscountStartedAt: timestamp("applied_discount_started_at"),
   appliedDiscountAppliedBy: varchar("applied_discount_applied_by"), // user who applied it (super admin or self)
   appliedDiscountIsPlatform: boolean("applied_discount_is_platform").default(false), // Was this a platform-wide code?
+
+  // Staging tenant flag - marks this as the platform staging tenant for unaffiliated users
+  isStaging: boolean("is_staging").default(false),
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
@@ -322,6 +325,9 @@ export const users = pgTable("users", {
   parent2InvitePhone: varchar("parent2_invite_phone"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  
+  // Unaffiliated user flag - indicates user signed up without joining a specific club
+  isUnaffiliated: boolean("is_unaffiliated").default(false),
 }, (table) => [
   index("users_tenant_id_idx").on(table.tenantId),
 ]);
