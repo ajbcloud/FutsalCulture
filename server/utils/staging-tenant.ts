@@ -19,7 +19,7 @@ export async function getOrCreateStagingTenant() {
 
   const inviteCode = `PLAT${nanoid(8).toUpperCase()}`;
 
-  const [newTenant] = await db.insert(tenants).values({
+  const result = await db.insert(tenants).values({
     id: STAGING_TENANT_ID,
     name: STAGING_TENANT_NAME,
     displayName: STAGING_TENANT_NAME,
@@ -29,6 +29,8 @@ export async function getOrCreateStagingTenant() {
     planLevel: 'free',
     billingStatus: 'none',
   }).returning();
+  
+  const newTenant = result[0];
 
   console.log('✅ Created platform staging tenant:', {
     id: newTenant.id,

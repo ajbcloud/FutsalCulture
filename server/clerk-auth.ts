@@ -6,6 +6,7 @@ import { tenants, subscriptions, tenantPlanAssignments, users } from "@shared/sc
 import { eq } from "drizzle-orm";
 import { slugify, generateTenantCode } from "@shared/utils";
 import { nanoid } from "nanoid";
+import { getOrCreateStagingTenant, getStagingTenantId } from "./utils/staging-tenant";
 
 export { clerkMiddleware };
 
@@ -283,6 +284,52 @@ async function autoCreateTenantForUser(userData: {
   
   // Should not reach here, but throw last error if we do
   throw lastError || new Error('Failed to create tenant after maximum retries');
+}
+
+// Create an unaffiliated user assigned to the staging tenant
+// Used when users sign up without joining a specific club
+async function createUnaffiliatedUser(userData: {
+  email: string;
+  clerkUserId: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  role?: 'parent' | 'player';
+  dateOfBirth?: string;
+}): Promise<{ user: typeof users.$inferSelect }> {
+  const { email, clerkUserId, firstName, lastName, profileImageUrl, role, dateOfBirth } = userData;
+  
+  // Get or create the staging tenant
+  const stagingTenant = await getOrCreateStagingTenant();
+  
+  // Create user assigned to staging tenant
+  const userResult = await db.insert(users).values({
+    email,
+    clerkUserId,
+    authProvider: 'clerk',
+    tenantId: stagingTenant.id,
+    isAdmin: false, // Unaffiliated users are never admins
+    isSuperAdmin: false,
+    isApproved: true, // Auto-approve unaffiliated users
+    registrationStatus: 'approved',
+    approvedAt: new Date(),
+    firstName: firstName || null,
+    lastName: lastName || null,
+    profileImageUrl: profileImageUrl || null,
+    role: role || 'parent',
+    isUnaffiliated: true, // Mark as unaffiliated user
+    dateOfBirth: dateOfBirth || null,
+  }).returning();
+  const user = (userResult as any[])[0];
+  
+  console.log(`✅ Created unaffiliated user ${user.id} assigned to staging tenant "${stagingTenant.name}"`);
+  
+  return { user };
+}
+
+// Check if a user is unaffiliated (in staging tenant)
+export function isUserUnaffiliated(user: typeof users.$inferSelect): boolean {
+  return user.isUnaffiliated === true || user.tenantId === getStagingTenantId();
 }
 
 export async function syncClerkUser(req: Request, res: Response, next: NextFunction) {

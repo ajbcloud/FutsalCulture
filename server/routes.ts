@@ -44,6 +44,7 @@ import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
 import billingRouter from './billing-routes';
 import quickbooksRoutes from './routes/quickbooks';
 import { terminologyRouter } from './routes/terminology';
+import unaffiliatedSignupRouter from './routes/unaffiliated-signup';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -67,6 +68,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Sync Clerk users to our database - only for API routes
   app.use('/api', syncClerkUser);
+
+  // Unaffiliated signup routes - for parents/players who sign up without joining a club
+  app.use(unaffiliatedSignupRouter);
 
   // Self-signup endpoint for personal accounts (public endpoint - before auth middleware)
   app.post('/api/users/self-signup', async (req, res) => {
