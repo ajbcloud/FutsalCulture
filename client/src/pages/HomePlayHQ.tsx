@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import { PlanComparisonCards } from "@/components/billing/PlanComparisonCards";
 import { FeatureGrid } from "@/components/billing/FeatureGrid";
 import { BusinessBranding } from "@/components/business-branding";
@@ -7,6 +10,32 @@ import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
 export default function HomePlayHQ() {
   const currentYear = new Date().getFullYear();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      if (user.isSuperAdmin) {
+        setLocation('/super-admin');
+      } else if (user.isAdmin || user.isAssistant) {
+        setLocation('/admin');
+      } else {
+        setLocation('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isLoading, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
