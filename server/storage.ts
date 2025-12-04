@@ -4181,14 +4181,18 @@ export class DatabaseStorage implements IStorage {
     return newTemplate;
   }
 
-  async updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>): Promise<ConsentTemplate> {
+  async updateConsentTemplate(id: string, template: Partial<InsertConsentTemplate>, tenantId?: string): Promise<ConsentTemplate> {
+    // When tenantId is provided, enforce tenant isolation for admin operations
+    const whereCondition = tenantId 
+      ? and(eq(consentTemplates.id, id), eq(consentTemplates.tenantId, tenantId))
+      : eq(consentTemplates.id, id);
     const [updatedTemplate] = await db
       .update(consentTemplates)
       .set({
         ...template,
         updatedAt: new Date()
       })
-      .where(eq(consentTemplates.id, id))
+      .where(whereCondition)
       .returning();
     return updatedTemplate;
   }

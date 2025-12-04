@@ -1491,6 +1491,11 @@ export async function setupAdminRoutes(app: any) {
   app.post('/api/admin/payments/:id/mark-paid', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       
       // Get the signup details
       const signup = await storage.getSignupWithDetails(id);
@@ -1498,9 +1503,14 @@ export async function setupAdminRoutes(app: any) {
         return res.status(404).json({ message: "Signup not found" });
       }
       
+      // CRITICAL: Verify the signup belongs to the admin's tenant
+      if (signup.player?.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Signup not found" });
+      }
+      
       // Create a payment record with current timestamp 
       await storage.createPayment({
-        tenantId: signup.player?.tenantId || 'default-tenant',
+        tenantId: tenantId,
         signupId: id,
         amountCents: signup.session?.priceCents || 1000, // Default $10
         paidAt: new Date()
@@ -2647,6 +2657,12 @@ export async function setupAdminRoutes(app: any) {
   // Integrations Management Endpoints
   app.get('/api/admin/integrations', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const allIntegrations = await db.select({
         id: integrations.id,
         provider: integrations.provider,
@@ -2655,7 +2671,8 @@ export async function setupAdminRoutes(app: any) {
         testStatus: integrations.testStatus,
         createdAt: integrations.createdAt,
         updatedAt: integrations.updatedAt,
-      }).from(integrations);
+      }).from(integrations)
+        .where(eq(integrations.tenantId, tenantId));
 
       res.json(allIntegrations);
     } catch (error) {
@@ -2667,7 +2684,15 @@ export async function setupAdminRoutes(app: any) {
   app.get('/api/admin/integrations/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
+      const integration = await db.select().from(integrations)
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
+        .limit(1);
       
       if (!integration.length) {
         return res.status(404).json({ message: "Integration not found" });
@@ -2691,6 +2716,11 @@ export async function setupAdminRoutes(app: any) {
     try {
       const { provider, credentials, enabled = true } = req.body;
       const adminUserId = (req as any).currentUser?.id;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
 
       // Check feature access for specific providers
       const planLevel = (req as any).planLevel;
@@ -2713,36 +2743,42 @@ export async function setupAdminRoutes(app: any) {
         return res.status(400).json({ message: validationError });
       }
 
-      // Handle payment processor mutual exclusivity (Stripe vs Braintree)
+      // Handle payment processor mutual exclusivity (Stripe vs Braintree) - TENANT SCOPED
       if ((provider === 'stripe' || provider === 'braintree') && enabled) {
         const otherProvider = provider === 'stripe' ? 'braintree' : 'stripe';
         const otherProcessorIntegration = await db.select()
           .from(integrations)
           .where(and(
+            eq(integrations.tenantId, tenantId),
             eq(integrations.provider, otherProvider),
             eq(integrations.enabled, true)
           ))
           .limit(1);
 
         if (otherProcessorIntegration.length > 0) {
-          // Disable the other payment processor
+          // Disable the other payment processor for this tenant
           await db.update(integrations)
             .set({
               enabled: false,
               updatedAt: new Date(),
               configuredBy: adminUserId,
             })
-            .where(eq(integrations.provider, otherProvider));
+            .where(and(
+              eq(integrations.tenantId, tenantId),
+              eq(integrations.provider, otherProvider)
+            ));
           
-          // Add a note about the automatic switch
-          console.log(`Automatically disabled ${otherProvider} integration when enabling ${provider}`);
+          console.log(`Automatically disabled ${otherProvider} integration when enabling ${provider} for tenant ${tenantId}`);
         }
       }
 
-      // Check if integration already exists
+      // Check if integration already exists for this tenant and provider
       const existing = await db.select()
         .from(integrations)
-        .where(eq(integrations.provider, provider))
+        .where(and(
+          eq(integrations.tenantId, tenantId),
+          eq(integrations.provider, provider)
+        ))
         .limit(1);
       
       if (existing.length > 0) {
@@ -2754,14 +2790,18 @@ export async function setupAdminRoutes(app: any) {
             configuredBy: adminUserId,
             updatedAt: new Date(),
           })
-          .where(eq(integrations.provider, provider))
+          .where(and(
+            eq(integrations.tenantId, tenantId),
+            eq(integrations.provider, provider)
+          ))
           .returning();
 
         res.json(updated[0]);
       } else {
-        // Create new integration
+        // Create new integration with tenantId
         const created = await db.insert(integrations)
           .values({
+            tenantId,
             provider,
             credentials,
             enabled,
@@ -2782,9 +2822,16 @@ export async function setupAdminRoutes(app: any) {
       const { id } = req.params;
       const { enabled } = req.body;
       const adminUserId = (req as any).currentUser?.id;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
 
-      // Get the integration to check its provider
-      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      // Get the integration to check its provider - TENANT SCOPED
+      const integration = await db.select().from(integrations)
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
+        .limit(1);
       if (!integration.length) {
         return res.status(404).json({ message: "Integration not found" });
       }
@@ -2811,7 +2858,7 @@ export async function setupAdminRoutes(app: any) {
           configuredBy: adminUserId,
           updatedAt: new Date(),
         })
-        .where(eq(integrations.id, id))
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
         .returning();
 
       if (!updated.length) {
@@ -2828,9 +2875,16 @@ export async function setupAdminRoutes(app: any) {
   app.delete('/api/admin/integrations/:id', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
 
-      // Get the integration to check its provider before deletion
-      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      // Get the integration to check its provider before deletion - TENANT SCOPED
+      const integration = await db.select().from(integrations)
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
+        .limit(1);
       if (!integration.length) {
         return res.status(404).json({ message: "Integration not found" });
       }
@@ -2852,7 +2906,7 @@ export async function setupAdminRoutes(app: any) {
       }
 
       const deleted = await db.delete(integrations)
-        .where(eq(integrations.id, id))
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
         .returning();
 
       if (!deleted.length) {
@@ -2869,8 +2923,15 @@ export async function setupAdminRoutes(app: any) {
   app.post('/api/admin/integrations/:id/test', requireAdmin, loadTenantMiddleware, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
       
-      const integration = await db.select().from(integrations).where(eq(integrations.id, id)).limit(1);
+      const integration = await db.select().from(integrations)
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)))
+        .limit(1);
       if (!integration.length) {
         return res.status(404).json({ message: "Integration not found" });
       }
@@ -2893,7 +2954,7 @@ export async function setupAdminRoutes(app: any) {
 
       const testResult = await testIntegration(integration[0]);
       
-      // Update test status
+      // Update test status - TENANT SCOPED
       await db.update(integrations)
         .set({
           lastTestedAt: new Date(),
@@ -2901,7 +2962,7 @@ export async function setupAdminRoutes(app: any) {
           testErrorMessage: testResult.error || null,
           updatedAt: new Date(),
         })
-        .where(eq(integrations.id, id));
+        .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)));
 
       res.json(testResult);
     } catch (error) {
@@ -5246,9 +5307,16 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   app.put('/api/admin/consent-templates/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      // CRITICAL: Extract tenantId for multi-tenant isolation
       const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Tenant ID required" });
+      }
       
-      const template = await storage.updateConsentTemplate(id, req.body);
+      const template = await storage.updateConsentTemplate(id, req.body, tenantId);
+      if (!template) {
+        return res.status(404).json({ error: "Consent template not found" });
+      }
       res.json(template);
     } catch (error) {
       console.error('Error updating consent template:', error);
