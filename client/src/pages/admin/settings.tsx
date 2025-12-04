@@ -21,15 +21,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/feature-flags';
-import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
-import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
-import { FeatureGrid } from '../../components/billing/FeatureGrid';
-import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
-import { PlanUpgradeCard } from '../../components/billing/PlanUpgradeCard';
-import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
-import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
 import AgePolicySettings from '../../components/admin/AgePolicySettings';
 import ConsentTemplateSettings from '../../components/admin/ConsentTemplateSettings';
 
@@ -454,155 +447,6 @@ function DefaultInviteCodeSection() {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-// Plan & Features Component
-function PlanAndFeaturesContent() {
-  const { data: tenantPlan, isLoading: tenantPlanLoading, isError: tenantPlanError } = useTenantPlan();
-  const { data: subscriptionInfo, isLoading: subscriptionLoading, isError: subscriptionError } = useSubscriptionInfo();
-  const { data: planFeatures } = usePlanFeatures();
-
-  if (tenantPlanLoading || subscriptionLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-muted-foreground">Loading plan information...</div>
-      </div>
-    );
-  }
-
-  // Handle error states gracefully
-  if (tenantPlanError || subscriptionError) {
-    return (
-      <div className="flex flex-col justify-center items-center h-64 space-y-4">
-        <AlertCircle className="w-12 h-12 text-yellow-500" />
-        <div className="text-center">
-          <div className="text-foreground font-semibold mb-2">Unable to load plan information</div>
-          <div className="text-muted-foreground text-sm">
-            {tenantPlanError ? 'Error loading tenant data. ' : ''}
-            {subscriptionError ? 'Error loading subscription data. ' : ''}
-            Please refresh the page or contact support if the issue persists.
-          </div>
-        </div>
-        <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-reload-plan">
-          Reload Page
-        </Button>
-      </div>
-    );
-  }
-
-  // SINGLE SOURCE OF TRUTH: Use only tenantPlan from /api/tenant/info
-  const currentPlan = tenantPlan?.planId || 'free';
-  const plan = getPlan(currentPlan) || getPlan('free')!;
-  const planDisplayName = plan.name;
-  const planPrice = plan.price;
-  const billingStatus = tenantPlan?.billingStatus || 'none';
-  const hasActiveSubscription = billingStatus === 'active';
-
-  return (
-    <div className="space-y-6">
-      {/* Current Plan Overview */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Crown className="w-5 h-5 mr-2 text-amber-500" />
-            Current Plan
-          </CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Your plan determines which features and limits are available for your organization.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-foreground capitalize mb-2">
-                {planDisplayName} Plan
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {planPrice === 0 ? 'Free forever' : `$${planPrice}/month`}
-              </div>
-            </div>
-            
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {plan.playerLimit === 'unlimited' 
-                  ? 'Unlimited' 
-                  : `${planFeatures?.playerCount || 0}/${plan.playerLimit}`}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {plan.playerLimit === 'unlimited' 
-                  ? `Currently registered: ${planFeatures?.playerCount || 0}`
-                  : 'Current vs maximum players'}
-              </div>
-            </div>
-            
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="text-lg font-semibold text-foreground mb-2">Billing Status</div>
-              <div className="space-y-2">
-                {hasActiveSubscription ? (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Active
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {currentPlan === 'free' ? 'Free Plan' : 'Inactive'}
-                    </span>
-                  </div>
-                )}
-                
-                <ManageSubscriptionButton
-                  planId={currentPlan as any}
-                  billingStatus={billingStatus as any}
-                  className="mt-2"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Plan Comparison Cards */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <DollarSign className="w-5 h-5 mr-2" />
-            Plan Options
-          </CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Compare features and upgrade to unlock more capabilities for your organization.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <PlanUpgradeCard 
-              planKey="free" 
-              isCurrentPlan={currentPlan === 'free'} 
-            />
-            <PlanUpgradeCard 
-              planKey="core" 
-              isCurrentPlan={currentPlan === 'core'} 
-            />
-            <PlanUpgradeCard 
-              planKey="growth" 
-              isCurrentPlan={currentPlan === 'growth'} 
-            />
-            <PlanUpgradeCard 
-              planKey="elite" 
-              isCurrentPlan={currentPlan === 'elite'} 
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Feature Grid */}
-      <FeatureGrid currentPlan={currentPlan} />
-    </div>
   );
 }
 
@@ -1238,13 +1082,6 @@ export default function AdminSettings() {
               Communications
             </TabsTrigger>
             <TabsTrigger 
-              value="plan" 
-              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
-            >
-              Plan & Features
-            </TabsTrigger>
-
-            <TabsTrigger 
               value="integrations" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
@@ -1286,7 +1123,7 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-7 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-6 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -1295,9 +1132,6 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="communications" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Communications
-            </TabsTrigger>
-            <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              Plan & Features
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Integrations
@@ -2146,13 +1980,6 @@ export default function AdminSettings() {
             </Button>
           </div>
         </TabsContent>
-
-
-        <TabsContent value="plan" className="space-y-6">
-          <PlanAndFeaturesContent />
-        </TabsContent>
-
-
 
         <TabsContent value="integrations" className="space-y-6">
           <Card className="bg-card border-border">
