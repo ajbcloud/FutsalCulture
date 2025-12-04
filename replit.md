@@ -129,6 +129,17 @@ Preferred communication style: Simple, everyday language.
 #### Scheduled Jobs
 - Daily pending downgrade processing at 4 AM UTC
 
+### Multi-Tenant Data Isolation (Recently Fixed)
+- **Critical Fix**: All admin endpoints now enforce tenantId filtering to prevent cross-tenant data leakage
+- **Affected Endpoints**: sessions, payments, players, analytics, pending registrations, bulk operations, access codes, business insights
+- **Pattern Used**: Extract `tenantId` from `req.currentUser.tenantId`, validate it exists, apply to all storage/DB queries
+- **Storage Updates**: `storage.getAnalytics(tenantId)` now accepts optional tenantId to filter players, payments, and sessions
+- **Background Jobs**: `session-status.ts` and `capacity-monitor.ts` process all tenants (system-wide) - acceptable since they don't expose data to users
+- **Key Files**:
+  - `server/admin-routes.ts` - 10+ endpoints fixed with tenantId filtering
+  - `server/routes.ts` - Analytics endpoint fixed
+  - `server/storage.ts` - getAnalytics() updated to support tenantId
+
 ### Consent Form System (Recently Updated)
 - **Default Behavior**: Consent forms are now required by default (`requireConsent: true` in age policy)
 - **Tenant Age Policy Endpoint**: `/api/tenant/age-policy` - accessible by any authenticated user (not just admins)
