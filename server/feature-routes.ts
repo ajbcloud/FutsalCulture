@@ -42,7 +42,9 @@ router.get('/tenant/plan-features', async (req, res) => {
     const tenant = await db.select({
       planLevel: tenants.planLevel,
       stripeSubscriptionId: tenants.stripeSubscriptionId,
-      stripeCustomerId: tenants.stripeCustomerId
+      stripeCustomerId: tenants.stripeCustomerId,
+      braintreeSubscriptionId: tenants.braintreeSubscriptionId,
+      braintreeStatus: tenants.braintreeStatus
     })
       .from(tenants)
       .where(eq(tenants.id, tenantId))
@@ -64,8 +66,15 @@ router.get('/tenant/plan-features', async (req, res) => {
       effectivePlanLevel = 'free';
     }
 
+    // Check if tenant has an active subscription (Stripe or Braintree)
+    // Note: Braintree status can be 'Active' (capital A) or 'active' (lowercase)
+    const braintreeActive = tenant[0].braintreeStatus?.toLowerCase() === 'active';
+    const hasActiveSubscription = 
+      tenant[0].stripeSubscriptionId || 
+      (tenant[0].braintreeSubscriptionId && braintreeActive);
+    
     // For extra safety, if tenant has no active subscription, ensure they're on free plan
-    if (!tenant[0].stripeSubscriptionId && effectivePlanLevel !== 'free') {
+    if (!hasActiveSubscription && effectivePlanLevel !== 'free') {
       console.warn(`Tenant ${tenantId} has plan level '${effectivePlanLevel}' but no active subscription, defaulting to 'free'`);
       effectivePlanLevel = 'free';
     }

@@ -10,106 +10,86 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import BraintreeHostedFields, { BraintreeHostedFieldsRef } from '@/components/billing/BraintreeHostedFields';
+import { plans as planConfigs, PlanConfig } from '@/config/plans.config';
+import { getPlan } from '@/lib/planUtils';
 
 interface PlanDetails {
   name: string;
   price: number;
+  playerLimit: string;
   description: string;
   icon: React.ReactNode;
-  features: string[];
-  limits: {
-    players?: number;
-    sessions?: number;
-    locations?: number;
-    coaches?: number;
-  };
+  features: Array<{ name: string; description?: string }>;
   color: string;
 }
 
-const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
+const getDisplayFeatures = (planId: string): Array<{ name: string; description?: string; isInheritanceNote?: boolean }> => {
+  const plan = getPlan(planId);
+  if (!plan) return [];
+
+  const displayFeatures: Array<{name: string, description?: string, isInheritanceNote?: boolean}> = [];
+  const planOrder = ['free', 'core', 'growth', 'elite'];
+  
+  if (planId !== 'free') {
+    const previousPlanNames: Record<string, string> = {
+      'core': 'Free',
+      'growth': 'Core', 
+      'elite': 'Growth'
+    };
+    displayFeatures.push({
+      name: `Includes everything in ${previousPlanNames[planId as keyof typeof previousPlanNames]}, plus...`,
+      isInheritanceNote: true
+    });
+  }
+
+  const currentFeatures = Object.entries(plan.features).filter(([_, feature]) => feature.status === 'included');
+  
+  if (planId === 'free') {
+    currentFeatures.forEach(([featureKey, feature]) => {
+      displayFeatures.push({
+        name: feature.name,
+        description: feature.description
+      });
+    });
+  } else {
+    const previousPlanIndex = planOrder.indexOf(planId) - 1;
+    const previousPlan = previousPlanIndex >= 0 ? getPlan(planOrder[previousPlanIndex]) : null;
+    
+    currentFeatures.forEach(([featureKey, feature]) => {
+      const previousFeature = previousPlan?.features[featureKey];
+      
+      if (!previousFeature || previousFeature.status !== 'included' || 
+          (feature.description && feature.description !== previousFeature.description)) {
+        displayFeatures.push({
+          name: feature.name,
+          description: feature.description
+        });
+      }
+    });
+  }
+
+  return displayFeatures;
+};
+
+const planMeta: Record<'free' | 'core' | 'growth' | 'elite', { description: string; icon: React.ReactNode; color: string }> = {
   free: {
-    name: 'Free',
-    price: 0,
     description: 'Perfect for getting started',
     icon: <Sparkles className="h-5 w-5" />,
-    features: [
-      'Up to 10 players',
-      'Basic session management',
-      '1 location',
-      'Email support',
-    ],
-    limits: {
-      players: 10,
-      sessions: 5,
-      locations: 1,
-      coaches: 1,
-    },
     color: 'text-gray-600',
   },
   core: {
-    name: 'Core',
-    price: 99,
     description: 'Essential features for growing programs',
     icon: <Rocket className="h-5 w-5" />,
-    features: [
-      'Up to 100 players',
-      'Advanced session management',
-      '3 locations',
-      'Waitlist management',
-      'SMS notifications',
-      'Priority support',
-    ],
-    limits: {
-      players: 100,
-      sessions: 50,
-      locations: 3,
-      coaches: 3,
-    },
     color: 'text-blue-600',
   },
   growth: {
-    name: 'Growth',
-    price: 199,
     description: 'Advanced features for scaling',
     icon: <Crown className="h-5 w-5 text-purple-600" />,
-    features: [
-      'Up to 500 players',
-      'Unlimited sessions',
-      '10 locations',
-      'Advanced analytics',
-      'Custom branding',
-      'API access',
-      'Phone support',
-    ],
-    limits: {
-      players: 500,
-      sessions: -1,
-      locations: 10,
-      coaches: 10,
-    },
     color: 'text-purple-600',
   },
   elite: {
-    name: 'Elite',
-    price: 399,
     description: 'Enterprise-grade features',
     icon: <Crown className="h-5 w-5 text-yellow-600" />,
-    features: [
-      'Unlimited players',
-      'Unlimited sessions',
-      'Unlimited locations',
-      'White-label options',
-      'Advanced integrations',
-      'Dedicated account manager',
-      '24/7 phone support',
-      'Custom features',
-    ],
-    limits: {
-      players: -1,
-      sessions: -1,
-      locations: -1,
-      coaches: -1,
-    },
     color: 'text-yellow-600',
   },
 };
@@ -127,7 +107,9 @@ export function PlanUpgradeCard({
   onUpgrade,
   onDowngrade,
 }: PlanUpgradeCardProps) {
-  const plan = plans[planKey];
+  const planConfig = planConfigs.find(p => p.id === planKey);
+  const meta = planMeta[planKey];
+  const displayFeatures = getDisplayFeatures(planKey);
   const { toast } = useToast();
   const { data: tenantPlanData } = useTenantPlan();
   const [isLoading, setIsLoading] = useState(false);
@@ -208,7 +190,7 @@ export function PlanUpgradeCard({
       setShowCheckoutDialog(false);
       toast({
         title: 'Subscription Created',
-        description: `You are now subscribed to the ${plan.name} plan!`,
+        description: `You are now subscribed to the ${planKey.charAt(0).toUpperCase() + planKey.slice(1)} plan!`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/billing/braintree/subscription'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tenant/subscription'] });
@@ -309,6 +291,14 @@ export function PlanUpgradeCard({
     }
   };
 
+  if (!planConfig) return null;
+
+  const planName = planConfig.name;
+  const planPrice = planConfig.price;
+  const playerLimit = planConfig.playerLimit === 'unlimited' 
+    ? 'Unlimited players' 
+    : `Up to ${planConfig.playerLimit} players`;
+
   return (
     <>
       <Card className={`relative ${isCurrentPlan ? 'ring-2 ring-primary' : ''}`}>
@@ -321,26 +311,37 @@ export function PlanUpgradeCard({
         )}
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className={`flex items-center gap-2 ${plan.color}`}>
-              {plan.icon}
-              {plan.name}
+            <CardTitle className={`flex items-center gap-2 ${meta.color}`}>
+              {meta.icon}
+              {planName}
             </CardTitle>
             <div className="text-right">
               <div className="text-2xl font-bold" data-testid={`text-price-${planKey}`}>
-                ${plan.price}
+                ${planPrice}
               </div>
               <div className="text-xs text-muted-foreground">per month</div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+          <p className="text-sm text-muted-foreground mt-1">{playerLimit}</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="space-y-2">
-              {plan.features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <span>{feature}</span>
+              {displayFeatures.map((feature, index) => (
+                <div key={index} className="flex items-start gap-2 text-sm">
+                  <span className="mt-1 inline-flex h-4 w-4 items-center justify-center flex-shrink-0">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  <div>
+                    <span className={feature.isInheritanceNote ? 'text-muted-foreground italic' : ''}>
+                      {feature.name}
+                    </span>
+                    {feature.description && !feature.isInheritanceNote && (
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-1">
+                        ({feature.description})
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -381,8 +382,8 @@ export function PlanUpgradeCard({
                 {isLoading || upgradeMutation.isPending || downgradeMutation.isPending || subscribeMutation.isPending
                   ? 'Processing...'
                   : isUpgrade
-                  ? `Upgrade to ${plan.name}`
-                  : `Downgrade to ${plan.name}`}
+                  ? `Upgrade to ${planName}`
+                  : `Downgrade to ${planName}`}
               </Button>
             )}
 
@@ -401,18 +402,18 @@ export function PlanUpgradeCard({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Subscribe to {plan.name}
+              Subscribe to {planName}
             </DialogTitle>
             <DialogDescription>
-              Enter your payment details to start your ${plan.price}/month subscription.
+              Enter your payment details to start your ${planPrice}/month subscription.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="bg-muted/50 rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="font-medium">{plan.name} Plan</span>
-                <span className="text-xl font-bold">${plan.price}/mo</span>
+                <span className="font-medium">{planName} Plan</span>
+                <span className="text-xl font-bold">${planPrice}/mo</span>
               </div>
               {discountCode && (
                 <div className="mt-2 text-sm text-muted-foreground flex items-center gap-1">
@@ -446,7 +447,7 @@ export function PlanUpgradeCard({
               disabled={isLoading || subscribeMutation.isPending || !clientToken}
               data-testid="button-confirm-subscription"
             >
-              {isLoading || subscribeMutation.isPending ? 'Processing...' : `Subscribe - $${plan.price}/month`}
+              {isLoading || subscribeMutation.isPending ? 'Processing...' : `Subscribe - $${planPrice}/month`}
             </Button>
           </div>
         </DialogContent>

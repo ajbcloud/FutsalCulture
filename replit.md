@@ -129,6 +129,11 @@ Preferred communication style: Simple, everyday language.
 #### Scheduled Jobs
 - Daily pending downgrade processing at 4 AM UTC
 
+#### Feature Access Fix
+- **Fixed**: `server/feature-routes.ts` now checks for both Stripe AND Braintree subscriptions when validating plan access
+- **Issue**: Feature access was checking only `stripeSubscriptionId`, causing Braintree subscribers to be treated as free plan users
+- **Solution**: Added check for `braintreeSubscriptionId` + `braintreeStatus` with case-insensitive status comparison ('Active' or 'active')
+
 ### Multi-Tenant Data Isolation (Recently Fixed)
 - **Critical Fix**: All admin endpoints now enforce tenantId filtering to prevent cross-tenant data leakage
 - **Affected Endpoints**: sessions, payments, players, analytics, pending registrations, bulk operations, access codes, business insights
