@@ -29,6 +29,10 @@ Preferred communication style: Simple, everyday language.
 - **Core Booking**: Session management (creation, filtering), interactive calendar, time-restricted booking, real-time capacity monitoring.
 - **Payment & Credits**: Stripe and Braintree integration for payment processing, including webhooks and subscription management. Comprehensive user credit system for cancellations.
 - **Signup & Registration**: Role-based signup flow (Player/Parent/Guardian) with age-gating. Consumer signup uses a simple post-login JoinClubModal approach where users sign up normally, then join their club using the tenant slug as the join code. After joining, users are signed out and must log back in for a clean session with proper org membership.
+- **Multi-tenant Data Model**: 
+  - `users.tenantId` = Which tenant the user belongs to (membership existence, source of truth for access)
+  - `tenant_memberships` = Role/tier within that tenant (parent/player/coach/admin + status)
+  - Consumer join flow (`/api/consumer/join`) atomically sets both in a transaction
 - **Admin & User Dashboards**: Parent dashboard for history, Admin panel for management, analytics, and settings.
 - **Multi-tenancy**: Super Admin portal for managing organizations, tenant defaults, and policies.
 - **Advanced Features**: Recurring sessions, analytics dashboard, structured help requests, business branding, waitlist system, and a comprehensive consent form system.
