@@ -53,13 +53,13 @@ router.get('/billing/check-subscription', async (req: any, res) => {
       
       if (provider === 'stripe') {
         try {
-          const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+          const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
           const subscription = await stripeClient.subscriptions.retrieve(tenantData.stripeSubscriptionId);
           
           subscriptionDetails = {
             id: subscription.id,
             status: subscription.status,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             priceId: subscription.items.data[0]?.price?.id,
             amount: subscription.items.data[0]?.price?.unit_amount
@@ -181,7 +181,7 @@ router.post('/billing/portal', async (req: any, res) => {
         return res.status(400).json({ message: 'No billing information found' });
       }
 
-      const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+      const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
       
       const session = await stripeClient.billingPortal.sessions.create({
         customer: tenant[0].stripeCustomerId,
@@ -251,15 +251,15 @@ router.post('/billing/checkout', async (req: any, res) => {
     console.log('- credentials.secretKey exists:', !!credentials?.secretKey);
     console.log('- credentials.publishableKey exists:', !!credentials?.publishableKey);
     
-    if (!provider || provider !== 'stripe') {
+    if (!provider || (provider as string) !== 'stripe') {
       console.log('ERROR: Payment processor check failed!');
       console.log('- provider value:', provider);
-      console.log('- provider !== "stripe":', provider !== 'stripe');
+      console.log('- provider !== "stripe":', (provider as string) !== 'stripe');
       console.log('=== CHECKOUT ENDPOINT DEBUG END (ERROR) ===');
       return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
     }
 
-    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
 
     // If tenant already has an active subscription, use the change-plan logic instead
     if (tenant[0].stripeSubscriptionId) {
@@ -487,7 +487,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
       return res.status(500).json({ message: 'Stripe payment processor required. Please configure Stripe in integrations.' });
     }
 
-    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -544,7 +544,7 @@ router.post('/billing/change-plan', async (req: any, res) => {
           id: updatedSubscription.id,
           status: updatedSubscription.status,
           plan,
-          currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString()
+          currentPeriodEnd: new Date((updatedSubscription as any).current_period_end * 1000).toISOString()
         }
       });
     } catch (error: any) {
@@ -622,7 +622,7 @@ router.post('/billing/upgrade', async (req: any, res) => {
       return res.status(400).json({ message: 'Stripe payment processor required' });
     }
 
-    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
 
     // Get the new price ID
     const priceIds: Record<string, string | undefined> = {
@@ -720,7 +720,7 @@ router.post('/billing/downgrade', async (req: any, res) => {
       return res.status(400).json({ message: 'Stripe payment processor required' });
     }
 
-    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+    const stripeClient = new Stripe(credentials.secretKey || process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
 
     // Get the subscription
     const subscription = await stripeClient.subscriptions.retrieve(tenant[0].stripeSubscriptionId);
@@ -739,7 +739,7 @@ router.post('/billing/downgrade', async (req: any, res) => {
       await db.update(tenants)
         .set({ 
           pendingPlanCode: 'free',
-          pendingPlanEffectiveDate: new Date(subscription.current_period_end * 1000),
+          pendingPlanEffectiveDate: new Date((subscription as any).current_period_end * 1000),
           billingStatus: 'pending_downgrade'
         })
         .where(eq(tenants.id, currentUser.tenantId));
@@ -764,15 +764,15 @@ router.post('/billing/downgrade', async (req: any, res) => {
         end_behavior: 'release',
         phases: [
           {
-            start_date: subscription.current_period_start,
-            end_date: subscription.current_period_end,
+            start_date: (subscription as any).current_period_start,
+            end_date: (subscription as any).current_period_end,
             items: subscription.items.data.map(item => ({
               price: item.price.id,
               quantity: item.quantity
             }))
           },
           {
-            start_date: subscription.current_period_end,
+            start_date: (subscription as any).current_period_end,
             items: [{
               price: newPriceId,
               quantity: 1
@@ -786,7 +786,7 @@ router.post('/billing/downgrade', async (req: any, res) => {
       await db.update(tenants)
         .set({ 
           pendingPlanCode: plan,
-          pendingPlanEffectiveDate: new Date(subscription.current_period_end * 1000),
+          pendingPlanEffectiveDate: new Date((subscription as any).current_period_end * 1000),
           billingStatus: 'pending_downgrade'
         })
         .where(eq(tenants.id, currentUser.tenantId));
@@ -795,7 +795,7 @@ router.post('/billing/downgrade', async (req: any, res) => {
     res.json({ 
       success: true,
       message: 'Downgrade scheduled for the end of the current billing period',
-      effectiveDate: new Date(subscription.current_period_end * 1000).toISOString()
+      effectiveDate: new Date((subscription as any).current_period_end * 1000).toISOString()
     });
   } catch (error) {
     console.error('Error downgrading subscription:', error);
@@ -1150,7 +1150,7 @@ router.get('/billing/braintree/payment-history', async (req: any, res) => {
       id: tenantSubscriptionEvents.id,
       eventType: tenantSubscriptionEvents.eventType,
       planLevel: tenantSubscriptionEvents.planLevel,
-      amount: tenantSubscriptionEvents.amount,
+      amountCents: tenantSubscriptionEvents.amountCents,
       currency: tenantSubscriptionEvents.currency,
       status: tenantSubscriptionEvents.status,
       createdAt: tenantSubscriptionEvents.createdAt,
@@ -1188,15 +1188,15 @@ router.get('/billing/braintree/payment-history', async (req: any, res) => {
     // Transform events to payment history format
     const paymentHistory = events
       .filter(event => 
-        event.eventType === 'subscription_charged_successfully' ||
-        event.eventType === 'payment_completed' ||
+        event.eventType === 'subscription_charged' ||
+        event.eventType === 'subscription_activated' ||
         event.eventType === 'subscription_created'
       )
       .map(event => ({
         id: event.id,
         date: event.createdAt?.toISOString() || new Date().toISOString(),
-        amount: event.amount || 0,
-        status: event.status === 'completed' || event.eventType === 'subscription_charged_successfully' 
+        amount: event.amountCents ? event.amountCents / 100 : 0,
+        status: event.status === 'completed' || event.eventType === 'subscription_charged' 
           ? 'completed' 
           : event.status === 'failed' ? 'failed' : 'pending',
         plan: event.planLevel || 'unknown',

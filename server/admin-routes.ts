@@ -1720,8 +1720,19 @@ export async function setupAdminRoutes(app: any) {
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const dateEnd = endDate ? new Date(endDate as string) : new Date();
       
-      // Get filtered sessions
-      let sessionQuery = db
+      // Build conditions array for filtering
+      const conditions = [
+        gte(futsalSessions.startTime, dateStart),
+        lte(futsalSessions.startTime, dateEnd)
+      ];
+      
+      // Add location filter if specified
+      if (location && location !== '') {
+        conditions.push(eq(futsalSessions.location, location as string));
+      }
+
+      // Get filtered sessions with all conditions
+      const applicableSessions = await db
         .select({
           id: futsalSessions.id,
           ageGroups: futsalSessions.ageGroups,
@@ -1736,25 +1747,7 @@ export async function setupAdminRoutes(app: any) {
           )`,
         })
         .from(futsalSessions)
-        .where(
-          and(
-            gte(futsalSessions.startTime, dateStart),
-            lte(futsalSessions.startTime, dateEnd)
-          )
-        );
-
-      // Apply location filter by adding to where clause
-      if (location && location !== '') {
-        sessionQuery = sessionQuery.where(
-          and(
-            gte(futsalSessions.startTime, dateStart),
-            lte(futsalSessions.startTime, dateEnd),
-            eq(futsalSessions.location, location as string)
-          )
-        );
-      }
-
-      const applicableSessions = await sessionQuery;
+        .where(and(...conditions));
       
       // Filter sessions by age group and gender
       let filteredSessions = applicableSessions;
@@ -2845,7 +2838,7 @@ export async function setupAdminRoutes(app: any) {
       
       if (process.env.STRIPE_SECRET_KEY) {
         try {
-          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
           
           // Create Stripe coupon based on discount type
           const couponParams: Stripe.CouponCreateParams = {
@@ -2925,7 +2918,7 @@ export async function setupAdminRoutes(app: any) {
       let updateData = { ...req.body };
       
       if (process.env.STRIPE_SECRET_KEY) {
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
         
         try {
           // If discount parameters changed, recreate the Stripe coupon and promotion code
@@ -3014,7 +3007,7 @@ export async function setupAdminRoutes(app: any) {
         // Delete Stripe coupon if it exists
         if (discountCode.stripeCouponId) {
           try {
-            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-10-28.acacia' });
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-07-30.basil' as any });
             await stripe.coupons.del(discountCode.stripeCouponId);
             console.log(`✅ Deleted Stripe coupon ${discountCode.stripeCouponId}`);
           } catch (stripeError) {
@@ -3800,7 +3793,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
 
       // If only updating portal access, check age with current birth year
       if (updateData.canAccessPortal === true && !updateData.birthYear) {
-        const age = calculateAge(new Date(currentPlayer[0].birthYear, 0, 1));
+        const age = calculateAge(currentPlayer[0].birthYear);
         if (age < MINIMUM_PORTAL_AGE) {
           return res.status(400).json({ 
             message: `Portal access requires player to be at least ${MINIMUM_PORTAL_AGE} years old` 
@@ -3993,7 +3986,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
               updatedAt: new Date()
             }).returning();
             
-            parentId = newParent[0].id;
+            parentId = (newParent as any[])[0].id;
             if (sendInviteEmails) {
               inviteEmails.push(rowData.parentEmail);
             }
@@ -4024,23 +4017,13 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         }
       }
 
-      // Send invite emails if requested
-      if (sendInviteEmails && inviteEmails.length > 0) {
-        try {
-          const { sendInvitationEmail } = await import('./utils/invite-helpers');
-          for (const email of inviteEmails) {
-            await sendInvitationEmail(email, tenantId);
-          }
-        } catch (emailError) {
-          console.error('Error sending invite emails:', emailError);
-          // Don't fail the import for email errors
-        }
-      }
+      // Note: Invite emails feature not yet implemented
+      // TODO: Implement sendInvitationEmail in invite-helpers.ts when email integration is ready
 
       res.json({ 
         imported,
         errors,
-        emailsSent: sendInviteEmails ? inviteEmails.length : 0,
+        emailsSent: 0,
         message: `Successfully imported ${imported} players${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
       });
     } catch (error) {
@@ -4166,23 +4149,13 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         }
       }
 
-      // Send invite emails if requested
-      if (sendInviteEmails && inviteEmails.length > 0) {
-        try {
-          const { sendInvitationEmail } = await import('./utils/invite-helpers');
-          for (const email of inviteEmails) {
-            await sendInvitationEmail(email, tenantId);
-          }
-        } catch (emailError) {
-          console.error('Error sending invite emails:', emailError);
-          // Don't fail the import for email errors
-        }
-      }
+      // Note: Invite emails feature not yet implemented
+      // TODO: Implement sendInvitationEmail in invite-helpers.ts when email integration is ready
 
       res.json({ 
         imported,
         errors,
-        emailsSent: sendInviteEmails ? inviteEmails.length : 0,
+        emailsSent: 0,
         message: `Successfully imported ${imported} parents${errors.length > 0 ? ` with ${errors.length} errors` : ''}` 
       });
     } catch (error) {
@@ -5605,7 +5578,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         if (player && player.parentId === userId) {
           // Allow access if it's the player's parent
           isAuthorizedPlayer = true;
-        } else if (player && calculateAge(new Date(player.birthDate)) >= MINIMUM_PORTAL_AGE) {
+        } else if (player && player.birthYear && calculateAge(player.birthYear) >= MINIMUM_PORTAL_AGE) {
           // TODO: Check if user is actually the player (would need player authentication)
           // For now, we'll skip this check
         }
@@ -5783,7 +5756,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const playerId = (req as any).session?.playerId || 'mock-player';
       
       const integration = await wearablesService.handleOAuthCallback(
-        provider as string,
+        provider as "fitbit" | "garmin" | "strava" | "apple_health" | "google_fit" | "whoop" | "polar",
         code as string,
         state as string,
         tenantId,

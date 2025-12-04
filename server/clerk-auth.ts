@@ -58,7 +58,7 @@ async function createTenantForExistingUser(
       
       return await db.transaction(async (tx) => {
         // Create tenant
-        const [tenant] = await tx.insert(tenants).values({
+        const tenantResult = await tx.insert(tenants).values({
           name: baseName,
           slug: slug,
           subdomain: slug,
@@ -68,6 +68,7 @@ async function createTenantForExistingUser(
           contactEmail: email,
           planLevel: "free",
         }).returning();
+        const tenant = (tenantResult as any[])[0];
         
         // Create subscription
         await tx.insert(subscriptions).values({
@@ -85,7 +86,7 @@ async function createTenantForExistingUser(
         });
         
         // Update existing user to be admin of this tenant
-        const [user] = await tx.update(users)
+        const userResult = await tx.update(users)
           .set({
             clerkUserId,
             authProvider: 'clerk',
@@ -100,6 +101,7 @@ async function createTenantForExistingUser(
           })
           .where(eq(users.id, existingUser.id))
           .returning();
+        const user = (userResult as any[])[0];
         
         return { tenant, user };
       });
@@ -171,7 +173,7 @@ async function autoCreateTenantForUser(userData: {
       // Use transaction for atomic creation with optimistic uniqueness
       return await db.transaction(async (tx) => {
         // Create tenant with auto-generated name (can be edited later)
-        const [tenant] = await tx.insert(tenants).values({
+        const tenantResult = await tx.insert(tenants).values({
           name: baseName,
           slug: slug,
           subdomain: slug,
@@ -181,6 +183,7 @@ async function autoCreateTenantForUser(userData: {
           contactEmail: email,
           planLevel: "free",
         }).returning();
+        const tenant = (tenantResult as any[])[0];
         
         // Create subscription
         await tx.insert(subscriptions).values({
@@ -199,7 +202,7 @@ async function autoCreateTenantForUser(userData: {
         
         // Create user as admin of this tenant
         // IMPORTANT: isAdmin=true for tenant creator, isSuperAdmin is NEVER set in code
-        const [user] = await tx.insert(users).values({
+        const userResult = await tx.insert(users).values({
           email,
           clerkUserId,
           authProvider: 'clerk',
@@ -213,6 +216,7 @@ async function autoCreateTenantForUser(userData: {
           lastName: lastName || null,
           profileImageUrl: profileImageUrl || null,
         }).returning();
+        const user = (userResult as any[])[0];
         
         return { tenant, user };
       });
