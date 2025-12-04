@@ -12,6 +12,116 @@ export { clerkMiddleware };
 const clerkUserCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Create a tenant for an existing user who doesn't have one yet
+// Updates the existing user to be admin of the new tenant
+async function createTenantForExistingUser(
+  existingUser: typeof users.$inferSelect,
+  userData: {
+    clerkUserId: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    profileImageUrl?: string | null;
+  }
+): Promise<{ tenant: typeof tenants.$inferSelect; user: typeof users.$inferSelect }> {
+  const { clerkUserId, firstName, lastName, profileImageUrl } = userData;
+  const email = existingUser.email || '';
+  
+  // Generate a unique tenant name based on name or email
+  const baseName = firstName && lastName 
+    ? `${firstName}'s Club` 
+    : email 
+      ? `${email.split('@')[0]}'s Club`
+      : `New Club`;
+  
+  const baseSlug = slugify(baseName);
+  
+  // Retry loop with increasing entropy for handling unique constraint violations
+  const MAX_RETRIES = 10;
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Generate unique identifiers with increasing entropy per attempt
+      let slug: string;
+      if (attempt === 0) {
+        slug = baseSlug;
+      } else if (attempt < 3) {
+        slug = `${baseSlug}-${nanoid(4)}`;
+      } else if (attempt < 6) {
+        slug = `${baseSlug}-${nanoid(8)}`;
+      } else {
+        slug = `club-${nanoid(12)}`;
+      }
+      
+      const tenantCode = generateTenantCode() + (attempt >= 3 ? nanoid(4) : '');
+      const inviteCode = generateTenantCode() + (attempt >= 3 ? nanoid(4) : '');
+      
+      return await db.transaction(async (tx) => {
+        // Create tenant
+        const [tenant] = await tx.insert(tenants).values({
+          name: baseName,
+          slug: slug,
+          subdomain: slug,
+          tenantCode: tenantCode,
+          inviteCode: inviteCode,
+          contactName: firstName && lastName ? `${firstName} ${lastName}` : null,
+          contactEmail: email,
+          planLevel: "free",
+        }).returning();
+        
+        // Create subscription
+        await tx.insert(subscriptions).values({
+          tenantId: tenant.id,
+          planKey: "free",
+          status: "inactive"
+        });
+        
+        // Create plan assignment
+        await tx.insert(tenantPlanAssignments).values({
+          tenantId: tenant.id,
+          planCode: "free",
+          since: new Date(),
+          until: null
+        });
+        
+        // Update existing user to be admin of this tenant
+        const [user] = await tx.update(users)
+          .set({
+            clerkUserId,
+            authProvider: 'clerk',
+            tenantId: tenant.id,
+            isAdmin: true,
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            firstName: firstName || existingUser.firstName,
+            lastName: lastName || existingUser.lastName,
+            profileImageUrl: profileImageUrl || existingUser.profileImageUrl,
+          })
+          .where(eq(users.id, existingUser.id))
+          .returning();
+        
+        return { tenant, user };
+      });
+    } catch (error: any) {
+      lastError = error;
+      
+      const isUniqueViolation = error?.code === '23505' || 
+        error?.message?.includes('unique constraint') ||
+        error?.message?.includes('duplicate key');
+      
+      if (isUniqueViolation && attempt < MAX_RETRIES - 1) {
+        console.log(`Tenant creation for existing user attempt ${attempt + 1} failed, retrying...`);
+        continue;
+      }
+      
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error('Failed to create tenant after maximum retries');
+}
+
 // Auto-create a tenant for a new user signing up
 // First user becomes admin of their auto-generated club
 // Uses retry loop with increasing randomness for concurrent safety
@@ -139,10 +249,24 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
 
     const clerkUserId = auth.userId;
     
-    // First, check if user exists in our database
+    // First, check if user exists in our database by Clerk ID
     let user = await storage.getUserByClerkId(clerkUserId);
     
     if (user) {
+      // User exists - but check if they need a tenant created
+      if (!user.tenantId) {
+        // User has no tenant - create one and make them admin
+        console.log(`User ${user.id} found but has no tenant - creating one...`);
+        const result = await createTenantForExistingUser(user, {
+          clerkUserId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+        });
+        user = result.user;
+        console.log(`Created tenant "${result.tenant.name}" for existing Clerk user ${user.id} (admin: true)`);
+      }
+      
       (req as any).user = user;
       (req as any).userId = user.id;
       return next();
@@ -190,15 +314,29 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     const existingUserByEmail = email ? await storage.getUserByEmail(email) : null;
     
     if (existingUserByEmail) {
-      // Link existing user to Clerk
-      user = await storage.updateUser(existingUserByEmail.id, {
-        clerkUserId,
-        authProvider: 'clerk',
-        firstName: firstName || existingUserByEmail.firstName,
-        lastName: lastName || existingUserByEmail.lastName,
-        profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
-      });
-      console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
+      // Check if existing user already has a tenant
+      if (existingUserByEmail.tenantId) {
+        // User already has a tenant - just link Clerk account
+        user = await storage.updateUser(existingUserByEmail.id, {
+          clerkUserId,
+          authProvider: 'clerk',
+          firstName: firstName || existingUserByEmail.firstName,
+          lastName: lastName || existingUserByEmail.lastName,
+          profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
+        });
+        console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId} (already has tenant)`);
+      } else {
+        // Existing user has no tenant - create one and make them admin
+        // This handles users who existed but never got a club set up
+        const result = await createTenantForExistingUser(existingUserByEmail, {
+          clerkUserId,
+          firstName: firstName || existingUserByEmail.firstName,
+          lastName: lastName || existingUserByEmail.lastName,
+          profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
+        });
+        user = result.user;
+        console.log(`Created tenant "${result.tenant.name}" for existing user ${user.id} (admin: true)`);
+      }
     } else {
       // Create new user and auto-create their tenant
       // The first user who signs up automatically becomes admin of their own club
