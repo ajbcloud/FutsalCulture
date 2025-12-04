@@ -79,7 +79,8 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
       });
       console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
     } else {
-      // Create new user
+      // Create new user with NO tenant association
+      // User must join a tenant via invite code after signup
       user = await storage.upsertUser({
         email,
         clerkUserId,
@@ -87,10 +88,11 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         firstName,
         lastName,
         profileImageUrl,
+        tenantId: null, // Explicitly null - user must join a tenant
         isApproved: false,
         registrationStatus: 'pending',
       });
-      console.log(`Created new user for Clerk user ${clerkUserId}`);
+      console.log(`Created new user for Clerk user ${clerkUserId} (no tenant - must join via code)`);
     }
 
     (req as any).user = user;

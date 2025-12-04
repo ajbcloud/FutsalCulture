@@ -40,6 +40,7 @@ import templatesRouter from './routes/templates';
 import notificationsRouter from './routes/notifications';
 import contactGroupsRouter from './routes/contact-groups';
 import terminologyRouter from './routes/terminology';
+import clubAuthRouter from './routes/club-auth';
 
 const app = express();
 
@@ -121,6 +122,9 @@ app.use((req, res, next) => {
   
   // Mount auth verification routes FIRST to avoid any conflicts
   app.use('/api/auth', authVerificationRouter);
+  
+  // Mount club auth routes (Clerk-based club signup)
+  app.use('/api/auth', clubAuthRouter);
 
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);

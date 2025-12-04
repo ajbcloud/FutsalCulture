@@ -69,6 +69,8 @@ import AdminQuickBooksIntegration from "./pages/admin/quickbooks-integration";
 import AdminFinancialReports from "./pages/admin/financial-reports";
 import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
+import ClubSignup from "./pages/ClubSignup";
+import ClubSetup from "./pages/ClubSetup";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -89,6 +91,9 @@ function Router() {
         <Route path="/app" component={Dashboard} />
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={GetStarted} />
+        <Route path="/club-signup" component={ClubSignup} />
+        <Route path="/club-signup/:rest*" component={ClubSignup} />
+        <Route path="/club-setup" component={ClubSetup} />
         <Route path="/join" component={Join} />
         <Route path="/signup" component={PersonalSignup} />
         <Route path="/signup/:rest*" component={PersonalSignup} />
