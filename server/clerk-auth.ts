@@ -14,6 +14,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Auto-create a tenant for a new user signing up
 // First user becomes admin of their auto-generated club
+// Uses retry loop with increasing randomness for concurrent safety
 async function autoCreateTenantForUser(userData: {
   email: string;
   clerkUserId: string;
@@ -30,76 +31,101 @@ async function autoCreateTenantForUser(userData: {
       ? `${email.split('@')[0]}'s Club`
       : `New Club`;
   
-  // Generate unique slug
-  let baseSlug = slugify(baseName);
-  let slug = baseSlug;
-  let counter = 1;
+  const baseSlug = slugify(baseName);
   
-  // Ensure slug uniqueness
-  while (true) {
-    const existingTenant = await db.query.tenants.findFirst({
-      where: eq(tenants.slug, slug)
-    });
-    
-    if (!existingTenant) break;
-    
-    slug = `${baseSlug}-${nanoid(4)}`;
-    counter++;
-    
-    if (counter > 10) {
-      // Fallback to fully random slug
-      slug = `club-${nanoid(8)}`;
-      break;
+  // Retry loop with increasing entropy for handling unique constraint violations
+  const MAX_RETRIES = 10;
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Generate unique identifiers with increasing entropy per attempt
+      let slug: string;
+      if (attempt === 0) {
+        slug = baseSlug;
+      } else if (attempt < 3) {
+        // Early retries: use base slug with small random suffix
+        slug = `${baseSlug}-${nanoid(4)}`;
+      } else if (attempt < 6) {
+        // Medium retries: use base slug with larger random suffix
+        slug = `${baseSlug}-${nanoid(8)}`;
+      } else {
+        // Final retries: use fully random slug to guarantee progress
+        slug = `club-${nanoid(12)}`;
+      }
+      
+      // Generate codes with entropy that increases on later retries
+      const tenantCode = generateTenantCode() + (attempt >= 3 ? nanoid(4) : '');
+      const inviteCode = generateTenantCode() + (attempt >= 3 ? nanoid(4) : '');
+      
+      // Use transaction for atomic creation with optimistic uniqueness
+      return await db.transaction(async (tx) => {
+        // Create tenant with auto-generated name (can be edited later)
+        const [tenant] = await tx.insert(tenants).values({
+          name: baseName,
+          slug: slug,
+          subdomain: slug,
+          tenantCode: tenantCode,
+          inviteCode: inviteCode,
+          contactName: firstName && lastName ? `${firstName} ${lastName}` : null,
+          contactEmail: email,
+          planLevel: "free",
+        }).returning();
+        
+        // Create subscription
+        await tx.insert(subscriptions).values({
+          tenantId: tenant.id,
+          planKey: "free",
+          status: "inactive"
+        });
+        
+        // Create plan assignment
+        await tx.insert(tenantPlanAssignments).values({
+          tenantId: tenant.id,
+          planCode: "free",
+          since: new Date(),
+          until: null
+        });
+        
+        // Create user as admin of this tenant
+        // IMPORTANT: isAdmin=true for tenant creator, isSuperAdmin is NEVER set in code
+        const [user] = await tx.insert(users).values({
+          email,
+          clerkUserId,
+          authProvider: 'clerk',
+          tenantId: tenant.id,
+          isAdmin: true, // First user is admin of their club
+          isSuperAdmin: false, // NEVER set to true in code
+          isApproved: true,
+          registrationStatus: 'approved',
+          approvedAt: new Date(),
+          firstName: firstName || null,
+          lastName: lastName || null,
+          profileImageUrl: profileImageUrl || null,
+        }).returning();
+        
+        return { tenant, user };
+      });
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if this is a unique constraint violation (retry with new identifiers)
+      const isUniqueViolation = error?.code === '23505' || 
+        error?.message?.includes('unique constraint') ||
+        error?.message?.includes('duplicate key');
+      
+      if (isUniqueViolation && attempt < MAX_RETRIES - 1) {
+        console.log(`Tenant creation attempt ${attempt + 1} failed due to uniqueness conflict, retrying with higher entropy...`);
+        continue;
+      }
+      
+      // Non-retryable error or max retries exceeded
+      throw error;
     }
   }
   
-  // Use transaction for atomic creation
-  return await db.transaction(async (tx) => {
-    // Create tenant with auto-generated name (can be edited later)
-    const [tenant] = await tx.insert(tenants).values({
-      name: baseName,
-      slug: slug,
-      subdomain: slug,
-      inviteCode: slug,
-      contactName: firstName && lastName ? `${firstName} ${lastName}` : null,
-      contactEmail: email,
-      planLevel: "free",
-    }).returning();
-    
-    // Create subscription
-    await tx.insert(subscriptions).values({
-      tenantId: tenant.id,
-      planKey: "free",
-      status: "inactive"
-    });
-    
-    // Create plan assignment
-    await tx.insert(tenantPlanAssignments).values({
-      tenantId: tenant.id,
-      planCode: "free",
-      since: new Date(),
-      until: null
-    });
-    
-    // Create user as admin of this tenant
-    // IMPORTANT: isAdmin=true for tenant creator, isSuperAdmin is NEVER set in code
-    const [user] = await tx.insert(users).values({
-      email,
-      clerkUserId,
-      authProvider: 'clerk',
-      tenantId: tenant.id,
-      isAdmin: true, // First user is admin of their club
-      isSuperAdmin: false, // NEVER set to true in code
-      isApproved: true,
-      registrationStatus: 'approved',
-      approvedAt: new Date(),
-      firstName: firstName || null,
-      lastName: lastName || null,
-      profileImageUrl: profileImageUrl || null,
-    }).returning();
-    
-    return { tenant, user };
-  });
+  // Should not reach here, but throw last error if we do
+  throw lastError || new Error('Failed to create tenant after maximum retries');
 }
 
 export async function syncClerkUser(req: Request, res: Response, next: NextFunction) {
