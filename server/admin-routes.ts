@@ -863,9 +863,13 @@ export async function setupAdminRoutes(app: any) {
     try {
       const tenantId = (req as any).currentUser?.tenantId;
       
-      // For now, return basic stats using existing methods
-      const sessions = await storage.getSessions({});
-      const analytics = await storage.getAnalytics();
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+      
+      // For now, return basic stats using existing methods - MUST filter by tenantId
+      const sessions = await storage.getSessions({ tenantId });
+      const analytics = await storage.getAnalytics(tenantId);
       
       // Get sessions this week
       const now = new Date();
@@ -947,6 +951,12 @@ export async function setupAdminRoutes(app: any) {
   // Admin Sessions Management with Accordion Data
   app.get('/api/admin/sessions', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       // Get sessions with signup counts in a single optimized query
       const sessions = await db
         .select({
@@ -985,6 +995,7 @@ export async function setupAdminRoutes(app: any) {
           )`,
         })
         .from(futsalSessions)
+        .where(eq(futsalSessions.tenantId, tenantId))
         .orderBy(desc(futsalSessions.startTime));
 
       // Fetch all player details for those sessions in one go
@@ -1333,11 +1344,17 @@ export async function setupAdminRoutes(app: any) {
   // Admin Payments Management - Unified endpoint
   app.get('/api/admin/payments', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { status } = req.query;
       
       if (status === 'pending') {
         // Get pending payment signups (unpaid reservations)
-        const pendingSignups = await storage.getPendingPaymentSignups();
+        const pendingSignups = await storage.getPendingPaymentSignups(tenantId);
         res.json(pendingSignups);
       } else if (status === 'paid') {
         // Get paid signups with full details including parent info and payment status
@@ -1388,14 +1405,14 @@ export async function setupAdminRoutes(app: any) {
           .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
           .innerJoin(users, eq(players.parentId, users.id))
           .leftJoin(payments, eq(signups.id, payments.signupId))
-          .where(eq(signups.paid, true))
+          .where(and(eq(signups.paid, true), eq(futsalSessions.tenantId, tenantId)))
           .orderBy(desc(payments.paidAt));
         
         res.json(paidSignups);
       } else {
         // Return all payments (pending and paid)
         const [pendingSignups, paidSignups] = await Promise.all([
-          storage.getPendingPaymentSignups(),
+          storage.getPendingPaymentSignups(tenantId),
           db
             .select({
               id: signups.id,
@@ -1443,7 +1460,7 @@ export async function setupAdminRoutes(app: any) {
             .innerJoin(futsalSessions, eq(signups.sessionId, futsalSessions.id))
             .innerJoin(users, eq(players.parentId, users.id))
             .leftJoin(payments, eq(signups.id, payments.signupId))
-            .where(eq(signups.paid, true))
+            .where(and(eq(signups.paid, true), eq(futsalSessions.tenantId, tenantId)))
             .orderBy(desc(payments.paidAt))
         ]);
         
@@ -1486,6 +1503,12 @@ export async function setupAdminRoutes(app: any) {
   // Admin Players Management
   app.get('/api/admin/players', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { search, playerId } = req.query;
       
       // Get all players with parent information and signup counts
@@ -1521,12 +1544,15 @@ export async function setupAdminRoutes(app: any) {
       .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
       .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`)
       .where(
-        playerId ? eq(players.id, playerId as string) : 
-        search ? or(
-          sql`${players.firstName} ILIKE ${`%${search}%`}`,
-          sql`${players.lastName} ILIKE ${`%${search}%`}`,
-          sql`CONCAT(${players.firstName}, ' ', ${players.lastName}) ILIKE ${`%${search}%`}`
-        ) : undefined
+        and(
+          eq(players.tenantId, tenantId),
+          playerId ? eq(players.id, playerId as string) : 
+          search ? or(
+            sql`${players.firstName} ILIKE ${`%${search}%`}`,
+            sql`${players.lastName} ILIKE ${`%${search}%`}`,
+            sql`CONCAT(${players.firstName}, ' ', ${players.lastName}) ILIKE ${`%${search}%`}`
+          ) : undefined
+        )
       );
 
       const playersWithData = allPlayers.map(player => ({
@@ -1562,12 +1588,18 @@ export async function setupAdminRoutes(app: any) {
 
   app.patch('/api/admin/players/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { id } = req.params;
       const updateData = req.body;
       
       // If attempting to enable portal access, validate age requirement
       if (updateData.canAccessPortal === true) {
-        const existingPlayer = await db.select().from(players).where(eq(players.id, id)).limit(1);
+        const existingPlayer = await db.select().from(players).where(and(eq(players.id, id), eq(players.tenantId, tenantId))).limit(1);
         if (existingPlayer.length > 0) {
           const age = calculateAge(existingPlayer[0].birthYear);
           if (age < MINIMUM_PORTAL_AGE) {
@@ -1707,6 +1739,12 @@ export async function setupAdminRoutes(app: any) {
   // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
       console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
@@ -1714,8 +1752,9 @@ export async function setupAdminRoutes(app: any) {
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const dateEnd = endDate ? new Date(endDate as string) : new Date();
       
-      // Build conditions array for filtering
+      // Build conditions array for filtering - ALWAYS include tenantId for multi-tenant isolation
       const conditions = [
+        eq(futsalSessions.tenantId, tenantId),
         gte(futsalSessions.startTime, dateStart),
         lte(futsalSessions.startTime, dateEnd)
       ];
@@ -2049,6 +2088,12 @@ export async function setupAdminRoutes(app: any) {
   // Pending Registrations Management
   app.get('/api/admin/pending-registrations', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       // Check if auto-approve is enabled
       const autoApproveSetting = await db.select()
         .from(systemSettings)
@@ -2071,7 +2116,7 @@ export async function setupAdminRoutes(app: any) {
         registrationStatus: users.registrationStatus,
         createdAt: users.createdAt,
       }).from(users)
-      .where(eq(users.registrationStatus, 'pending'));
+      .where(and(eq(users.registrationStatus, 'pending'), eq(users.tenantId, tenantId)));
 
       const pendingPlayers = await db.select({
         id: players.id,
@@ -2083,7 +2128,7 @@ export async function setupAdminRoutes(app: any) {
         createdAt: players.createdAt,
         parentId: players.parentId,
       }).from(players)
-      .where(eq(players.registrationStatus, 'pending'));
+      .where(and(eq(players.registrationStatus, 'pending'), eq(players.tenantId, tenantId)));
 
       // Combine and format results
       const pendingRegistrations = [
@@ -2120,6 +2165,12 @@ export async function setupAdminRoutes(app: any) {
   // Approve Registration
   app.post('/api/admin/registrations/:id/approve', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { id } = req.params;
       const { type } = req.body; // 'parent' or 'player'
       const adminUserId = (req as any).currentUser?.id;
@@ -2132,7 +2183,7 @@ export async function setupAdminRoutes(app: any) {
             approvedAt: new Date(),
             approvedBy: adminUserId,
           })
-          .where(eq(users.id, id))
+          .where(and(eq(users.id, id), eq(users.tenantId, tenantId)))
           .returning();
 
         // TODO: Send approval email notification
@@ -2145,7 +2196,7 @@ export async function setupAdminRoutes(app: any) {
             approvedAt: new Date(),
             approvedBy: adminUserId,
           })
-          .where(eq(players.id, id))
+          .where(and(eq(players.id, id), eq(players.tenantId, tenantId)))
           .returning();
 
         // TODO: Send approval email notification
@@ -2162,6 +2213,12 @@ export async function setupAdminRoutes(app: any) {
   // Bulk Approve Registrations
   app.post('/api/admin/registrations/bulk-approve', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { registrations } = req.body; // Array of {id, type} objects
       const adminUserId = (req as any).currentUser?.id;
       
@@ -2181,7 +2238,7 @@ export async function setupAdminRoutes(app: any) {
                 approvedAt: new Date(),
                 approvedBy: adminUserId,
               })
-              .where(eq(users.id, registration.id));
+              .where(and(eq(users.id, registration.id), eq(users.tenantId, tenantId)));
           } else if (registration.type === 'player') {
             await db.update(players)
               .set({
@@ -2190,7 +2247,7 @@ export async function setupAdminRoutes(app: any) {
                 approvedAt: new Date(),
                 approvedBy: adminUserId,
               })
-              .where(eq(players.id, registration.id));
+              .where(and(eq(players.id, registration.id), eq(players.tenantId, tenantId)));
           }
           results.approved++;
         } catch (error) {
@@ -2212,6 +2269,12 @@ export async function setupAdminRoutes(app: any) {
   // Bulk Reject Registrations
   app.post('/api/admin/registrations/bulk-reject', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { registrations, reason } = req.body; // Array of {id, type} objects and reason
       const adminUserId = (req as any).currentUser?.id;
       
@@ -2235,13 +2298,13 @@ export async function setupAdminRoutes(app: any) {
                 rejectedBy: adminUserId,
                 rejectionReason: reason,
               })
-              .where(eq(users.id, registration.id));
+              .where(and(eq(users.id, registration.id), eq(users.tenantId, tenantId)));
           } else if (registration.type === 'player') {
             await db.update(players)
               .set({
                 registrationStatus: 'rejected',
               })
-              .where(eq(players.id, registration.id));
+              .where(and(eq(players.id, registration.id), eq(players.tenantId, tenantId)));
           }
           results.rejected++;
         } catch (error) {
@@ -2263,6 +2326,12 @@ export async function setupAdminRoutes(app: any) {
   // Reject Registration
   app.post('/api/admin/registrations/:id/reject', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { id } = req.params;
       const { type, reason } = req.body; // 'parent' or 'player', and rejection reason
       const adminUserId = (req as any).currentUser?.id;
@@ -2275,7 +2344,7 @@ export async function setupAdminRoutes(app: any) {
             rejectedBy: adminUserId,
             rejectionReason: reason,
           })
-          .where(eq(users.id, id))
+          .where(and(eq(users.id, id), eq(users.tenantId, tenantId)))
           .returning();
 
         // TODO: Send rejection email notification
@@ -2288,7 +2357,7 @@ export async function setupAdminRoutes(app: any) {
             // rejectedBy: adminUserId, // Field doesn't exist in schema
             // rejectionReason: reason, // Field doesn't exist in schema
           })
-          .where(eq(players.id, id))
+          .where(and(eq(players.id, id), eq(players.tenantId, tenantId)))
           .returning();
 
         // TODO: Send rejection email notification
@@ -3287,6 +3356,12 @@ export async function setupAdminRoutes(app: any) {
   // Admin Analytics with real database filtering
   app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { startDate, endDate, ageGroup, gender, location, viewBy } = req.query;
       console.log('Analytics request filters:', { startDate, endDate, ageGroup, gender, location, viewBy });
       
@@ -3294,7 +3369,7 @@ export async function setupAdminRoutes(app: any) {
       const dateStart = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const dateEnd = endDate ? new Date(endDate as string) : new Date();
       
-      // Get filtered sessions
+      // Get filtered sessions - ALWAYS include tenantId for multi-tenant isolation
       let sessionQuery = db
         .select({
           id: futsalSessions.id,
@@ -3312,6 +3387,7 @@ export async function setupAdminRoutes(app: any) {
         .from(futsalSessions)
         .where(
           and(
+            eq(futsalSessions.tenantId, tenantId),
             gte(futsalSessions.startTime, dateStart),
             lte(futsalSessions.startTime, dateEnd)
           )
@@ -3752,6 +3828,12 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
   // Update Player
   app.patch('/api/admin/players/:id', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { id } = req.params;
       const updateData = req.body;
       
@@ -3780,7 +3862,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       }
 
       // Get current player to check existing portal access restrictions
-      const currentPlayer = await db.select().from(players).where(eq(players.id, id)).limit(1);
+      const currentPlayer = await db.select().from(players).where(and(eq(players.id, id), eq(players.tenantId, tenantId))).limit(1);
       if (currentPlayer.length === 0) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -3795,13 +3877,13 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
         }
       }
 
-      // Update the player
+      // Update the player with tenantId filter
       const [updatedPlayer] = await db.update(players)
         .set({
           ...updateData,
           updatedAt: new Date()
         })
-        .where(eq(players.id, id))
+        .where(and(eq(players.id, id), eq(players.tenantId, tenantId)))
         .returning();
 
       // Return the updated player with parent information
@@ -3837,7 +3919,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
       .from(players)
       .leftJoin(sql`users as parent1`, sql`parent1.id = ${players.parentId}`)
       .leftJoin(sql`users as parent2`, sql`parent2.id = ${players.parent2Id}`)
-      .where(eq(players.id, id))
+      .where(and(eq(players.id, id), eq(players.tenantId, tenantId)))
       .limit(1);
 
       if (playerWithParents.length === 0) {
@@ -4610,6 +4692,12 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Access Codes Management
   app.get('/api/admin/sessions-with-access-codes', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const sessions = await db
         .select({
           id: futsalSessions.id,
@@ -4641,6 +4729,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           )`
         })
         .from(futsalSessions)
+        .where(eq(futsalSessions.tenantId, tenantId))
         .orderBy(desc(futsalSessions.startTime));
 
       res.json(sessions);
@@ -4652,6 +4741,12 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
 
   app.put('/api/admin/sessions/:sessionId/access-code', requireAdmin, async (req: Request, res: Response) => {
     try {
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
       const { sessionId } = req.params;
       const { hasAccessCode, accessCode } = req.body;
 
@@ -4660,14 +4755,14 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         return res.status(400).json({ message: "Access code is required when protection is enabled" });
       }
 
-      // Update session
+      // Update session with tenantId filter
       await db
         .update(futsalSessions)
         .set({
           hasAccessCode,
           accessCode: hasAccessCode ? accessCode.trim().toUpperCase() : null,
         })
-        .where(eq(futsalSessions.id, sessionId));
+        .where(and(eq(futsalSessions.id, sessionId), eq(futsalSessions.tenantId, tenantId)));
 
       res.json({ 
         message: hasAccessCode 
@@ -4683,10 +4778,17 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Business Insights API endpoint
   app.get('/api/admin/business-insights', requireAdmin, async (req: Request, res: Response) => {
     try {
-      // Get all sessions for peak hours analysis
+      // CRITICAL: Extract tenantId for multi-tenant isolation
+      const tenantId = (req as any).currentUser?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant ID required" });
+      }
+
+      // Get all sessions for peak hours analysis - filtered by tenantId
       const allSessions = await db
         .select()
-        .from(futsalSessions);
+        .from(futsalSessions)
+        .where(eq(futsalSessions.tenantId, tenantId));
 
       // Calculate peak hours based on session start times
       const hourCounts: { [hour: number]: number } = {};
@@ -4702,10 +4804,11 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         `${parseInt(peakHour) > 12 ? parseInt(peakHour) - 12 : parseInt(peakHour)}${parseInt(peakHour) >= 12 ? ' PM' : ' AM'}` : 
         '6 PM';
 
-      // Get all players for age group analysis
+      // Get all players for age group analysis - filtered by tenantId
       const allPlayers = await db
         .select()
-        .from(players);
+        .from(players)
+        .where(eq(players.tenantId, tenantId));
 
       // Calculate age group distribution
       const ageGroupCounts: { [ageGroup: string]: number } = {};
@@ -4721,7 +4824,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         .slice(0, 2)
         .map(([ageGroup]) => ageGroup);
 
-      // Calculate revenue growth (this month vs last month)
+      // Calculate revenue growth (this month vs last month) - filtered by tenantId
       const now = new Date();
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -4730,13 +4833,14 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const thisMonthPayments = await db
         .select()
         .from(payments)
-        .where(gte(payments.createdAt, thisMonthStart));
+        .where(and(eq(payments.tenantId, tenantId), gte(payments.createdAt, thisMonthStart)));
 
       const lastMonthPayments = await db
         .select()
         .from(payments)
         .where(
           and(
+            eq(payments.tenantId, tenantId),
             gte(payments.createdAt, lastMonthStart),
             lte(payments.createdAt, lastMonthEnd)
           )
@@ -4749,10 +4853,12 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
         : thisMonthRevenue > 0 ? 100 : 0;
 
-      // Calculate session utilization rate
-      const allSignups = await db
+      // Calculate session utilization rate - using filtered sessions
+      const sessionIds = allSessions.map(s => s.id);
+      const allSignups = sessionIds.length > 0 ? await db
         .select()
-        .from(signups);
+        .from(signups)
+        .where(inArray(signups.sessionId, sessionIds)) : [];
 
       const totalCapacity = allSessions.reduce((sum, session) => sum + session.capacity, 0);
       const totalBookings = allSignups.length;
