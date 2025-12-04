@@ -1,28 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-let getTokenFunction: (() => Promise<string | null>) | null = null;
-
-export function setClerkTokenGetter(fn: () => Promise<string | null>) {
-  getTokenFunction = fn;
-}
-
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {};
-  
-  if (getTokenFunction) {
-    try {
-      const token = await getTokenFunction();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.warn('Failed to get Clerk token:', error);
-    }
-  }
-  
-  return headers;
-}
-
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -35,14 +12,9 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
-  
   const res = await fetch(url, {
     method,
-    headers: {
-      ...authHeaders,
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
+    headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -57,10 +29,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const authHeaders = await getAuthHeaders();
-    
     const res = await fetch(queryKey.join("/") as string, {
-      headers: authHeaders,
       credentials: "include",
     });
 
@@ -72,12 +41,10 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Safe fetch wrapper for analytics and other endpoints
 export async function get<T>(url: string): Promise<T> {
   try {
-    const authHeaders = await getAuthHeaders();
-    
     const res = await fetch(url, {
-      headers: authHeaders,
       credentials: "include",
     });
     
@@ -89,6 +56,7 @@ export async function get<T>(url: string): Promise<T> {
     return await res.json();
   } catch (error) {
     console.warn(`Fetch error for ${url}:`, error);
+    // Return safe defaults for different endpoint types
     if (url.includes('/stats')) {
       return { totals: { revenue: 0, players: 0, activeTenants: 0, sessionsThisMonth: 0, pendingPayments: 0 }, topTenants: [], recentActivity: [] } as T;
     } else if (url.includes('/series')) {
@@ -96,33 +64,15 @@ export async function get<T>(url: string): Promise<T> {
     } else if (url.includes('/tenants') || url.includes('/payments') || url.includes('/sessions')) {
       return { rows: [], page: 1, pageSize: 25, totalRows: 0 } as T;
     }
+    // Generic safe default
     return {} as T;
   }
 }
 
-// Drop-in replacement for fetch() that adds auth headers automatically
-export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
-  
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...authHeaders,
-      ...options.headers,
-    },
-    credentials: "include",
-  });
-}
-
 export async function patch<T>(url: string, data: any): Promise<T> {
-  const authHeaders = await getAuthHeaders();
-  
   const res = await fetch(url, {
     method: 'PATCH',
-    headers: { 
-      ...authHeaders,
-      'Content-Type': 'application/json' 
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
     credentials: 'include',
   });
@@ -140,11 +90,11 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
+      refetchOnWindowFocus: true, // Refetch when user returns to window
+      refetchOnMount: true, // Always refetch when component mounts
       refetchOnReconnect: false,
-      staleTime: 30000,
-      gcTime: 300000,
+      staleTime: 30000, // Consider data stale after 30 seconds
+      gcTime: 300000, // Keep in cache for 5 minutes
       retry: false,
     },
     mutations: {

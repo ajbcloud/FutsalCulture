@@ -168,16 +168,6 @@ export function setupSuperAdminRoutes(app: Express) {
         }).catch(err => console.error('Failed to send welcome email:', err));
       }
       
-      // Create Clerk organization for tenant
-      try {
-        const { createOrganizationForTenant, isClerkEnabled } = await import('./services/clerkOrganizationService');
-        if (isClerkEnabled()) {
-          await createOrganizationForTenant(tenant.id);
-        }
-      } catch (clerkError) {
-        console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
-      }
-      
       res.json({
         tenant,
         adminUser: { id: adminUser.id, email: adminUser.email },
@@ -1243,30 +1233,6 @@ export function setupSuperAdminRoutes(app: Express) {
     }
   });
 
-  // Clerk organization backfill endpoint
-  app.post('/api/super-admin/integrations/clerk/backfill', isAuthenticated, isSuperAdmin, async (req, res) => {
-    try {
-      const { backfillClerkOrganizations, isClerkEnabled } = await import('./services/clerkOrganizationService');
-      const { resyncExisting = false } = req.body || {};
-      
-      if (!isClerkEnabled()) {
-        return res.status(400).json({ error: 'Clerk is not configured. Set CLERK_SECRET_KEY environment variable.' });
-      }
-      
-      console.log(`Starting Clerk organization backfill (resyncExisting: ${resyncExisting})...`);
-      const result = await backfillClerkOrganizations(resyncExisting);
-      
-      res.json({
-        success: true,
-        message: `Clerk organization backfill complete`,
-        result
-      });
-    } catch (error) {
-      console.error("Error running Clerk backfill:", error);
-      res.status(500).json({ message: "Failed to run Clerk organization backfill" });
-    }
-  });
-
   // Test Email integration
   app.post('/api/super-admin/integrations/email/test', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
@@ -1274,8 +1240,8 @@ export function setupSuperAdminRoutes(app: Express) {
       if (!apiKey) {
         return res.status(400).json({ error: 'API key is required' });
       }
-      // Test Resend connection
-      res.json({ success: true, message: 'Resend connection successful' });
+      // Test SendGrid connection
+      res.json({ success: true, message: 'SendGrid connection successful' });
     } catch (error) {
       console.error("Error testing email integration:", error);
       res.status(500).json({ error: "Failed to test email integration" });
@@ -1285,12 +1251,12 @@ export function setupSuperAdminRoutes(app: Express) {
   // Test SMS integration
   app.post('/api/super-admin/integrations/sms/test', isAuthenticated, isSuperAdmin, async (req, res) => {
     try {
-      const { apiKey, fromNumber } = req.body;
-      if (!apiKey || !fromNumber) {
-        return res.status(400).json({ error: 'API Key and From Number are required' });
+      const { accountSid, authToken } = req.body;
+      if (!accountSid || !authToken) {
+        return res.status(400).json({ error: 'Account SID and Auth Token are required' });
       }
-      // Test Telnyx connection
-      res.json({ success: true, message: 'Telnyx connection successful' });
+      // Test Twilio connection
+      res.json({ success: true, message: 'Twilio connection successful' });
     } catch (error) {
       console.error("Error testing SMS integration:", error);
       res.status(500).json({ error: "Failed to test SMS integration" });
@@ -2006,72 +1972,6 @@ export function setupSuperAdminRoutes(app: Express) {
     } catch (error: any) {
       console.error('Error deleting invitation:', error);
       res.status(500).json({ error: 'Failed to delete invitation' });
-    }
-  });
-
-  // Braintree Transactions for Super Admin
-  app.get('/api/super-admin/braintree/transactions', isAuthenticated, isSuperAdmin, async (req, res) => {
-    try {
-      const { searchTransactions, isBraintreeEnabled } = await import('./services/braintreeService');
-      
-      if (!isBraintreeEnabled()) {
-        return res.status(503).json({ message: 'Braintree is not configured' });
-      }
-      
-      const { startDate, endDate, status, type, customerId, limit } = req.query;
-      
-      const options: any = {};
-      if (startDate) options.startDate = new Date(startDate as string);
-      if (endDate) options.endDate = new Date(endDate as string);
-      if (status) options.status = status as string;
-      if (type) options.type = type as string;
-      if (customerId) options.customerId = customerId as string;
-      if (limit) options.limit = parseInt(limit as string, 10);
-      
-      const transactions = await searchTransactions(options);
-      res.json(transactions);
-    } catch (error: any) {
-      console.error('Error fetching Braintree transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions', details: error.message });
-    }
-  });
-
-  app.get('/api/super-admin/braintree/transactions/stats', isAuthenticated, isSuperAdmin, async (req, res) => {
-    try {
-      const { getTransactionStats, isBraintreeEnabled } = await import('./services/braintreeService');
-      
-      if (!isBraintreeEnabled()) {
-        return res.status(503).json({ message: 'Braintree is not configured' });
-      }
-      
-      const days = parseInt(req.query.days as string, 10) || 30;
-      const stats = await getTransactionStats(days);
-      res.json(stats);
-    } catch (error: any) {
-      console.error('Error fetching Braintree transaction stats:', error);
-      res.status(500).json({ error: 'Failed to fetch transaction stats', details: error.message });
-    }
-  });
-
-  app.get('/api/super-admin/braintree/transactions/:id', isAuthenticated, isSuperAdmin, async (req, res) => {
-    try {
-      const { getTransactionById, isBraintreeEnabled } = await import('./services/braintreeService');
-      
-      if (!isBraintreeEnabled()) {
-        return res.status(503).json({ message: 'Braintree is not configured' });
-      }
-      
-      const { id } = req.params;
-      const transaction = await getTransactionById(id);
-      
-      if (!transaction) {
-        return res.status(404).json({ error: 'Transaction not found' });
-      }
-      
-      res.json(transaction);
-    } catch (error: any) {
-      console.error('Error fetching Braintree transaction:', error);
-      res.status(500).json({ error: 'Failed to fetch transaction', details: error.message });
     }
   });
 }

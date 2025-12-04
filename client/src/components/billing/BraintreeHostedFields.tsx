@@ -3,22 +3,12 @@ import * as braintree from "braintree-web";
 import type { Client, HostedFields, HostedFieldsEvent, HostedFieldsStateObject } from "braintree-web";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { CreditCard, Calendar, Lock, AlertCircle, MapPin, Hash } from "lucide-react";
-
-export interface BillingAddress {
-  streetAddress: string;
-  locality?: string;
-  region?: string;
-  postalCode: string;
-  countryCodeAlpha2?: string;
-}
+import { CreditCard, Calendar, Lock, AlertCircle } from "lucide-react";
 
 export interface BraintreeHostedFieldsRef {
-  tokenize: (billingAddress?: BillingAddress) => Promise<{ nonce: string; cardType?: string; lastFour?: string }>;
+  tokenize: () => Promise<{ nonce: string; cardType?: string; lastFour?: string }>;
   clear: () => void;
-  getBillingAddress: () => BillingAddress;
 }
 
 interface BraintreeHostedFieldsProps {
@@ -28,11 +18,10 @@ interface BraintreeHostedFieldsProps {
   onCardTypeChange?: (cardType: string) => void;
   onValidityChange?: (isValid: boolean) => void;
   className?: string;
-  showBillingAddress?: boolean;
 }
 
 const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHostedFieldsProps>(
-  ({ clientToken, onReady, onError, onCardTypeChange, onValidityChange, className, showBillingAddress = true }, ref) => {
+  ({ clientToken, onReady, onError, onCardTypeChange, onValidityChange, className }, ref) => {
     const [hostedFieldsInstance, setHostedFieldsInstance] = useState<braintree.HostedFields | null>(null);
     const hostedFieldsInstanceRef = useRef<braintree.HostedFields | null>(null);
     const [isReady, setIsReady] = useState(false);
@@ -41,14 +30,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
       number: { isValid: false, isEmpty: true, isFocused: false },
       expirationDate: { isValid: false, isEmpty: true, isFocused: false },
       cvv: { isValid: false, isEmpty: true, isFocused: false },
-      postalCode: { isValid: false, isEmpty: true, isFocused: false },
-    });
-    const [billingAddress, setBillingAddress] = useState<BillingAddress>({
-      streetAddress: "",
-      locality: "",
-      region: "",
-      postalCode: "",
-      countryCodeAlpha2: "US",
     });
     const [initError, setInitError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -99,10 +80,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
               container: "#cvv",
               placeholder: "123",
             },
-            postalCode: {
-              container: "#postal-code",
-              placeholder: "12345",
-            },
           },
         });
       }).then((instance) => {
@@ -138,8 +115,7 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
             };
             const allValid = updated.number.isValid && 
                            updated.expirationDate.isValid && 
-                           updated.cvv.isValid &&
-                           updated.postalCode.isValid;
+                           updated.cvv.isValid;
             onValidityChange?.(allValid);
             return updated;
           });
@@ -176,28 +152,12 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
     }, [clientToken]);
 
     useImperativeHandle(ref, () => ({
-      tokenize: async (overrideBillingAddress?: BillingAddress) => {
+      tokenize: async () => {
         if (!hostedFieldsInstance) {
           throw new Error("Hosted Fields not initialized");
         }
 
-        const addressToUse = overrideBillingAddress || billingAddress;
-        
-        if (!addressToUse.streetAddress) {
-          throw new Error("Street address is required");
-        }
-
-        const tokenizeOptions: any = {
-          billingAddress: {
-            streetAddress: addressToUse.streetAddress,
-            locality: addressToUse.locality || "",
-            region: addressToUse.region || "",
-            postalCode: addressToUse.postalCode || "",
-            countryCodeAlpha2: addressToUse.countryCodeAlpha2 || "US",
-          },
-        };
-
-        const { nonce, details } = await hostedFieldsInstance.tokenize(tokenizeOptions);
+        const { nonce, details } = await hostedFieldsInstance.tokenize();
         return {
           nonce,
           cardType: (details as any)?.cardType,
@@ -209,17 +169,8 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
           hostedFieldsInstance.clear("number");
           hostedFieldsInstance.clear("expirationDate");
           hostedFieldsInstance.clear("cvv");
-          hostedFieldsInstance.clear("postalCode");
         }
-        setBillingAddress({
-          streetAddress: "",
-          locality: "",
-          region: "",
-          postalCode: "",
-          countryCodeAlpha2: "US",
-        });
       },
-      getBillingAddress: () => billingAddress,
     }));
 
     const getFieldClassName = (field: keyof typeof fieldStates) => {
@@ -289,80 +240,6 @@ const BraintreeHostedFields = forwardRef<BraintreeHostedFieldsRef, BraintreeHost
             />
           </div>
         </div>
-
-        {showBillingAddress && (
-          <>
-            <div className="border-t pt-4 mt-4">
-              <Label className="text-sm font-medium mb-3 block">Billing Address</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="street-address" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Street Address
-              </Label>
-              <Input
-                id="street-address"
-                placeholder="123 Main St"
-                value={billingAddress.streetAddress}
-                onChange={(e) => setBillingAddress(prev => ({ ...prev, streetAddress: e.target.value }))}
-                className="h-12"
-                data-testid="input-street-address"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="locality">City</Label>
-                <Input
-                  id="locality"
-                  placeholder="Boston"
-                  value={billingAddress.locality}
-                  onChange={(e) => setBillingAddress(prev => ({ ...prev, locality: e.target.value }))}
-                  className="h-12"
-                  data-testid="input-city"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="region">State</Label>
-                <Input
-                  id="region"
-                  placeholder="MA"
-                  value={billingAddress.region}
-                  onChange={(e) => setBillingAddress(prev => ({ ...prev, region: e.target.value }))}
-                  className="h-12"
-                  data-testid="input-state"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="postal-code" className="flex items-center gap-2">
-                  <Hash className="h-4 w-4" />
-                  Postal Code
-                </Label>
-                <div
-                  id="postal-code"
-                  className={getFieldClassName("postalCode")}
-                  data-testid="input-postal-code"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value="United States"
-                  disabled
-                  className="h-12 bg-muted"
-                  data-testid="input-country"
-                />
-              </div>
-            </div>
-          </>
-        )}
 
         {!isReady && (
           <div className="flex items-center justify-center py-4">

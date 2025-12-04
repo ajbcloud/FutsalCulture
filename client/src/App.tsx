@@ -1,7 +1,5 @@
 import { Switch, Route, Redirect } from "wouter";
-import { useEffect } from "react";
-import { useAuth as useClerkAuth } from "@clerk/clerk-react";
-import { queryClient, setClerkTokenGetter } from "./lib/queryClient";
+import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,14 +48,7 @@ import SignupPlayerFlow from "@/pages/SignupPlayerFlow";
 import GetStarted from "@/pages/GetStarted";
 import Join from "@/pages/Join";
 import PersonalSignup from "@/pages/PersonalSignup";
-import Signup from "@/pages/Signup";
-import SignupBusiness from "@/pages/SignupBusiness";
-import BusinessSignupNew from "@/pages/BusinessSignupNew";
-import SignupConsumer from "@/pages/SignupConsumer";
 import Login from "@/pages/Login";
-import LoginBusiness from "@/pages/LoginBusiness";
-import LoginConsumer from "@/pages/LoginConsumer";
-import AppUnassigned from "@/pages/AppUnassigned";
 import ForgotPassword from "@/pages/ForgotPassword";
 import VerifyEmailSent from "@/pages/VerifyEmailSent";
 import SetPassword from "@/pages/SetPassword";
@@ -78,12 +69,6 @@ import AdminQuickBooksIntegration from "./pages/admin/quickbooks-integration";
 import AdminFinancialReports from "./pages/admin/financial-reports";
 import Checkout from "./pages/checkout";
 import CheckoutSuccess from "./pages/checkout-success";
-import PublicSessions from "./pages/PublicSessions";
-import PublicSessionDetail from "./pages/PublicSessionDetail";
-import ClerkBusinessSignup from "./pages/ClerkBusinessSignup";
-import ClerkBusinessSignupCallback from "./pages/ClerkBusinessSignupCallback";
-import AuthCallback from "./pages/AuthCallback";
-import OnboardingChooseOrganization from "./pages/OnboardingChooseOrganization";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -102,26 +87,13 @@ function Router() {
         <Route path="/" component={HomePlayHQ} />
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
-        <Route path="/app-unassigned" component={AppUnassigned} />
         <Route path="/signups" component={SignupStart} />
         <Route path="/get-started" component={GetStarted} />
         <Route path="/join" component={Join} />
-        <Route path="/signup" component={Signup} />
-        <Route path="/signup-business" component={BusinessSignupNew} />
-        <Route path="/signup-business/*" component={BusinessSignupNew} />
-        <Route path="/signup-business-old" component={SignupBusiness} />
-        <Route path="/signup/clerk" component={ClerkBusinessSignup} />
-        <Route path="/signup/clerk/callback" component={ClerkBusinessSignupCallback} />
-        <Route path="/signup-consumer" component={SignupConsumer} />
-        <Route path="/signup-consumer/*" component={SignupConsumer} />
-        <Route path="/auth-callback" component={AuthCallback} />
-        <Route path="/onboarding/choose-organization" component={OnboardingChooseOrganization} />
+        <Route path="/signup" component={PersonalSignup} />
+        <Route path="/signup/:rest*" component={PersonalSignup} />
         <Route path="/login" component={Login} />
-        <Route path="/login-business" component={LoginBusiness} />
-        <Route path="/login-business/*" component={LoginBusiness} />
-        <Route path="/login-consumer" component={LoginConsumer} />
-        <Route path="/login-consumer/*" component={LoginConsumer} />
-        <Route path="/login/*" component={Login} />
+        <Route path="/login/:rest*" component={Login} />
         <Route path="/forgot" component={ForgotPassword} />
         <Route path="/verify-email-sent" component={VerifyEmailSent} />
         <Route path="/set-password" component={SetPassword} />
@@ -130,8 +102,6 @@ function Router() {
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />
-        <Route path="/browse/:tenantSlug" component={PublicSessions} />
-        <Route path="/browse/:tenantSlug/session/:sessionId" component={PublicSessionDetail} />
         <Route path="/profile" component={Profile} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/sessions" component={Sessions} />
@@ -200,43 +170,24 @@ function Router() {
   );
 }
 
-function ClerkTokenSetup({ children }: { children: React.ReactNode }) {
-  const { getToken } = useClerkAuth();
-  
-  useEffect(() => {
-    setClerkTokenGetter(async () => {
-      try {
-        return await getToken();
-      } catch (error) {
-        console.warn('Failed to get Clerk token:', error);
-        return null;
-      }
-    });
-  }, [getToken]);
-  
-  return <>{children}</>;
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ClerkTokenSetup>
-          <BusinessProvider>
-            <AuthProvider>
-              <TerminologyProvider>
-                <TimezoneProvider>
-                  <TooltipProvider>
-                    <ErrorBoundary>
-                      <Toaster />
-                      <Router />
-                    </ErrorBoundary>
-                  </TooltipProvider>
-                </TimezoneProvider>
-              </TerminologyProvider>
-            </AuthProvider>
-          </BusinessProvider>
-        </ClerkTokenSetup>
+        <BusinessProvider>
+          <AuthProvider>
+            <TerminologyProvider>
+              <TimezoneProvider>
+                <TooltipProvider>
+                  <ErrorBoundary>
+                    <Toaster />
+                    <Router />
+                  </ErrorBoundary>
+                </TooltipProvider>
+              </TimezoneProvider>
+            </TerminologyProvider>
+          </AuthProvider>
+        </BusinessProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

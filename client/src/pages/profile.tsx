@@ -11,10 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3, Lock, Building2 } from "lucide-react";
+import { Edit, Save, X, User, Settings, Cookie, Shield, BarChart3, Lock } from "lucide-react";
 import { type NotificationPreferences } from "@shared/schema";
 import { format } from "date-fns";
-import JoinClubModal from "@/components/JoinClubModal";
 
 export default function Profile() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -35,9 +34,6 @@ export default function Profile() {
     newPassword: "",
     confirmPassword: "",
   });
-  
-  // State for Join Club modal
-  const [showJoinClubModal, setShowJoinClubModal] = useState(false);
 
   // Notification preferences query
   const { data: notificationPrefs, isLoading: prefsLoading } = useQuery<NotificationPreferences>({
@@ -519,37 +515,6 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Club Membership Section - only show for users without a club */}
-            {!user.tenantId && (
-              <div className="space-y-6">
-                <h3 className="text-xl font-semibold text-foreground flex items-center">
-                  <Building2 className="w-5 h-5 mr-2" />
-                  Club Membership
-                </h3>
-                <Card className="border-dashed">
-                  <CardContent className="pt-6 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-                      <Building2 className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-foreground">You're not part of a club yet</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Join a club to access training sessions, bookings, and more.
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={() => setShowJoinClubModal(true)}
-                      className="bg-primary hover:bg-primary/90"
-                      data-testid="button-join-club"
-                    >
-                      <Building2 className="w-4 h-4 mr-2" />
-                      Join a Club
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
             {/* Consent Documents Section */}
             <div className="space-y-6">
               <h3 className="text-xl font-semibold text-foreground flex items-center">
@@ -619,12 +584,6 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Join Club Modal */}
-      <JoinClubModal
-        isOpen={showJoinClubModal}
-        onClose={() => setShowJoinClubModal(false)}
-      />
     </div>
   );
 }

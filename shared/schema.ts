@@ -203,7 +203,7 @@ export const tenants = pgTable("tenants", {
   // Tenant Invitation System
   inviteCode: varchar("invite_code").unique().notNull(),
   inviteCodeUpdatedAt: timestamp("invite_code_updated_at").defaultNow().notNull(),
-  inviteCodeUpdatedBy: varchar("invite_code_updated_by"),
+  inviteCodeUpdatedBy: varchar("invite_code_updated_by").references(() => users.id),
 
   // SMS Credits System
   smsCreditsBalance: integer("sms_credits_balance").default(0).notNull(),
@@ -211,13 +211,6 @@ export const tenants = pgTable("tenants", {
   smsCreditsLastPurchasedAt: timestamp("sms_credits_last_purchased_at"),
   smsCreditsAutoRecharge: boolean("sms_credits_auto_recharge").default(false),
   smsCreditsAutoRechargeAmount: integer("sms_credits_auto_recharge_amount"), // Package to auto-buy when low
-
-  // Clerk Organization Integration
-  clerkOrganizationId: varchar("clerk_organization_id").unique(), // Links to Clerk Organization
-  clerkOrganizationSyncedAt: timestamp("clerk_organization_synced_at"), // Last sync timestamp
-
-  // Session Visibility Defaults
-  defaultSessionVisibility: varchar("default_session_visibility").default("private"), // 'public', 'private', or 'access_code_required'
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
@@ -334,38 +327,6 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   index("email_verification_tokens_token_hash_idx").on(table.tokenHash),
 ]);
 
-// Business signup token status enum
-export const businessSignupTokenStatusEnum = pgEnum("business_signup_token_status", ["pending", "attached", "expired"]);
-
-// Business signup tokens table - links pre-created tenant/user to Clerk signup
-export const businessSignupTokens = pgTable("business_signup_tokens", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  token: text("token").unique().notNull(),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  email: varchar("email").notNull(),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  orgName: varchar("org_name").notNull(),
-  status: businessSignupTokenStatusEnum("status").default("pending"),
-  expiresAt: timestamp("expires_at").notNull().default(sql`NOW() + INTERVAL '24 hours'`),
-  attachedAt: timestamp("attached_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("business_signup_tokens_token_idx").on(table.token),
-  index("business_signup_tokens_email_idx").on(table.email),
-  index("business_signup_tokens_tenant_idx").on(table.tenantId),
-  index("business_signup_tokens_user_idx").on(table.userId),
-  index("business_signup_tokens_status_idx").on(table.status),
-]);
-
-export const insertBusinessSignupTokenSchema = createInsertSchema(businessSignupTokens).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertBusinessSignupToken = z.infer<typeof insertBusinessSignupTokenSchema>;
-export type BusinessSignupToken = typeof businessSignupTokens.$inferSelect;
-
 // Gender enum for players and sessions
 export const genderEnum = pgEnum("gender", ["boys", "girls"]);
 export const ageBandEnum = pgEnum("age_band", ["child", "teen", "adult"]);
@@ -412,9 +373,6 @@ export const players = pgTable("players", {
 // Sessions table
 export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed", "cancelled"]);
 
-// Session visibility enum for public/private sessions
-export const sessionVisibilityEnum = pgEnum("session_visibility", ["public", "private", "access_code_required"]);
-
 export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
@@ -443,9 +401,7 @@ export const futsalSessions = pgTable("futsal_sessions", {
   // Advanced booking constraints
   noTimeConstraints: boolean("no_time_constraints").default(false), // If true, can book anytime
   daysBeforeBooking: integer("days_before_booking"), // Number of days before session date when booking opens
-  // Session visibility (public can be browsed by anyone, private only club members, access_code requires code)
-  visibility: sessionVisibilityEnum("visibility").default("private"),
-  // Access code protection (used when visibility is 'access_code_required')
+  // Access code protection
   hasAccessCode: boolean("has_access_code").default(false),
   accessCode: varchar("access_code"), // The actual code needed to book
   // Waitlist settings
@@ -679,8 +635,6 @@ export const discountCodes = pgTable("discount_codes", {
   // Stripe integration
   stripeCouponId: varchar("stripe_coupon_id"), // Stripe coupon ID for this discount
   stripePromotionCodeId: varchar("stripe_promotion_code_id"), // Stripe promotion code ID
-  // Braintree integration
-  braintreeDiscountId: varchar("braintree_discount_id"), // Synced Braintree discount ID
   createdBy: varchar("created_by"), // admin user id
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -708,7 +662,6 @@ export const inviteCodes = pgTable("invite_codes", {
   // Discount functionality
   discountType: varchar("discount_type"), // 'percentage', 'fixed', 'full'
   discountValue: integer("discount_value"), // percentage (0-100) or cents amount
-  braintreeDiscountId: varchar("braintree_discount_id"), // Linked Braintree discount ID
   // Usage and time limits
   maxUses: integer("max_uses"), // null = unlimited
   currentUses: integer("current_uses").default(0),
@@ -1455,8 +1408,8 @@ export const auditLogs = pgTable("audit_logs", {
 export const platformSettings = pgTable("platform_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   policies: jsonb("policies").notNull().default(sql`'{
-    "autoApproveTenants": true,
-    "requireTenantApproval": false,
+    "autoApproveTenants": false,
+    "requireTenantApproval": true,
     "mfa": {
       "requireSuperAdmins": true,
       "requireTenantAdmins": false
@@ -2163,8 +2116,6 @@ export type TenantPlanHistorySelect = typeof tenantPlanHistory.$inferSelect;
 
 export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   id: true,
-  tenantId: true,
-  createdBy: true,
   currentUses: true,
   createdAt: true,
   updatedAt: true,
@@ -2174,20 +2125,14 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
     .max(50, "Code must be less than 50 characters")
     .regex(/^[A-Z0-9_-]+$/, "Code can only contain uppercase letters, numbers, underscores, and hyphens"),
   discountType: z.enum(['percentage', 'fixed', 'full']),
-  discountValue: z.number().int().nullable().optional(),
-  maxUses: z.number().int().positive().nullable().optional(),
-  lockedToPlayerId: z.string().nullable().optional(),
-  lockedToParentId: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  validFrom: z.string().nullable().optional(),
-  validUntil: z.string().nullable().optional(),
-  braintreeDiscountId: z.string().nullable().optional(),
+  discountValue: z.number().int().optional(),
+  maxUses: z.number().int().positive().optional(),
+  lockedToPlayerId: z.string().optional(),
+  lockedToParentId: z.string().optional(),
 });
 
 export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
   id: true,
-  tenantId: true,
-  createdBy: true,
   currentUses: true,
   createdAt: true,
   updatedAt: true,
@@ -2196,18 +2141,10 @@ export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
     .min(3, "Code must be at least 3 characters")
     .max(50, "Code must be less than 50 characters"),
   codeType: z.enum(['invite', 'access', 'discount']),
-  discountType: z.enum(['percentage', 'fixed', 'full']).nullable().optional(),
-  discountValue: z.number().int().nullable().optional(),
-  maxUses: z.number().int().positive().nullable().optional(),
-  metadata: z.record(z.any()).nullable().optional(),
-  description: z.string().nullable().optional(),
-  ageGroup: z.string().nullable().optional(),
-  gender: z.string().nullable().optional(),
-  location: z.string().nullable().optional(),
-  club: z.string().nullable().optional(),
-  validFrom: z.string().nullable().optional(),
-  validUntil: z.string().nullable().optional(),
-  braintreeDiscountId: z.string().nullable().optional(),
+  discountType: z.enum(['percentage', 'fixed', 'full']).optional(),
+  discountValue: z.number().int().optional(),
+  maxUses: z.number().int().positive().optional(),
+  metadata: z.record(z.any()).optional(),
 });
 
 export type InviteCodeInsert = z.infer<typeof insertInviteCodeSchema>;
@@ -2730,20 +2667,12 @@ export const betaPlanFeatures = pgTable("beta_plan_features", {
 // Audit events for compliance
 export const auditEvents = pgTable("audit_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").references(() => tenants.id).notNull(),
-  userId: varchar("user_id").references(() => users.id),
-  userRole: varchar("user_role"),
-  action: varchar("action").notNull(),
-  resourceType: varchar("resource_type").notNull(),
-  resourceId: varchar("resource_id"),
-  details: jsonb("details"),
-  ipAddress: varchar("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
   actorUserId: varchar("actor_user_id").references(() => users.id),
-  eventType: varchar("event_type"),
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  eventType: varchar("event_type").notNull(),
   targetId: varchar("target_id"),
   metadataJson: jsonb("metadata_json"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("audit_events_tenant_idx").on(table.tenantId),
   index("audit_events_actor_idx").on(table.actorUserId),
@@ -3643,34 +3572,3 @@ export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
 export type InsertQuickbooksSyncLog = z.infer<typeof insertQuickbooksSyncLogSchema>;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransactionSchema>;
-
-// ============================================================================
-// Business Signup Schema - Simplified auth flow for club owners
-// ============================================================================
-
-export const businessSignupSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Valid email is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  phone: z.string().optional(),
-  orgName: z.string().min(2, "Organization name is required"),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  country: z.string().default("US"),
-  sports: z.array(z.string()).default(["futsal"]),
-});
-
-export type BusinessSignupInput = z.infer<typeof businessSignupSchema>;
-
-export const businessSignupResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  userId: z.string().optional(),
-  tenantId: z.string().optional(),
-  tenantCode: z.string().optional(),
-  requiresEmailVerification: z.boolean(),
-  emailVerificationFailed: z.boolean().optional(),
-});
-
-export type BusinessSignupResponse = z.infer<typeof businessSignupResponseSchema>;

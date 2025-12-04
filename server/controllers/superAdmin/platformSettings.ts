@@ -101,10 +101,10 @@ export type Policies = z.infer<typeof PoliciesSchema>;
 export type TenantDefaults = z.infer<typeof TenantDefaultsSchema>;
 export type TrialSettings = z.infer<typeof TrialSettingsSchema>;
 
-// Default values - auto-approve tenants by default, Super Admin can toggle this
+// Default values
 const defaultPolicies: Policies = {
-  autoApproveTenants: true,
-  requireTenantApproval: false,
+  autoApproveTenants: false,
+  requireTenantApproval: true,
   mfa: {
     requireSuperAdmins: false,
     requireTenantAdmins: false,

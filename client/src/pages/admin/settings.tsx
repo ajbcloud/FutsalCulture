@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { useToast } from '../../hooks/use-toast';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2, Info, Copy } from 'lucide-react';
+import type { inviteCodes } from '@shared/schema';
+import { Settings, Shield, Bell, Users, Zap, CheckCircle, XCircle, AlertCircle, ExternalLink, Calendar, Clock, CreditCard, Building2, Upload, X, Image, MapPin, Plus, Edit2, Crown, DollarSign, Receipt, Mail, MessageSquare, Cloud, TestTube, Lock, Settings2, Info, Ticket, Copy } from 'lucide-react';
 import { CardDescription } from '@/components/ui/card';
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { Link } from 'wouter';
@@ -20,7 +21,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt, usePlanLimits } from '../../hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/feature-flags';
-import { useTenantPlan } from '../../hooks/useTenantPlan';
+import { useTenantPlan, useSubscriptionInfo } from '../../hooks/useTenantPlan';
+import { ManageSubscriptionButton } from '../../components/billing/ManageSubscriptionButton';
+import { FeatureGrid } from '../../components/billing/FeatureGrid';
+import { PlanComparisonCards } from '../../components/billing/PlanComparisonCards';
+import { PlanUpgradeCard } from '../../components/billing/PlanUpgradeCard';
+import { plans, getPlan } from '@/lib/planUtils';
 import { useUpgradeStatus } from '../../hooks/use-upgrade-status';
 import { SubscriptionUpgradeBanner, SubscriptionSuccessBanner } from '../../components/subscription-upgrade-banner';
 import { PlanUpgradeButtons } from '../../components/plan-upgrade-buttons';
@@ -59,8 +65,6 @@ interface SystemSettings {
   fiscalYearType: string;
   fiscalYearStartMonth: number;
   availableLocations: (string | LocationData)[];
-  // Session visibility default
-  defaultSessionVisibility: 'public' | 'private' | 'access_code_required';
   // Waitlist settings
   defaultWaitlistEnabled: boolean;
   defaultWaitlistLimit: number;
@@ -182,6 +186,426 @@ const getTimezones = () => {
   return [...priorityTimezones, ...remainingTimezones];
 };
 
+type InviteCode = typeof inviteCodes.$inferSelect;
+
+// Default Invite Code Component
+function DefaultInviteCodeSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newCodeValue, setNewCodeValue] = useState('');
+  const [changeDefaultDialogOpen, setChangeDefaultDialogOpen] = useState(false);
+
+  const { data: inviteCodes = [], isLoading } = useQuery<InviteCode[]>({
+    queryKey: ["/api/admin/invite-codes"],
+  });
+
+  const defaultCode = inviteCodes.find(code => code.isDefault);
+  const nonDefaultCodes = inviteCodes.filter(code => !code.isDefault && code.isActive);
+
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("POST", `/api/admin/invite-codes/set-default/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+      toast({ title: "Default invite code updated successfully" });
+      setChangeDefaultDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to set default code",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createDefaultMutation = useMutation({
+    mutationFn: (code: string) =>
+      apiRequest("POST", "/api/admin/invite-codes", {
+        code: code.toUpperCase(),
+        codeType: "invite",
+        isActive: true,
+        description: "Default invite code",
+      }),
+    onSuccess: async (data: any) => {
+      await setDefaultMutation.mutateAsync(data.id);
+      setIsCreateDialogOpen(false);
+      setNewCodeValue('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create invite code",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copied to clipboard` });
+  };
+
+  const getSignupUrl = (code: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/signup/start?code=${code}`;
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center">
+            <Ticket className="w-5 h-5 mr-2" />
+            Default Invite Code
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-4">
+            <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-card border-border">
+      <CardHeader>
+        <CardTitle className="text-foreground flex items-center">
+          <Ticket className="w-5 h-5 mr-2" />
+          Default Invite Code
+        </CardTitle>
+        <CardDescription>
+          Quick access to your default invite code for new player registrations
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {defaultCode ? (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="default" className="bg-blue-600 text-white" data-testid="badge-default-code">
+                    DEFAULT
+                  </Badge>
+                  <span className="text-sm text-muted-foreground" data-testid="text-code-usage">
+                    Used {defaultCode.currentUses || 0} times
+                  </span>
+                </div>
+                <div className="font-mono text-3xl font-bold text-foreground break-all" data-testid="text-default-invite-code">
+                  {defaultCode.code}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(defaultCode.code, "Code")}
+                data-testid="button-copy-code"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Code
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => copyToClipboard(getSignupUrl(defaultCode.code), "Invite link")}
+                className="w-full"
+                data-testid="button-copy-invite-link"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Copy Invite Link
+              </Button>
+              
+              <Dialog open={changeDefaultDialogOpen} onOpenChange={setChangeDefaultDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full" data-testid="button-change-default">
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Change Default
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Default Invite Code</DialogTitle>
+                    <DialogDescription>
+                      Select a different invite code to set as the default
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {nonDefaultCodes.length > 0 ? (
+                      <div className="space-y-2">
+                        <Label>Available Invite Codes</Label>
+                        <Select
+                          onValueChange={(value) => setDefaultMutation.mutate(value)}
+                          disabled={setDefaultMutation.isPending}
+                        >
+                          <SelectTrigger data-testid="select-new-default-code">
+                            <SelectValue placeholder="Select a code..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {nonDefaultCodes.map((code) => (
+                              <SelectItem key={code.id} value={code.id}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-mono font-semibold">{code.code}</span>
+                                  {code.description && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      {code.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">
+                          No other active invite codes available.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Create a new code in the Invite Codes management page.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Link href="/admin/invitations">
+                <Button variant="outline" className="w-full" data-testid="link-manage-all-codes">
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Manage All Codes
+                </Button>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8 space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <Ticket className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">No Default Invite Code</h3>
+              <p className="text-sm text-muted-foreground">
+                Create a default invite code for quick access and easy sharing
+              </p>
+            </div>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-default-code">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Default Invite Code
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Default Invite Code</DialogTitle>
+                  <DialogDescription>
+                    Create a new invite code and set it as the default
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-code">Invite Code</Label>
+                    <Input
+                      id="new-code"
+                      value={newCodeValue}
+                      onChange={(e) => setNewCodeValue(e.target.value.toUpperCase())}
+                      placeholder="e.g., WELCOME2024"
+                      className="font-mono"
+                      data-testid="input-new-default-code"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Code will be automatically converted to uppercase
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsCreateDialogOpen(false);
+                      setNewCodeValue('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => createDefaultMutation.mutate(newCodeValue)}
+                    disabled={!newCodeValue.trim() || createDefaultMutation.isPending}
+                    data-testid="button-confirm-create-default"
+                  >
+                    {createDefaultMutation.isPending ? 'Creating...' : 'Create & Set as Default'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Link href="/admin/invitations">
+              <Button variant="outline" data-testid="link-manage-codes-empty">
+                <Settings2 className="w-4 h-4 mr-2" />
+                Manage All Invite Codes
+              </Button>
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Plan & Features Component
+function PlanAndFeaturesContent() {
+  const { data: tenantPlan, isLoading: tenantPlanLoading, isError: tenantPlanError } = useTenantPlan();
+  const { data: subscriptionInfo, isLoading: subscriptionLoading, isError: subscriptionError } = useSubscriptionInfo();
+  const { data: planFeatures } = usePlanFeatures();
+
+  if (tenantPlanLoading || subscriptionLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-muted-foreground">Loading plan information...</div>
+      </div>
+    );
+  }
+
+  // Handle error states gracefully
+  if (tenantPlanError || subscriptionError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64 space-y-4">
+        <AlertCircle className="w-12 h-12 text-yellow-500" />
+        <div className="text-center">
+          <div className="text-foreground font-semibold mb-2">Unable to load plan information</div>
+          <div className="text-muted-foreground text-sm">
+            {tenantPlanError ? 'Error loading tenant data. ' : ''}
+            {subscriptionError ? 'Error loading subscription data. ' : ''}
+            Please refresh the page or contact support if the issue persists.
+          </div>
+        </div>
+        <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-reload-plan">
+          Reload Page
+        </Button>
+      </div>
+    );
+  }
+
+  // SINGLE SOURCE OF TRUTH: Use only tenantPlan from /api/tenant/info
+  const currentPlan = tenantPlan?.planId || 'free';
+  const plan = getPlan(currentPlan) || getPlan('free')!;
+  const planDisplayName = plan.name;
+  const planPrice = plan.price;
+  const billingStatus = tenantPlan?.billingStatus || 'none';
+  const hasActiveSubscription = billingStatus === 'active';
+
+  return (
+    <div className="space-y-6">
+      {/* Current Plan Overview */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center">
+            <Crown className="w-5 h-5 mr-2 text-amber-500" />
+            Current Plan
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Your plan determines which features and limits are available for your organization.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-foreground capitalize mb-2">
+                {planDisplayName} Plan
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {planPrice === 0 ? 'Free forever' : `$${planPrice}/month`}
+              </div>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-lg font-semibold text-foreground mb-2">Player Limit</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {plan.playerLimit === 'unlimited' 
+                  ? 'Unlimited' 
+                  : `${planFeatures?.playerCount || 0}/${plan.playerLimit}`}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {plan.playerLimit === 'unlimited' 
+                  ? `Currently registered: ${planFeatures?.playerCount || 0}`
+                  : 'Current vs maximum players'}
+              </div>
+            </div>
+            
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="text-lg font-semibold text-foreground mb-2">Billing Status</div>
+              <div className="space-y-2">
+                {hasActiveSubscription ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Active
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {currentPlan === 'free' ? 'Free Plan' : 'Inactive'}
+                    </span>
+                  </div>
+                )}
+                
+                <ManageSubscriptionButton
+                  planId={currentPlan as any}
+                  billingStatus={billingStatus as any}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Plan Comparison Cards */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center">
+            <DollarSign className="w-5 h-5 mr-2" />
+            Plan Options
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Compare features and upgrade to unlock more capabilities for your organization.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <PlanUpgradeCard 
+              planKey="free" 
+              isCurrentPlan={currentPlan === 'free'} 
+            />
+            <PlanUpgradeCard 
+              planKey="core" 
+              isCurrentPlan={currentPlan === 'core'} 
+            />
+            <PlanUpgradeCard 
+              planKey="growth" 
+              isCurrentPlan={currentPlan === 'growth'} 
+            />
+            <PlanUpgradeCard 
+              planKey="elite" 
+              isCurrentPlan={currentPlan === 'elite'} 
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Feature Grid */}
+      <FeatureGrid currentPlan={currentPlan} />
+    </div>
+  );
+}
+
 export default function AdminSettings() {
   const businessName = useBusinessName();
   const { upgradeStatus, clearUpgradeStatus } = useUpgradeStatus();
@@ -247,8 +671,6 @@ export default function AdminSettings() {
       { name: 'Sports Hub', addressLine1: 'Sports Hub', city: 'Singapore', country: 'SG' },
       { name: 'Jurong East', addressLine1: 'Jurong East', city: 'Singapore', country: 'SG' }
     ],
-    // Session visibility default
-    defaultSessionVisibility: 'private' as const,
     // Waitlist settings
     defaultWaitlistEnabled: true,
     defaultWaitlistLimit: 10,
@@ -303,13 +725,13 @@ export default function AdminSettings() {
   const { hasFeature: hasAutoPromotion } = useHasFeature(FEATURE_KEYS.WAITLIST_AUTO_PROMOTE);
   const planLimits = usePlanLimits();
 
-  // Check if Telnyx integration is enabled
-  const isTelnyxEnabled = integrations.some(
-    integration => integration.provider.toLowerCase() === 'telnyx' && integration.enabled
+  // Check if Twilio integration is enabled
+  const isTwilioEnabled = integrations.some(
+    integration => integration.provider.toLowerCase() === 'twilio' && integration.enabled
   );
 
-  // Combined SMS availability check (requires both plan feature and Telnyx integration)
-  const canUseSms = hasSmsFeature && isTelnyxEnabled;
+  // Combined SMS availability check (requires both plan feature and Twilio integration)
+  const canUseSms = hasSmsFeature && isTwilioEnabled;
 
   useEffect(() => {
     // Check for payment success parameter
@@ -816,6 +1238,13 @@ export default function AdminSettings() {
               Communications
             </TabsTrigger>
             <TabsTrigger 
+              value="plan" 
+              className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
+            >
+              Plan & Features
+            </TabsTrigger>
+
+            <TabsTrigger 
               value="integrations" 
               className="w-full justify-start data-[state=active]:bg-accent data-[state=active]:text-accent-foreground text-sm py-3"
             >
@@ -857,7 +1286,7 @@ export default function AdminSettings() {
 
         {/* Desktop Tab Navigation - Horizontal Grid */}
         <div className="hidden md:block">
-          <TabsList className="grid w-full grid-cols-6 bg-muted border-border">
+          <TabsList className="grid w-full grid-cols-7 bg-muted border-border">
             <TabsTrigger value="general" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               General & Registration
             </TabsTrigger>
@@ -866,6 +1295,9 @@ export default function AdminSettings() {
             </TabsTrigger>
             <TabsTrigger value="communications" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Communications
+            </TabsTrigger>
+            <TabsTrigger value="plan" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              Plan & Features
             </TabsTrigger>
             <TabsTrigger value="integrations" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
               Integrations
@@ -1039,6 +1471,8 @@ export default function AdminSettings() {
               </div>
             </CardContent>
           </Card>
+
+          <DefaultInviteCodeSection />
 
           <Card className="bg-card border-border">
             <CardHeader>
@@ -1238,64 +1672,6 @@ export default function AdminSettings() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-foreground">Default Session Visibility</h4>
-                <p className="text-sm text-muted-foreground">Control who can see new sessions by default. Individual sessions can override this setting.</p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      settings.defaultSessionVisibility === 'public'
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                        : 'border-border hover:border-muted-foreground/50'
-                    }`}
-                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'public' }))}
-                    data-testid="settings-visibility-public"
-                  >
-                    <div className="flex items-center mb-2">
-                      <span className="font-medium text-foreground">Public</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Visible to anyone browsing your calendar
-                    </p>
-                  </div>
-                  
-                  <div
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      settings.defaultSessionVisibility === 'private'
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-border hover:border-muted-foreground/50'
-                    }`}
-                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'private' }))}
-                    data-testid="settings-visibility-private"
-                  >
-                    <div className="flex items-center mb-2">
-                      <span className="font-medium text-foreground">Private</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Only visible to club members
-                    </p>
-                  </div>
-                  
-                  <div
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      settings.defaultSessionVisibility === 'access_code_required'
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                        : 'border-border hover:border-muted-foreground/50'
-                    }`}
-                    onClick={() => setSettings(prev => ({ ...prev, defaultSessionVisibility: 'access_code_required' }))}
-                    data-testid="settings-visibility-access-code"
-                  >
-                    <div className="flex items-center mb-2">
-                      <span className="font-medium text-foreground">Access Code</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Requires a code to view and book
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
                 <h4 className="text-sm font-medium text-foreground">Default Waitlist Settings</h4>
                 <p className="text-sm text-muted-foreground">These settings will be applied to new sessions by default. Individual sessions can override these values.</p>
                 
@@ -1403,27 +1779,27 @@ export default function AdminSettings() {
 
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className={`${!isTelnyxEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <Label className={`${!isTwilioEnabled ? 'text-muted-foreground' : 'text-foreground'}`}>
                           SMS Notifications
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          {isTelnyxEnabled 
+                          {isTwilioEnabled 
                             ? 'Send SMS notifications for urgent waitlist updates'
-                            : 'Requires Telnyx integration to be configured'
+                            : 'Requires Twilio integration to be configured'
                           }
                         </p>
-                        {!isTelnyxEnabled && (
+                        {!isTwilioEnabled && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                            Configure Telnyx in the Integrations tab to enable SMS notifications
+                            Configure Twilio in the Integrations tab to enable SMS notifications
                           </p>
                         )}
                       </div>
                       <Switch
-                        checked={settings.waitlistNotificationSMS && isTelnyxEnabled}
+                        checked={settings.waitlistNotificationSMS && isTwilioEnabled}
                         onCheckedChange={(checked) => 
                           setSettings(prev => ({ ...prev, waitlistNotificationSMS: checked }))
                         }
-                        disabled={!isTelnyxEnabled}
+                        disabled={!isTwilioEnabled}
                       />
                     </div>
 
@@ -1735,9 +2111,9 @@ export default function AdminSettings() {
                   <p className="text-sm text-muted-foreground">
                     {!hasSmsFeature 
                       ? 'SMS notifications are available on Growth and Elite plans'
-                      : isTelnyxEnabled 
+                      : isTwilioEnabled 
                         ? 'Receive SMS notifications for urgent events'
-                        : 'Requires Telnyx integration to be configured'
+                        : 'Requires Twilio integration to be configured'
                     }
                   </p>
                   {!hasSmsFeature ? (
@@ -1746,9 +2122,9 @@ export default function AdminSettings() {
                       className="mt-2"
                       targetPlan="growth"
                     />
-                  ) : !isTelnyxEnabled && (
+                  ) : !isTwilioEnabled && (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Configure Telnyx in the Integrations tab to enable SMS notifications
+                      Configure Twilio in the Integrations tab to enable SMS notifications
                     </p>
                   )}
                 </div>
@@ -1770,6 +2146,13 @@ export default function AdminSettings() {
             </Button>
           </div>
         </TabsContent>
+
+
+        <TabsContent value="plan" className="space-y-6">
+          <PlanAndFeaturesContent />
+        </TabsContent>
+
+
 
         <TabsContent value="integrations" className="space-y-6">
           <Card className="bg-card border-border">

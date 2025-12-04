@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard } from "lucide-react";
+import { ExternalLink, CreditCard } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
 interface ManageSubscriptionButtonProps {
@@ -13,28 +16,53 @@ export function ManageSubscriptionButton({
   billingStatus, 
   className = "" 
 }: ManageSubscriptionButtonProps) {
-  const [, navigate] = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const [location, navigate] = useLocation();
 
-  const handleClick = () => {
-    navigate('/admin/billing');
+  const handleClick = async () => {
+    try {
+      setIsLoading(true);
+
+      if (planId === 'free' || billingStatus === 'none') {
+        // Redirect to embedded checkout for Core plan upgrade
+        navigate('/checkout?plan=core');
+      } else {
+        // Redirect to embedded checkout with portal parameter for existing subscriptions
+        navigate('/checkout?portal=true');
+      }
+    } catch (error: any) {
+      console.error('Error managing subscription:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to manage payment method. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getButtonText = () => {
+    return 'Manage Payment Method';
+  };
+
+  const getButtonIcon = () => {
     if (planId === 'free' || billingStatus === 'none') {
-      return 'Upgrade Plan';
+      return <CreditCard className="h-4 w-4" />;
     }
-    return 'Manage Subscription';
+    return <ExternalLink className="h-4 w-4" />;
   };
 
   return (
     <Button
       onClick={handleClick}
+      disabled={isLoading}
       className={className}
       size="sm"
-      data-testid="button-manage-subscription"
     >
-      <CreditCard className="h-4 w-4" />
-      {getButtonText()}
+      {getButtonIcon()}
+      {isLoading ? 'Loading...' : getButtonText()}
     </Button>
   );
 }

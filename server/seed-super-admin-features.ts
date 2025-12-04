@@ -59,9 +59,9 @@ async function seedSuperAdminFeatures() {
         enabled: true
       },
       {
-        id: 'wh_telnyx_sms',
-        name: 'Telnyx SMS Events',
-        url: 'https://api.example.com/webhooks/telnyx',
+        id: 'wh_twilio_sms',
+        name: 'Twilio SMS Events',
+        url: 'https://api.example.com/webhooks/twilio',
         enabled: false
       },
       {
@@ -175,7 +175,7 @@ async function seedSuperAdminFeatures() {
     console.log('✉️ Seeding email events...');
     
     const emailEventTypes = ['processed', 'delivered', 'open', 'click', 'bounce', 'dropped', 'spamreport', 'deferred'];
-    const emailProviders = ['resend', 'mailgun', 'ses'];
+    const emailProviders = ['resend', 'sendgrid', 'mailgun', 'ses'];
     
     for (let i = 0; i < 1000; i++) {
       const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
@@ -196,7 +196,7 @@ async function seedSuperAdminFeatures() {
     console.log('📱 Seeding SMS events...');
     
     const smsEventTypes = ['delivered', 'undelivered', 'failed', 'sent'];
-    const smsProviders = ['telnyx', 'vonage'];
+    const smsProviders = ['twilio', 'vonage'];
     
     for (let i = 0; i < 300; i++) {
       const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);

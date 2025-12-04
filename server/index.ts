@@ -40,11 +40,10 @@ import templatesRouter from './routes/templates';
 import notificationsRouter from './routes/notifications';
 import contactGroupsRouter from './routes/contact-groups';
 import terminologyRouter from './routes/terminology';
-import { publicSessionsRouter } from './routes/public-sessions';
 
 const app = express();
 
-// CORS configuration for production and development domains
+// CORS configuration for production domain
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://playhq.app',
@@ -54,16 +53,11 @@ app.use((req, res, next) => {
   ];
 
   const origin = req.headers.origin;
-  
-  // Allow the origin if it's in the list OR if it's a Replit dev URL
-  const isAllowed = allowedOrigins.includes(origin as string) || 
-    (origin && (origin.includes('.replit.dev') || origin.includes('.repl.co')));
-  
-  if (isAllowed && origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (allowedOrigins.includes(origin as string)) {
+    res.setHeader('Access-Control-Allow-Origin', origin as string);
   }
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
@@ -131,7 +125,6 @@ app.use((req, res, next) => {
   // Mount public routes BEFORE authentication
   app.use('/api', signupRouter);
   app.use('/api', companySignupRouter);
-  app.use('/api/public', publicSessionsRouter);
   
   // Ensure admin user exists for testing
   await ensureAdminUser();

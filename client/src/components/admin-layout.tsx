@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -44,7 +43,7 @@ const adminNavItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
-  { href: "/admin/invitations", label: "Promo & Access Codes", icon: Tag },
+  { href: "/admin/invitations", label: "Invitations", icon: UserPlus },
   { href: "/admin/credits", label: "Credits", icon: CreditCard },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
@@ -244,7 +243,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenuItem 
                   onClick={async () => {
                     try {
-                      await apiRequest('POST', '/api/auth/logout');
+                      await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                      });
                       window.location.href = '/';
                     } catch (error) {
                       console.error('Logout error:', error);

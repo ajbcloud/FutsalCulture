@@ -4,7 +4,6 @@ import {
   tenants, 
   tenantMemberships,
   invites,
-  inviteCodes,
   emailVerifications, 
   subscriptions,
   auditEvents,
@@ -15,8 +14,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
-import { eq, and, isNull, sql } from "drizzle-orm";
-import { createOrganizationForTenant, isClerkEnabled } from "./services/clerkOrganizationService";
+import { eq, and, isNull } from "drizzle-orm";
 
 export function setupBetaOnboardingRoutes(app: Express) {
   
@@ -42,7 +40,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
       const tenantCode = generateTenantCode();
 
       // Create tenant
-      const tenantResult = await db.insert(tenants).values({
+      const [tenant] = await db.insert(tenants).values({
         name: org_name,
         subdomain: slug,
         city: city || null,
@@ -52,13 +50,8 @@ export function setupBetaOnboardingRoutes(app: Express) {
         tenantCode,
         contactName: contact_name,
         contactEmail: contact_email,
-        inviteCode: slug.toUpperCase(), // Legacy field - use slug as invite code
         planLevel: "free", // Always start new tenants on free plan
-      }).returning() as any[];
-      const tenant = tenantResult[0];
-      if (!tenant) {
-        return res.status(500).json({ error: "Failed to create tenant" });
-      }
+      }).returning();
 
       // Create subscription record (free plan)
       await db.insert(subscriptions).values({
@@ -76,33 +69,12 @@ export function setupBetaOnboardingRoutes(app: Express) {
         until: null
       });
 
-      // Create default invite code using the slug
-      await db.insert(inviteCodes).values({
-        tenantId: tenant.id,
-        code: slug.toUpperCase(),
-        codeType: "invite",
-        description: "Default organization invite code",
-        isDefault: true,
-        isActive: true,
-      });
-
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant.id,
-        action: "create",
-        resourceType: "tenant",
-        resourceId: tenant.id,
-        details: { slug, org_name }
+        eventType: "tenant_created",
+        metadataJson: { slug, org_name }
       });
-
-      // Create Clerk organization for tenant
-      if (isClerkEnabled()) {
-        try {
-          await createOrganizationForTenant(tenant.id);
-        } catch (clerkError) {
-          console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
-        }
-      }
 
       res.json({ 
         success: true, 
@@ -112,192 +84,6 @@ export function setupBetaOnboardingRoutes(app: Express) {
 
     } catch (error) {
       console.error("Beta get-started error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Create club for Clerk-authenticated users
-  app.post('/api/beta/clerk-create-club', async (req, res) => {
-    try {
-      // Verify Clerk authentication
-      const { getAuth } = await import('@clerk/express');
-      const auth = getAuth(req);
-      
-      if (!auth || !auth.userId) {
-        return res.status(401).json({ error: "Authentication required. Please sign in first." });
-      }
-      
-      const clerk_user_id = auth.userId;
-      const { org_name, join_code, contact_name, city, state, country, zip_code, sports } = req.body;
-      
-      if (!org_name || !contact_name) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Validate join_code if provided
-      if (!join_code || typeof join_code !== 'string') {
-        return res.status(400).json({ error: "Join code is required" });
-      }
-      
-      const sanitizedCode = join_code.toLowerCase().replace(/[^a-z0-9-]/g, '');
-      if (sanitizedCode.length < 3) {
-        return res.status(400).json({ error: "Join code must be at least 3 characters" });
-      }
-      if (sanitizedCode.length > 30) {
-        return res.status(400).json({ error: "Join code must be 30 characters or less" });
-      }
-      if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]{1,2}$/.test(sanitizedCode)) {
-        return res.status(400).json({ error: "Join code must start and end with a letter or number" });
-      }
-
-      // Check if join code is already taken
-      const existingTenant = await db.query.tenants.findFirst({ 
-        where: eq(tenants.subdomain, sanitizedCode) 
-      });
-      if (existingTenant) {
-        return res.status(409).json({ 
-          error: "This join code is already taken. Please choose a different one.",
-          field: "join_code"
-        });
-      }
-
-      // Get user's email from Clerk
-      let userEmail = '';
-      if (process.env.CLERK_SECRET_KEY) {
-        try {
-          const response = await fetch(`https://api.clerk.com/v1/users/${clerk_user_id}`, {
-            headers: {
-              Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-            },
-          });
-          if (response.ok) {
-            const clerkUser = await response.json();
-            userEmail = clerkUser.email_addresses?.[0]?.email_address || '';
-          }
-        } catch (e) {
-          console.error('Error fetching Clerk user:', e);
-        }
-      }
-
-      // Use the sanitized join_code as both slug and tenantCode
-      const slug = sanitizedCode;
-      const tenantCode = sanitizedCode;
-
-      // Create tenant
-      const tenantResult = await db.insert(tenants).values({
-        name: org_name,
-        subdomain: slug,
-        city: city || null,
-        state: state || null,
-        country: country || "US",
-        slug,
-        tenantCode,
-        contactName: contact_name,
-        contactEmail: userEmail,
-        inviteCode: slug.toUpperCase(), // Legacy field - use slug as invite code
-        planLevel: "free",
-      }).returning() as any[];
-      const tenant = tenantResult[0];
-      if (!tenant) {
-        return res.status(500).json({ error: "Failed to create tenant" });
-      }
-
-      // Import required tables
-      const { tenantPlanAssignments, users } = await import('@shared/schema');
-
-      // Create plan assignment
-      await db.insert(tenantPlanAssignments).values({
-        tenantId: tenant.id,
-        planCode: "free",
-        since: new Date(),
-        until: null
-      });
-
-      // Create default invite code using the slug
-      await db.insert(inviteCodes).values({
-        tenantId: tenant.id,
-        code: slug.toUpperCase(),
-        codeType: "invite",
-        description: "Default organization invite code",
-        isDefault: true,
-        isActive: true,
-      });
-
-      // Create or find user with Clerk ID
-      let existingUser = await db.query.users.findFirst({
-        where: eq(users.clerkUserId, clerk_user_id)
-      });
-
-      let currentUser: { id: string; email: string };
-
-      if (!existingUser) {
-        // Create new user
-        const userResult = await db.insert(users).values({
-          tenantId: tenant.id,
-          email: userEmail,
-          firstName: contact_name.split(' ')[0] || contact_name,
-          lastName: contact_name.split(' ').slice(1).join(' ') || '',
-          role: 'tenant_admin',
-          status: 'active',
-          clerkUserId: clerk_user_id,
-          emailVerifiedAt: new Date(),
-        }).returning() as any[];
-        currentUser = userResult[0];
-      } else {
-        // Update existing user with tenant and admin role
-        await db.update(users)
-          .set({ 
-            tenantId: tenant.id, 
-            role: 'tenant_admin',
-            status: 'active'
-          })
-          .where(eq(users.id, existingUser.id));
-        currentUser = { id: existingUser.id, email: existingUser.email || userEmail };
-      }
-
-      // Create tenant membership
-      await db.insert(tenantMemberships).values({
-        tenantId: tenant.id,
-        userId: currentUser.id,
-        role: 'admin',
-        status: 'active'
-      } as any);
-
-      // Record audit event
-      await db.insert(auditEvents).values({
-        tenantId: tenant.id,
-        userId: currentUser.id,
-        action: "create",
-        resourceType: "tenant",
-        resourceId: tenant.id,
-        details: { slug, org_name, clerkUserId: clerk_user_id }
-      });
-
-      // Create Clerk organization for tenant and add user as admin
-      if (isClerkEnabled()) {
-        try {
-          const clerkOrg = await createOrganizationForTenant(tenant.id);
-          if (clerkOrg) {
-            // Add user to the Clerk organization as admin
-            const { addMemberToOrganization } = await import('./services/clerkOrganizationService');
-            await addMemberToOrganization(clerkOrg.id, clerk_user_id, 'admin');
-            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${clerkOrg.id} as admin`);
-          }
-        } catch (clerkError) {
-          console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
-        }
-      }
-
-      res.json({ 
-        success: true, 
-        tenantId: tenant.id,
-        tenantName: tenant.name,
-        tenantCode: tenant.tenantCode,
-        userId: currentUser.id
-      });
-
-    } catch (error) {
-      console.error("Clerk create-club error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -327,10 +113,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: tenant_id,
-        action: "create",
-        resourceType: "invite",
-        resourceId: invite.id,
-        details: { email, role }
+        eventType: "invite_sent",
+        targetId: invite.id,
+        metadataJson: { email, role }
       });
 
       res.json({ 
@@ -386,10 +171,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Record audit event
       await db.insert(auditEvents).values({
         tenantId: invite.tenantId,
-        userId: user_id,
-        action: "accept",
-        resourceType: "invite",
-        resourceId: invite.id
+        actorUserId: user_id,
+        eventType: "invite_accepted",
+        targetId: invite.id
       });
 
       res.json({ success: true, tenantId: invite.tenantId });
@@ -409,10 +193,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Find tenant by code (case-insensitive)
-      const normalizedCode = tenant_code.toLowerCase().trim();
+      // Find tenant by code
       const tenant = await db.query.tenants.findFirst({
-        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
+        where: eq(tenants.tenantCode, tenant_code.toUpperCase())
       });
 
       if (!tenant) {
@@ -486,9 +269,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
         await db.insert(notifications).values({
           tenantId: tenant.id,
           type: 'email',
-          recipient: 'admins',
+          recipientType: 'admins',
           subject: 'Minor Access Request Requires Approval',
-          message: `A minor (age ${age}) has requested to join your organization:\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${email}\nRole: ${role}\n\nPlease review and approve this request in the admin panel.`,
+          body: `A minor (age ${age}) has requested to join your organization:\n\nName: ${user.firstName} ${user.lastName}\nEmail: ${email}\nRole: ${role}\n\nPlease review and approve this request in the admin panel.`,
           status: 'pending'
         });
 
@@ -497,9 +280,10 @@ export function setupBetaOnboardingRoutes(app: Express) {
           await db.insert(notifications).values({
             tenantId: tenant.id,
             type: 'email',
-            recipient: guardian_email,
+            recipientEmail: guardian_email,
+            recipientType: 'custom',
             subject: 'Minor Access Request Pending Approval',
-            message: `${user.firstName} ${user.lastName} (age ${age}) has requested to join ${tenant.name}.\n\nThis request is pending approval from the organization administrators. You will be notified when the request is approved or denied.`,
+            body: `${user.firstName} ${user.lastName} (age ${age}) has requested to join ${tenant.name}.\n\nThis request is pending approval from the organization administrators. You will be notified when the request is approved or denied.`,
             status: 'pending'
           });
         }
@@ -507,10 +291,9 @@ export function setupBetaOnboardingRoutes(app: Express) {
         // Record audit event
         await db.insert(auditEvents).values({
           tenantId: tenant.id,
-          userId: user_id,
-          action: "request",
-          resourceType: "membership",
-          details: { email, role, age, isMinor: true, guardianEmail: guardian_email || null }
+          actorUserId: user_id,
+          eventType: "join_request_pending",
+          metadataJson: { email, role, age, isMinor: true, guardianEmail: guardian_email || null }
         });
 
         res.json({ 
@@ -544,422 +327,16 @@ export function setupBetaOnboardingRoutes(app: Express) {
         // Record audit event
         await db.insert(auditEvents).values({
           tenantId: tenant.id,
-          userId: user_id,
-          action: "join",
-          resourceType: "membership",
-          details: { email, role, age }
+          actorUserId: user_id,
+          eventType: "joined_by_code",
+          metadataJson: { email, role, age }
         });
-
-        // Add user to tenant's Clerk organization if applicable
-        if (tenant.clerkOrganizationId && user.clerkUserId) {
-          try {
-            const { addMemberToOrganization, isClerkEnabled } = await import('./services/clerkOrganizationService');
-            if (isClerkEnabled()) {
-              await addMemberToOrganization(
-                tenant.clerkOrganizationId, 
-                user.clerkUserId,
-                role === 'tenant_admin' ? 'admin' : 'basic_member'
-              );
-              console.log(`✅ Added user ${user.clerkUserId} to Clerk org ${tenant.clerkOrganizationId}`);
-            }
-          } catch (clerkError) {
-            console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
-            // Don't fail the join if Clerk addition fails
-          }
-        }
 
         res.json({ success: true, tenantId: tenant.id });
       }
 
     } catch (error) {
       console.error("Beta join-by-code error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Join by code for Clerk-authenticated users (no existing PlayHQ user required)
-  // This endpoint requires Clerk authentication
-  app.post('/api/beta/clerk-join-by-code', async (req, res) => {
-    try {
-      // Verify Clerk authentication and get the real clerk_user_id from the session
-      const { getAuth } = await import('@clerk/express');
-      const auth = getAuth(req);
-      
-      if (!auth || !auth.userId) {
-        return res.status(401).json({ error: "Authentication required. Please sign in first." });
-      }
-      
-      // Use the authenticated clerk_user_id from the session, NOT from the request body
-      const clerk_user_id = auth.userId;
-      
-      const { tenant_code, email, first_name, last_name, role = 'parent' } = req.body;
-      
-      if (!tenant_code) {
-        return res.status(400).json({ error: "Missing tenant code" });
-      }
-      
-      // If email not provided, fetch from Clerk
-      let userEmail = email;
-      if (!userEmail && process.env.CLERK_SECRET_KEY) {
-        try {
-          const response = await fetch(`https://api.clerk.com/v1/users/${clerk_user_id}`, {
-            headers: {
-              Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-            },
-          });
-          if (response.ok) {
-            const clerkUser = await response.json();
-            userEmail = clerkUser.email_addresses?.[0]?.email_address;
-          }
-        } catch (e) {
-          console.error('Error fetching Clerk user:', e);
-        }
-      }
-      
-      if (!userEmail) {
-        return res.status(400).json({ error: "Could not determine email address" });
-      }
-
-      // Find tenant by code (case-insensitive, try tenantCode first, then inviteCode)
-      const normalizedCode = tenant_code.toLowerCase().trim();
-      let tenant = await db.query.tenants.findFirst({
-        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
-      });
-      
-      if (!tenant) {
-        tenant = await db.query.tenants.findFirst({
-          where: sql`LOWER(${tenants.inviteCode}) = ${normalizedCode}`
-        });
-      }
-
-      if (!tenant) {
-        return res.status(404).json({ error: "Organization not found. Please check your code and try again." });
-      }
-
-      // Check if user already exists by clerkUserId
-      const { users } = await import('@shared/schema');
-      let user = await db.query.users.findFirst({
-        where: eq(users.clerkUserId, clerk_user_id)
-      });
-
-      // If not, check by email
-      if (!user) {
-        user = await db.query.users.findFirst({
-          where: eq(users.email, userEmail.toLowerCase())
-        });
-      }
-
-      // Create user if they don't exist
-      let currentUser: NonNullable<typeof user>;
-      if (!user) {
-        const insertResult = await db.insert(users).values({
-          email: userEmail.toLowerCase(),
-          firstName: first_name || userEmail.split('@')[0],
-          lastName: last_name || '',
-          clerkUserId: clerk_user_id,
-          tenantId: tenant.id,
-          role: role as any,
-          authProvider: 'clerk',
-          verificationStatus: 'verified',
-          isApproved: true,
-          approvedAt: new Date(),
-        }).returning() as any[];
-        const newUser = insertResult[0];
-        if (!newUser) {
-          return res.status(500).json({ error: "Failed to create user" });
-        }
-        currentUser = newUser;
-        console.log(`✅ Created new PlayHQ user for Clerk user ${clerk_user_id}`);
-      } else {
-        currentUser = user;
-        // Update existing user with clerkUserId if not set
-        if (!currentUser.clerkUserId) {
-          await db.update(users)
-            .set({ clerkUserId: clerk_user_id })
-            .where(eq(users.id, currentUser.id));
-        }
-        // Update tenantId if not set
-        if (!currentUser.tenantId) {
-          await db.update(users)
-            .set({ tenantId: tenant.id })
-            .where(eq(users.id, currentUser.id));
-        }
-      }
-
-      // Check if already a member
-      const existingMembership = await db.query.tenantMemberships.findFirst({
-        where: and(
-          eq(tenantMemberships.tenantId, tenant.id),
-          eq(tenantMemberships.userId, currentUser.id)
-        )
-      });
-
-      if (!existingMembership) {
-        // Create tenant membership
-        await db.insert(tenantMemberships).values({
-          tenantId: tenant.id,
-          userId: currentUser.id,
-          role: role as any,
-          status: 'active'
-        });
-      }
-
-      // Add user to tenant's Clerk organization (create org if needed)
-      let finalClerkOrgId: string | null = null;
-      try {
-        const { addMemberToOrganization, isClerkEnabled, createOrganizationForTenant: createClerkOrg } = await import('./services/clerkOrganizationService');
-        if (isClerkEnabled()) {
-          let clerkOrgId = tenant.clerkOrganizationId;
-          
-          // Create Clerk org if tenant doesn't have one yet
-          if (!clerkOrgId) {
-            console.log(`⚠️ Tenant ${tenant.name} has no Clerk org, creating one...`);
-            const createdOrg = await createClerkOrg(tenant.id);
-            clerkOrgId = createdOrg?.id || null;
-            if (clerkOrgId) {
-              console.log(`✅ Created Clerk org ${clerkOrgId} for tenant ${tenant.name}`);
-            }
-          }
-          
-          if (clerkOrgId) {
-            await addMemberToOrganization(
-              clerkOrgId, 
-              clerk_user_id,
-              role === 'tenant_admin' ? 'admin' : 'basic_member'
-            );
-            console.log(`✅ Added Clerk user ${clerk_user_id} to org ${clerkOrgId}`);
-            finalClerkOrgId = clerkOrgId;
-          }
-        }
-      } catch (clerkError: any) {
-        // Ignore "already a member" errors but still capture the orgId
-        if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
-          console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
-        }
-        // Still try to return the org ID even if "already a member"
-        finalClerkOrgId = tenant.clerkOrganizationId || null;
-      }
-
-      // Record audit event
-      await db.insert(auditEvents).values({
-        tenantId: tenant.id,
-        userId: currentUser.id,
-        action: "join",
-        resourceType: "membership",
-        details: { email: userEmail, role, clerkUserId: clerk_user_id }
-      });
-
-      res.json({ 
-        success: true, 
-        tenantId: tenant.id,
-        tenantName: tenant.name,
-        userId: currentUser.id,
-        clerkOrgId: finalClerkOrgId
-      });
-
-    } catch (error) {
-      console.error("Clerk join-by-code error:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  // Join by code for pending Clerk sessions (when session is in pending state)
-  // This endpoint verifies the Clerk token directly, which works even for pending sessions
-  app.post('/api/beta/pending-session-join', async (req, res) => {
-    try {
-      // Extract Bearer token from Authorization header
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: "Authorization token required" });
-      }
-      
-      const token = authHeader.replace('Bearer ', '');
-      
-      if (!process.env.CLERK_SECRET_KEY) {
-        return res.status(500).json({ error: "Server configuration error" });
-      }
-      
-      // Verify the token using Clerk's backend SDK - works even for pending sessions
-      let clerkUserId: string;
-      try {
-        const { verifyToken } = await import('@clerk/backend');
-        const verifiedToken = await verifyToken(token, {
-          secretKey: process.env.CLERK_SECRET_KEY,
-        });
-        
-        // The 'sub' claim contains the user ID
-        clerkUserId = verifiedToken.sub;
-        
-        if (!clerkUserId) {
-          return res.status(401).json({ error: "Invalid token: no user ID" });
-        }
-        
-        console.log(`✅ Verified pending session token for Clerk user: ${clerkUserId}`);
-      } catch (verifyError: any) {
-        console.error('Token verification failed:', verifyError);
-        return res.status(401).json({ error: "Invalid or expired token" });
-      }
-      
-      const { tenant_code, first_name, last_name, role = 'parent' } = req.body;
-      
-      if (!tenant_code) {
-        return res.status(400).json({ error: "Missing tenant code" });
-      }
-      
-      // Fetch user email from Clerk API
-      let userEmail: string | null = null;
-      try {
-        const response = await fetch(`https://api.clerk.com/v1/users/${clerkUserId}`, {
-          headers: {
-            Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-          },
-        });
-        if (response.ok) {
-          const clerkUser = await response.json();
-          userEmail = clerkUser.email_addresses?.[0]?.email_address;
-        }
-      } catch (e) {
-        console.error('Error fetching Clerk user:', e);
-      }
-      
-      if (!userEmail) {
-        return res.status(400).json({ error: "Could not determine email address" });
-      }
-
-      // Find tenant by code (case-insensitive, try tenantCode first, then inviteCode)
-      const normalizedCode = tenant_code.toLowerCase().trim();
-      let tenant = await db.query.tenants.findFirst({
-        where: sql`LOWER(${tenants.tenantCode}) = ${normalizedCode}`
-      });
-      
-      if (!tenant) {
-        tenant = await db.query.tenants.findFirst({
-          where: sql`LOWER(${tenants.inviteCode}) = ${normalizedCode}`
-        });
-      }
-
-      if (!tenant) {
-        return res.status(404).json({ error: "Organization not found. Please check your code and try again." });
-      }
-
-      // Check if user already exists by clerkUserId
-      const { users } = await import('@shared/schema');
-      let user = await db.query.users.findFirst({
-        where: eq(users.clerkUserId, clerkUserId)
-      });
-
-      // If not, check by email
-      if (!user) {
-        user = await db.query.users.findFirst({
-          where: eq(users.email, userEmail.toLowerCase())
-        });
-      }
-
-      let currentUser: typeof user;
-
-      if (!user) {
-        // Create new user
-        const [newUser] = await db.insert(users).values({
-          email: userEmail.toLowerCase(),
-          firstName: first_name || '',
-          lastName: last_name || '',
-          clerkUserId: clerkUserId,
-          tenantId: tenant.id,
-          role: role as any,
-          authProvider: 'clerk',
-          emailVerifiedAt: new Date(),
-        }).returning();
-        currentUser = newUser;
-      } else {
-        currentUser = user;
-        // Update existing user with clerkUserId if not set
-        if (!currentUser.clerkUserId) {
-          await db.update(users)
-            .set({ clerkUserId: clerkUserId })
-            .where(eq(users.id, currentUser.id));
-        }
-        // Update tenantId if not set
-        if (!currentUser.tenantId) {
-          await db.update(users)
-            .set({ tenantId: tenant.id })
-            .where(eq(users.id, currentUser.id));
-        }
-      }
-
-      // Check if already a member
-      const existingMembership = await db.query.tenantMemberships.findFirst({
-        where: and(
-          eq(tenantMemberships.tenantId, tenant.id),
-          eq(tenantMemberships.userId, currentUser.id)
-        )
-      });
-
-      if (!existingMembership) {
-        // Create tenant membership
-        await db.insert(tenantMemberships).values({
-          tenantId: tenant.id,
-          userId: currentUser.id,
-          role: role as any,
-          status: 'active'
-        });
-      }
-
-      // Add user to tenant's Clerk organization (create org if needed)
-      let finalClerkOrgId: string | null = null;
-      try {
-        const { addMemberToOrganization, isClerkEnabled, createOrganizationForTenant: createClerkOrg } = await import('./services/clerkOrganizationService');
-        if (isClerkEnabled()) {
-          let clerkOrgId = tenant.clerkOrganizationId;
-          
-          // Create Clerk org if tenant doesn't have one yet
-          if (!clerkOrgId) {
-            console.log(`⚠️ Tenant ${tenant.name} has no Clerk org, creating one...`);
-            const createdOrg = await createClerkOrg(tenant.id);
-            clerkOrgId = createdOrg?.id || null;
-            if (clerkOrgId) {
-              console.log(`✅ Created Clerk org ${clerkOrgId} for tenant ${tenant.name}`);
-            }
-          }
-          
-          if (clerkOrgId) {
-            await addMemberToOrganization(
-              clerkOrgId, 
-              clerkUserId,
-              role === 'tenant_admin' ? 'admin' : 'basic_member'
-            );
-            console.log(`✅ Added Clerk user ${clerkUserId} to org ${clerkOrgId}`);
-            finalClerkOrgId = clerkOrgId;
-          }
-        }
-      } catch (clerkError: any) {
-        // Ignore "already a member" errors but still capture the orgId
-        if (!clerkError.message?.includes('already') && !clerkError.message?.includes('exists')) {
-          console.error(`⚠️ Failed to add user to Clerk organization:`, clerkError);
-        }
-        finalClerkOrgId = tenant.clerkOrganizationId || null;
-      }
-
-      // Record audit event
-      await db.insert(auditEvents).values({
-        tenantId: tenant.id,
-        userId: currentUser.id,
-        action: "join",
-        resourceType: "membership",
-        details: { email: userEmail, role, clerkUserId: clerkUserId, pendingSession: true }
-      });
-
-      console.log(`✅ Pending session join successful: user ${currentUser.id} joined tenant ${tenant.name}`);
-
-      res.json({ 
-        success: true, 
-        tenantId: tenant.id,
-        tenantName: tenant.name,
-        userId: currentUser.id,
-        clerkOrgId: finalClerkOrgId
-      });
-
-    } catch (error) {
-      console.error("Pending session join error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

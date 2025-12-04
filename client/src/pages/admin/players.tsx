@@ -28,20 +28,16 @@ import { PlayerSessionHistoryDropdown } from '@/components/player-session-histor
 import { useQuery } from '@tanstack/react-query';
 import { FileCheck, FileX, Loader2 } from 'lucide-react';
 import { useTerminology } from "@/contexts/TerminologyContext";
-import { authFetch, apiRequest } from '@/lib/queryClient';
-
-interface ConsentStatus {
-  completedCount: number;
-  missingCount: number;
-  totalTemplates: number;
-  needsAdultResign?: boolean;
-  invalidatedTypes?: string[];
-}
 
 // Consent Status Cell Component
 function ConsentStatusCell({ playerId, playerName }: { playerId: string; playerName: string }) {
-  const { data: consentStatus, isLoading } = useQuery<ConsentStatus>({
-    queryKey: ['/api/admin/players', playerId, 'consent-status'],
+  const { data: consentStatus, isLoading } = useQuery({
+    queryKey: [`/api/admin/players/${playerId}/consent-status`],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/players/${playerId}/consent-status`);
+      if (!response.ok) throw new Error('Failed to fetch consent status');
+      return response.json();
+    },
     enabled: !!playerId
   });
 
@@ -293,7 +289,7 @@ export default function AdminPlayers() {
       const sendInviteEmails = (document.getElementById('sendInviteEmailsPlayers') as HTMLInputElement)?.checked;
       formData.append('sendInviteEmails', sendInviteEmails?.toString() || 'false');
       
-      const response = await authFetch('/api/admin/imports/players', {
+      const response = await fetch('/api/admin/imports/players', {
         method: 'POST',
         body: formData,
       });
@@ -341,7 +337,17 @@ export default function AdminPlayers() {
     try {
       setImporting(true); // Reuse importing state for loading
       
-      const response = await apiRequest('PATCH', `/api/admin/players/${editingPlayer.id}`, editForm);
+      const response = await fetch(`/api/admin/players/${editingPlayer.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update player');
+      }
 
       const updatedPlayer = await response.json();
 

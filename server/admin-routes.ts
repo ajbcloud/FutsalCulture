@@ -37,10 +37,16 @@ function getTimeAgo(date: Date): string {
 // Integration helper functions
 function maskCredentials(provider: string, credentials: any): any {
   switch (provider) {
-    case 'telnyx':
+    case 'twilio':
+      return {
+        accountSid: credentials.accountSid ? `***${credentials.accountSid.slice(-4)}` : '',
+        authToken: credentials.authToken ? '***' : '',
+        fromNumber: credentials.fromNumber,
+      };
+    case 'sendgrid':
       return {
         apiKey: credentials.apiKey ? `***${credentials.apiKey.slice(-4)}` : '',
-        fromNumber: credentials.fromNumber,
+        verifiedSender: credentials.verifiedSender,
       };
     case 'resend':
       return {
@@ -93,9 +99,14 @@ function maskCredentials(provider: string, credentials: any): any {
 
 function validateCredentials(provider: string, credentials: any): string | null {
   switch (provider) {
-    case 'telnyx':
-      if (!credentials.apiKey || !credentials.fromNumber) {
-        return 'Telnyx requires API Key and From Number';
+    case 'twilio':
+      if (!credentials.accountSid || !credentials.authToken || !credentials.fromNumber) {
+        return 'Twilio requires Account SID, Auth Token, and From Number';
+      }
+      break;
+    case 'sendgrid':
+      if (!credentials.apiKey || !credentials.verifiedSender) {
+        return 'SendGrid requires API Key and Verified Sender Address';
       }
       break;
     case 'resend':
@@ -142,8 +153,11 @@ function validateCredentials(provider: string, credentials: any): string | null 
 async function testIntegration(integration: any): Promise<{ success: boolean; error?: string }> {
   try {
     switch (integration.provider) {
-      case 'telnyx':
-        // Test Telnyx connection - placeholder for now
+      case 'twilio':
+        // Test Twilio connection - placeholder for now
+        return { success: true };
+      case 'sendgrid':
+        // Test SendGrid connection - placeholder for now
         return { success: true };
       case 'resend':
         // Test Resend connection using email provider abstraction
@@ -183,36 +197,79 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
 // Middleware to require admin access
 export async function requireAdmin(req: Request, res: Response, next: Function) {
   try {
-    let user = null;
+    let userId;
     
-    // PRIORITY 1: Check if user was already set by Clerk's syncClerkUser middleware
-    if ((req as any).user?.id) {
-      user = (req as any).user;
+    // Session validation for authentication
+    
+    // Check for local session first (password-based users)  
+    if ((req as any).session?.userId) {
+      userId = (req as any).session.userId;
     }
-    // PRIORITY 2: Check for local session (password-based users)
-    else if ((req as any).session?.userId) {
-      user = await storage.getUser((req as any).session.userId);
+    // Check direct user.id format (local auth)
+    else if ((req as any).user?.id) {
+      userId = (req as any).user.id;
     }
-    // PRIORITY 3: Check if user is authenticated via isAuthenticated() passport method
+    // Check if user is authenticated via isAuthenticated() passport method
     else if ((req as any).isAuthenticated && (req as any).isAuthenticated() && (req as any).user) {
-      user = (req as any).user;
+      userId = (req as any).user.id;
+    }
+    // In development, always allow the hardcoded super admin user to bypass auth
+    if (process.env.NODE_ENV === 'development' && !userId) {
+      userId = 'ajosephfinch';
+      // IMPORTANT: Set the session so subsequent requests work
+      if ((req as any).session) {
+        (req as any).session.userId = userId;
+        await new Promise((resolve) => (req as any).session.save(resolve));
+      }
+      // Development failsafe admin access
     }
     
     // Authentication validation complete
     
-    if (!user) {
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Check user's admin status directly from database
+    let user = await storage.getUser(userId);
+    
+    // Apply failsafe super admin permissions if this is the hardcoded admin
+    if (userId === 'ajosephfinch') {
+      if (user) {
+        // Ensure failsafe admin always has super admin permissions
+        user = {
+          ...user,
+          isSuperAdmin: true,
+          isAdmin: true,
+        };
+        // Enhanced failsafe admin permissions
+      } else {
+        // If failsafe admin doesn't exist in database, create a minimal user object
+        // Failsafe super admin virtual user - no tenant assignment
+        user = {
+          id: userId,
+          email: "ajosephfinch@gmail.com",
+          tenantId: null,
+          tenant_id: null,
+          isAdmin: true,
+          isSuperAdmin: true,
+          isAssistant: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
     }
     
     // Final user permissions validation
     
-    if (!user?.isAdmin && !user?.isSuperAdmin && !user?.isAssistant) {
+    if (!user?.isAdmin && !user?.isAssistant) {
       return res.status(403).json({ message: "Admin access required" });
     }
     
     // Attach user to request for convenience
     (req as any).currentUser = user;
     (req as any).adminTenantId = user?.tenantId;
+    (req as any).user = { ...((req as any).user || {}), id: userId };
     next();
   } catch (error) {
     console.error("Error checking admin access:", error);
@@ -223,23 +280,24 @@ export async function requireAdmin(req: Request, res: Response, next: Function) 
 // Middleware to require full admin (not assistant)
 export async function requireFullAdmin(req: Request, res: Response, next: Function) {
   try {
-    let user = null;
+    let userId;
     
-    // PRIORITY 1: Check if user was already set by Clerk's syncClerkUser middleware
-    if ((req as any).user?.id) {
-      user = (req as any).user;
+    // Check for local session first (password-based users)
+    if ((req as any).session?.userId) {
+      userId = (req as any).session.userId;
     }
-    // PRIORITY 2: Check for local session (password-based users)
-    else if ((req as any).session?.userId) {
-      user = await storage.getUser((req as any).session.userId);
+    // Check direct req.user.id format
+    else if ((req as any).user?.id) {
+      userId = (req as any).user.id;
     }
     
-    if (!user) {
+    if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
-    // Check user's admin status
-    if (!user?.isAdmin && !user?.isSuperAdmin) {
+    // Check user's admin status directly from database
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin) {
       return res.status(403).json({ message: "Full admin access required" });
     }
     
@@ -2433,13 +2491,13 @@ export async function setupAdminRoutes(app: any) {
       }, {} as any);
 
       // Use tenant's actual organization name and admin email as defaults
-      const tenantName = tenantInfo?.name || "Your Organization";
+      const defaultBusinessName = tenantInfo?.name || "Your Organization";
       const defaultContactEmail = currentUser?.email || "admin@example.com";
 
       // Default settings if none exist
       const defaultSettings = {
         autoApproveRegistrations: true,
-        businessName: tenantName, // Will be overridden below if saved value exists
+        businessName: defaultBusinessName,
         businessLogo: "",
         contactEmail: defaultContactEmail,
         supportEmail: defaultContactEmail,
@@ -2465,11 +2523,6 @@ export async function setupAdminRoutes(app: any) {
         enableHelpRequests: true, // Default to enabled for existing tenants
         ...settingsMap
       };
-      
-      // Always fall back to tenant name if businessName is empty or not set
-      if (!defaultSettings.businessName || defaultSettings.businessName === '' || defaultSettings.businessName === 'Your Organization') {
-        defaultSettings.businessName = tenantName;
-      }
       
       // Convert legacy paymentReminderHours to paymentReminderMinutes if it exists
       if (settingsMap.paymentReminderHours && !settingsMap.paymentReminderMinutes) {
@@ -3129,179 +3182,6 @@ export async function setupAdminRoutes(app: any) {
     } catch (error) {
       console.error("Error setting default invite code:", error);
       res.status(500).json({ message: "Failed to set default invite code" });
-    }
-  });
-
-  // Braintree discount management endpoints
-  app.get('/api/admin/braintree/discounts', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const tenantId = (req as any).currentUser?.tenantId;
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      const { fetchBraintreeDiscounts, isTenantBraintreeConfigured } = await import('./services/braintreeDiscountService');
-      
-      const isConfigured = await isTenantBraintreeConfigured(tenantId);
-      if (!isConfigured) {
-        return res.status(400).json({ 
-          message: "Braintree not configured", 
-          configured: false,
-          discounts: [] 
-        });
-      }
-
-      const discounts = await fetchBraintreeDiscounts(tenantId);
-      res.json({ configured: true, discounts });
-    } catch (error) {
-      console.error("Error fetching Braintree discounts:", error);
-      res.status(500).json({ message: "Failed to fetch Braintree discounts" });
-    }
-  });
-
-  app.post('/api/admin/braintree/test-connection', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const tenantId = (req as any).currentUser?.tenantId;
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      const { testBraintreeConnection } = await import('./services/braintreeDiscountService');
-      const result = await testBraintreeConnection(tenantId);
-      res.json(result);
-    } catch (error) {
-      console.error("Error testing Braintree connection:", error);
-      res.status(500).json({ success: false, error: "Failed to test connection" });
-    }
-  });
-
-  app.post('/api/admin/invite-codes/:id/link-braintree', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { braintreeDiscountId } = req.body;
-      const tenantId = (req as any).currentUser?.tenantId;
-      
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      if (!braintreeDiscountId) {
-        return res.status(400).json({ message: "Braintree discount ID is required" });
-      }
-
-      // Verify the code belongs to the tenant
-      const existingCode = await storage.getInviteCode(id);
-      if (!existingCode || existingCode.tenantId !== tenantId) {
-        return res.status(404).json({ message: "Invite code not found" });
-      }
-
-      const { linkInviteCodeToBraintreeDiscount } = await import('./services/braintreeDiscountService');
-      const result = await linkInviteCodeToBraintreeDiscount(id, braintreeDiscountId, tenantId);
-      
-      if (!result.success) {
-        return res.status(400).json({ message: result.error });
-      }
-
-      const updatedCode = await storage.getInviteCode(id);
-      res.json(updatedCode);
-    } catch (error) {
-      console.error("Error linking invite code to Braintree:", error);
-      res.status(500).json({ message: "Failed to link to Braintree discount" });
-    }
-  });
-
-  app.post('/api/admin/invite-codes/:id/unlink-braintree', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const tenantId = (req as any).currentUser?.tenantId;
-      
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      // Verify the code belongs to the tenant
-      const existingCode = await storage.getInviteCode(id);
-      if (!existingCode || existingCode.tenantId !== tenantId) {
-        return res.status(404).json({ message: "Invite code not found" });
-      }
-
-      const { unlinkFromBraintree } = await import('./services/braintreeDiscountService');
-      const result = await unlinkFromBraintree(id, 'invite', tenantId);
-      
-      if (!result.success) {
-        return res.status(400).json({ message: result.error });
-      }
-
-      const updatedCode = await storage.getInviteCode(id);
-      res.json(updatedCode);
-    } catch (error) {
-      console.error("Error unlinking invite code from Braintree:", error);
-      res.status(500).json({ message: "Failed to unlink from Braintree discount" });
-    }
-  });
-
-  app.post('/api/admin/discount-codes/:id/link-braintree', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { braintreeDiscountId } = req.body;
-      const tenantId = (req as any).currentUser?.tenantId;
-      
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      if (!braintreeDiscountId) {
-        return res.status(400).json({ message: "Braintree discount ID is required" });
-      }
-
-      // Verify the code belongs to the tenant
-      const existingCode = await storage.getDiscountCode(id);
-      if (!existingCode || existingCode.tenantId !== tenantId) {
-        return res.status(404).json({ message: "Discount code not found" });
-      }
-
-      const { linkDiscountCodeToBraintree } = await import('./services/braintreeDiscountService');
-      const result = await linkDiscountCodeToBraintree(id, braintreeDiscountId, tenantId);
-      
-      if (!result.success) {
-        return res.status(400).json({ message: result.error });
-      }
-
-      const updatedCode = await storage.getDiscountCode(id);
-      res.json(updatedCode);
-    } catch (error) {
-      console.error("Error linking discount code to Braintree:", error);
-      res.status(500).json({ message: "Failed to link to Braintree discount" });
-    }
-  });
-
-  app.post('/api/admin/discount-codes/:id/unlink-braintree', requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const tenantId = (req as any).currentUser?.tenantId;
-      
-      if (!tenantId) {
-        return res.status(400).json({ message: "Tenant ID is required" });
-      }
-
-      // Verify the code belongs to the tenant
-      const existingCode = await storage.getDiscountCode(id);
-      if (!existingCode || existingCode.tenantId !== tenantId) {
-        return res.status(404).json({ message: "Discount code not found" });
-      }
-
-      const { unlinkFromBraintree } = await import('./services/braintreeDiscountService');
-      const result = await unlinkFromBraintree(id, 'discount', tenantId);
-      
-      if (!result.success) {
-        return res.status(400).json({ message: result.error });
-      }
-
-      const updatedCode = await storage.getDiscountCode(id);
-      res.json(updatedCode);
-    } catch (error) {
-      console.error("Error unlinking discount code from Braintree:", error);
-      res.status(500).json({ message: "Failed to unlink from Braintree discount" });
     }
   });
 
@@ -4353,15 +4233,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Parents management
   app.get('/api/admin/parents', requireAdmin, async (req: Request, res: Response) => {
     try {
-      let tenantId = (req as any).currentUser?.tenantId;
-      const isSuperAdmin = (req as any).currentUser?.isSuperAdmin;
-      
-      // For super admins without tenant context, use the first available tenant
-      if (!tenantId && isSuperAdmin) {
-        const firstTenant = await db.query.tenants.findFirst();
-        tenantId = firstTenant?.id;
-      }
-      
+      const tenantId = (req as any).currentUser?.tenantId;
       if (!tenantId) {
         return res.status(400).json({ error: "Tenant ID required" });
       }
@@ -5200,8 +5072,9 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       const testResults = {
         stripe: { success: true, message: "Stripe connection verified successfully" },
         braintree: { success: true, message: "Braintree connection verified successfully" },
+        sendgrid: { success: true, message: "SendGrid email service connected successfully" },
         resend: { success: true, message: "Resend email service connected successfully" },
-        telnyx: { success: true, message: "Telnyx SMS service connected successfully" },
+        twilio: { success: true, message: "Twilio SMS service connected successfully" },
         mailchimp: { success: true, message: "Mailchimp API connection verified" },
         google: { success: true, message: "Google Workspace integration verified" },
         microsoft: { success: true, message: "Microsoft 365 integration verified" },

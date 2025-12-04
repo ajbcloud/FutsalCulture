@@ -28,15 +28,24 @@ export default function SessionPayment() {
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [paymentComplete, setPaymentComplete] = useState(false);
 
-  // Fetch all offers and find the one we need
-  const { data: offers } = useQuery<WaitlistOffer[]>({
-    queryKey: ["/api/player/offers"],
+  // Fetch the waitlist offer details
+  const { data: offer, isLoading: offerLoading, error: offerError } = useQuery<WaitlistOffer>({
+    queryKey: ["/api/player/offers", offerId],
+    queryFn: async () => {
+      if (!offerId) throw new Error("No offer ID provided");
+      
+      const offers = await fetch("/api/player/offers").then(res => res.json());
+      const offer = offers.find((o: WaitlistOffer) => o.id === offerId);
+      
+      if (!offer) {
+        throw new Error("Offer not found or expired");
+      }
+      
+      return offer;
+    },
     enabled: !!offerId && isAuthenticated,
+    retry: false,
   });
-  
-  const offer = offers?.find((o: WaitlistOffer) => o.id === offerId);
-  const offerLoading = !offers;
-  const offerError = offerId && offers && !offer ? new Error("Offer not found or expired") : null;
 
   // Payment mutation
   const processPaymentMutation = useMutation({

@@ -44,6 +44,7 @@ export default function Parent2Invite() {
   // Fetch age policy to check if consent forms are required (uses tenant endpoint, not admin)
   const { data: agePolicyData } = useQuery<AgePolicy>({
     queryKey: ["/api/tenant/age-policy"],
+    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
   });
 
   // Check if consent forms are required (handle all possible truthy values)

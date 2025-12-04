@@ -2,7 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { db } from "../db";
-import { tenants, users, emailVerificationTokens, inviteCodes } from "@shared/schema";
+import { tenants, users, emailVerificationTokens } from "@shared/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { sendEmail, initEmail } from "../emailService";
 
@@ -53,7 +53,6 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
       country: country || null,
       contactName: contact_name,
       contactEmail: email.toLowerCase(),
-      inviteCode: subdomain.toUpperCase(), // Legacy field - use subdomain as invite code
       planLevel: "free", // Always start new tenants on free plan
     }).returning();
 
@@ -83,16 +82,6 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
       planCode: "free",
       since: new Date(),
       until: null
-    });
-
-    // Create default invite code using the subdomain
-    await db.insert(inviteCodes).values({
-      tenantId: tenant.id,
-      code: subdomain.toUpperCase(),
-      codeType: "invite",
-      description: "Default organization invite code",
-      isDefault: true,
-      isActive: true,
     });
 
     // Create verification token
@@ -204,6 +193,10 @@ authVerificationRouter.post("/signup", async (req, res) => {
       counter++;
     }
 
+    // Generate tenant invite code  
+    const { generateInviteCode } = await import('../utils/invite-helpers');
+    const inviteCode = generateInviteCode();
+    
     // Determine initial tenant status based on policies
     const tenantStatus = autoApprove ? 'active' : 'pending';
     const billingStatus = autoApprove ? 'trial' : 'pending_approval';
@@ -223,7 +216,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
       country: country || null,
       contactName: contact_name,
       contactEmail: contact_email.toLowerCase(),
-      inviteCode: subdomain.toUpperCase(), // Legacy field - use subdomain as invite code
+      inviteCode,
       planLevel: "free", // Base plan level
       status: tenantStatus,
       billingStatus: billingStatus,
@@ -244,8 +237,18 @@ authVerificationRouter.post("/signup", async (req, res) => {
       authProvider: "local",
     }).returning();
 
+    // Create default invite code for new tenant
+    const { tenantInviteCodes, subscriptions, tenantPlanAssignments } = await import('@shared/schema');
+    await db.insert(tenantInviteCodes).values({
+      tenantId: tenant.id,
+      code: generateInviteCode(),
+      name: 'Main Registration Code',
+      description: 'Primary code for parent and player registration',
+      isActive: true,
+      createdBy: user.id,
+    });
+
     // Create subscription record (free plan) - CRITICAL for webhook upgrades
-    const { subscriptions, tenantPlanAssignments } = await import('@shared/schema');
     await db.insert(subscriptions).values({
       tenantId: tenant.id,
       planKey: "free",
@@ -258,16 +261,6 @@ authVerificationRouter.post("/signup", async (req, res) => {
       planCode: "free",
       since: new Date(),
       until: null
-    });
-
-    // Create default invite code using the subdomain
-    await db.insert(inviteCodes).values({
-      tenantId: tenant.id,
-      code: subdomain.toUpperCase(),
-      codeType: "invite",
-      description: "Default organization invite code",
-      isDefault: true,
-      isActive: true,
     });
 
     // Create verification token
@@ -326,18 +319,6 @@ The PlayHQ Team`;
     });
 
     console.log(`✅ Created tenant ${tenant.name} and sent verification email to ${user.email}`);
-    
-    // Create Clerk organization for this tenant
-    try {
-      const { createOrganizationForTenant, isClerkEnabled } = await import('../services/clerkOrganizationService');
-      if (isClerkEnabled()) {
-        await createOrganizationForTenant(tenant.id);
-        console.log(`✅ Created Clerk organization for tenant ${tenant.id}`);
-      }
-    } catch (clerkError) {
-      console.error(`⚠️ Failed to create Clerk organization for tenant ${tenant.id}:`, clerkError);
-      // Don't fail the signup if Clerk org creation fails
-    }
     
     // Send notification to Super Admins if manual approval is required
     if (!autoApprove && requireApproval) {

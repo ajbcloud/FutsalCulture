@@ -1,4 +1,4 @@
-import { Check, Crown, Rocket, Sparkles, Tag, CreditCard, Star, TrendingUp, Zap } from 'lucide-react';
+import { Check, Crown, Rocket, Sparkles, Tag, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import BraintreeHostedFields, { BraintreeHostedFieldsRef, BillingAddress } from '@/components/billing/BraintreeHostedFields';
+import BraintreeHostedFields, { BraintreeHostedFieldsRef } from '@/components/billing/BraintreeHostedFields';
 
 interface PlanDetails {
   name: string;
@@ -31,7 +31,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Free',
     price: 0,
     description: 'Perfect for getting started',
-    icon: <Star className="h-5 w-5" />,
+    icon: <Sparkles className="h-5 w-5" />,
     features: [
       'Up to 10 players',
       'Basic session management',
@@ -44,7 +44,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
       locations: 1,
       coaches: 1,
     },
-    color: 'text-slate-600',
+    color: 'text-gray-600',
   },
   core: {
     name: 'Core',
@@ -71,7 +71,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Growth',
     price: 199,
     description: 'Advanced features for scaling',
-    icon: <TrendingUp className="h-5 w-5" />,
+    icon: <Crown className="h-5 w-5 text-purple-600" />,
     features: [
       'Up to 500 players',
       'Unlimited sessions',
@@ -93,7 +93,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
     name: 'Elite',
     price: 399,
     description: 'Enterprise-grade features',
-    icon: <Zap className="h-5 w-5" />,
+    icon: <Crown className="h-5 w-5 text-yellow-600" />,
     features: [
       'Unlimited players',
       'Unlimited sessions',
@@ -110,7 +110,7 @@ const plans: Record<'free' | 'core' | 'growth' | 'elite', PlanDetails> = {
       locations: -1,
       coaches: -1,
     },
-    color: 'text-amber-600',
+    color: 'text-yellow-600',
   },
 };
 
@@ -295,28 +295,8 @@ export function PlanUpgradeCard({
 
     setIsLoading(true);
     try {
-      const billingAddress = hostedFieldsRef.current.getBillingAddress();
-      
-      const missingFields: string[] = [];
-      if (!billingAddress.streetAddress?.trim()) {
-        missingFields.push('street address');
-      }
-      if (!billingAddress.postalCode?.trim()) {
-        missingFields.push('postal code');
-      }
-      
-      if (missingFields.length > 0) {
-        toast({
-          title: 'Missing Billing Information',
-          description: `Please enter your ${missingFields.join(' and ')} to complete payment.`,
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      const result = await hostedFieldsRef.current.tokenize(billingAddress);
-      await subscribeMutation.mutateAsync(result.nonce);
+      const nonce = await hostedFieldsRef.current.tokenize();
+      await subscribeMutation.mutateAsync(nonce);
     } catch (error: any) {
       toast({
         title: 'Payment Error',
@@ -448,7 +428,7 @@ export function PlanUpgradeCard({
                 onError={(error) => {
                   toast({
                     title: 'Payment Error',
-                    description: error.message || 'Failed to load payment form',
+                    description: error,
                     variant: 'destructive',
                   });
                 }}

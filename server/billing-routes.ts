@@ -14,14 +14,6 @@ router.use(async (req: any, res, next) => {
     const { storage } = await import('./storage');
     const user = await storage.getUser(req.user.id);
     (req as any).currentUser = user;
-    
-    // For Super Admin without tenant context, use the first available tenant
-    if (user && !user.tenantId && user.isSuperAdmin) {
-      const firstTenant = await db.query.tenants.findFirst();
-      if (firstTenant) {
-        (req as any).currentUser = { ...user, tenantId: firstTenant.id };
-      }
-    }
   }
   next();
 });
@@ -837,19 +829,12 @@ import * as braintreeService from './services/braintreeService';
 // Get Braintree client token for Drop-In UI
 router.get('/billing/braintree/client-token', async (req: any, res) => {
   try {
-    console.log('=== Braintree Client Token Request ===');
-    console.log('Braintree enabled:', braintreeService.isBraintreeEnabled());
-    
     if (!braintreeService.isBraintreeEnabled()) {
-      console.log('Braintree NOT enabled - returning 503');
       return res.status(503).json({ message: 'Braintree is not configured' });
     }
 
     const currentUser = req.currentUser;
-    console.log('Current user:', currentUser?.id, 'Tenant:', currentUser?.tenantId);
-    
     if (!currentUser?.tenantId) {
-      console.log('No tenant ID - returning 400');
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
@@ -862,10 +847,7 @@ router.get('/billing/braintree/client-token', async (req: any, res) => {
     .limit(1);
 
     const customerId = tenant[0]?.braintreeCustomerId || undefined;
-    console.log('Generating client token, customerId:', customerId || 'none (new customer)');
-    
     const clientToken = await braintreeService.generateClientToken(customerId);
-    console.log('Client token generated successfully, length:', clientToken?.length);
 
     res.json({ clientToken });
   } catch (error) {
@@ -898,7 +880,7 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       return res.status(503).json({ message: 'Braintree is not configured' });
     }
 
-    const { plan, paymentMethodNonce, discountCode } = req.body;
+    const { plan, paymentMethodNonce } = req.body;
     const currentUser = req.currentUser;
 
     if (!currentUser?.tenantId) {
@@ -949,41 +931,11 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       true
     );
 
-    // Look up Braintree discount ID if discount code provided
-    let braintreeDiscountId: string | null = null;
-    if (discountCode && typeof discountCode === 'string' && discountCode.trim()) {
-      try {
-        const { getBraintreeDiscountId, validateBraintreeDiscountId } = await import('./services/braintreeDiscountService');
-        braintreeDiscountId = await getBraintreeDiscountId(discountCode.trim(), currentUser.tenantId);
-        
-        if (braintreeDiscountId) {
-          // Validate the discount still exists in Braintree
-          const validation = await validateBraintreeDiscountId(currentUser.tenantId, braintreeDiscountId);
-          if (validation.valid) {
-            console.log(`✅ Braintree discount validated for tenant ${currentUser.tenantId}: code=${discountCode}, discountId=${braintreeDiscountId}`);
-          } else {
-            console.warn(`⚠️ Braintree discount no longer valid for tenant ${currentUser.tenantId}: ${validation.error}`);
-            braintreeDiscountId = null;
-          }
-        } else {
-          console.log(`ℹ️ No Braintree discount linked to code "${discountCode}" for tenant ${currentUser.tenantId}`);
-        }
-      } catch (error) {
-        console.error(`Error looking up Braintree discount for tenant ${currentUser.tenantId}:`, error);
-        braintreeDiscountId = null;
-      }
-    }
-
-    // Create subscription with optional discount
-    const subscriptionOptions = braintreeDiscountId 
-      ? { discountId: braintreeDiscountId }
-      : undefined;
-
+    // Create subscription
     const subscription = await braintreeService.createSubscription(
       currentUser.tenantId,
       plan as 'core' | 'growth' | 'elite',
-      paymentMethod.token,
-      subscriptionOptions
+      paymentMethod.token
     );
 
     // Clear feature access cache
@@ -994,8 +946,7 @@ router.post('/billing/braintree/subscribe', async (req: any, res) => {
       subscriptionId: subscription.id,
       plan,
       status: subscription.status,
-      nextBillingDate: subscription.nextBillingDate,
-      discountApplied: !!braintreeDiscountId
+      nextBillingDate: subscription.nextBillingDate
     });
   } catch (error) {
     console.error('Error creating Braintree subscription:', error);

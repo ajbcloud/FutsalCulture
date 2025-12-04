@@ -6,9 +6,9 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DollarSign, Users, TrendingUp, Calendar, Download, Crown } from 'lucide-react';
-import { authFetch } from '@/lib/queryClient';
+
 import { usePlanFeatures, useHasFeature, FeatureGuard, UpgradePrompt } from '../../hooks/use-feature-flags';
-import { FEATURE_KEYS } from '@shared/feature-flags';
+import { FEATURE_KEYS } from '@shared/schema';
 import {
   LineChart,
   Line,
@@ -43,26 +43,22 @@ export default function DetailedAnalytics() {
   const { hasFeature: hasAdvancedAnalytics } = useHasFeature(FEATURE_KEYS.ANALYTICS_ADVANCED);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const response = await authFetch(`/api/admin/analytics?${new URLSearchParams(filters as any)}`);
-        const detailed = await response.json();
-        setAnalytics(detailed);
+    Promise.all([
+      adminApi.getAnalytics(),
+      fetch(`/api/admin/analytics?${new URLSearchParams(filters)}`).then(r => r.json())
+    ])
+      .then(([basicAnalytics, detailed]) => {
+        setAnalytics(basicAnalytics);
         setDetailedData(detailed);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   const applyFilters = async () => {
     setLoading(true);
     try {
-      const response = await authFetch(`/api/admin/analytics?${new URLSearchParams(filters as any)}`);
-      const detailed = await response.json();
+      const detailed = await fetch(`/api/admin/analytics?${new URLSearchParams(filters)}`).then(r => r.json());
       setDetailedData(detailed);
     } catch (error) {
       console.error('Failed to fetch filtered analytics:', error);

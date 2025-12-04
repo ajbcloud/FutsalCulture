@@ -81,26 +81,47 @@ export default function ContactGroupsManager() {
     description: "",
   });
 
-  const { data: groupsData, isLoading: groupsLoading } = useQuery<{ groups: GroupWithMembers[] }>({
+  const { data: groupsData, isLoading: groupsLoading } = useQuery({
     queryKey: ['/api/contact-groups'],
+    queryFn: async () => {
+      const response = await fetch('/api/contact-groups');
+      if (!response.ok) throw new Error('Failed to fetch contact groups');
+      return response.json();
+    }
   });
 
   const groups: GroupWithMembers[] = groupsData?.groups || [];
 
-  const { data: usersData } = useQuery<{ users: User[] }>({
+  const { data: usersData } = useQuery({
     queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
   });
 
   const users: User[] = usersData?.users || [];
 
-  const { data: playersData } = useQuery<User[]>({
+  const { data: playersData } = useQuery({
     queryKey: ['/api/players'],
+    queryFn: async () => {
+      const response = await fetch('/api/players');
+      if (!response.ok) throw new Error('Failed to fetch players');
+      return response.json();
+    }
   });
 
   const players: User[] = playersData || [];
 
-  const { data: membersData, isLoading: membersLoading } = useQuery<{ members: ContactGroupMember[] }>({
+  const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ['/api/contact-groups', managingMembersGroup?.id, 'members'],
+    queryFn: async () => {
+      if (!managingMembersGroup?.id) return { members: [] };
+      const response = await fetch(`/api/contact-groups/${managingMembersGroup.id}/members`);
+      if (!response.ok) throw new Error('Failed to fetch group members');
+      return response.json();
+    },
     enabled: !!managingMembersGroup,
   });
 

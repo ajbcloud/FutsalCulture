@@ -120,8 +120,6 @@ export interface IStorage {
   // Tenant operations
   getTenant(id: string): Promise<TenantSelect | undefined>;
   getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined>;
-  getTenantByCode(tenantCode: string): Promise<TenantSelect | undefined>;
-  getTenantByInviteCode(inviteCode: string): Promise<TenantSelect | undefined>;
   getTenants(): Promise<TenantSelect[]>;
   createTenant(tenant: TenantInsert): Promise<TenantSelect>;
   updateTenant(id: string, tenant: Partial<TenantInsert>): Promise<TenantSelect>;
@@ -438,16 +436,6 @@ export class DatabaseStorage implements IStorage {
 
   async getTenantBySubdomain(subdomain: string): Promise<TenantSelect | undefined> {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.subdomain, subdomain));
-    return tenant;
-  }
-
-  async getTenantByCode(tenantCode: string): Promise<TenantSelect | undefined> {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.tenantCode, tenantCode));
-    return tenant;
-  }
-
-  async getTenantByInviteCode(inviteCode: string): Promise<TenantSelect | undefined> {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.inviteCode, inviteCode));
     return tenant;
   }
 
@@ -2322,14 +2310,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSuperAdminSettings(): Promise<any> {
-    // Default: auto-approve tenants, Super Admin can toggle this
+    // Mock platform settings for now
     return {
-      autoApproveTenants: true,
+      autoApproveTenants: false,
       enableMfaByDefault: true,
       defaultBookingWindowHours: 24,
       maxTenantsPerAdmin: 5,
       enableTenantSubdomains: true,
-      requireTenantApproval: false,
+      requireTenantApproval: true,
       defaultSessionCapacity: 15,
       platformMaintenanceMode: false,
     };
@@ -2353,7 +2341,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         id: '2',
-        name: 'Telnyx',
+        name: 'Twilio',
         type: 'sms',
         enabled: false,
         status: 'disconnected',
@@ -3101,9 +3089,9 @@ export class DatabaseStorage implements IStorage {
           verified: true
         },
         sms: {
-          provider: 'telnyx',
-          apiKey: '***',
-          fromNumber: '+1***',
+          provider: 'twilio',
+          accountSid: 'AC***',
+          authToken: '***',
           verified: false
         },
         payment: {

@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Shield,
   UserCheck,
+  Key,
+  Globe,
   UserX,
   Clock,
   Database,
@@ -128,8 +130,8 @@ export default function SuperAdminSettings() {
   
   // UI visibility states
   const [showResendKey, setShowResendKey] = useState(false);
-  const [showTelnyxKey, setShowTelnyxKey] = useState(false);
-  const [showTelnyxNumber, setShowTelnyxNumber] = useState(false);
+  const [showTwilioSid, setShowTwilioSid] = useState(false);
+  const [showTwilioToken, setShowTwilioToken] = useState(false);
   
   // Loading states
   const [testingIntegration, setTestingIntegration] = useState<string | null>(null);
@@ -244,6 +246,9 @@ export default function SuperAdminSettings() {
     const riskyChanges = [];
     if (updates.maintenance?.enabled && !localPolicies.maintenance.enabled) {
       riskyChanges.push('Enable maintenance mode');
+    }
+    if (updates.mfa?.requireSuperAdmins && !localPolicies.mfa.requireSuperAdmins) {
+      riskyChanges.push('Require MFA for Super Admins');
     }
     if (updates.impersonation && !updates.impersonation.allow && localPolicies.impersonation.allow) {
       riskyChanges.push('Disable impersonation');
@@ -516,6 +521,109 @@ export default function SuperAdminSettings() {
                         }
                       }}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* MFA Policy */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Key className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Multi-Factor Authentication</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Enforce MFA requirements for different user roles</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require MFA for Super Admins</Label>
+                      <p className="text-sm text-muted-foreground">Enforce MFA for all Super Admin accounts</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.mfa.requireSuperAdmins}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          mfa: { ...localPolicies.mfa, requireSuperAdmins: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Require MFA for Tenant Admins</Label>
+                      <p className="text-sm text-muted-foreground">Enforce MFA for all Tenant Admin accounts</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.mfa.requireTenantAdmins}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          mfa: { ...localPolicies.mfa, requireTenantAdmins: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Subdomains */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-muted-foreground" />
+                      <CardTitle>Tenant Subdomains</CardTitle>
+                    </div>
+                    <a href="#" className="text-sm text-primary hover:underline">Learn more</a>
+                  </div>
+                  <CardDescription>Configure custom subdomains for tenants</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Enable subdomains</Label>
+                      <p className="text-sm text-muted-foreground">Allow tenants to use custom subdomains</p>
+                    </div>
+                    <Switch
+                      checked={localPolicies.subdomains.enabled}
+                      onCheckedChange={(checked) => {
+                        handlePolicyChange({ 
+                          subdomains: { ...localPolicies.subdomains, enabled: checked }
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Base domain</Label>
+                    <Input
+                      value={localPolicies.subdomains.baseDomain}
+                      onChange={(e) => {
+                        handlePolicyChange({ 
+                          subdomains: { ...localPolicies.subdomains, baseDomain: e.target.value }
+                        });
+                      }}
+                      placeholder="tenants.playhq.app"
+                      disabled={!localPolicies.subdomains.enabled}
+                    />
+                    <div className="flex gap-2">
+                      {localPolicies.subdomains.dnsOk && (
+                        <Badge variant="secondary" className="text-green-600">
+                          <Check className="h-3 w-3 mr-1" />
+                          DNS Verified
+                        </Badge>
+                      )}
+                      {localPolicies.subdomains.sslOk && (
+                        <Badge variant="secondary" className="text-green-600">
+                          <Check className="h-3 w-3 mr-1" />
+                          SSL Verified
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1282,7 +1390,7 @@ export default function SuperAdminSettings() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>SMS Service (Telnyx)</CardTitle>
+                  <CardTitle>SMS Service (Twilio)</CardTitle>
                 </div>
                 <Badge variant={smsConfig?.accountSid ? "default" : "secondary"}>
                   {smsConfig?.accountSid ? "Configured" : "Not Configured"}
@@ -1294,41 +1402,41 @@ export default function SuperAdminSettings() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="telnyx-api-key">API Key</Label>
+                    <Label htmlFor="twilio-account-sid">Account SID</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="telnyx-api-key"
-                        type={showTelnyxKey ? "text" : "password"}
-                        placeholder="KEY0123456789..."
+                        id="twilio-account-sid"
+                        type={showTwilioSid ? "text" : "password"}
+                        placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                         value={smsConfig?.accountSid || ''}
                         onChange={(e) => setSmsConfig({ ...smsConfig, accountSid: e.target.value })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowTelnyxKey(!showTelnyxKey)}
+                        onClick={() => setShowTwilioSid(!showTwilioSid)}
                       >
-                        {showTelnyxKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showTwilioSid ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="telnyx-phone">From Phone Number</Label>
+                    <Label htmlFor="twilio-auth-token">Auth Token</Label>
                     <div className="flex gap-2">
                       <Input
-                        id="telnyx-phone"
-                        type="tel"
-                        placeholder="+1234567890"
-                        value={smsConfig?.phoneNumber || ''}
-                        onChange={(e) => setSmsConfig({ ...smsConfig, phoneNumber: e.target.value })}
+                        id="twilio-auth-token"
+                        type={showTwilioToken ? "text" : "password"}
+                        placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        value={smsConfig?.authToken || ''}
+                        onChange={(e) => setSmsConfig({ ...smsConfig, authToken: e.target.value })}
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setShowTelnyxNumber(!showTelnyxNumber)}
+                        onClick={() => setShowTwilioToken(!showTwilioToken)}
                       >
-                        {showTelnyxNumber ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showTwilioToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -1336,10 +1444,21 @@ export default function SuperAdminSettings() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="telnyx-messaging-profile">Messaging Profile ID (Optional)</Label>
+                    <Label htmlFor="twilio-phone">From Phone Number</Label>
                     <Input
-                      id="telnyx-messaging-profile"
-                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      id="twilio-phone"
+                      type="tel"
+                      placeholder="+1234567890"
+                      value={smsConfig?.phoneNumber || ''}
+                      onChange={(e) => setSmsConfig({ ...smsConfig, phoneNumber: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="twilio-messaging-service">Messaging Service SID (Optional)</Label>
+                    <Input
+                      id="twilio-messaging-service"
+                      placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       value={smsConfig?.messagingServiceSid || ''}
                       onChange={(e) => setSmsConfig({ ...smsConfig, messagingServiceSid: e.target.value })}
                     />
@@ -1539,7 +1658,7 @@ export default function SuperAdminSettings() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
+                  <Key className="h-5 w-5 text-muted-foreground" />
                   <CardTitle>Authentication (Replit OAuth)</CardTitle>
                 </div>
                 <Badge variant="default">Active</Badge>

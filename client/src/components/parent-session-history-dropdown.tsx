@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient, authFetch } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface ParentSessionHistoryDropdownProps {
   playerId: string;
@@ -60,7 +60,7 @@ export function ParentSessionHistoryDropdown({
   const { data: historyData, isLoading, error } = useQuery<SessionHistoryData>({
     queryKey: [`/api/players/${playerId}/session-history`, currentPage],
     queryFn: async () => {
-      const response = await authFetch(`/api/players/${playerId}/session-history?page=${currentPage}&limit=10`);
+      const response = await fetch(`/api/players/${playerId}/session-history?page=${currentPage}&limit=10`);
       if (!response.ok) {
         throw new Error('Failed to fetch session history');
       }

@@ -34,6 +34,7 @@ export default function AgePolicySettings() {
   // Fetch current policy
   const { data: currentPolicy, isLoading: loadingPolicy } = useQuery<TenantPolicy>({
     queryKey: ["/api/admin/age-policy"],
+    queryFn: () => fetch("/api/admin/age-policy", { credentials: 'include' }).then(res => res.json()),
   });
 
   // Local state for form

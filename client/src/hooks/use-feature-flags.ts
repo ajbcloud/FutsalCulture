@@ -3,17 +3,21 @@ import { hasFeature, getEnabledFeatures, checkPlanLimits, PLAN_LIMITS, FEATURE_N
 import type { PlanLevel, FeatureKey } from '@shared/schema';
 import React from 'react';
 
-type PlanFeaturesResponse = {
-  planLevel: PlanLevel;
-  features: Record<FeatureKey, boolean>;
-  limits: typeof PLAN_LIMITS[PlanLevel];
-  playerCount: number;
-};
-
 // Hook to get current tenant's plan level and features
 export function usePlanFeatures() {
-  return useQuery<PlanFeaturesResponse>({
+  return useQuery({
     queryKey: ['/api/tenant/plan-features'],
+    queryFn: async () => {
+      const response = await fetch('/api/tenant/plan-features');
+      if (!response.ok) throw new Error('Failed to fetch plan features');
+      const data = await response.json();
+      return data as {
+        planLevel: PlanLevel;
+        features: Record<FeatureKey, boolean>;
+        limits: typeof PLAN_LIMITS[PlanLevel];
+        playerCount: number;
+      };
+    },
   });
 }
 
@@ -156,7 +160,7 @@ export function UpgradePrompt({ feature, className, targetPlan }: UpgradePromptP
         ]),
         React.createElement('div', { className: 'mt-3', key: 'button-container' },
           React.createElement('a', {
-            href: '/admin/billing',
+            href: '/admin/settings?tab=plans-features',
             className: 'inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors',
             'data-testid': 'button-upgrade'
           }, 'Upgrade Now')

@@ -52,7 +52,7 @@ export interface CommunicationStats {
 }
 
 /**
- * Track email events from Resend webhooks
+ * Track email events from SendGrid webhooks
  */
 export async function trackEmailEvent(event: EmailEvent): Promise<void> {
   try {
@@ -81,7 +81,7 @@ export async function trackEmailEvent(event: EmailEvent): Promise<void> {
 }
 
 /**
- * Track SMS events from Telnyx webhooks
+ * Track SMS events from Twilio webhooks
  */
 export async function trackSMSEvent(event: SMSEvent): Promise<void> {
   try {

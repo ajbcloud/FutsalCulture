@@ -13,35 +13,19 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     
     // Handle cases where auth is null or userId is not present
     if (!auth || !auth.userId) {
-      // Debug: Log cookie info for auth requests
-      if (req.path === '/auth/user') {
-        const cookies = req.headers.cookie || '';
-        const hasSessionCookie = cookies.includes('__session');
-        const authHeader = req.headers.authorization;
-        console.log("🔍 syncClerkUser DEBUG for /auth/user:", {
-          hasSessionCookie,
-          hasAuthHeader: !!authHeader,
-          cookiePreview: cookies.substring(0, 100),
-          auth: auth
-        });
-      }
       return next();
     }
 
     const clerkUserId = auth.userId;
-    console.log("🔍 syncClerkUser: Found Clerk user", clerkUserId, "for request to", req.path);
     
     // First, check if user exists in our database
     let user = await storage.getUserByClerkId(clerkUserId);
     
     if (user) {
-      console.log("✅ syncClerkUser: Found existing user", user.id, "for Clerk ID", clerkUserId);
       (req as any).user = user;
       (req as any).userId = user.id;
       return next();
     }
-    
-    console.log("🆕 syncClerkUser: No existing user for Clerk ID", clerkUserId, "- will create new user");
     
     // User doesn't exist in our DB, need to fetch from Clerk and create
     if (!process.env.CLERK_SECRET_KEY) {
@@ -93,10 +77,9 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         lastName: lastName || existingUserByEmail.lastName,
         profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
       });
-      console.log(`✅ Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
+      console.log(`Linked existing user ${existingUserByEmail.id} to Clerk user ${clerkUserId}`);
     } else {
       // Create new user
-      console.log(`🆕 Creating new user for Clerk user ${clerkUserId} with email:`, email);
       user = await storage.upsertUser({
         email,
         clerkUserId,
@@ -107,11 +90,7 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
         isApproved: false,
         registrationStatus: 'pending',
       });
-      console.log(`✅ Created new user ${user?.id} for Clerk user ${clerkUserId}`);
-    }
-
-    if (!user) {
-      console.error("❌ syncClerkUser: Failed to create/find user for Clerk ID", clerkUserId);
+      console.log(`Created new user for Clerk user ${clerkUserId}`);
     }
 
     (req as any).user = user;
@@ -135,22 +114,31 @@ export function isClerkAuthenticated(req: Request, res: Response, next: NextFunc
 }
 
 export async function requireClerkAuth(req: Request, res: Response, next: NextFunction) {
-  // Clerk-only authentication - user must be set by syncClerkUser middleware
-  const user = (req as any).user;
+  // First, check if user is authenticated via Clerk
+  const auth = getAuth(req);
   
-  if (user) {
-    return next();
+  if (auth?.userId) {
+    // Clerk authentication - user should be set by syncClerkUser middleware
+    const user = (req as any).user;
+    if (user) {
+      return next();
+    }
   }
   
-  // No authenticated user found
-  const auth = getAuth(req);
-  const hasAuthHeader = !!req.headers.authorization;
-  
-  console.log("⚠️ requireClerkAuth: No user found", {
-    path: req.path,
-    hasAuthHeader,
-    clerkUserId: auth?.userId || null,
-  });
+  // Fallback to legacy session authentication for backward compatibility
+  const session = (req as any).session;
+  if (session?.userId) {
+    try {
+      const user = await storage.getUser(session.userId);
+      if (user) {
+        (req as any).user = user;
+        (req as any).userId = user.id;
+        return next();
+      }
+    } catch (error) {
+      console.error('Error fetching legacy session user:', error);
+    }
+  }
   
   return res.status(401).json({ message: "Authentication required" });
 }

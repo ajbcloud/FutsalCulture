@@ -7,7 +7,6 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DollarSign, Users, TrendingUp, Calendar, Download } from 'lucide-react';
 import { adminAnalytics } from '../../lib/adminApi';
-import { authFetch } from '@/lib/queryClient';
 import {
   LineChart,
   Line,
@@ -56,7 +55,7 @@ export default function AdminAnalyticsWorking() {
       params.append('viewBy', filters.viewBy);
       
       // Get filtered analytics data from the same endpoint
-      const response = await authFetch(`/api/admin/analytics?${params.toString()}`);
+      const response = await fetch(`/api/admin/analytics?${params.toString()}`);
       const analyticsData = await response.json();
       
       setAnalytics(analyticsData);
@@ -91,7 +90,7 @@ export default function AdminAnalyticsWorking() {
       params.append('viewBy', filters.viewBy);
       
       // Get filtered analytics data
-      const response = await authFetch(`/api/admin/analytics?${params.toString()}`);
+      const response = await fetch(`/api/admin/analytics?${params.toString()}`);
       const filteredAnalytics = await response.json();
       
       setAnalytics(filteredAnalytics);

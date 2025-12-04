@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUp, Download, AlertCircle, CheckCircle, Info, ExternalLink } from 'lucide-react';
-import { apiRequest, authFetch } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { HowToGuide } from './HowToGuide';
 
@@ -194,7 +194,7 @@ export function SessionsImportModal({ isOpen, onClose, onImportComplete }: Sessi
 
   const downloadTemplate = async () => {
     try {
-      const response = await authFetch('/api/admin/downloads/sessions-template');
+      const response = await fetch('/api/admin/downloads/sessions-template');
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -216,7 +216,7 @@ export function SessionsImportModal({ isOpen, onClose, onImportComplete }: Sessi
 
   const downloadSample = async () => {
     try {
-      const response = await authFetch('/api/admin/downloads/sessions-sample');
+      const response = await fetch('/api/admin/downloads/sessions-sample');
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);

@@ -65,28 +65,43 @@ export default function SendNotification() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
 
-  const { data: templatesData } = useQuery<{ templates: NotificationTemplate[] }>({
+  const { data: templatesData } = useQuery({
     queryKey: ['/api/templates'],
+    queryFn: async () => {
+      const response = await fetch('/api/templates');
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      return response.json();
+    }
   });
 
   const templates = templatesData?.templates || [];
 
-  const { data: contactGroupsData } = useQuery<{ groups: Array<{ id: string; name: string; memberCount?: number }> }>({
+  const { data: contactGroupsData } = useQuery({
     queryKey: ['/api/contact-groups'],
+    queryFn: async () => {
+      const response = await fetch('/api/contact-groups');
+      if (!response.ok) throw new Error('Failed to fetch contact groups');
+      return response.json();
+    }
   });
 
   const contactGroups = contactGroupsData?.groups || [];
 
-  const { data: usersData } = useQuery<{ users: Array<{ id: string; firstName: string; lastName: string; email?: string; phone?: string; role: string; canAccessPortal?: boolean }> }>({
+  const { data: usersData } = useQuery({
     queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
   });
 
   const allUsers = usersData?.users || [];
-  const eligibleUsers = allUsers.filter((u) => 
+  const eligibleUsers = allUsers.filter((u: any) => 
     u.role === 'parent' || (u.role === 'player' && u.canAccessPortal)
   );
 
-  const { data: stats } = useQuery<{ totalParents?: number; totalPlayers?: number }>({
+  const { data: stats } = useQuery({
     queryKey: ["/api/admin/stats"],
   });
 

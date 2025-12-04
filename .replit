@@ -64,20 +64,12 @@ localPort = 38787
 externalPort = 6800
 
 [[ports]]
-localPort = 38795
-externalPort = 8081
-
-[[ports]]
 localPort = 39249
 externalPort = 3003
 
 [[ports]]
 localPort = 39379
 externalPort = 5000
-
-[[ports]]
-localPort = 39953
-externalPort = 9000
 
 [[ports]]
 localPort = 41171
@@ -95,10 +87,6 @@ externalPort = 4200
 localPort = 44827
 externalPort = 3000
 
-[[ports]]
-localPort = 46137
-externalPort = 8099
-
 [agent]
 integrations = ["javascript_sendgrid==1.0.0:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0"]
 
@@ -107,6 +95,3 @@ integrations = ["javascript_sendgrid==1.0.0:1.0.0", "javascript_log_in_with_repl
 [userenv.shared]
 TESTING_VITE_STRIPE_PUBLIC_KEY = "pk_test_dGFsZW50ZWQtYnVsbGZyb2ctMjguY2xlcmsuYWNjb3VudHMuZGV2JA"
 TESTING_STRIPE_SECRET_KEY = "sk_test_6zqbVmr7NsOc8wviu7xBWkbx1URtnj8y6NtkDRb4Yk"
-BRAINTREE_PLAN_CORE = "plan_core_123"
-BRAINTREE_PLAN_GROWTH = "plan_growth_123"
-BRAINTREE_PLAN_ELITE = "plan_elite_123"

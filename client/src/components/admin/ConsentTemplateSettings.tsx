@@ -3,17 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient, authFetch } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { FileText, Upload, Download, Trash2, Eye, Info, Copy, X } from "lucide-react";
+import { FileText, Upload, Download, Trash2, Eye, Info, Copy } from "lucide-react";
 import { ObjectUploader } from "../ObjectUploader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { UploadResult } from '@uppy/core';
 
 interface ConsentTemplate {
@@ -201,8 +200,6 @@ export default function ConsentTemplateSettings() {
   const [newTemplateType, setNewTemplateType] = useState('');
   const [newTemplateTitle, setNewTemplateTitle] = useState('');
   const [newTemplateContent, setNewTemplateContent] = useState('');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewTitle, setPreviewTitle] = useState<string>('');
 
   // Fetch current templates
   const { data: templates = [], isLoading, error } = useQuery<ConsentTemplate[]>({
@@ -312,30 +309,37 @@ export default function ConsentTemplateSettings() {
 
   // Preview PDF mutation  
   const previewMutation = useMutation({
-    mutationFn: async ({ templateType, title }: { templateType: string; title: string }) => {
-      const response = await authFetch(`/api/admin/consent-templates/${templateType}/preview`, {
+    mutationFn: async (templateType: string) => {
+      // For PDF preview, we need to handle the blob response specially
+      const response = await fetch(`/api/admin/consent-templates/${templateType}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include' // Important: include cookies for authentication
       });
       
       if (!response.ok) {
         throw new Error('Failed to generate preview PDF');
       }
       
-      const blob = await response.blob();
-      return { blob, title };
+      return response.blob();
     },
-    onSuccess: ({ blob, title }) => {
-      // Revoke previous URL if exists
-      if (previewUrl) {
-        window.URL.revokeObjectURL(previewUrl);
-      }
-      // Create blob URL and show in modal
+    onSuccess: (blob, templateType) => {
+      // Create download link
       const url = window.URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setPreviewTitle(title);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${templateType}-consent-preview.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "PDF Generated",
+        description: "Preview PDF has been downloaded",
+      });
     },
     onError: (error) => {
       toast({
@@ -499,16 +503,8 @@ export default function ConsentTemplateSettings() {
     saveContentMutation.mutate({ templateType, content });
   };
 
-  const handlePreviewPDF = (templateType: string, title: string) => {
-    previewMutation.mutate({ templateType, title });
-  };
-
-  const closePreview = () => {
-    if (previewUrl) {
-      window.URL.revokeObjectURL(previewUrl);
-    }
-    setPreviewUrl(null);
-    setPreviewTitle('');
+  const handlePreviewPDF = (templateType: string) => {
+    previewMutation.mutate(templateType);
   };
 
   const copyMergeField = (field: string) => {
@@ -657,14 +653,15 @@ export default function ConsentTemplateSettings() {
                     </div>
                     
                     <div>
-                      <Label>Initial Content (Optional)</Label>
-                      <div className="mt-1">
-                        <RichTextEditor
-                          content={newTemplateContent}
-                          onChange={setNewTemplateContent}
-                          placeholder="Enter content for the consent form (you can edit this later)..."
-                        />
-                      </div>
+                      <Label htmlFor="template-content">Initial Content (Optional)</Label>
+                      <Textarea
+                        id="template-content"
+                        value={newTemplateContent}
+                        onChange={(e) => setNewTemplateContent(e.target.value)}
+                        rows={6}
+                        placeholder="Enter HTML content for the consent form (you can edit this later)..."
+                        className="mt-1 font-mono text-sm"
+                      />
                     </div>
                     
                     <Button 
@@ -731,17 +728,15 @@ export default function ConsentTemplateSettings() {
                         </AlertDescription>
                       </Alert>
                       <div>
-                        <Label>Template Content</Label>
-                        <div className="mt-1">
-                          <RichTextEditor
-                            content={customContent[type.key] || ''}
-                            onChange={(content) => setCustomContent({ ...customContent, [type.key]: content })}
-                            placeholder="Enter content for the consent form..."
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          You can type merge fields like {'{{COMPANY_NAME}}'} directly in the content
-                        </p>
+                        <Label htmlFor={`content-${type.key}`}>Template Content (HTML with Merge Fields)</Label>
+                        <Textarea
+                          id={`content-${type.key}`}
+                          value={customContent[type.key] || ''}
+                          onChange={(e) => setCustomContent({ ...customContent, [type.key]: e.target.value })}
+                          rows={10}
+                          className="font-mono text-sm"
+                          placeholder="Enter HTML content for the consent form..."
+                        />
                       </div>
                       <div className="flex gap-2">
                         <Button 
@@ -785,13 +780,12 @@ export default function ConsentTemplateSettings() {
 
                         <Button
                           variant="outline"
-                          onClick={() => handlePreviewPDF(type.key, type.label)}
-                          disabled={previewMutation.isPending}
+                          onClick={() => handlePreviewPDF(type.key)}
                           className="flex items-center gap-2"
                           data-testid={`button-preview-${type.key}`}
                         >
-                          <Eye className="h-4 w-4" />
-                          {previewMutation.isPending ? 'Loading...' : 'Preview PDF'}
+                          <Download className="h-4 w-4" />
+                          Preview PDF
                         </Button>
 
                         {activeTemplate?.filePath && (
@@ -840,36 +834,6 @@ export default function ConsentTemplateSettings() {
           })}
         </CardContent>
       </Card>
-
-      {/* PDF Preview Modal */}
-      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && closePreview()}>
-        <DialogContent className="max-w-4xl h-[90vh] p-0">
-          <DialogHeader className="p-4 pb-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle>{previewTitle} - Preview</DialogTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={closePreview}
-                className="h-8 w-8"
-                data-testid="button-close-preview"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 p-4 pt-2">
-            {previewUrl && (
-              <iframe
-                src={previewUrl}
-                className="w-full h-full rounded-lg border"
-                title="PDF Preview"
-                data-testid="iframe-pdf-preview"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -51,24 +51,25 @@ interface ProviderConfig {
 }
 
 const providerConfigs: Record<string, ProviderConfig> = {
-  telnyx: {
-    name: 'Telnyx',
+  twilio: {
+    name: 'Twilio',
     icon: <MessageSquare className="w-4 h-4" />,
-    description: 'SMS messaging and phone notifications',
+    description: 'SMS messaging and phone verification',
     category: 'sms',
     fields: [
-      { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+      { key: 'accountSid', label: 'Account SID', type: 'text', required: true },
+      { key: 'authToken', label: 'Auth Token', type: 'password', required: true },
       { key: 'fromNumber', label: 'From Number', type: 'text', placeholder: '+1234567890', required: true },
     ],
   },
-  resend: {
-    name: 'Resend',
+  sendgrid: {
+    name: 'SendGrid',
     icon: <Mail className="w-4 h-4" />,
-    description: 'Email delivery platform',
+    description: 'Email delivery and marketing platform',
     category: 'email',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', required: true },
-      { key: 'fromEmail', label: 'From Email', type: 'email', required: true },
+      { key: 'verifiedSender', label: 'Verified Sender Email', type: 'email', required: true },
     ],
   },
   google: {

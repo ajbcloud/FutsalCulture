@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +13,8 @@ import { useUserTerminology } from "@/hooks/use-user-terminology";
 
 export default function GetStarted() {
   const { term } = useUserTerminology();
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
-
   const [formData, setFormData] = useState({
     org_name: "",
-    join_code: "",
     contact_name: "",
     contact_email: "",
     country: "",
@@ -31,57 +24,13 @@ export default function GetStarted() {
     sports: [] as string[],
     accept: false
   });
-  const [joinCodeTouched, setJoinCodeTouched] = useState(false);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      navigate("/signup-business");
-    }
-  }, [isLoaded, isSignedIn, navigate]);
-
-  useEffect(() => {
-    if (user) {
-      const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-      const email = user.primaryEmailAddress?.emailAddress || '';
-      setFormData(prev => ({
-        ...prev,
-        contact_name: prev.contact_name || fullName,
-        contact_email: prev.contact_email || email
-      }));
-    }
-  }, [user]);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   const sportOptions = ["Soccer", "Futsal", "Basketball", "Volleyball", "Other"];
-  
-  function generateJoinCode(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .substring(0, 30);
-  }
-
-  function handleOrgNameChange(name: string) {
-    setFormData(prev => ({ 
-      ...prev, 
-      org_name: name,
-      join_code: joinCodeTouched ? prev.join_code : generateJoinCode(name)
-    }));
-  }
-
-  function handleJoinCodeChange(code: string) {
-    setJoinCodeTouched(true);
-    const sanitized = code
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '')
-      .substring(0, 30);
-    setFormData(prev => ({ ...prev, join_code: sanitized }));
-  }
   
   const usStates = [
     { code: "AL", name: "Alabama" },
@@ -150,6 +99,7 @@ export default function GetStarted() {
         const cities = data.places?.map((place: any) => place['place name']) || [];
         setCityOptions(cities);
         
+        // If only one city, auto-fill it
         if (cities.length === 1) {
           setFormData(prev => ({ ...prev, city: cities[0] }));
         } else if (cities.length === 0) {
@@ -175,7 +125,7 @@ export default function GetStarted() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!formData.org_name || !formData.join_code || !formData.contact_name || !formData.accept) {
+    if (!formData.org_name || !formData.contact_name || !formData.contact_email || !formData.accept) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields and accept the terms",
@@ -184,48 +134,19 @@ export default function GetStarted() {
       return;
     }
 
-    if (formData.join_code.length < 3) {
-      toast({
-        title: "Invalid join code",
-        description: "Join code must be at least 3 characters",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/beta/clerk-create-club", {
-        org_name: formData.org_name,
-        join_code: formData.join_code,
-        contact_name: formData.contact_name,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country || "US",
-        zip_code: formData.zip_code,
-        sports: formData.sports
+      const response = await apiRequest("POST", "/api/auth/signup", {
+        ...formData,
+        plan_key: "free"
       });
 
       if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: "Club created!",
-          description: `Welcome to ${data.tenantName}! Your join code is: ${data.tenantCode}`,
-        });
-        setTimeout(() => {
-          navigate("/admin/dashboard");
-        }, 2000);
+        // Redirect to email verification page
+        navigate(`/verify-email-sent?email=${encodeURIComponent(formData.contact_email)}`);
       } else {
         const data = await response.json();
-        if (data.field === "join_code") {
-          toast({
-            title: "Join code unavailable",
-            description: data.error,
-            variant: "destructive",
-          });
-        } else {
-          throw new Error(data.error || "Failed to create club");
-        }
+        throw new Error(data.error || "Failed to create club");
       }
     } catch (error: any) {
       console.error("Error creating club:", error);
@@ -248,18 +169,6 @@ export default function GetStarted() {
     }));
   }
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
@@ -279,26 +188,11 @@ export default function GetStarted() {
               <Input
                 id="org_name"
                 value={formData.org_name}
-                onChange={(e) => handleOrgNameChange(e.target.value)}
+                onChange={(e) => setFormData(prev => ({ ...prev, org_name: e.target.value }))}
                 placeholder="e.g., City United FC"
                 required
                 data-testid="input-org-name"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="join_code">Your Club's Player & Parent Join Code *</Label>
-              <Input
-                id="join_code"
-                value={formData.join_code}
-                onChange={(e) => handleJoinCodeChange(e.target.value)}
-                placeholder="e.g., city-united-fc"
-                required
-                data-testid="input-join-code"
-              />
-              <p className="text-xs text-muted-foreground">
-                This is the code players and parents will use to join your club. Letters, numbers, and dashes only.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -314,16 +208,16 @@ export default function GetStarted() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact_email">Email</Label>
+              <Label htmlFor="contact_email">Work Email *</Label>
               <Input
                 id="contact_email"
                 type="email"
                 value={formData.contact_email}
-                disabled
-                className="bg-muted"
+                onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                placeholder="you@yourclub.com"
+                required
                 data-testid="input-contact-email"
               />
-              <p className="text-xs text-muted-foreground">This is your account email</p>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -431,6 +325,20 @@ export default function GetStarted() {
               <Label htmlFor="accept" className="text-sm">
                 I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a> *
               </Label>
+            </div>
+
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Prefer Google/Microsoft?
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" asChild className="flex-1">
+                  <a href="/api/auth/google?intent=owner">Google</a>
+                </Button>
+                <Button type="button" variant="outline" size="sm" asChild className="flex-1">
+                  <a href="/api/auth/microsoft?intent=owner">Microsoft</a>
+                </Button>
+              </div>
             </div>
           </form>
 
