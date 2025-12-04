@@ -42,9 +42,9 @@ export default function CheckoutSuccess() {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          // Redirect to settings if admin, otherwise to dashboard
-          if (user?.isAdmin) {
-            navigate('/admin/settings');
+          // Redirect to admin panel if admin/assistant, otherwise to dashboard
+          if (user?.isAdmin || user?.isAssistant) {
+            navigate('/admin');
           } else {
             navigate('/dashboard');
           }
@@ -66,7 +66,12 @@ export default function CheckoutSuccess() {
   };
 
   const handleGoToDashboard = () => {
-    navigate('/dashboard');
+    // Redirect admins to /admin instead of /dashboard
+    if (user?.isAdmin || user?.isAssistant) {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -86,7 +91,7 @@ export default function CheckoutSuccess() {
               Your subscription has been updated successfully. You now have access to all the features of your new plan.
             </p>
             <p className="text-sm text-muted-foreground">
-              Redirecting to {user?.isAdmin ? 'settings' : 'dashboard'} in {secondsRemaining} seconds...
+              Redirecting to {(user?.isAdmin || user?.isAssistant) ? 'admin panel' : 'dashboard'} in {secondsRemaining} seconds...
             </p>
           </div>
 
@@ -106,7 +111,7 @@ export default function CheckoutSuccess() {
               data-testid="button-go-to-dashboard"
             >
               <Home className="h-4 w-4 mr-2" />
-              Go to Dashboard
+              Go to {(user?.isAdmin || user?.isAssistant) ? 'Admin Panel' : 'Dashboard'}
             </Button>
           </div>
 

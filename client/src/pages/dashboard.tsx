@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [localReservedSessions, setLocalReservedSessions] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
+
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentSession, setSelectedPaymentSession] = useState<{
     session: FutsalSession;
@@ -281,6 +282,22 @@ export default function Dashboard() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
+
+  // Redirect admins to /admin instead of /dashboard
+  useEffect(() => {
+    if (!isLoading && user && (user.isAdmin || user.isAssistant)) {
+      setLocation('/admin', { replace: true });
+    }
+  }, [isLoading, user, setLocation]);
+
+  // Show loading state while redirecting admins to prevent flicker
+  if (!isLoading && user && (user.isAdmin || user.isAssistant)) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   if (isLoading || playersLoading || signupsLoading || prefsLoading || sessionsLoading) {
     return (
