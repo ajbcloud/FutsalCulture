@@ -50,7 +50,7 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
   const getFeatureStatus = (planId: string, featureKey: string) => {
     const plan = getPlan(planId);
     const feature = plan?.features[featureKey];
-    
+
     if (!feature || feature.status !== 'included') {
       return { included: false, label: '', description: '' };
     }
@@ -135,7 +135,7 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
                   {features.map((featureKey) => {
                     // Get the feature name from the first plan that has it
                     const featureName = plans.find(plan => plan.features[featureKey])?.features[featureKey]?.name;
-                    
+
                     if (!featureName) return null;
 
                     return (
@@ -146,7 +146,7 @@ export function FeatureGrid({ currentPlan, isHomepage = false }: FeatureGridProp
                         {plans.map((plan) => {
                           const featureValue = getFeatureValue(plan.id, featureKey);
                           const isIncluded = !!featureValue;
-                          
+
                           return (
                             <td key={plan.id} className="p-3 text-center">
                               {isIncluded ? (
