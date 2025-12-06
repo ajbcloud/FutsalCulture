@@ -535,31 +535,6 @@ export const householdMembers = pgTable("household_members", {
   uniqueIndex("household_members_tenant_player_unique_idx").on(table.tenantId, table.playerId),
 ]);
 
-// Household Invites table - tracks invitations to join households with tenant assignment
-export const householdInviteStatusEnum = pgEnum("household_invite_status", ["pending", "accepted", "expired", "cancelled"]);
-
-export const householdInvites = pgTable("household_invites", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
-  householdId: varchar("household_id").notNull().references(() => households.id, { onDelete: 'cascade' }),
-  inviterId: varchar("inviter_id").notNull().references(() => users.id),
-  recipientEmail: varchar("recipient_email").notNull(),
-  token: varchar("token").notNull().unique(),
-  status: householdInviteStatusEnum("status").default("pending").notNull(),
-  inviteType: varchar("invite_type").notNull().default("parent"), // "parent" or "player"
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  acceptedAt: timestamp("accepted_at"),
-  acceptedByUserId: varchar("accepted_by_user_id").references(() => users.id),
-}, (table) => [
-  index("household_invites_tenant_id_idx").on(table.tenantId),
-  index("household_invites_household_id_idx").on(table.householdId),
-  index("household_invites_inviter_id_idx").on(table.inviterId),
-  index("household_invites_token_idx").on(table.token),
-  index("household_invites_status_idx").on(table.status),
-  index("household_invites_recipient_email_idx").on(table.recipientEmail),
-]);
-
 // User Credits table - replaces refund system, supports household-level credits
 export const userCredits = pgTable("user_credits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

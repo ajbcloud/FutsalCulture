@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar, Building2, KeyRound } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
@@ -94,7 +95,8 @@ export default function HouseholdSection() {
   const { term } = useUserTerminology();
   const [, setLocation] = useLocation();
   const [householdName, setHouseholdName] = useState("");
-    const [inviteEmail, setInviteEmail] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<{ memberId: string; memberName: string } | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
@@ -125,7 +127,10 @@ export default function HouseholdSection() {
     enabled: isAuthenticated && !!user?.id,
   });
 
-  
+  const availablePlayers = userPlayers.filter(player => 
+    !userHousehold?.members.some(m => m.playerId === player.id)
+  );
+
   const { data: creditsHistoryData } = useQuery<{ credits: CreditHistoryItem[] }>({
     queryKey: ["/api/credits/history"],
     enabled: isAuthenticated,
@@ -188,6 +193,7 @@ export default function HouseholdSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      setSelectedPlayerId("");
       toast({ title: "Success", description: "Player added to household" });
     },
     onError: (error: any) => {
@@ -420,6 +426,25 @@ export default function HouseholdSection() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     </div>
+                    {!userHousehold?.members.some(m => m.playerId === player.id) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-3"
+                        onClick={() => {
+                          if (isUnaffiliated) {
+                            setShowJoinClubModal(true);
+                          } else {
+                            handleAddPlayer(player.id);
+                          }
+                        }}
+                        disabled={addPlayerMutation.isPending}
+                        data-testid={`button-link-player-${player.id}`}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Link to Household
+                      </Button>
+                    )}
                     {userHousehold?.members.some(m => m.playerId === player.id) && (
                       <Badge variant="secondary" className="mt-3">
                         In Household
@@ -509,6 +534,41 @@ export default function HouseholdSection() {
         </Card>
 
         <div className="space-y-6">
+          {availablePlayers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Add Player to Household
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                    <SelectTrigger className="flex-1" data-testid="select-player-to-add">
+                      <SelectValue placeholder="Select a player" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePlayers.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {player.firstName} {player.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => handleAddPlayer(selectedPlayerId)}
+                    disabled={!selectedPlayerId || addPlayerMutation.isPending}
+                    data-testid="button-add-player-to-household"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
