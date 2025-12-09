@@ -283,15 +283,19 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Redirect admins to /admin instead of /dashboard
+  // Redirect admins to appropriate portal
   useEffect(() => {
-    if (!isLoading && user && (user.isAdmin || user.isAssistant)) {
-      setLocation('/admin', { replace: true });
+    if (!isLoading && user) {
+      if (user.isSuperAdmin) {
+        setLocation('/super-admin', { replace: true });
+      } else if (user.isAdmin || user.isAssistant) {
+        setLocation('/admin', { replace: true });
+      }
     }
   }, [isLoading, user, setLocation]);
 
   // Show loading state while redirecting admins to prevent flicker
-  if (!isLoading && user && (user.isAdmin || user.isAssistant)) {
+  if (!isLoading && user && (user.isSuperAdmin || user.isAdmin || user.isAssistant)) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
