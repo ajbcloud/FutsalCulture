@@ -1,0 +1,137 @@
+▲ [WARNING] Unexpected "a" [css-syntax-error]
+
+    <stdin>:5303:74:
+      5303 │ ...s .data-\[state\=checked\]\:bg-blue-600[data-state="checked"]a {
+           ╵                                                                 ^
+
+
+▲ [WARNING] Unexpected "a" [css-syntax-error]
+
+    <stdin>:5306:74:
+      5306 │ ...a-\[state\=checked\]\:bg-blue-600[data-state="checked"]a:hover {
+           ╵                                                           ^
+
+
+▲ [WARNING] Unexpected "button" [css-syntax-error]
+
+    <stdin>:5310:100:
+      5310 │ ...blue-600[data-state="checked"]button:not(.quick-actions button),
+           ╵                                  ~~~~~~
+
+
+▲ [WARNING] Unexpected "button" [css-syntax-error]
+
+    <stdin>:5317:100:
+      5317 │ ...state\=checked\]\:bg-blue-600[data-state="checked"]button:hover,
+           ╵                                                       ~~~~~~
+
+
+▲ [WARNING] Unexpected "button" [css-syntax-error]
+
+    <stdin>:5360:70:
+      5360 │ ... .dark\:bg-red-600:is(.dark *)button:not(.quick-actions button),
+           ╵                                  ~~~~~~
+
+
+
+rendering chunks...
+
+computing gzip size...
+
+../dist/public/index.html                                               1.85 kB │ gzip:   0.71 kB
+
+../dist/public/assets/chrome_Xe6PgsfHlu_1756180663671-CzszAA5A.png    177.28 kB
+../dist/public/assets/PlayHQ_1753846544553-Dli7tSML.png             1,041.21 kB
+
+../dist/public/assets/index-DEInlLho.css                              169.38 kB │ gzip:  25.30 kB
+
+../dist/public/assets/dropin-DvVDL4YI.js                              500.08 kB │ gzip: 128.61 kB
+
+../dist/public/assets/index-CrjBDzn2.js                             3,265.07 kB │ gzip: 832.21 kB
+
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+✓ built in 26.86s
+
+▲ [WARNING] Duplicate member "createCredit" in class body [duplicate-class-member]
+
+    server/storage.ts:1024:8:
+      1024 │   async createCredit(
+           ╵         ~~~~~~~~~~~~
+
+  The original member "createCredit" is here:
+
+    server/storage.ts:876:8:
+      876 │   async createCredit(credit: UserCreditInsert): Promise<UserCredi...
+          ╵         ~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getSuperAdminAnalytics" in class body [duplicate-class-member]
+
+    server/storage.ts:2896:8:
+      2896 │   async getSuperAdminAnalytics(filters?: any): Promise<any> {
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~
+
+  The original member "getSuperAdminAnalytics" is here:
+
+    server/storage.ts:2278:8:
+      2278 │   async getSuperAdminAnalytics(filters?: { tenants?: string[]; f...
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "getSuperAdminSettings" in class body [duplicate-class-member]
+
+    server/storage.ts:3093:8:
+      3093 │   async getSuperAdminSettings(): Promise<any> {
+           ╵         ~~~~~~~~~~~~~~~~~~~~~
+
+  The original member "getSuperAdminSettings" is here:
+
+    server/storage.ts:2364:8:
+      2364 │   async getSuperAdminSettings(): Promise<any> {
+           ╵         ~~~~~~~~~~~~~~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "updateSuperAdminSettings" in class body [duplicate-class-member]
+
+    server/storage.ts:3173:8:
+      3173 │   async updateSuperAdminSettings(section: string, data: any): Pr...
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The original member "updateSuperAdminSettings" is here:
+
+    server/storage.ts:2378:8:
+      2378 │   async updateSuperAdminSettings(settings: any): Promise<any> {
+           ╵         ~~~~~~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getConsentTemplates" in class body [duplicate-class-member]
+
+    server/storage.ts:4151:8:
+      4151 │   async getConsentTemplates(tenantId: string): Promise<ConsentTe...
+           ╵         ~~~~~~~~~~~~~~~~~~~
+
+  The original member "getConsentTemplates" is here:
+
+    server/storage.ts:3963:8:
+      3963 │   async getConsentTemplates(tenantId: string): Promise<any[]> {
+           ╵         ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate member "getConsentTemplate" in class body [duplicate-class-member]
+
+    server/storage.ts:4189:8:
+      4189 │   async getConsentTemplate(id: string, tenantId: string): Promis...
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+  The original member "getConsentTemplate" is here:
+
+    server/storage.ts:3975:8:
+      3975 │   async getConsentTemplate(id: string): Promise<any | null> {
+           ╵         ~~~~~~~~~~~~~~~~~~
+
+6 of 8 warnings shown (disable the message limit with --log-limit=0)
+
+
+  dist/index.js  1.4mb ⚠️
