@@ -4,6 +4,7 @@ import { FEATURE_KEYS } from '../shared/feature-flags';
 import { db } from './db';
 import { tenants, tenantPlanAssignments } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { clearCapabilitiesCache } from './lib/capabilitiesCache';
 
 // Type definitions for plan levels and feature keys
 type PlanLevel = 'free' | 'core' | 'growth' | 'elite';
@@ -120,6 +121,12 @@ export function requireAllFeatures(featureKeys: FeatureKey[]) {
 // Utility function to get plan level for a tenant (using new tenant_plan_assignments table)
 export async function getTenantPlanLevel(tenantId: string): Promise<PlanLevel | null> {
   try {
+    const [tenant] = await db
+      .select({ planLevel: tenants.planLevel })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
     // Get current plan assignment from tenant_plan_assignments table
     const assignment = await db
       .select({
@@ -132,28 +139,44 @@ export async function getTenantPlanLevel(tenantId: string): Promise<PlanLevel | 
       ))
       .orderBy(sql`${tenantPlanAssignments.since} DESC`)
       .limit(1);
-    
+
+    const tenantPlanLevel = tenant?.planLevel || null;
+
+    if (assignment.length > 0 && tenantPlanLevel && assignment[0].planCode !== tenantPlanLevel) {
+      await db
+        .update(tenantPlanAssignments)
+        .set({ until: new Date() })
+        .where(and(
+          eq(tenantPlanAssignments.tenantId, tenantId),
+          sql`${tenantPlanAssignments.until} IS NULL OR ${tenantPlanAssignments.until} > NOW()`
+        ));
+
+      await db.insert(tenantPlanAssignments).values({
+        tenantId,
+        planCode: tenantPlanLevel,
+        since: new Date(),
+      });
+
+      clearCapabilitiesCache(tenantId);
+      return tenantPlanLevel as PlanLevel;
+    }
+
     if (assignment.length > 0) {
       return assignment[0].planCode as PlanLevel;
     }
-    
+
     // Fallback: if no assignment found, check tenants table and create assignment
-    const tenant = await db.select({ planLevel: tenants.planLevel })
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
-      .limit(1);
-    
-    if (tenant.length > 0 && tenant[0].planLevel) {
+    if (tenantPlanLevel) {
       // Create missing assignment
       await db.insert(tenantPlanAssignments)
         .values({
           tenantId,
-          planCode: tenant[0].planLevel,
+          planCode: tenantPlanLevel,
           since: new Date(),
         })
         .onConflictDoNothing();
-      
-      return tenant[0].planLevel;
+
+      return tenantPlanLevel as PlanLevel;
     }
     
     return null;
