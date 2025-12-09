@@ -18,6 +18,19 @@ export default function GetStarted() {
           </p>
         </div>
 
+        <div className="flex justify-start mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/")}
+            className="text-muted-foreground"
+            data-testid="button-back-home"
+          >
+            <Home className="mr-2 h-4 w-4" />
+            Back to home
+          </Button>
+        </div>
+
         <div className="grid gap-4">
           <Card 
             className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
@@ -101,17 +114,6 @@ export default function GetStarted() {
               Join with invite code
             </Button>
           </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/")}
-            className="text-muted-foreground"
-            data-testid="button-back-home"
-          >
-            <Home className="mr-2 h-4 w-4" />
-            Back to home
-          </Button>
         </div>
       </div>
     </div>
