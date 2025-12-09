@@ -38,7 +38,6 @@ import creditsRouter from './routes/credits';
 import templatesRouter from './routes/templates';
 import notificationsRouter from './routes/notifications';
 import contactGroupsRouter from './routes/contact-groups';
-import terminologyRouter from './routes/terminology';
 import clubAuthRouter from './routes/club-auth';
 
 const app = express();
@@ -171,9 +170,6 @@ app.use((req, res, next) => {
   app.use('/api', policyRouter);
   app.use('/api', consentRouter);
   app.use('/api', guardianRouter);
-  
-  // Mount terminology routes
-  app.use('/api', terminologyRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

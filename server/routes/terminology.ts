@@ -239,7 +239,21 @@ terminologyRouter.get("/terminology/policy", async (req: any, res) => {
       }
       
       if (!tenant) {
-        return res.status(404).json({ error: "Tenant not found" });
+        // Return sensible defaults when tenant can't be resolved (e.g., development mode)
+        return res.json({
+          audienceMode: "youth_only",
+          adultAge: 18,
+          parentRequiredBelow: 18,
+          teenSelfAccessAt: 13,
+          labels: {
+            adultColumnLabel: "Parent",
+            adult1: "Parent 1",
+            adult2: "Parent 2",
+            userTerm: "Parent",
+            guardianTerm: "Parent"
+          },
+          showGuardianColumns: true
+        });
       }
       
       actualTenantId = tenant.id;
@@ -252,7 +266,21 @@ terminologyRouter.get("/terminology/policy", async (req: any, res) => {
       .where(eq(tenantPolicies.tenantId, actualTenantId));
 
     if (!policy) {
-      return res.status(404).json({ error: "Policy not found for tenant" });
+      // Return sensible defaults when no policy exists
+      return res.json({
+        audienceMode: "youth_only",
+        adultAge: 18,
+        parentRequiredBelow: 18,
+        teenSelfAccessAt: 13,
+        labels: {
+          adultColumnLabel: "Parent",
+          adult1: "Parent 1",
+          adult2: "Parent 2",
+          userTerm: "Parent",
+          guardianTerm: "Parent"
+        },
+        showGuardianColumns: true
+      });
     }
 
     const audienceMode = policy.audienceMode || "youth_only";

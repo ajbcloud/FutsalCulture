@@ -69,6 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync Clerk users to our database - only for API routes
   app.use('/api', syncClerkUser);
 
+  // Terminology routes - mounted after session/Clerk middleware so authenticated users get tenant-aware data
+  // These routes handle both authenticated and unauthenticated users internally
+  app.use('/api', terminologyRouter);
+
   // Unaffiliated signup routes - for parents/players who sign up without joining a club
   app.use(unaffiliatedSignupRouter);
 
@@ -3323,9 +3327,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/webhooks', sendgridWebhookRouter);
   app.use('/api/webhooks', resendWebhookRouter);
   app.use('/api/communications', communicationTestRouter);
-  
-  // Terminology routes for dynamic UI labels
-  app.use('/api', terminologyRouter);
 
   const httpServer = createServer(app);
   return httpServer;
