@@ -2829,6 +2829,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup beta onboarding routes
   setupBetaOnboardingRoutes(app);
 
+  // Terminology routes for dynamic UI labels (must be BEFORE authenticated routes)
+  // These routes handle both authenticated and unauthenticated users
+  app.use('/api', terminologyRouter);
+
   // Setup feature flag routes
   const featureRoutes = await import('./feature-routes');
   app.use('/api', isAuthenticated, featureRoutes.default);
@@ -3323,9 +3327,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/webhooks', sendgridWebhookRouter);
   app.use('/api/webhooks', resendWebhookRouter);
   app.use('/api/communications', communicationTestRouter);
-  
-  // Terminology routes for dynamic UI labels
-  app.use('/api', terminologyRouter);
 
   const httpServer = createServer(app);
   return httpServer;
