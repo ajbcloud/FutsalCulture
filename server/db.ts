@@ -4,6 +4,7 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
+neonConfig.fetchConnectionCache = true;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,12 +12,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure connection pool with better error handling
+// Configure connection pool with conservative settings for Neon
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection cannot be established
+  max: 5, // Reduced max connections to prevent exhaustion
+  idleTimeoutMillis: 10000, // Close idle clients after 10 seconds
+  connectionTimeoutMillis: 10000,
 });
 
 // Handle pool errors to prevent crashes
