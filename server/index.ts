@@ -190,6 +190,9 @@ app.use((req, res, next) => {
   // Mount terminology routes
   app.use('/api', terminologyRouter);
 
+  // Sentry error handler - must be before other error handlers
+  Sentry.setupExpressErrorHandler(app);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
