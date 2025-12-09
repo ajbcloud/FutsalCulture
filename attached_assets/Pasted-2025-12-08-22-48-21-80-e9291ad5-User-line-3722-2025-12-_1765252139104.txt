@@ -1,0 +1,140 @@
+2025-12-08 22:48:21.80
+e9291ad5
+User
+line: '3722',
+2025-12-08 22:48:21.80
+e9291ad5
+User
+internalPosition: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+}
+2025-12-08 22:48:21.80
+e9291ad5
+User
+hint: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+schema: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+column: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+file: 'parse_relation.c',
+2025-12-08 22:48:21.80
+e9291ad5
+User
+internalQuery: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+length: 116,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-08 22:48:21.80
+e9291ad5
+User
+detail: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+position: '642',
+2025-12-08 22:48:21.80
+e9291ad5
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-12-08 22:48:21.80
+e9291ad5
+User
+at async syncClerkUser (file:///home/runner/workspace/dist/index.js:21467:16) {
+2025-12-08 22:48:21.80
+e9291ad5
+User
+table: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+Error syncing Clerk user: error: column "is_unaffiliated" does not exist
+2025-12-08 22:48:21.80
+e9291ad5
+User
+severity: 'ERROR',
+2025-12-08 22:48:21.80
+e9291ad5
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-12-08 22:48:21.80
+e9291ad5
+User
+code: '42703',
+2025-12-08 22:48:21.80
+e9291ad5
+User
+where: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+constraint: undefined,
+2025-12-08 22:48:21.80
+e9291ad5
+User
+at async DatabaseStorage.getUserByClerkId (file:///home/runner/workspace/dist/index.js:3719:24)
+2025-12-08 22:48:21.80
+e9291ad5
+User
+routine: 'errorMissingColumn'
+2025-12-08 22:48:22.13
+e9291ad5
+User
+length: 116,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+internalPosition: undefined,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+schema: undefined,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+at async DatabaseStorage.getUserByClerkId (file:///home/runner/workspace/dist/index.js:3719:24)
+2025-12-08 22:48:22.13
+e9291ad5
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-12-08 22:48:22.13
+e9291ad5
+User
+where: undefined,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+hint: undefined,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-12-08 22:48:22.13
+e9291ad5
+User
+column: undefined,
+2025-12-08 22:48:22.13
+e9291ad5
+User
+position: '642',
+2025-12-08 22:48:22.13
+e9291ad5
+User
+Error syncing Clerk user: error: column "is_unaffiliated" does not exist
+2025-12-08 22:48:22.13
+e9291ad5
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
