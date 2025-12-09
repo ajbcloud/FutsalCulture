@@ -47,11 +47,11 @@ export default function USMap({ data, title = "Tenant Distribution by State", cl
 
   return (
     <div className={`${className}`}>
-      <h3 className="text-sm font-semibold mb-2 text-center">{title}</h3>
+      {title && <h3 className="text-sm font-semibold mb-2 text-center">{title}</h3>}
       <ComposableMap
         projection="geoAlbersUsa"
-        width={600}
-        height={350}
+        width={400}
+        height={240}
         className="w-full h-auto border rounded-lg bg-gray-50 dark:bg-gray-900"
       >
         <ZoomableGroup>
