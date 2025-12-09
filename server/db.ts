@@ -14,7 +14,7 @@ if (!process.env.DATABASE_URL) {
 // Configure connection pool with better error handling
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 5, // Maximum number of clients in pool (lower for serverless)
+  max: 20, // Maximum number of clients in pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection cannot be established
 });
