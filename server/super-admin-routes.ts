@@ -1843,7 +1843,7 @@ export function setupSuperAdminRoutes(app: Express) {
         return res.status(404).json({ error: 'Tenant not found' });
       }
 
-      const credit = await storage.createCredit(
+      const credit = await storage.createAdminCredit(
         tenantId,
         undefined, // No userId for tenant-level credit
         amount,

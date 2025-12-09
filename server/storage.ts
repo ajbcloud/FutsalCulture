@@ -184,8 +184,10 @@ export interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(signupId: string, paidAt: Date): Promise<void>;
 
-  // Credit operations
-  createCredit(tenantId: string, userId: string | undefined, amount: number, reason: string, expiresAt: Date | undefined, createdBy: string): Promise<Credit | TenantCredit>;
+  // Credit operations (for user credits via userCredits table)
+  createCredit(credit: UserCreditInsert): Promise<UserCreditSelect>;
+  // Admin credit operations (for credits via credits/tenantCredits tables)
+  createAdminCredit(tenantId: string, userId: string | undefined, amount: number, reason: string, expiresAt: Date | undefined, createdBy: string): Promise<Credit | TenantCredit>;
   getCredits(tenantId: string, userId?: string): Promise<Array<Credit | TenantCredit>>;
   getUserCreditsBalance(tenantId: string, userId: string): Promise<number>;
   getTenantCreditsBalance(tenantId: string): Promise<number>;
@@ -1020,8 +1022,8 @@ export class DatabaseStorage implements IStorage {
     return updatedCredit;
   }
 
-  // New credit operations implementation
-  async createCredit(
+  // New credit operations implementation (for super admin creating credits)
+  async createAdminCredit(
     tenantId: string, 
     userId: string | undefined, 
     amount: number, 
@@ -2275,50 +2277,6 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getSuperAdminAnalytics(filters?: { tenants?: string[]; from?: string; to?: string; ageGroup?: string; gender?: string }): Promise<any> {
-    // Basic analytics aggregation across all tenants
-    const totalRevenue = await db.select({
-      value: sql<number>`SUM(${payments.amountCents})`,
-    }).from(payments).where(eq(payments.status, 'paid'));
-
-    const totalPlayers = await db.select({
-      value: sql<number>`COUNT(*)`,
-    }).from(players);
-
-    const totalSessions = await db.select({
-      value: sql<number>`COUNT(*)`,
-    }).from(futsalSessions);
-
-    const activeTenants = await db.select({
-      value: sql<number>`COUNT(*)`,
-    }).from(tenants);
-
-    // Revenue by tenant
-    const revenueByTenant = await db.select({
-      tenantId: tenants.id,
-      tenantName: tenants.name,
-      revenue: sql<number>`COALESCE(SUM(${payments.amountCents}), 0)`,
-      growth: sql<number>`0`, // Placeholder for growth calculation
-    })
-    .from(tenants)
-    .leftJoin(payments, eq(tenants.id, payments.tenantId))
-    .groupBy(tenants.id, tenants.name);
-
-    return {
-      totalRevenue: totalRevenue[0]?.value || 0,
-      totalPlayers: totalPlayers[0]?.value || 0,
-      totalSessions: totalSessions[0]?.value || 0,
-      activeTenants: activeTenants[0]?.value || 0,
-      revenueGrowth: 0,
-      playersGrowth: 0,
-      sessionsGrowth: 0,
-      tenantGrowth: 0,
-      revenueByTenant,
-      playersByTenant: [],
-      sessionsByTenant: [],
-    };
-  }
-
   async getSuperAdminHelpRequests(filters?: { tenantId?: string; status?: string; priority?: string; dateFrom?: string; dateTo?: string }): Promise<any[]> {
     let query = db.select({
       id: helpRequests.id,
@@ -2359,25 +2317,6 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await query;
-  }
-
-  async getSuperAdminSettings(): Promise<any> {
-    // Mock platform settings for now
-    return {
-      autoApproveTenants: false,
-      enableMfaByDefault: true,
-      defaultBookingWindowHours: 24,
-      maxTenantsPerAdmin: 5,
-      enableTenantSubdomains: true,
-      requireTenantApproval: true,
-      defaultSessionCapacity: 15,
-      platformMaintenanceMode: false,
-    };
-  }
-
-  async updateSuperAdminSettings(settings: any): Promise<any> {
-    // Mock implementation - would update platform settings table
-    return settings;
   }
 
   async getSuperAdminIntegrations(): Promise<any[]> {
@@ -3957,46 +3896,6 @@ export class DatabaseStorage implements IStorage {
     console.log(`Plan ${planId} updated:`, updatedPlan);
 
     return updatedPlan;
-  }
-
-  // Consent template operations
-  async getConsentTemplates(tenantId: string): Promise<any[]> {
-    const templates = await db
-      .select()
-      .from(consentTemplates)
-      .where(and(
-        eq(consentTemplates.tenantId, tenantId),
-        eq(consentTemplates.isActive, true)
-      ))
-      .orderBy(consentTemplates.templateType, consentTemplates.createdAt);
-    return templates;
-  }
-
-  async getConsentTemplate(id: string): Promise<any | null> {
-    const [template] = await db
-      .select()
-      .from(consentTemplates)
-      .where(eq(consentTemplates.id, id));
-    return template || null;
-  }
-
-  async createConsentTemplate(data: any): Promise<any> {
-    const [template] = await db
-      .insert(consentTemplates)
-      .values(data)
-      .returning();
-    return template;
-  }
-
-  async deactivateConsentTemplate(tenantId: string, templateType: string): Promise<void> {
-    await db
-      .update(consentTemplates)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(and(
-        eq(consentTemplates.tenantId, tenantId),
-        eq(consentTemplates.templateType, templateType),
-        eq(consentTemplates.isActive, true)
-      ));
   }
 
   async deleteConsentTemplate(id: string): Promise<void> {

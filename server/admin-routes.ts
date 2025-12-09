@@ -3364,7 +3364,7 @@ export async function setupAdminRoutes(app: any) {
         return res.status(400).json({ error: 'Amount must be positive' });
       }
 
-      const credit = await storage.createCredit(
+      const credit = await storage.createAdminCredit(
         user.tenantId,
         userId,
         amount,
