@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { eq, and, sql } from 'drizzle-orm';
-import { 
-  features, 
-  planFeatures, 
+import {
+  features,
+  planFeatures,
   tenantFeatureOverrides,
-  tenantPlanAssignments
+  tenantPlanAssignments,
+  tenants
 } from '../../shared/schema';
 import { 
   getCachedCapabilities, 
@@ -21,6 +22,13 @@ async function getTenantCapabilities(tenantId: string) {
     return cached;
   }
 
+  // Fetch the tenant's recorded plan level
+  const [tenant] = await db
+    .select({ planLevel: tenants.planLevel })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
   // Get current plan for tenant
   const planAssignment = await db
     .select({
@@ -34,7 +42,37 @@ async function getTenantCapabilities(tenantId: string) {
     .orderBy(sql`${tenantPlanAssignments.since} DESC`)
     .limit(1);
 
-  const planCode = planAssignment[0]?.planCode || 'free';
+  const tenantPlanLevel = tenant?.planLevel || 'free';
+  let planCode = planAssignment[0]?.planCode || tenantPlanLevel;
+
+  // If the tenant table has been updated but assignments are stale, realign them
+  if (planAssignment[0]?.planCode && tenantPlanLevel && planAssignment[0].planCode !== tenantPlanLevel) {
+    await db
+      .update(tenantPlanAssignments)
+      .set({ until: new Date() })
+      .where(and(
+        eq(tenantPlanAssignments.tenantId, tenantId),
+        sql`${tenantPlanAssignments.until} IS NULL OR ${tenantPlanAssignments.until} > NOW()`
+      ));
+
+    await db.insert(tenantPlanAssignments).values({
+      tenantId,
+      planCode: tenantPlanLevel,
+      since: new Date(),
+    });
+
+    planCode = tenantPlanLevel;
+    clearCache(tenantId);
+  } else if (!planAssignment.length && tenantPlanLevel) {
+    // If no assignment exists yet, create one based on tenant record
+    await db.insert(tenantPlanAssignments).values({
+      tenantId,
+      planCode: tenantPlanLevel,
+      since: new Date(),
+    });
+
+    planCode = tenantPlanLevel;
+  }
 
   // Get base features from plan
   const baseFeatures = await db
