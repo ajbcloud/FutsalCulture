@@ -2,6 +2,14 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+// Sonarly/Sentry integration - must be initialized early
+import * as Sentry from "@sentry/node";
+Sentry.init({
+  dsn: "https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155",
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || "development",
+});
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -58,7 +66,7 @@ app.use((req, res, next) => {
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-sonarly-session-id');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
@@ -71,6 +79,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Sonarly session linking middleware - connects frontend sessions to backend errors
+app.use((req, res, next) => {
+  const sessionId = req.headers['x-sonarly-session-id'];
+  if (sessionId) Sentry.setTag('sonarly.session_id', sessionId as string);
+  next();
+});
 
 // Apply security middleware
 app.use(rateLimitMiddleware);
