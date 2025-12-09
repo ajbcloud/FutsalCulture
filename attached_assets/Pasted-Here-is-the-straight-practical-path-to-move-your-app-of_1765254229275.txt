@@ -1,0 +1,117 @@
+Here is the straight, practical path to move your app off Replit and into Google’s Antigravity environment without losing your database or secrets. No fluff. No guesses.
+
+## Step 1: Export your code from Replit
+
+You already have GitHub connected, which makes this easy.
+
+1. Open your Replit project
+2. Push the entire repo to GitHub using the Replit GitHub sync
+3. Verify on GitHub that your most recent commit includes everything
+
+   * All app code
+   * Any migrations
+   * Your package files
+   * Your environment config templates
+
+You now treat GitHub as the source of truth.
+
+## Step 2: Retrieve your secrets from Replit
+
+Replit does not export secrets through GitHub, so you must do this manually.
+
+1. In your Replit project, open the Secrets panel
+2. Copy each secret name and value
+3. Paste them into a local `.env` file on your machine (temporary) or directly into Antigravity’s environment variables once the project is created
+
+You will recreate every secret manually in Google’s environment.
+
+## Step 3: Migrate your database
+
+This depends on what database you used:
+
+### If you used Replit DB
+
+You cannot export it directly. You must do one of these:
+
+Option A:
+Write a small script in Replit to read all keys and values and output a JSON file, then download that file, then import into your new database.
+
+Option B:
+If your app already abstracts data behind a repository layer, rewrite the backend to point at a real database (Postgres or Firestore), then write a one time migration script to pull data from Replit DB and insert into the new store.
+
+### If you used SQLite (most common in Rails apps)
+
+1. Download your `development.sqlite3` or whichever file is in your repo
+2. Commit it to GitHub if needed
+3. Decide what your target database will be
+
+   * Cloud SQL for Postgres
+   * SQLite managed by Antigravity (only recommended for early dev)
+4. Run `rails db:schema:load` on the new environment
+5. Import your data if needed
+
+   * If SQLite to Postgres, use `pgloader` or export to CSV then import
+
+### If you used Postgres with a Replit hosted extension
+
+1. Connect to the database using `psql` from your local machine
+2. Run
+
+   ```
+   pg_dump --format=custom --no-owner --no-privileges -h HOST -p PORT -U USER DBNAME > dump.pg
+   ```
+3. Upload that dump into your Google Antigravity database
+4. Restore it
+
+   ```
+   pg_restore --no-owner --role=yournewrole -h NEWHOST -U NEWUSER -d NEWDB dump.pg
+   ```
+
+## Step 4: Recreate your environment in Google Antigravity
+
+Antigravity behaves like a managed cloud environment. You will need to:
+
+1. Create a new Antigravity app
+2. Connect the GitHub repo
+3. Set your environment variables in the Antigravity config
+4. Choose your runtime
+5. Point your app to your migrated database
+6. Deploy
+
+## Step 5: Replace Replit integrations
+
+Any Replit specific features must be rewritten or replaced.
+
+Examples
+
+* Replit persistent storage becomes Cloud SQL, Firestore, or another real DB
+* Replit Secrets become Antigravity environment variables
+* Replit web server port may need `PORT` set manually for Google
+* Replit agent features will not migrate and must be rebuilt or removed
+
+## Step 6: Test everything before cutting over
+
+Create a full testing checklist:
+
+* Authentication
+* Database CRUD
+* Webhooks
+* Background jobs
+* API integrations
+* File uploads
+* Any AI features
+
+Once everything passes, shut off the Replit instance.
+
+## If you want, I can map your exact app structure
+
+If you tell me:
+
+* What framework the app uses
+* What database you use
+* What secrets you have
+* What integrations are active
+
+I can give you a step by step plan custom to your exact app, including what code to copy, what scripts to write, and how to run the migration cleanly.
+
+Just tell me your stack.
