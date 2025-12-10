@@ -16,11 +16,13 @@ import {
   waitlistSettingsSchema,
   insertHouseholdSchema,
   insertHouseholdMemberSchema,
+  householdMembers,
   users,
-  tenants
+  tenants,
+  players
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { z } from "zod";
 // Lazy load background jobs - they're initialized after server starts
 // import "./jobs/capacity-monitor";
@@ -231,6 +233,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: "Registration failed. Please try again." 
       });
+    }
+  });
+
+  // Update birth year for adult player self-signup (18+ verification)
+  app.post('/api/users/update-birth-year', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const { birthYear } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      if (!birthYear || typeof birthYear !== 'number') {
+        return res.status(400).json({ error: 'Birth year is required' });
+      }
+      
+      const currentYear = new Date().getFullYear();
+      const age = currentYear - birthYear;
+      
+      if (age < 18) {
+        return res.status(400).json({ error: 'You must be 18 or older to register as a player' });
+      }
+      
+      if (birthYear < 1920 || birthYear > currentYear - 18) {
+        return res.status(400).json({ error: 'Please enter a valid birth year' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      await db.update(users)
+        .set({ dateOfBirth: new Date(birthYear, 0, 1).toISOString().split('T')[0] })
+        .where(eq(users.id, userId));
+      
+      if (user.role === 'player' && user.tenantId) {
+        const existingPlayer = await db.select()
+          .from(players)
+          .where(eq(players.parentId, userId))
+          .limit(1);
+        
+        if (existingPlayer.length === 0) {
+          await db.insert(players).values({
+            tenantId: user.tenantId,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            birthYear: birthYear,
+            gender: 'boys',
+            parentId: userId,
+            isApproved: true,
+            registrationStatus: 'approved',
+          });
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating birth year:', error);
+      res.status(500).json({ error: 'Failed to update birth year' });
     }
   });
 

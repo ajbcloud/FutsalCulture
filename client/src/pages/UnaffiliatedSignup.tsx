@@ -287,20 +287,37 @@ export function UnaffiliatedSignupComplete() {
   const { getToken } = useAuth();
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [needsBirthYear, setNeedsBirthYear] = useState<boolean | null>(null);
+  const [birthYear, setBirthYear] = useState<string>("");
+  const [birthYearError, setBirthYearError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const maxBirthYear = currentYear - 18;
+  const minBirthYear = 1920;
 
   useEffect(() => {
-    if (!isLoaded || !user || isSyncing) return;
+    if (!isLoaded || !user) return;
+    
+    const role = user.unsafeMetadata?.role as string | undefined;
+    
+    if (role === "player") {
+      setNeedsBirthYear(true);
+    } else {
+      setNeedsBirthYear(false);
+    }
+  }, [isLoaded, user]);
+
+  useEffect(() => {
+    if (needsBirthYear !== false || isSyncing) return;
+    if (!isLoaded || !user) return;
     
     setIsSyncing(true);
     
-    // Make a simple authenticated API call to trigger user sync
-    // This ensures the syncClerkUser middleware creates the user before we redirect
     async function syncAndRedirect() {
       try {
         const token = await getToken();
         
-        // Call /api/user which will trigger syncClerkUser middleware
-        // This ensures the user exists in our DB before redirecting
         const response = await fetch("/api/user", {
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -308,7 +325,6 @@ export function UnaffiliatedSignupComplete() {
         });
         
         if (response.ok) {
-          // User is synced, safe to redirect
           sessionStorage.removeItem(ROLE_STORAGE_KEY);
           sessionStorage.removeItem(FROM_GET_STARTED_KEY);
           
@@ -319,18 +335,67 @@ export function UnaffiliatedSignupComplete() {
           
           navigate("/dashboard");
         } else {
-          // Retry after a short delay
           setTimeout(syncAndRedirect, 500);
         }
       } catch (error) {
         console.error("Error syncing user:", error);
-        // Retry after a short delay
         setTimeout(syncAndRedirect, 500);
       }
     }
     
     syncAndRedirect();
-  }, [isLoaded, user, isSyncing, getToken, navigate, toast]);
+  }, [isLoaded, user, isSyncing, needsBirthYear, getToken, navigate, toast]);
+
+  async function handleBirthYearSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBirthYearError("");
+    
+    const yearNum = parseInt(birthYear, 10);
+    
+    if (isNaN(yearNum)) {
+      setBirthYearError("Please enter a valid birth year");
+      return;
+    }
+    
+    if (yearNum < minBirthYear || yearNum > maxBirthYear) {
+      setBirthYearError(`Birth year must be between ${minBirthYear} and ${maxBirthYear}`);
+      return;
+    }
+    
+    const age = currentYear - yearNum;
+    if (age < 18) {
+      setBirthYearError("You must be 18 or older to register as a player");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const token = await getToken();
+      
+      const response = await fetch("/api/users/update-birth-year", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ birthYear: yearNum }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setBirthYearError(data.error || "Failed to save birth year");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      setNeedsBirthYear(false);
+    } catch (error) {
+      console.error("Error submitting birth year:", error);
+      setBirthYearError("An error occurred. Please try again.");
+      setIsSubmitting(false);
+    }
+  }
 
   if (!isLoaded) {
     return (
@@ -361,9 +426,79 @@ export function UnaffiliatedSignupComplete() {
             <Button 
               className="w-full"
               onClick={() => navigate("/signup/unaffiliated")}
+              data-testid="button-go-to-signup"
             >
               Go to Signup
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (needsBirthYear) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <User className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">Verify Your Age</CardTitle>
+            <CardDescription>
+              As a player (18+), please confirm your birth year to continue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleBirthYearSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="birthYear" className="text-sm font-medium text-foreground">
+                  Birth Year
+                </label>
+                <input
+                  id="birthYear"
+                  type="number"
+                  min={minBirthYear}
+                  max={maxBirthYear}
+                  value={birthYear}
+                  onChange={(e) => {
+                    setBirthYear(e.target.value);
+                    setBirthYearError("");
+                  }}
+                  placeholder={`e.g., ${currentYear - 25}`}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="input-birth-year"
+                />
+                <p className="text-xs text-muted-foreground">
+                  You must be 18 or older (born in {maxBirthYear} or earlier)
+                </p>
+              </div>
+              
+              {birthYearError && (
+                <p className="text-sm text-destructive" data-testid="text-birth-year-error">
+                  {birthYearError}
+                </p>
+              )}
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting || !birthYear}
+                data-testid="button-continue-birth-year"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
