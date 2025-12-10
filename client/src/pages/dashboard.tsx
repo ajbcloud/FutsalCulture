@@ -14,6 +14,7 @@ import WaitlistOffers from "@/components/waitlist-offers";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
 import { ParentSessionHistoryDropdown } from "@/components/parent-session-history-dropdown";
 import HouseholdSection from "@/components/household-section";
+import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
 
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,15 @@ export default function Dashboard() {
     session: FutsalSession;
     player: Player;
     signup: any;
+  } | null>(null);
+
+  // Consent modal state
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentPlayerData, setConsentPlayerData] = useState<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthDate: string;
   } | null>(null);
 
   // Sync tab state with URL query params - MUST be with other hooks before any computed values
@@ -131,6 +141,79 @@ export default function Dashboard() {
   const userHasHousehold = households.some(h => 
     h.members?.some(m => m.userId === user?.id)
   );
+
+  // Query for household consent documents to check for missing consent forms
+  type HouseholdConsentData = {
+    player: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      isAdult: boolean;
+      birthYear: number | null;
+    };
+    documents: any[];
+    missingForms: Array<{
+      templateId: string;
+      templateType: string;
+      title: string;
+    }>;
+    hasCompletedConsent: boolean;
+  };
+
+  // Check if user is unaffiliated (no club membership) - must be computed before using in queries
+  const isUnaffiliated = user?.isUnaffiliated === true;
+
+  const { data: householdConsentData = [], refetch: refetchConsentData } = useQuery<HouseholdConsentData[]>({
+    queryKey: ["/api/household/consent-documents"],
+    enabled: isAuthenticated && !!user?.tenantId && !isUnaffiliated,
+  });
+
+  // Find players (minors) who need consent forms signed
+  const playersNeedingConsent = householdConsentData.filter(
+    (data) => !data.player.isAdult && data.missingForms.length > 0
+  );
+
+  // Show consent modal automatically when there are minors with missing consent forms
+  useEffect(() => {
+    if (playersNeedingConsent.length > 0 && !showConsentModal && !consentPlayerData) {
+      const firstPlayerNeedingConsent = playersNeedingConsent[0];
+      setConsentPlayerData({
+        id: firstPlayerNeedingConsent.player.id,
+        firstName: firstPlayerNeedingConsent.player.firstName,
+        lastName: firstPlayerNeedingConsent.player.lastName,
+        birthDate: firstPlayerNeedingConsent.player.birthYear 
+          ? `${firstPlayerNeedingConsent.player.birthYear}-01-01`
+          : '',
+      });
+      setShowConsentModal(true);
+    }
+  }, [playersNeedingConsent, showConsentModal, consentPlayerData]);
+
+  const handleConsentComplete = () => {
+    setShowConsentModal(false);
+    setConsentPlayerData(null);
+    // Refetch consent data to check if there are more players needing consent
+    refetchConsentData();
+    queryClient.invalidateQueries({ queryKey: ["/api/household/consent-documents"] });
+    toast({
+      title: "Consent forms signed",
+      description: "Thank you for completing the required consent forms.",
+    });
+  };
+
+  const handleConsentClose = () => {
+    // User cannot close the modal if there are still players needing consent
+    if (playersNeedingConsent.length > 0) {
+      toast({
+        title: "Consent required",
+        description: "Please complete the consent forms before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowConsentModal(false);
+    setConsentPlayerData(null);
+  };
 
   // Determine if player creation should be blocked based on age policy
   const householdRequired = agePolicy?.householdPolicy?.householdRequired === true;
@@ -349,9 +432,6 @@ export default function Dashboard() {
 
   const paidSessionsCount = signups.filter(s => s.paid).length;
   const pendingPayments = upcomingSignups.filter(s => !s.paid).length;
-
-  // Check if user is unaffiliated (no club membership)
-  const isUnaffiliated = user?.isUnaffiliated === true;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -896,6 +976,22 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Consent Form Modal - shown when minors have unsigned consent forms */}
+      {showConsentModal && consentPlayerData && (
+        <ConsentDocumentModal
+          isOpen={showConsentModal}
+          onClose={handleConsentClose}
+          onComplete={handleConsentComplete}
+          isParentSigning={true}
+          playerData={consentPlayerData}
+          parentData={{
+            id: user?.id,
+            firstName: user?.firstName || '',
+            lastName: user?.lastName || '',
+          }}
+        />
+      )}
     </div>
   );
 }
