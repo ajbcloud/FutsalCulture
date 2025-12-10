@@ -1,3 +1,11 @@
+// Sentry must be initialized before other imports
+import * as Sentry from "@sentry/node";
+Sentry.init({
+  dsn: "https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155",
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || "development",
+});
+
 // Load environment variables first - must be at the very top
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -57,7 +65,7 @@ app.use((req, res, next) => {
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-sonarly-session-id');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
@@ -75,6 +83,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use(rateLimitMiddleware);
 app.use(ipRestrictionMiddleware);
 app.use(sessionMonitoringMiddleware);
+
+// Sonarly session linking middleware (links backend errors to frontend sessions)
+app.use((req, res, next) => {
+  const sessionId = req.headers['x-sonarly-session-id'] as string;
+  if (sessionId) Sentry.setTag('sonarly.session_id', sessionId);
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
