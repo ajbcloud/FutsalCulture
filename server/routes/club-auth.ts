@@ -379,8 +379,16 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
           const isSameTenant = existingUser.tenantId === tenant.id;
           
           if (isSameTenant) {
-            // Already in this club
-            user = existingUser;
+            // Already in this club - but make sure isUnaffiliated is cleared
+            if (existingUser.isUnaffiliated === true) {
+              const [updatedUser] = await tx.update(users)
+                .set({ isUnaffiliated: false })
+                .where(eq(users.id, existingUser.id))
+                .returning();
+              user = updatedUser;
+            } else {
+              user = existingUser;
+            }
           } else if (isUnaffiliated) {
             // User is unaffiliated, allow them to join a real club
             const [updatedUser] = await tx.update(users)
@@ -390,6 +398,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
                 isApproved: autoApprove,
                 registrationStatus: autoApprove ? 'approved' : 'pending',
                 approvedAt: autoApprove ? new Date() : null,
+                isUnaffiliated: false, // Clear unaffiliated flag when joining a real club
               })
               .where(eq(users.id, existingUser.id))
               .returning();
@@ -407,6 +416,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
               isApproved: autoApprove,
               registrationStatus: autoApprove ? 'approved' : 'pending',
               approvedAt: autoApprove ? new Date() : null,
+              isUnaffiliated: false, // Clear unaffiliated flag when joining a club
             })
             .where(eq(users.id, existingUser.id))
             .returning();
