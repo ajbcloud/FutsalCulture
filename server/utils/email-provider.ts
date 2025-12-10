@@ -64,7 +64,11 @@ class ResendEmailProvider implements IEmailProvider {
         emailOptions.replyTo = message.replyTo;
       }
       if (message.categories?.length) {
-        emailOptions.tags = message.categories.map(cat => ({ name: 'category', value: cat }));
+        // Resend requires unique tag names, so we use the category value as part of the name
+        emailOptions.tags = message.categories.map((cat, index) => ({ 
+          name: `cat_${index}`, 
+          value: cat 
+        }));
       }
       if (message.attachments?.length) {
         emailOptions.attachments = message.attachments.map(att => ({
