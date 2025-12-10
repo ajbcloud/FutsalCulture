@@ -1,13 +1,9 @@
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-interface AdminSettings {
+interface PublicBranding {
   businessName: string;
   businessLogo?: string;
-  autoApproveRegistrations: boolean;
-  paymentReminderMinutes: number;
-  sessionDurationMinutes: number;
-  requireSessionAccessCode: boolean;
 }
 
 interface BusinessContextType {
@@ -19,14 +15,14 @@ interface BusinessContextType {
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
-  const { data: settings, isLoading } = useQuery<AdminSettings>({
-    queryKey: ['/api/admin/settings'],
+  const { data: branding, isLoading } = useQuery<PublicBranding>({
+    queryKey: ['/api/branding'],
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnWindowFocus: false,
   });
 
-  const businessName = settings?.businessName || 'PlayHQ';
-  const businessLogo = settings?.businessLogo;
+  const businessName = branding?.businessName || 'PlayHQ';
+  const businessLogo = branding?.businessLogo;
 
   return (
     <BusinessContext.Provider value={{ businessName, businessLogo, isLoading }}>

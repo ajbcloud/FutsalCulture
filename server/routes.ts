@@ -15,7 +15,9 @@ import {
   promoteWaitlistSchema,
   waitlistSettingsSchema,
   insertHouseholdSchema,
-  insertHouseholdMemberSchema
+  insertHouseholdMemberSchema,
+  users,
+  tenants
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -73,6 +75,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Terminology routes - mounted after session/Clerk middleware so authenticated users get tenant-aware data
   // These routes handle both authenticated and unauthenticated users internally
   app.use('/api', terminologyRouter);
+
+  // Branding endpoint - works for both authenticated and unauthenticated users
+  // Goes through Clerk middleware and syncClerkUser so we can access req.user if available
+  app.get('/api/branding', async (req, res) => {
+    try {
+      let tenantId: string | null = null;
+      
+      // Priority 1: Check X-Tenant-Id header (used by admin dashboards for tenant switching)
+      const headerTenantId = req.get('X-Tenant-Id');
+      if (headerTenantId) {
+        tenantId = headerTenantId;
+      }
+      
+      // Priority 2: Check impersonation context (super admin viewing a tenant)
+      if (!tenantId) {
+        const impersonation = (req as any).session?.impersonation;
+        if (impersonation?.tenantId) {
+          tenantId = impersonation.tenantId;
+        }
+      }
+      
+      // Priority 3: Use synced user's tenant (set by syncClerkUser middleware)
+      if (!tenantId && (req as any).user?.tenantId) {
+        tenantId = (req as any).user.tenantId;
+      }
+      
+      // Priority 4: Try subdomain-based detection for unauthenticated users
+      if (!tenantId) {
+        const host = req.get('host') || '';
+        const subdomain = host.split('.')[0];
+        
+        if (subdomain && !['www', 'localhost', 'playhq', 'app'].includes(subdomain)) {
+          const tenant = await db.query.tenants.findFirst({
+            where: eq(tenants.subdomain, subdomain),
+            columns: { id: true }
+          });
+          tenantId = tenant?.id || null;
+        }
+      }
+      
+      // If no tenant, return platform defaults
+      if (!tenantId) {
+        return res.json({
+          businessName: 'PlayHQ',
+          businessLogo: undefined
+        });
+      }
+      
+      // Fetch branding settings for the tenant
+      const settings = await db.query.systemSettings.findMany({
+        where: eq(systemSettings.tenantId, tenantId),
+        columns: { key: true, value: true }
+      });
+      
+      const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+      
+      res.json({
+        businessName: settingsMap.get('businessName') || 'PlayHQ',
+        businessLogo: settingsMap.get('businessLogo') || undefined
+      });
+    } catch (error) {
+      // Log the error for monitoring but return defaults to keep UI functional
+      console.error('❌ Branding endpoint error:', error);
+      res.status(500).json({
+        businessName: 'PlayHQ',
+        businessLogo: undefined,
+        error: 'Failed to load branding'
+      });
+    }
+  });
 
   // Unaffiliated signup routes - for parents/players who sign up without joining a club
   app.use(unaffiliatedSignupRouter);
