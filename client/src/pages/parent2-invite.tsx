@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle, AlertCircle, Users, FileCheck } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
-
-type AgePolicy = {
-  requireConsent: boolean | string | number;
-};
 
 interface Parent2InviteData {
   valid: boolean;
@@ -36,22 +30,8 @@ export default function Parent2Invite() {
     email: "",
     phone: "",
   });
-  const [showConsentModal, setShowConsentModal] = useState(false);
-  const [consentSignatures, setConsentSignatures] = useState<any[]>([]);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-
-  // Fetch age policy to check if consent forms are required (uses tenant endpoint, not admin)
-  const { data: agePolicyData } = useQuery<AgePolicy>({
-    queryKey: ["/api/tenant/age-policy"],
-    queryFn: () => fetch("/api/tenant/age-policy", { credentials: 'include' }).then(res => res.json()),
-  });
-
-  // Check if consent forms are required (handle all possible truthy values)
-  const isConsentRequired = agePolicyData?.requireConsent === true || 
-                            agePolicyData?.requireConsent === 'true' || 
-                            agePolicyData?.requireConsent === 1 || 
-                            agePolicyData?.requireConsent === '1';
 
   // Extract token from URL on component mount
   useEffect(() => {
@@ -137,26 +117,10 @@ export default function Parent2Invite() {
       return;
     }
 
-    // If consent forms are required, show consent modal first
-    if (isConsentRequired) {
-      setShowConsentModal(true);
-      return;
-    }
-
-    // Otherwise, proceed with account creation
-    await createAccount();
-  };
-
-  const createAccount = async (signatures?: any[]) => {
+    // Proceed with account creation (consent forms will be collected after login)
     setLoading(true);
     try {
-      // Include consent signatures if they were collected
-      const payload = {
-        ...formData,
-        consentSignatures: signatures && signatures.length > 0 ? signatures : undefined
-      };
-      
-      const response = await apiRequest("POST", `/api/parent2-invite/accept/${token}`, payload);
+      const response = await apiRequest("POST", `/api/parent2-invite/accept/${token}`, formData);
 
       const result = await response.json();
       
@@ -167,7 +131,7 @@ export default function Parent2Invite() {
           variant: "default",
         });
         
-        // Redirect to success page or login
+        // Redirect to login page
         setTimeout(() => {
           navigate("/login?message=account-created");
         }, 2000);
@@ -184,18 +148,6 @@ export default function Parent2Invite() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConsentComplete = (signedDocuments: any[]) => {
-    // Store the consent signatures and close modal
-    setConsentSignatures(signedDocuments);
-    setShowConsentModal(false);
-    // Now create the account with consent signatures passed directly
-    createAccount(signedDocuments);
-  };
-
-  const handleConsentClose = () => {
-    setShowConsentModal(false);
   };
 
   if (validating) {
@@ -358,26 +310,6 @@ export default function Parent2Invite() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Consent Form Modal for second parent */}
-      {showConsentModal && (
-        <ConsentDocumentModal
-          isOpen={showConsentModal}
-          onClose={handleConsentClose}
-          onComplete={handleConsentComplete}
-          isParentSigning={true}
-          skipApiSubmit={true}
-          playerData={{
-            firstName: "",
-            lastName: "",
-            birthDate: '',
-          }}
-          parentData={{
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-          }}
-        />
-      )}
     </div>
   );
 }

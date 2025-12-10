@@ -48,6 +48,7 @@ interface ConsentDocumentModalProps {
   };
   isParentSigning: boolean;
   skipApiSubmit?: boolean; // When true, just collect signatures and return them without API call
+  templateEndpoint?: string; // Custom endpoint for fetching templates (for unauthenticated flows)
 }
 
 interface SignatureData {
@@ -63,7 +64,8 @@ export default function ConsentDocumentModal({
   playerData,
   parentData,
   isParentSigning,
-  skipApiSubmit = false
+  skipApiSubmit = false,
+  templateEndpoint
 }: ConsentDocumentModalProps) {
   const [templates, setTemplates] = useState<ConsentTemplate[]>([]);
   const [currentTemplateIndex, setCurrentTemplateIndex] = useState(0);
@@ -108,19 +110,36 @@ export default function ConsentDocumentModal({
       setIsLoading(true);
       setError(null);
       
-      const response = await apiRequest('GET', '/api/admin/consent-templates');
+      // Use custom endpoint if provided (for unauthenticated flows like parent2 invite)
+      const endpoint = templateEndpoint || '/api/admin/consent-templates';
+      const response = await apiRequest('GET', endpoint);
       if (!response.ok) {
         throw new Error('Failed to fetch consent templates');
       }
       const data = await response.json();
-      const activeTemplates = data.filter((template: ConsentTemplate) => template.isRequired);
+      
+      // Filter for active templates - the custom endpoint already filters, but double-check
+      const activeTemplates = data.filter((template: any) => 
+        template.isActive === true || template.isRequired === true
+      );
       
       if (activeTemplates.length === 0) {
-        setError('No active consent templates found. Please contact support.');
+        // If no consent forms are configured, just complete without signatures
+        onComplete([]);
         return;
       }
       
-      setTemplates(activeTemplates);
+      // Map to expected interface format
+      const mappedTemplates = activeTemplates.map((t: any) => ({
+        id: t.id,
+        templateType: t.templateType,
+        title: t.title,
+        content: t.content,
+        version: t.version || 1,
+        isRequired: t.isActive || t.isRequired || true
+      }));
+      
+      setTemplates(mappedTemplates);
     } catch (error) {
       console.error('Error fetching consent templates:', error);
       setError('Failed to load consent documents. Please try again.');

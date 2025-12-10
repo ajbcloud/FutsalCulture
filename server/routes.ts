@@ -1049,11 +1049,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: parent1.firstName,
           lastName: parent1.lastName,
           email: parent1.parent2InviteEmail || parent1.parent2InvitePhone
-        }
+        },
+        tenantId: parent1.tenantId
       });
     } catch (error) {
       console.error("Error validating parent 2 invite:", error);
       res.status(500).json({ message: "Failed to validate invite" });
+    }
+  });
+
+  // Public endpoint for consent templates via parent2 invite token (no auth required)
+  app.get('/api/parent2-invite/consent-templates/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      // Decode token to get parent1 ID and their tenant
+      let parentId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'parent2') throw new Error('Invalid token type');
+        parentId = parts[1];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const parent1 = await storage.getUser(parentId);
+      if (!parent1 || !parent1.tenantId) {
+        return res.status(404).json({ message: "Parent or tenant not found" });
+      }
+
+      // Get consent templates for parent1's tenant
+      const { db } = await import('./db');
+      const { consentTemplates } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      const templates = await db
+        .select()
+        .from(consentTemplates)
+        .where(and(
+          eq(consentTemplates.tenantId, parent1.tenantId),
+          eq(consentTemplates.isActive, true)
+        ));
+
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching consent templates for parent2 invite:", error);
+      res.status(500).json({ message: "Failed to fetch consent templates" });
     }
   });
 
