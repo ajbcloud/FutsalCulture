@@ -2618,6 +2618,20 @@ export async function setupAdminRoutes(app: any) {
         logoSize: updates.businessLogo ? updates.businessLogo.length : 'N/A'
       });
 
+      // If businessName is being updated, also update the tenant's displayName
+      // This ensures the sidebar and all other places show the correct name
+      if (updates.businessName && tenantId) {
+        try {
+          await db.update(tenants)
+            .set({ displayName: updates.businessName })
+            .where(eq(tenants.id, tenantId));
+          console.log(`Updated tenant displayName to: ${updates.businessName}`);
+        } catch (tenantError: any) {
+          console.error('Error updating tenant displayName:', tenantError);
+          // Continue with other settings updates even if tenant update fails
+        }
+      }
+
       // Update each setting in the database
       for (const [key, value] of Object.entries(updates)) {
         try {
