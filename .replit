@@ -59,3 +59,4 @@ integrations = ["javascript_sendgrid:1.0.0", "javascript_log_in_with_replit:1.0.
 [userenv.shared]
 TESTING_VITE_STRIPE_PUBLIC_KEY = "pk_test_dGFsZW50ZWQtYnVsbGZyb2ctMjguY2xlcmsuYWNjb3VudHMuZGV2JA"
 TESTING_STRIPE_SECRET_KEY = "sk_test_6zqbVmr7NsOc8wviu7xBWkbx1URtnj8y6NtkDRb4Yk"
+GENERATE_SOURCEMAP = "true"
