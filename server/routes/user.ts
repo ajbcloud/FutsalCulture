@@ -3,9 +3,12 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import { db } from '../db';
 import { users } from '../../shared/schema';
-import { getAuth } from '@clerk/express';
+import { clerkMiddleware, getAuth } from '@clerk/express';
 
 const router = express.Router();
+
+// Apply Clerk middleware to parse auth from requests
+router.use(clerkMiddleware());
 
 // Middleware to check if user is authenticated
 const requireAuth = (req: any, res: express.Response, next: express.NextFunction) => {
