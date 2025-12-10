@@ -48,6 +48,7 @@ import quickbooksRoutes from './routes/quickbooks';
 import { terminologyRouter } from './routes/terminology';
 import unaffiliatedSignupRouter from './routes/unaffiliated-signup';
 import { getStagingTenantId } from './utils/staging-tenant';
+import { emailTemplateService } from './services/unified-email-templates';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -1206,12 +1207,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { firstName, lastName, email, phone, consentSignatures } = req.body;
 
       // Decode token (simplified - in production use JWT verification)
+      // Token format: parent2:userId:householdId:timestamp or parent2:userId:timestamp (legacy)
       let parent1Id: string;
+      let householdId: string | null = null;
       try {
         const decoded = Buffer.from(token, 'base64').toString();
         const parts = decoded.split(':');
         if (parts[0] !== 'parent2') throw new Error('Invalid token type');
         parent1Id = parts[1];
+        // New format includes householdId
+        if (parts.length >= 4) {
+          householdId = parts[2];
+        }
       } catch {
         return res.status(400).json({ message: "Invalid token format" });
       }
@@ -1221,6 +1228,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Parent not found" });
       }
 
+      const tenantId = parent1.tenantId;
+
       // Create parent 2 user account
       const parent2 = await storage.upsertUser({
         id: `parent2_${parent1Id}_${Date.now()}`,
@@ -1228,11 +1237,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         phone,
-        tenantId: parent1.tenantId, // Inherit tenant from parent1
+        tenantId, // Inherit tenant from parent1
       });
 
       // Update all players belonging to parent 1 to include parent 2
       await storage.updatePlayersParent2(parent1Id, parent2.id);
+
+      // Add parent2 to the household if householdId was provided
+      if (householdId && tenantId) {
+        try {
+          await storage.addHouseholdMember(householdId, tenantId, {
+            userId: parent2.id,
+            role: 'secondary',
+          });
+          console.log(`Added parent2 ${parent2.id} to household ${householdId}`);
+        } catch (householdError) {
+          console.error('Error adding parent2 to household:', householdError);
+          // Don't fail the request - they can be added manually
+        }
+      } else {
+        // Legacy flow - try to find parent1's household and add parent2
+        try {
+          if (tenantId) {
+            const parent1Household = await storage.getUserHousehold(parent1Id, tenantId);
+            if (parent1Household) {
+              await storage.addHouseholdMember(parent1Household.id, tenantId, {
+                userId: parent2.id,
+                role: 'secondary',
+              });
+              console.log(`Added parent2 ${parent2.id} to parent1's household ${parent1Household.id}`);
+            }
+          }
+        } catch (householdError) {
+          console.error('Error adding parent2 to parent1 household:', householdError);
+        }
+      }
 
       // Process consent signatures if provided
       if (consentSignatures && Array.isArray(consentSignatures) && consentSignatures.length > 0) {
@@ -3188,14 +3227,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate invite token using parent2 format for compatibility with existing validate/accept routes
-      const inviteToken = Buffer.from(`parent2:${userId}:${Date.now()}`).toString('base64');
+      const inviteToken = Buffer.from(`parent2:${userId}:${householdId}:${Date.now()}`).toString('base64');
       const inviteUrl = `${req.protocol}://${req.get('host')}/parent2-invite/${inviteToken}`;
 
       // Update user with invite info
       await storage.updateUserParent2Invite(userId, 'email', email, new Date());
 
-      // TODO: Send actual email via Resend
-      // For now, return the invite URL
+      // Get tenant info for branding
+      const tenant = await storage.getTenant(tenantId);
+      const invitingUser = req.user;
+      const senderName = `${invitingUser.firstName || ''} ${invitingUser.lastName || ''}`.trim() || 'A parent';
+
+      // Send the actual invitation email
+      try {
+        await emailTemplateService.sendEmail({
+          to: email,
+          template: {
+            type: 'parent2',
+            variant: 'html',
+            data: {
+              tenantId,
+              tenantName: tenant?.name || 'PlayHQ',
+              recipientName: email.split('@')[0], // Use email prefix as placeholder name
+              recipientEmail: email,
+              senderName,
+              role: 'parent',
+              inviteUrl,
+              customMessage: `${senderName} has invited you to join their household on ${tenant?.name || 'PlayHQ'}. As a co-parent, you'll be able to manage players and book sessions together.`,
+              tenantBranding: {
+                businessName: tenant?.businessName || tenant?.name,
+                primaryColor: tenant?.primaryColor || undefined,
+              },
+            },
+          },
+        });
+        console.log(`Household invite email sent to ${email}`);
+      } catch (emailError) {
+        console.error('Failed to send household invite email:', emailError);
+        // Don't fail the request if email fails - invite is still created
+      }
+
       res.json({
         success: true,
         inviteUrl,
