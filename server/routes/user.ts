@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import { db } from '../db';
 import { users } from '../../shared/schema';
+import { getAuth } from '@clerk/express';
 
 const router = express.Router();
 
@@ -13,6 +14,50 @@ const requireAuth = (req: any, res: express.Response, next: express.NextFunction
   }
   next();
 };
+
+// GET /api/user - Get current user info (supports both Clerk and session auth)
+router.get('/', async (req: any, res) => {
+  try {
+    let user = null;
+    
+    // Try Clerk auth first
+    const auth = getAuth(req);
+    if (auth?.userId) {
+      const [foundUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.clerkUserId, auth.userId));
+      user = foundUser;
+    }
+    
+    // Fall back to session auth
+    if (!user && (req.session?.userId || req.user?.id)) {
+      const userId = req.session?.userId || req.user?.id;
+      const [foundUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
+      user = foundUser;
+    }
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      isApproved: user.isApproved,
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Failed to fetch user' });
+  }
+});
 
 // PUT /api/user/profile - Update user profile
 router.put('/profile', requireAuth, async (req: any, res) => {
