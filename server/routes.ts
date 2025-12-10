@@ -2235,8 +2235,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const playerId = req.params.id;
       
-      // Check that the player belongs to a household the user is in
-      const userHousehold = await storage.getUserHousehold(userId, tenantId);
+      // First get the user's household (just the ID)
+      const userHouseholdBasic = await storage.getUserHousehold(userId, tenantId);
+      if (!userHouseholdBasic) {
+        return res.status(403).json({ message: "You must be in a household to delete players" });
+      }
+
+      // Get the full household with members
+      const userHousehold = await storage.getHousehold(userHouseholdBasic.id, tenantId);
       if (!userHousehold) {
         return res.status(403).json({ message: "You must be in a household to delete players" });
       }
