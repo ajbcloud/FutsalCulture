@@ -29,7 +29,7 @@ router.post("/get-started", async (req, res) => {
   for(;;){ const exists = await db.query.tenants.findFirst({ where: (t,{eq})=> eq(t.slug, slug)}); if(!exists) break; i++; slug = `${base}-${i}`; }
 
   const code = tenantCode();
-  const t = await db.insert(tenants).values({ name: org_name, slug, tenant_code: code, contact_name, contact_email, city, state, country }).returning();
+  const t = await db.insert(tenants).values({ name: org_name, displayName: org_name, slug, tenant_code: code, contact_name, contact_email, city, state, country }).returning();
   await db.insert(tenant_users).values({ tenant_id: t[0].id, user_id: userId, role: "tenant_owner" });
 
   const customer = await stripe.customers.create({ email: contact_email, name: org_name, metadata: { tenant_id: t[0].id } });

@@ -20,6 +20,7 @@ export async function ensureAdminUser() {
       console.log("Creating test tenant for admin user...");
       const [newTenant] = await db.insert(tenants).values({
         name: "This is a test Club",
+        displayName: "This is a test Club",
         subdomain: "test-club",
         planLevel: "free",
         inviteCode: nanoid(10),

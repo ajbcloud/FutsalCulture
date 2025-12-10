@@ -89,6 +89,7 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
       // Create tenant
       const [tenant] = await tx.insert(tenants).values({
         name: validatedData.org_name,
+        displayName: validatedData.org_name, // User-facing name for UI
         slug: slug,
         subdomain: slug,
         inviteCode: slug,

@@ -1266,7 +1266,7 @@ export async function setupAdminRoutes(app: any) {
                     '{{sessionLocation}}': session.location || '',
                     '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
                     '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
-                    '{{organizationName}}': tenantData.name || 'PlayHQ',
+                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
                     '{{organizationPhone}}': tenantData.phone || ''
                   };
 
@@ -1314,7 +1314,7 @@ export async function setupAdminRoutes(app: any) {
                     '{{sessionLocation}}': session.location || '',
                     '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
                     '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
-                    '{{organizationName}}': tenantData.name || 'PlayHQ',
+                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
                     '{{organizationPhone}}': tenantData.phone || ''
                   };
 
@@ -2551,8 +2551,8 @@ export async function setupAdminRoutes(app: any) {
         return acc;
       }, {} as any);
 
-      // Use tenant's actual organization name and admin email as defaults
-      const defaultBusinessName = tenantInfo?.name || "Your Organization";
+      // Use tenant's displayName (user-facing) preferring over name (internal with suffix)
+      const defaultBusinessName = tenantInfo?.displayName || tenantInfo?.name || "Your Organization";
       const defaultContactEmail = currentUser?.email || "admin@example.com";
 
       // Default settings if none exist

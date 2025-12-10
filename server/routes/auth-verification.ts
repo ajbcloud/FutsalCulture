@@ -47,6 +47,7 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
     // Create tenant
     const [tenant] = await db.insert(tenants).values({
       name: organization_name,
+      displayName: organization_name,
       subdomain: subdomain,
       city: city || null,
       state: state || null,
@@ -210,6 +211,7 @@ authVerificationRouter.post("/signup", async (req, res) => {
     // Create tenant with appropriate status
     const [tenant] = await db.insert(tenants).values({
       name: org_name,
+      displayName: org_name,
       subdomain: subdomain,
       city: city || null,
       state: state || null,

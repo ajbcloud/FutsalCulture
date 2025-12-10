@@ -636,7 +636,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
               '{{sessionTime}}': format(new Date(sessionData.startTime), 'h:mm a'),
               '{{sessionLocation}}': sessionData.location || '',
               '{{sessionAgeGroup}}': sessionData.ageGroups?.join(', ') || '',
-              '{{organizationName}}': tenantData.name || 'PlayHQ',
+              '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
               '{{organizationPhone}}': tenantData.phone || ''
             };
 
@@ -671,7 +671,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
               '{{sessionTime}}': format(new Date(sessionData.startTime), 'h:mm a'),
               '{{sessionLocation}}': sessionData.location || '',
               '{{sessionAgeGroup}}': sessionData.ageGroups?.join(', ') || '',
-              '{{organizationName}}': tenantData.name || 'PlayHQ',
+              '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
               '{{organizationPhone}}': tenantData.phone || ''
             };
 

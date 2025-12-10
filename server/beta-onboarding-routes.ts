@@ -42,6 +42,7 @@ export function setupBetaOnboardingRoutes(app: Express) {
       // Create tenant
       const [tenant] = await db.insert(tenants).values({
         name: org_name,
+        displayName: org_name,
         subdomain: slug,
         city: city || null,
         state: state || null,
