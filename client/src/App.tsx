@@ -54,6 +54,7 @@ import SetPassword from "@/pages/SetPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvite from "@/pages/accept-invite";
 import PlayerInvite from "@/pages/player-invite";
+import PlayerSetup from "@/pages/PlayerSetup";
 import Parent2Invite from "@/pages/parent2-invite";
 import Parent2Setup from "@/pages/Parent2Setup";
 import Privacy from "./pages/Privacy";
@@ -122,7 +123,10 @@ function Router() {
         <Route path="/session/:id/payment" component={SessionPayment} />
         <Route path="/calendar" component={Calendar} />
         <Route path="/multi-checkout" component={MultiCheckout} />
+        <Route path="/player-invite" component={PlayerInvite} />
         <Route path="/player-invite/:token" component={PlayerInvite} />
+        <Route path="/player-invite/:rest*" component={PlayerInvite} />
+        <Route path="/player-setup" component={PlayerSetup} />
         <Route path="/parent2-invite" component={Parent2Invite} />
         <Route path="/parent2-invite/:token" component={Parent2Invite} />
         <Route path="/parent2-invite/:rest*" component={Parent2Invite} />

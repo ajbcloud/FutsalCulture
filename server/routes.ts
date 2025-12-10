@@ -853,6 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerId = req.params.id;
       const { method } = req.body; // 'email' or 'sms'
       const userId = req.user.id;
+      const tenantId = req.user.tenantId;
 
       // Get player and verify ownership
       const player = await storage.getPlayer(playerId);
@@ -867,23 +868,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Player must be 13 or older for portal access" });
       }
 
-      // Generate invite token (simplified - in production use JWT)
-      const inviteToken = Buffer.from(`${playerId}:${Date.now()}`).toString('base64');
-      const inviteUrl = `${req.protocol}://${req.get('host')}/player-invite/${inviteToken}`;
+      // Generate invite token with proper format: player:playerId:parentId:tenantId:timestamp
+      const inviteToken = Buffer.from(`player:${playerId}:${userId}:${tenantId}:${Date.now()}`).toString('base64');
+      const inviteUrl = `${req.protocol}://${req.get('host')}/player-invite?token=${inviteToken}`;
 
       // Update player with invite info
       await storage.updatePlayerInvite(playerId, method, new Date());
 
-      // For now, just return the invite URL (in production, send via email/SMS)
+      // Get parent info for email
+      const parent = await storage.getUser(userId);
+      const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Your parent';
+
+      // Get tenant info for branding
+      const tenant = tenantId ? await storage.getTenant(tenantId) : null;
+      const tenantName = tenant?.displayName || tenant?.name || 'PlayHQ';
+
+      // Send invite email if method is email and player has email
+      if (method === 'email' && player.email) {
+        try {
+          const emailResult = await emailTemplateService.sendEmail({
+            to: player.email,
+            template: {
+              type: 'invitation',
+              variant: 'html',
+              data: {
+                tenantId: tenantId || '',
+                tenantName,
+                recipientName: `${player.firstName} ${player.lastName}`,
+                recipientEmail: player.email,
+                senderName: parentName,
+                role: 'player',
+                inviteUrl,
+                tenantBranding: {
+                  businessName: tenantName,
+                },
+                metadata: {
+                  playerId,
+                  parentId: userId,
+                  inviteType: 'player_invite',
+                },
+              },
+            },
+          });
+          console.log(`Player invite email sent to ${player.email}: ${emailResult.success ? 'success' : 'failed'}`);
+        } catch (emailError) {
+          console.error('Error sending player invite email:', emailError);
+        }
+      }
+
       res.json({
         method,
         inviteUrl,
-        message: `Invite would be sent via ${method}`,
-        // In production: send actual email/SMS here
+        message: method === 'email' && player.email 
+          ? `Invite sent via email to ${player.email}` 
+          : `Invite link generated`,
+        emailSent: method === 'email' && player.email,
       });
     } catch (error) {
       console.error("Error sending player invite:", error);
       res.status(500).json({ message: "Failed to send invite" });
+    }
+  });
+
+  // Player invite validation endpoint (Clerk-based flow)
+  app.get('/api/player-invite/validate/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      // Decode token: player:playerId:parentId:tenantId:timestamp
+      let playerId: string;
+      let parentId: string;
+      let tenantId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'player') throw new Error('Invalid token type');
+        playerId = parts[1];
+        parentId = parts[2];
+        tenantId = parts[3];
+      } catch {
+        return res.status(400).json({ valid: false, message: "Invalid token format" });
+      }
+
+      const player = await storage.getPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ valid: false, message: "Player not found" });
+      }
+
+      // Check if account already created
+      if (player.userAccountCreated) {
+        return res.json({ valid: false, message: "Account already exists for this player" });
+      }
+
+      // Check age requirement
+      const currentYear = new Date().getFullYear();
+      const playerAge = currentYear - player.birthYear;
+      if (playerAge < 13) {
+        return res.status(403).json({ valid: false, message: "Player must be 13 or older" });
+      }
+
+      // Get parent info
+      const parent = await storage.getUser(parentId);
+      const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'Your parent';
+
+      // Get tenant info
+      const tenant = tenantId ? await storage.getTenant(tenantId) : null;
+
+      res.json({ 
+        valid: true, 
+        player: {
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          email: player.email,
+          parentName,
+        },
+        tenant: tenant ? {
+          id: tenant.id,
+          name: tenant.displayName || tenant.name,
+        } : null,
+      });
+    } catch (error) {
+      console.error("Error validating player invite:", error);
+      res.status(500).json({ valid: false, message: "Failed to validate invite" });
+    }
+  });
+
+  // Player invite join endpoint (after Clerk authentication)
+  app.post('/api/player-invite/join/:token', isAuthenticated, async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const clerkUserId = req.user.id;
+
+      // Decode token: player:playerId:parentId:tenantId:timestamp
+      let playerId: string;
+      let parentId: string;
+      let tenantId: string;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'player') throw new Error('Invalid token type');
+        playerId = parts[1];
+        parentId = parts[2];
+        tenantId = parts[3];
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const player = await storage.getPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Check if account already created
+      if (player.userAccountCreated) {
+        return res.status(400).json({ message: "Account already exists for this player" });
+      }
+
+      // Get the current user from req.user which was set by Clerk auth
+      const playerUser = await storage.getUser(clerkUserId);
+      if (!playerUser) {
+        return res.status(404).json({ message: "Your account was not found" });
+      }
+
+      // Update user's tenantId to match the player's tenant and set role to player
+      await storage.updateUser(playerUser.id, { 
+        tenantId,
+        role: 'player',
+        isAdmin: false,
+        isSuperAdmin: false,
+        isAssistant: false,
+        isUnaffiliated: false,
+      });
+
+      // Link the user to the player record
+      await storage.updatePlayer(playerId, {
+        userId: playerUser.id,
+        userAccountCreated: true,
+      });
+
+      // Get parent name for response
+      const parent = await storage.getUser(parentId);
+      const parentName = parent ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : 'the parent';
+
+      res.json({ 
+        success: true, 
+        message: "Successfully linked to player account",
+        parentName,
+        playerName: `${player.firstName} ${player.lastName}`,
+      });
+    } catch (error) {
+      console.error("Error joining as player:", error);
+      res.status(500).json({ message: "Failed to link player account" });
     }
   });
 
