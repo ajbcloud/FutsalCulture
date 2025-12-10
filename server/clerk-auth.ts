@@ -456,6 +456,7 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     const isUnaffiliatedSignup = signupType === 'unaffiliated';
     const isParent2InviteSignup = signupType === 'parent2_invite';
     const isPlayerInviteSignup = signupType === 'player_invite';
+    const isCoachInviteSignup = signupType === 'coach_invite';
 
     // Check if user exists by email (for migrating existing users)
     const existingUserByEmail = email ? await storage.getUserByEmail(email) : null;
@@ -548,6 +549,31 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
           .returning();
         user = updatedUser;
         console.log(`Linked existing user ${existingUserByEmail.id} to staging tenant for player invite (will be updated by join endpoint)`);
+      } else if (isCoachInviteSignup) {
+        // Existing user with no tenant signing up via coach invite
+        // Put them in staging tenant temporarily - join endpoint will update their tenant
+        // SECURITY: Don't set isAssistant here - join endpoint will do it after validating invite code
+        const stagingTenant = await getOrCreateStagingTenant();
+        const [updatedUser] = await db.update(users)
+          .set({
+            clerkUserId,
+            authProvider: 'clerk',
+            tenantId: stagingTenant.id,
+            isAdmin: false,
+            isSuperAdmin: false,
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            role: 'parent',
+            firstName: firstName || existingUserByEmail.firstName,
+            lastName: lastName || existingUserByEmail.lastName,
+            profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUserByEmail.id))
+          .returning();
+        user = updatedUser;
+        console.log(`Linked existing user ${existingUserByEmail.id} to staging tenant for coach invite (will be updated by join endpoint)`);
       } else {
         // Existing user has no tenant - create one and make them admin
         // This handles users who existed but never got a club set up
@@ -637,6 +663,43 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
           if (existingUser) {
             user = existingUser;
             console.log(`Found existing player invite user ${existingUser.id} (created by parallel request)`);
+          } else {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
+    } else if (isCoachInviteSignup) {
+      // New user signing up via coach invite
+      // Put them in staging tenant temporarily - join endpoint will update their tenant
+      // SECURITY: Don't set isAssistant here - join endpoint will do it after validating invite code
+      const stagingTenant = await getOrCreateStagingTenant();
+      try {
+        const insertResult = await db.insert(users).values({
+          email,
+          clerkUserId,
+          authProvider: 'clerk',
+          tenantId: stagingTenant.id,
+          isAdmin: false,
+          isSuperAdmin: false,
+          isApproved: true,
+          registrationStatus: 'approved',
+          approvedAt: new Date(),
+          firstName: firstName || null,
+          lastName: lastName || null,
+          profileImageUrl: profileImageUrl || null,
+          role: 'parent',
+        }).returning();
+        user = (insertResult as any[])[0];
+        console.log(`Created coach invite user ${user.id} in staging tenant (will be updated by join endpoint)`);
+      } catch (error: any) {
+        // Handle race condition - user was created by another request
+        if (error?.code === '23505') {
+          const existingUser = await storage.getUserByEmail(email);
+          if (existingUser) {
+            user = existingUser;
+            console.log(`Found existing coach invite user ${existingUser.id} (created by parallel request)`);
           } else {
             throw error;
           }

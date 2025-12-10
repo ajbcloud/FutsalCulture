@@ -38,6 +38,7 @@ import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
 import { useTenantPlan } from "@/hooks/useTenantPlan";
 import { ClubSwitcher } from "@/components/club-switcher";
+import { RoleSwitcher } from "@/components/role-switcher";
 
 type CoachPermissions = {
   canViewPii: boolean;
@@ -97,7 +98,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
 
   // Fetch coach permissions for assistants
-  const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: number; permissions: CoachPermissions }> }>({
+  const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: string; permissions: CoachPermissions }> }>({
     queryKey: ['/api/coach/my-tenants'],
     enabled: user?.isAssistant && !user?.isAdmin,
   });
@@ -225,6 +226,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             
             {/* Club switcher for coaches with multiple club assignments */}
             <ClubSwitcher />
+            
+            {/* Role switcher for coaches who are also parents */}
+            {user?.isAssistant && <RoleSwitcher />}
           </div>
           <Button
             variant="ghost"

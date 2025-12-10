@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Menu, User, X, Sun, Moon, LogOut, Settings, Shield, HelpCircle, Home } from "lucide-react";
+import { RoleSwitcher } from "@/components/role-switcher";
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -78,6 +79,9 @@ export default function Navbar() {
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Role Switcher for coaches who are also parents */}
+            {isAuthenticated && user?.isAssistant && <RoleSwitcher />}
+            
             {/* Theme Toggle - hidden on mobile, shown on desktop */}
             <button
               type="button"

@@ -788,13 +788,17 @@ router.post('/coach/join', async (req: any, res: Response) => {
 
     const permissions = metadata.permissions || {};
 
-    const userUpdate: { tenantId: string; isAssistant: boolean; firstName?: string; lastName?: string } = {
-      tenantId: inviteCode.tenantId,
-      isAssistant: true,
-    };
-    if (metadata.firstName) userUpdate.firstName = metadata.firstName;
-    if (metadata.lastName) userUpdate.lastName = metadata.lastName;
-    await storage.updateUser(userId, userUpdate);
+    // Update user with explicit fields only (type-safe update)
+    await db.update(users)
+      .set({
+        tenantId: inviteCode.tenantId,
+        isAssistant: true,
+        isUnaffiliated: false,
+        ...(metadata.firstName ? { firstName: metadata.firstName } : {}),
+        ...(metadata.lastName ? { lastName: metadata.lastName } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
 
     const assignment = await storage.createCoachTenantAssignment({
       userId,
@@ -830,6 +834,7 @@ router.post('/coach/join', async (req: any, res: Response) => {
       tenantName: tenant?.displayName || tenant?.name || 'Organization',
       assignmentId: assignment.id,
       redirectUrl: '/coach/dashboard',
+      requiresReload: true, // Tell client to reload to refresh session with new tenant
     });
   } catch (error) {
     console.error('Error joining as coach:', error);
