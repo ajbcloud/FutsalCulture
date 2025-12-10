@@ -1,0 +1,212 @@
+You are installing Sonarly tracking into this project. Install ALL THREE components:
+
+## 1. FRONTEND TRACKER (Session Replay)
+
+Add this script to the main HTML file (index.html, app.html, or layout file):
+
+<!-- Add this before the closing </head> tag -->
+<script>
+  (function(A, opts){
+    window.Sonarly = { opts: opts, queue: [] };
+    var s = document.createElement('script');
+    s.src = A;
+    s.async = true;
+    document.head.appendChild(s);
+  })("https://sonarly.dev/static/tracker.js", {
+    projectKey: "huYHJ1S6mcAcObjLDkNJ",
+    ingestPoint: "https://sonarly.dev/ingest"
+  });
+</script>
+
+## 2. SOURCEMAPS (Readable Stack Traces)
+
+### Step 1: Enable sourcemap generation in your build config
+
+**Vite** - in `vite.config.ts`:
+```javascript
+export default defineConfig({
+  build: { sourcemap: 'hidden' }
+})
+```
+
+**Next.js** - in `next.config.js`:
+```javascript
+module.exports = {
+  productionBrowserSourceMaps: true
+}
+```
+
+**Create React App** - in `.env` or build command:
+```
+GENERATE_SOURCEMAP=true
+```
+
+**Nuxt 3** - in `nuxt.config.ts`:
+```javascript
+export default defineNuxtConfig({
+  sourcemap: { client: true }
+})
+```
+
+**Vue CLI** - in `vue.config.js`:
+```javascript
+module.exports = {
+  productionSourceMap: true
+}
+```
+
+**Remix** - sourcemaps enabled by default
+
+**SvelteKit** - in `svelte.config.js`:
+```javascript
+const config = {
+  kit: { vite: { build: { sourcemap: 'hidden' } } }
+}
+```
+
+### Step 2: Add the sourcemap uploader to your build script in package.json
+
+**IMPORTANT: Detect the framework first, then use the correct folder path:**
+
+| Framework | Config file to detect | Sourcemap folder |
+|-----------|----------------------|------------------|
+| Vite | `vite.config.ts` or `vite.config.js` | `./dist/assets/` |
+| Next.js | `next.config.js` or `next.config.mjs` | `./.next/static/chunks/` |
+| Create React App | `react-scripts` in package.json | `./build/static/js/` |
+| Nuxt 3 | `nuxt.config.ts` | `./.output/public/_nuxt/` |
+| Vue CLI | `@vue/cli-service` in package.json | `./dist/js/` |
+| Remix | `remix.config.js` | `./public/build/` |
+| SvelteKit | `svelte.config.js` | `./build/_app/immutable/` |
+
+Example for Vite:
+```json
+{
+  "scripts": {
+    "build": "vite build && npx @sonarly/sourcemap-uploader --api-key=huYHJ1S6mcAcObjLDkNJ ./dist/assets/ || true"
+  }
+}
+```
+
+Example for Next.js:
+```json
+{
+  "scripts": {
+    "build": "next build && npx @sonarly/sourcemap-uploader --api-key=huYHJ1S6mcAcObjLDkNJ ./.next/static/chunks/ || true"
+  }
+}
+```
+
+Example for Create React App:
+```json
+{
+  "scripts": {
+    "build": "react-scripts build && npx @sonarly/sourcemap-uploader --api-key=huYHJ1S6mcAcObjLDkNJ ./build/static/js/ || true"
+  }
+}
+```
+
+## 3. BACKEND SENTRY SDK (Traces & Errors)
+
+### Node.js (Express/Fastify/Koa/NestJS)
+
+Add @sentry/node to package.json, then at the VERY TOP of your entry file:
+
+```javascript
+const Sentry = require("@sentry/node");
+Sentry.init({
+  dsn: "https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155",
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || "development",
+});
+
+// Session linking middleware (add before routes)
+app.use((req, res, next) => {
+  const sessionId = req.headers['x-sonarly-session-id'];
+  if (sessionId) Sentry.setTag('sonarly.session_id', sessionId);
+  next();
+});
+```
+
+### Python - Django
+
+Add sentry-sdk to requirements.txt, then in BOTH asgi.py AND wsgi.py:
+
+```python
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+sentry_sdk.init(
+    dsn="https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155",
+    traces_sample_rate=1.0,
+    environment="production",
+    integrations=[
+        DjangoIntegration(
+            transaction_style="url",
+            middleware_spans=True,
+            signals_spans=True,
+        ),
+    ],
+    send_default_pii=True,
+)
+```
+
+Create middleware.py for session linking:
+
+```python
+import sentry_sdk
+
+class SonarlySessionMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        session_id = request.headers.get('x-sonarly-session-id')
+        if session_id:
+            sentry_sdk.set_tag('sonarly.session_id', session_id)
+        return self.get_response(request)
+```
+
+In settings.py, add to MIDDLEWARE and CORS_ALLOW_HEADERS:
+
+```python
+MIDDLEWARE = [
+    # ... existing middleware ...
+    'your_app.middleware.SonarlySessionMiddleware',
+]
+
+CORS_ALLOW_HEADERS = [
+    # ... existing headers ...
+    'x-sonarly-session-id',
+]
+```
+
+### Python - FastAPI/Flask
+
+Add sentry-sdk to requirements.txt, then:
+
+```python
+import sentry_sdk
+sentry_sdk.init(
+    dsn="https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155",
+    traces_sample_rate=1.0,
+    environment="production",
+)
+
+# Session linking middleware (FastAPI)
+@app.middleware("http")
+async def link_sonarly_session(request, call_next):
+    session_id = request.headers.get("x-sonarly-session-id")
+    if session_id:
+        sentry_sdk.set_tag("sonarly.session_id", session_id)
+    return await call_next(request)
+```
+
+## Instructions
+
+1. Explore the repository structure
+2. Identify frontend, backend, or full-stack
+3. Install ALL applicable components
+4. Preserve ALL existing code
+
+Project Key: huYHJ1S6mcAcObjLDkNJ
+Sentry DSN: https://huYHJ1S6mcAcObjLDkNJ@sonarly.dev/155

@@ -149,12 +149,14 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
         user = newUser;
       }
       
-      // Create audit event
+      // Create audit event using actual database columns
       await tx.insert(auditEvents).values({
         tenantId: tenant.id,
-        actorUserId: user.id,
-        eventType: "tenant_created",
-        metadataJson: { 
+        userId: user.id,
+        action: "tenant_created",
+        resourceType: "tenant",
+        resourceId: tenant.id,
+        details: { 
           slug, 
           org_name: validatedData.org_name,
           method: "clerk_club_signup"
@@ -413,12 +415,14 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
         user = newUser;
       }
       
-      // Create audit event
+      // Create audit event using actual database columns
       await tx.insert(auditEvents).values({
         tenantId: tenant.id,
-        actorUserId: user.id,
-        eventType: "user_joined",
-        metadataJson: { 
+        userId: user.id,
+        action: "user_joined",
+        resourceType: "user",
+        resourceId: user.id,
+        details: { 
           method: "clerk_join_code",
           role: validRole,
         }
