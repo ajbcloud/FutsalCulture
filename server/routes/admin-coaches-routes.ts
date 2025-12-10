@@ -101,8 +101,9 @@ router.get('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) =
 // POST /api/admin/coaches/invite - Invite a new coach by email (creates invite code, sends email)
 router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
-    const invitedBy = req.currentUser?.id;
+    const tenantId = req.user?.tenantId;
+    const invitedBy = req.user?.id;
+    console.log('[Coach Invite] Starting invite process for tenant:', tenantId, 'by user:', invitedBy);
     
     if (!tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
@@ -217,12 +218,14 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
       </html>
     `;
 
+    console.log('[Coach Invite] Sending email to:', email);
     const emailResult = await sendEmail({
       to: email,
       subject: `You're invited to join ${tenantName} as a coach`,
       html: emailHtml,
       text: `${inviterName} has invited you to join ${tenantName} as a coach on PlayHQ. Visit ${joinUrl} to accept your invitation.`,
     });
+    console.log('[Coach Invite] Email result:', emailResult);
 
     res.status(201).json({
       success: true,
