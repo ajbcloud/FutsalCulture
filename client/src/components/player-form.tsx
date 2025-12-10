@@ -19,7 +19,7 @@ type Player = typeof players.$inferSelect;
 const playerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  birthYear: z.number().min(2000).max(new Date().getFullYear() - 4, "Child must be at least 4 years old"),
+  birthYear: z.number().min(1920, "Please enter a valid birth year").max(new Date().getFullYear() - 4, "Player must be at least 4 years old"),
   gender: z.enum(["boys", "girls"], { required_error: "Gender is required" }),
   soccerClub: z.string().optional(),
   email: z.string().email("Valid email required").optional().or(z.literal("")),
