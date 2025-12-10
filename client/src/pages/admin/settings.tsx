@@ -214,15 +214,18 @@ function DefaultInviteCodeSection() {
   });
 
   const createDefaultMutation = useMutation({
-    mutationFn: (code: string) =>
-      apiRequest("POST", "/api/admin/invite-codes", {
+    mutationFn: async (code: string) => {
+      const response = await apiRequest("POST", "/api/admin/invite-codes", {
         code: code.toUpperCase(),
         codeType: "invite",
         isActive: true,
         description: "Default invite code",
-      }),
+      });
+      return response.json();
+    },
     onSuccess: async (data: any) => {
       await setDefaultMutation.mutateAsync(data.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
       setIsCreateDialogOpen(false);
       setNewCodeValue('');
     },
