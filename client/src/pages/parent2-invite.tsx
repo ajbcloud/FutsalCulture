@@ -181,6 +181,10 @@ export default function Parent2Invite() {
             initialValues={{
               emailAddress: inviteData?.invitedEmail || '',
             }}
+            unsafeMetadata={{
+              signupType: 'parent2_invite',
+              parent2InviteToken: token,
+            }}
             appearance={{
               variables: {
                 colorPrimary: "#3b82f6",

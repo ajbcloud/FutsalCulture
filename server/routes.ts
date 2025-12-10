@@ -1388,10 +1388,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Your account was not found" });
       }
 
-      // Update parent2's tenantId to match parent1
-      if (parent2.tenantId !== tenantId) {
-        await storage.updateUser(parent2.id, { tenantId });
-      }
+      // Update parent2's tenantId to match parent1 and ensure non-admin role
+      // SECURITY: Defensive check to prevent privilege escalation - always clear admin flags
+      await storage.updateUser(parent2.id, { 
+        tenantId,
+        isAdmin: false,
+        isSuperAdmin: false,
+        isAssistant: false,
+        isUnaffiliated: false,
+      });
 
       // Update all players belonging to parent 1 to include parent 2
       await storage.updatePlayersParent2(parent1Id, parent2.id);

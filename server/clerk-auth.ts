@@ -421,6 +421,7 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     const signupType = unsafeMetadata.signupType as string | undefined;
     const role = unsafeMetadata.role as 'parent' | 'player' | undefined;
     const isUnaffiliatedSignup = signupType === 'unaffiliated';
+    const isParent2InviteSignup = signupType === 'parent2_invite';
 
     // Check if user exists by email (for migrating existing users)
     const existingUserByEmail = email ? await storage.getUserByEmail(email) : null;
@@ -461,6 +462,32 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
           .returning();
         user = updatedUser;
         console.log(`Linked existing user ${existingUserByEmail.id} to staging tenant as unaffiliated (signupType: unaffiliated)`);
+      } else if (isParent2InviteSignup) {
+        // Existing user with no tenant signing up via parent2 invite
+        // Put them in staging tenant temporarily - join endpoint will update their tenant
+        // SECURITY: Explicitly clear all admin flags to prevent privilege escalation
+        const stagingTenant = await getOrCreateStagingTenant();
+        const [updatedUser] = await db.update(users)
+          .set({
+            clerkUserId,
+            authProvider: 'clerk',
+            tenantId: stagingTenant.id,
+            isAdmin: false,
+            isSuperAdmin: false,
+            isAssistant: false,
+            isApproved: true,
+            registrationStatus: 'approved',
+            approvedAt: new Date(),
+            role: 'parent',
+            firstName: firstName || existingUserByEmail.firstName,
+            lastName: lastName || existingUserByEmail.lastName,
+            profileImageUrl: profileImageUrl || existingUserByEmail.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUserByEmail.id))
+          .returning();
+        user = updatedUser;
+        console.log(`Linked existing user ${existingUserByEmail.id} to staging tenant for parent2 invite (will be updated by join endpoint)`);
       } else {
         // Existing user has no tenant - create one and make them admin
         // This handles users who existed but never got a club set up
@@ -485,6 +512,42 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
       });
       user = result.user;
       console.log(`Created unaffiliated user ${user.id} in staging tenant (signupType: unaffiliated, role: ${role || 'parent'})`);
+    } else if (isParent2InviteSignup) {
+      // New user signing up via parent2 invite
+      // Put them in staging tenant temporarily - join endpoint will update their tenant
+      const stagingTenant = await getOrCreateStagingTenant();
+      try {
+        const insertResult = await db.insert(users).values({
+          email,
+          clerkUserId,
+          authProvider: 'clerk',
+          tenantId: stagingTenant.id,
+          isAdmin: false,
+          isSuperAdmin: false,
+          isApproved: true,
+          registrationStatus: 'approved',
+          approvedAt: new Date(),
+          firstName: firstName || null,
+          lastName: lastName || null,
+          profileImageUrl: profileImageUrl || null,
+          role: 'parent',
+        }).returning();
+        user = (insertResult as any[])[0];
+        console.log(`Created parent2 invite user ${user.id} in staging tenant (will be updated by join endpoint)`);
+      } catch (error: any) {
+        // Handle race condition - user was created by another request
+        if (error?.code === '23505') {
+          const existingUser = await storage.getUserByEmail(email);
+          if (existingUser) {
+            user = existingUser;
+            console.log(`Found existing parent2 invite user ${existingUser.id} (created by parallel request)`);
+          } else {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
     } else {
       // Create new user and auto-create their tenant
       // The first user who signs up automatically becomes admin of their own club
