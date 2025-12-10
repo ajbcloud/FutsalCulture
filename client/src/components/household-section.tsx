@@ -374,6 +374,7 @@ export default function HouseholdSection() {
                   <PlayerForm onSuccess={() => {
                     setIsAddPlayerDialogOpen(false);
                     queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/households"] });
                   }} />
                 </DialogContent>
               </Dialog>
@@ -426,30 +427,9 @@ export default function HouseholdSection() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     </div>
-                    {!userHousehold?.members.some(m => m.playerId === player.id) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-3"
-                        onClick={() => {
-                          if (isUnaffiliated) {
-                            setShowJoinClubModal(true);
-                          } else {
-                            handleAddPlayer(player.id);
-                          }
-                        }}
-                        disabled={addPlayerMutation.isPending}
-                        data-testid={`button-link-player-${player.id}`}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Link to Household
-                      </Button>
-                    )}
-                    {userHousehold?.members.some(m => m.playerId === player.id) && (
-                      <Badge variant="secondary" className="mt-3">
-                        In Household
-                      </Badge>
-                    )}
+                    <Badge variant="secondary" className="mt-3">
+                      In Household
+                    </Badge>
                   </CardContent>
                 </Card>
               ))}
@@ -534,41 +514,6 @@ export default function HouseholdSection() {
         </Card>
 
         <div className="space-y-6">
-          {availablePlayers.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
-                  Add Player to Household
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4">
-                  <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                    <SelectTrigger className="flex-1" data-testid="select-player-to-add">
-                      <SelectValue placeholder="Select a player" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePlayers.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.firstName} {player.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={() => handleAddPlayer(selectedPlayerId)}
-                    disabled={!selectedPlayerId || addPlayerMutation.isPending}
-                    data-testid="button-add-player-to-household"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
