@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { tenants, users, tenantPlanAssignments, subscriptions, auditEvents } from "../../shared/schema";
+import { tenants, users, tenantPlanAssignments, subscriptions, auditEvents, inviteCodes } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { slugify } from "../../shared/utils";
@@ -212,17 +212,41 @@ clubAuthRouter.post("/club-signup", async (req: any, res) => {
 // Validate invite code (public endpoint)
 clubAuthRouter.get("/validate-invite-code", async (req, res) => {
   try {
-    const code = (req.query.code as string)?.toLowerCase();
+    const code = (req.query.code as string)?.toUpperCase();
     
     if (!code) {
       return res.status(400).json({ valid: false, error: "Code is required" });
     }
     
-    // Look up tenant by slug or inviteCode
+    // First, look up in the inviteCodes table (new system)
+    const inviteCodeRecord = await db.query.inviteCodes.findFirst({
+      where: (inviteCodes, { and, eq }) => and(
+        eq(inviteCodes.code, code),
+        eq(inviteCodes.isActive, true)
+      )
+    });
+    
+    if (inviteCodeRecord) {
+      // Found in inviteCodes table, look up the tenant
+      const tenant = await db.query.tenants.findFirst({
+        where: (tenants, { eq }) => eq(tenants.id, inviteCodeRecord.tenantId)
+      });
+      
+      if (tenant) {
+        return res.json({
+          valid: true,
+          clubName: tenant.displayName || tenant.name,
+          slug: tenant.slug,
+          inviteCodeId: inviteCodeRecord.id,
+        });
+      }
+    }
+    
+    // Fall back to legacy lookup by tenant slug or inviteCode field
     const tenant = await db.query.tenants.findFirst({
       where: (tenants, { or, eq }) => or(
-        eq(tenants.slug, code),
-        eq(tenants.inviteCode, code)
+        eq(tenants.slug, code.toLowerCase()),
+        eq(tenants.inviteCode, code.toLowerCase())
       )
     });
     
@@ -232,7 +256,7 @@ clubAuthRouter.get("/validate-invite-code", async (req, res) => {
     
     res.json({
       valid: true,
-      clubName: tenant.name,
+      clubName: tenant.displayName || tenant.name,
       slug: tenant.slug,
     });
     
@@ -286,16 +310,45 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
     
     // Wrap in transaction
     const result = await db.transaction(async (tx) => {
-      // Find tenant
-      const tenant = await tx.query.tenants.findFirst({
-        where: (tenants, { or, eq }) => or(
-          eq(tenants.slug, code.toLowerCase()),
-          eq(tenants.inviteCode, code.toLowerCase())
+      // First try to find code in inviteCodes table (new system)
+      const upperCode = code.toUpperCase();
+      const inviteCodeRecord = await tx.query.inviteCodes.findFirst({
+        where: (inviteCodes, { and, eq }) => and(
+          eq(inviteCodes.code, upperCode),
+          eq(inviteCodes.isActive, true)
         )
       });
       
+      let tenant;
+      let usedInviteCodeId: string | null = null;
+      
+      if (inviteCodeRecord) {
+        // Found in inviteCodes table
+        tenant = await tx.query.tenants.findFirst({
+          where: (tenants, { eq }) => eq(tenants.id, inviteCodeRecord.tenantId)
+        });
+        usedInviteCodeId = inviteCodeRecord.id;
+      }
+      
+      if (!tenant) {
+        // Fall back to legacy lookup by tenant slug or inviteCode field
+        tenant = await tx.query.tenants.findFirst({
+          where: (tenants, { or, eq }) => or(
+            eq(tenants.slug, code.toLowerCase()),
+            eq(tenants.inviteCode, code.toLowerCase())
+          )
+        });
+      }
+      
       if (!tenant) {
         throw new Error("INVALID_CODE");
+      }
+      
+      // Increment invite code usage if found in inviteCodes table
+      if (usedInviteCodeId) {
+        await tx.update(inviteCodes)
+          .set({ currentUses: (inviteCodeRecord?.currentUses || 0) + 1 })
+          .where(eq(inviteCodes.id, usedInviteCodeId));
       }
       
       // Check if user already exists

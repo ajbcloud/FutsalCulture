@@ -27,7 +27,7 @@ export default function Join() {
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('code');
     if (codeFromUrl && !inviteCode) {
-      setInviteCode(codeFromUrl.toLowerCase());
+      setInviteCode(codeFromUrl.toUpperCase());
     }
   }, []);
 
@@ -45,7 +45,7 @@ export default function Join() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/auth/validate-invite-code?code=${encodeURIComponent(inviteCode.toLowerCase())}`);
+      const response = await fetch(`/api/auth/validate-invite-code?code=${encodeURIComponent(inviteCode.toUpperCase())}`);
       const data = await response.json();
 
       if (response.ok && data.valid) {
@@ -222,11 +222,11 @@ export default function Join() {
               <Input
                 id="inviteCode"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toLowerCase())}
-                placeholder="e.g., city-united-fc"
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="e.g., WELCOME2025"
                 required
                 data-testid="input-invite-code"
-                className="font-mono"
+                className="font-mono uppercase"
               />
               <p className="text-xs text-muted-foreground">
                 This is the unique code your club shared with you
