@@ -175,55 +175,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <h1 className="text-xl font-bold theme-nav-title text-center w-full admin-nav-title">Admin Portal</h1>
             
-            {/* User account info */}
-            <div className="w-full flex items-center justify-between pt-2">
-              <div className="flex items-center space-x-3">
-                <CustomAvatar
-                  src={user?.profileImageUrl || undefined}
-                  alt={user?.firstName || "User"}
-                  fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
-                  backgroundColor={user?.avatarColor || "#10b981"}
-                  textColor={user?.avatarTextColor || undefined}
-                  size="md"
-                />
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  {user?.email && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
-                  )}
-                  {!user?.isSuperAdmin && (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
-                      data-testid="badge-plan-level"
-                    >
-                      {planName} Plan
-                    </Badge>
-                  )}
-                  {user?.isSuperAdmin && (
-                    <Badge 
-                      variant="outline" 
-                      className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
-                    >
-                      Super Admin
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <button
-                onClick={toggleTheme}
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            </div>
-            
             {/* Club switcher for coaches with multiple club assignments */}
             <ClubSwitcher />
             
@@ -274,8 +225,59 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <TrialStatusIndicator />
         </div>
 
+        {/* User account info at bottom */}
+        <div className="px-4 py-3 border-t border-border bg-card flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <CustomAvatar
+                src={user?.profileImageUrl || undefined}
+                alt={user?.firstName || "User"}
+                fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
+                backgroundColor={user?.avatarColor || "#10b981"}
+                textColor={user?.avatarTextColor || undefined}
+                size="md"
+              />
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                )}
+                {!user?.isSuperAdmin && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                    data-testid="badge-plan-level"
+                  >
+                    {planName} Plan
+                  </Badge>
+                )}
+                {user?.isSuperAdmin && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
+                  >
+                    Super Admin
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={toggleTheme}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
         {/* Logout button at bottom */}
-        <div className="p-4 border-t border-border bg-card flex-shrink-0">
+        <div className="px-4 pb-4 bg-card flex-shrink-0">
           <button
             onClick={async () => {
               setSidebarOpen(false);
