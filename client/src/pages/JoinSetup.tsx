@@ -46,9 +46,21 @@ export default function JoinSetup() {
     validateCodeAndCheckUser();
   }, [isLoaded, isSignedIn, code]);
 
+  // Helper to get a valid Clerk token with retries
+  async function waitForToken(maxRetries = 10, delayMs = 500): Promise<string | null> {
+    let token = await getToken();
+    let retries = 0;
+    while (!token && retries < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      token = await getToken();
+      retries++;
+    }
+    return token;
+  }
+
   async function validateCodeAndCheckUser() {
     try {
-      // Validate the invite code
+      // Validate the invite code (public endpoint, no auth needed)
       const codeResponse = await fetch(`/api/auth/validate-invite-code?code=${encodeURIComponent(code!)}`);
       const codeData = await codeResponse.json();
 
@@ -60,9 +72,21 @@ export default function JoinSetup() {
 
       setClubName(codeData.clubName);
 
+      // Wait for Clerk token to be ready before making authenticated calls
+      const token = await waitForToken();
+      
+      if (!token) {
+        // Token still not available - still proceed with join but with default role
+        console.log("Token not available yet, proceeding with default 'parent' role");
+        setExistingRole('parent');
+        setRole('parent');
+        await handleAutoJoin('parent');
+        return;
+      }
+
       // Check if user already has a role set
+      let userRole = 'parent'; // Default to parent
       try {
-        const token = await getToken();
         const userResponse = await fetch('/api/user', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -72,20 +96,18 @@ export default function JoinSetup() {
         if (userResponse.ok) {
           const userData = await userResponse.json();
           if (userData.role && (userData.role === 'parent' || userData.role === 'player')) {
-            // User already has a role, auto-join with that role
-            setExistingRole(userData.role);
-            setRole(userData.role);
-            // Automatically join without showing role selection
-            await handleAutoJoin(userData.role);
-            return;
+            userRole = userData.role;
           }
         }
       } catch (userErr) {
-        console.log("Could not fetch user role, showing selection");
+        console.log("Could not fetch user role, using default 'parent'");
       }
 
-      // No existing role found, show role selection
-      setStatus("select_role");
+      // Always auto-join - no role selection screen needed
+      // The backend defaults to 'parent' if no role is set
+      setExistingRole(userRole);
+      setRole(userRole as 'parent' | 'player');
+      await handleAutoJoin(userRole);
     } catch (err) {
       console.error("Error validating code:", err);
       setError("Failed to validate code");
@@ -97,7 +119,18 @@ export default function JoinSetup() {
     setStatus("joining");
     
     try {
-      const token = await getToken();
+      // Wait for a valid Clerk token - retry a few times if needed
+      let token = await getToken();
+      let retries = 0;
+      while (!token && retries < 5) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        token = await getToken();
+        retries++;
+      }
+      
+      if (!token) {
+        throw new Error("Could not authenticate. Please try again.");
+      }
       
       const response = await fetch('/api/auth/join-club', {
         method: 'POST',
@@ -115,15 +148,11 @@ export default function JoinSetup() {
 
       if (response.ok) {
         if (data.requiresApproval) {
+          // Show pending approval screen inline
           setStatus("pending_approval");
         } else {
-          setStatus("success");
-          toast({
-            title: "Welcome!",
-            description: `You've joined ${clubName}`,
-          });
-          // Use full page redirect to refresh session cookies and show new tenant
-          setTimeout(() => window.location.href = '/dashboard', 1500);
+          // Immediately redirect to dashboard - no delay
+          window.location.href = '/dashboard';
         }
       } else {
         throw new Error(data.error || "Failed to join club");
@@ -143,7 +172,18 @@ export default function JoinSetup() {
     setStatus("joining");
     
     try {
-      const token = await getToken();
+      // Wait for a valid Clerk token - retry a few times if needed
+      let token = await getToken();
+      let retries = 0;
+      while (!token && retries < 5) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        token = await getToken();
+        retries++;
+      }
+      
+      if (!token) {
+        throw new Error("Could not authenticate. Please try again.");
+      }
       
       const response = await fetch('/api/auth/join-club', {
         method: 'POST',
@@ -161,15 +201,11 @@ export default function JoinSetup() {
 
       if (response.ok) {
         if (data.requiresApproval) {
+          // Show pending approval screen inline
           setStatus("pending_approval");
         } else {
-          setStatus("success");
-          toast({
-            title: "Welcome!",
-            description: `You've joined ${clubName}`,
-          });
-          // Use full page redirect to refresh session cookies and show new tenant
-          setTimeout(() => window.location.href = '/dashboard', 1500);
+          // Immediately redirect to dashboard - no delay
+          window.location.href = '/dashboard';
         }
       } else {
         throw new Error(data.error || "Failed to join club");

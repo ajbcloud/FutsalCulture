@@ -1,26 +1,28 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignUp, useUser } from "@clerk/clerk-react";
+import { SignUp, useUser, useAuth } from "@clerk/clerk-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Users, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 
-type Step = "enter_code" | "signup" | "already_signed_in";
+type Step = "enter_code" | "signup" | "joining" | "pending_approval";
 
 export default function Join() {
   const [step, setStep] = useState<Step>("enter_code");
   const [inviteCode, setInviteCode] = useState("");
   const [clubName, setClubName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [joinError, setJoinError] = useState("");
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { theme } = useTheme();
   const isDarkMode = theme === 'dark';
   const { isSignedIn } = useUser();
+  const { getToken } = useAuth();
 
   // Handle code from URL in useEffect to avoid render-loop issues
   useEffect(() => {
@@ -52,7 +54,8 @@ export default function Join() {
         setClubName(data.clubName);
         
         if (isSignedIn) {
-          setStep("already_signed_in");
+          // User is already signed in - immediately join the club
+          await joinClubDirectly(inviteCode.toUpperCase(), data.clubName);
         } else {
           setStep("signup");
         }
@@ -75,16 +78,93 @@ export default function Join() {
     }
   }
 
-  async function handleJoinAsExistingUser() {
-    setLoading(true);
+  // Directly join the club without intermediate screens
+  async function joinClubDirectly(code: string, clubDisplayName: string) {
+    setStep("joining");
+    setJoinError("");
+    
     try {
-      navigate(`/join-setup?code=${encodeURIComponent(inviteCode)}`);
-    } finally {
-      setLoading(false);
+      // Wait for a valid Clerk token - retry a few times if needed
+      let token = await getToken();
+      let retries = 0;
+      while (!token && retries < 5) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        token = await getToken();
+        retries++;
+      }
+      
+      if (!token) {
+        throw new Error("Could not authenticate. Please try again.");
+      }
+      
+      const response = await fetch('/api/auth/join-club', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          code,
+          // Role will default to 'parent' on backend if not specified or if user has existing role
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.requiresApproval) {
+          // Show pending approval screen inline
+          setStep("pending_approval");
+        } else {
+          // Successfully joined - redirect immediately to dashboard
+          window.location.href = '/dashboard';
+        }
+      } else {
+        // Handle specific error cases
+        if (data.error === "ALREADY_IN_CLUB") {
+          toast({
+            title: "Already a member",
+            description: "You're already part of a club. You cannot join another club.",
+            variant: "destructive",
+          });
+          window.location.href = '/dashboard';
+        } else {
+          throw new Error(data.error || "Failed to join club");
+        }
+      }
+    } catch (err: any) {
+      console.error("Error joining club:", err);
+      setJoinError(err.message || "Failed to join club");
+      setStep("enter_code");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to join club",
+        variant: "destructive",
+      });
     }
   }
 
-  if (step === "already_signed_in") {
+  // Show joining state
+  if (step === "joining") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl">Joining {clubName}...</CardTitle>
+            <CardDescription>
+              Please wait while we set up your account.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show pending approval state
+  if (step === "pending_approval") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
         <Card className="w-full max-w-md">
@@ -92,27 +172,22 @@ export default function Join() {
             <div className="flex justify-center mb-4">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Join {clubName}</CardTitle>
+            <CardTitle className="text-2xl">Request Submitted</CardTitle>
             <CardDescription>
-              You're already signed in. Continue to complete your profile and join the club.
+              Your request to join <span className="font-semibold">{clubName}</span> has been submitted.
+              An admin will review and approve your membership soon.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-center text-muted-foreground">
+              You'll receive a notification once your membership is approved.
+            </p>
             <Button 
-              onClick={handleJoinAsExistingUser}
+              onClick={() => navigate('/')}
               className="w-full"
-              disabled={loading}
-              data-testid="button-continue-join"
+              data-testid="button-back-home"
             >
-              {loading ? "Continuing..." : "Continue to Join"}
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => setStep("enter_code")}
-              className="w-full"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Use a different code
+              Back to Home
             </Button>
           </CardContent>
         </Card>

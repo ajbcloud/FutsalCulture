@@ -284,6 +284,7 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
       return res.status(400).json({ error: "Invite code is required" });
     }
     
+    // Default to 'parent' if no role provided - simplifies the join flow
     const validRole = role === 'player' ? 'player' : 'parent';
     
     // Fetch Clerk user info
