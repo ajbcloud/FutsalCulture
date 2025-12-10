@@ -679,7 +679,7 @@ export default function HouseholdSection() {
                   <div className="text-center py-4 text-muted-foreground">Loading consent forms...</div>
                 ) : consentDocuments.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
-                    No {term.players} registered yet
+                    None registered yet
                   </div>
                 ) : (
                   <div className="space-y-4">
