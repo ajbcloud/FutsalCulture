@@ -1,0 +1,140 @@
+2025-12-09 22:15:22.32
+36162806
+User
+weeklySessions: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+registrationsGrowth: 0,
+2025-12-09 22:15:22.32
+36162806
+User
+thisMonthSignups: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+lastMonthCents: 0,
+2025-12-09 22:15:22.32
+36162806
+User
+→ growth calculations: {
+2025-12-09 22:15:22.32
+36162806
+User
+sessionsGrowth: NaN,
+2025-12-09 22:15:22.32
+36162806
+User
+monthlyPlayers: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+lastMonthPlayers: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+lastMonthSignups: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+lastYearCents: 0,
+2025-12-09 22:15:22.32
+36162806
+User
+monthlyCents: 0,
+2025-12-09 22:15:22.32
+36162806
+User
+ytdGrowth: 0
+2025-12-09 22:15:22.32
+36162806
+User
+lastWeekSessions: '0',
+2025-12-09 22:15:22.32
+36162806
+User
+playersGrowth: 0,
+2025-12-09 22:15:22.32
+36162806
+User
+}
+2025-12-09 22:15:22.32
+36162806
+User
+revenueGrowth: 0,
+2025-12-09 22:15:22.47
+36162806
+User
+Found parent approvals: 1
+2025-12-09 22:15:22.78
+36162806
+User
+🏢 Dashboard metrics for tenant: 16160726-5ed7-4b09-99bb-8e2d64bae43c user: 4e0d7e38-a882-4940-8017-3dc64a011dd9 isSuperAdmin: false
+2025-12-09 22:15:22.87
+36162806
+User
+debugTimestamp: '2025-12-10T03:15:22.873Z'
+2025-12-09 22:15:22.87
+36162806
+User
+monthlyCents: 0,
+2025-12-09 22:15:22.87
+36162806
+User
+→ revenue calculations: {
+2025-12-09 22:15:22.87
+36162806
+User
+}
+2025-12-09 22:15:22.87
+36162806
+User
+ytdType: 'number',
+2025-12-09 22:15:22.87
+36162806
+User
+monthlyType: 'number',
+2025-12-09 22:15:22.87
+36162806
+User
+firstOfMonth: 2025-12-01T00:00:00.000Z,
+2025-12-09 22:15:22.87
+36162806
+User
+ytdCents: 0,
+2025-12-09 22:15:22.87
+36162806
+User
+startOfYear: 2025-01-01T00:00:00.000Z,
+2025-12-09 22:15:22.87
+36162806
+User
+tenantId: '16160726-5ed7-4b09-99bb-8e2d64bae43c',
+2025-12-09 22:15:23.49
+36162806
+User
+→ growth calculations: {
+2025-12-09 22:15:23.49
+36162806
+User
+lastMonthSignups: '0',
+2025-12-09 22:15:23.49
+36162806
+User
+lastMonthPlayers: '0',
+2025-12-09 22:15:23.49
+36162806
+User
+lastMonthCents: 0,
+2025-12-09 22:15:23.49
+36162806
+User
+ytdGrowth: 0
+2025-12-09 22:15:23.49
+36162806
+User
+ytdCents: 0,
+2025-12-09 22:15:23.49
+36162806
+User
+monthlyCents: 0,

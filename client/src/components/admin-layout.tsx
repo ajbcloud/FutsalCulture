@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -25,7 +24,6 @@ import {
   Sun,
   Moon,
   LogOut,
-  User,
   Shield,
   Shirt,
   Sparkles,
@@ -38,7 +36,17 @@ import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
 import { useTenantPlan } from "@/hooks/useTenantPlan";
 
-const adminNavItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  featureKey?: string;
+  isLogout?: boolean;
+  isSuperAdminOnly?: boolean;
+};
+
+const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/sessions", label: "Sessions", icon: Calendar },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
@@ -54,6 +62,8 @@ const adminNavItems = [
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
   { href: "/admin/billing", label: "Billing", icon: Sparkles },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/super-admin", label: "Super Admin Portal", icon: Shield, isSuperAdminOnly: true },
+  { href: "#logout", label: "Logout", icon: LogOut, isLogout: true },
 ];
 
 interface AdminLayoutProps {
@@ -85,8 +95,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   };
 
-  // Filter navigation items based on feature access
+  // Filter navigation items based on feature access and user role
   const visibleNavItems = adminNavItems.filter(item => {
+    if (item.isSuperAdminOnly && !user?.isSuperAdmin) {
+      return false;
+    }
     if (item.featureKey && item.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT) {
       return hasPlayerDevelopment;
     }
@@ -141,6 +154,31 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? location === item.href 
                   : location.startsWith(item.href);
 
+                if ('isLogout' in item && item.isLogout) {
+                  return (
+                    <div
+                      key={item.href}
+                      className="flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                      onClick={async () => {
+                        setSidebarOpen(false);
+                        try {
+                          await fetch('/api/auth/logout', {
+                            method: 'POST',
+                            credentials: 'include'
+                          });
+                          window.location.href = '/';
+                        } catch (error) {
+                          console.error('Logout error:', error);
+                          window.location.href = '/';
+                        }
+                      }}
+                    >
+                      <Icon className="w-5 h-5 mr-3" />
+                      <span className="admin-nav-text theme-nav-text">{item.label}</span>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link key={item.href} href={item.href}>
                     <div 
@@ -169,125 +207,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Fixed user info at bottom */}
         <div className="p-4 border-t border-border bg-card flex-shrink-0">
           <div className="flex items-center justify-between">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2 w-full justify-start">
-                  <CustomAvatar
-                    src={user?.profileImageUrl || undefined}
-                    alt={user?.firstName || "User"}
-                    fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
-                    backgroundColor={user?.avatarColor || "#10b981"}
-                    textColor={user?.avatarTextColor || undefined}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {user?.firstName} {user?.lastName}
-                    </p>
-                    {user?.email && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.email}
-                      </p>
-                    )}
-                    {!user?.isSuperAdmin && (
-                      <Badge 
-                        variant="outline" 
-                        className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
-                        data-testid="badge-plan-level"
-                      >
-                        {planName} Plan
-                      </Badge>
-                    )}
-                    {user?.isSuperAdmin && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
-                      >
-                        Super Admin
-                      </Badge>
-                    )}
-                    {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        Owner
-                      </p>
-                    )}
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="start" forceMount>
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">{user?.firstName} {user?.lastName}</p>
-                    {user?.email && (
-                      <p className="text-xs text-muted-foreground">
-                        {user.email}
-                      </p>
-                    )}
-                    {!user?.isSuperAdmin && (
-                      <Badge 
-                        variant="outline" 
-                        className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
-                      >
-                        {planName} Plan
-                      </Badge>
-                    )}
-                    {user?.isSuperAdmin && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
-                      >
-                        Super Admin
-                      </Badge>
-                    )}
-                    {user?.role === 'tenant_admin' && !user?.isSuperAdmin && (
-                      <p className="text-xs text-muted-foreground">
-                        Owner
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                
-                {/* Portal Navigation */}
-                
-                <DropdownMenuItem asChild>
-                  <Link href="/admin" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Admin Portal
-                  </Link>
-                </DropdownMenuItem>
-                
-                {user?.isSuperAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/super-admin" className="cursor-pointer">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Super Admin Portal
-                    </Link>
-                  </DropdownMenuItem>
+            <div className="flex items-center space-x-3">
+              <CustomAvatar
+                src={user?.profileImageUrl || undefined}
+                alt={user?.firstName || "User"}
+                fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
+                backgroundColor={user?.avatarColor || "#10b981"}
+                textColor={user?.avatarTextColor || undefined}
+                size="md"
+              />
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
                 )}
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem 
-                  onClick={async () => {
-                    try {
-                      await fetch('/api/auth/logout', {
-                        method: 'POST',
-                        credentials: 'include'
-                      });
-                      window.location.href = '/';
-                    } catch (error) {
-                      console.error('Logout error:', error);
-                      window.location.href = '/';
-                    }
-                  }}
-                  className="cursor-pointer"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                {!user?.isSuperAdmin && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                    data-testid="badge-plan-level"
+                  >
+                    {planName} Plan
+                  </Badge>
+                )}
+                {user?.isSuperAdmin && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
+                  >
+                    Super Admin
+                  </Badge>
+                )}
+              </div>
+            </div>
 
             <button
               onClick={toggleTheme}
