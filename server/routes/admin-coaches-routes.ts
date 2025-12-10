@@ -743,7 +743,7 @@ router.get('/coach/validate-invite', async (req: any, res: Response) => {
 // POST /api/coach/join - Accept a coach invite and join the organization (requires auth)
 router.post('/coach/join', async (req: any, res: Response) => {
   try {
-    const userId = req.currentUser?.id;
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Authentication required' });

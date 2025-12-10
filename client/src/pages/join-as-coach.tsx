@@ -75,7 +75,7 @@ export default function JoinAsCoach() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to join as coach");
+        throw new Error(data.message || data.error || "Failed to join as coach");
       }
       return data;
     },
