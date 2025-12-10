@@ -131,7 +131,7 @@ export default function Calendar() {
             {/* Title Section */}
             <div className="text-center sm:text-left mb-4">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Future Sessions Calendar</h1>
-              <p className="text-muted-foreground text-lg">View and book upcoming futsal training sessions</p>
+              <p className="text-muted-foreground text-lg">View and book upcoming training sessions</p>
             </div>
             
             {/* Filter Controls - Desktop: inline, Mobile: below title */}
