@@ -132,14 +132,6 @@ export default function Calendar() {
             <div className="text-center sm:text-left mb-4">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Future Sessions Calendar</h1>
               <p className="text-muted-foreground text-lg">View and book upcoming futsal training sessions</p>
-              <div className="mt-3 p-4 bg-card border border-border rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Booking Rules:</strong> Sessions may open for booking at different times based on their settings:
-                  • <span className="text-green-600">No restrictions</span> - Book anytime before the session starts
-                  • <span className="text-yellow-600">Days in advance</span> - Opens a specific number of days before
-                  • <span className="text-blue-600">Day-of only</span> - Opens at 8 AM on the session day
-                </p>
-              </div>
             </div>
             
             {/* Filter Controls - Desktop: inline, Mobile: below title */}
