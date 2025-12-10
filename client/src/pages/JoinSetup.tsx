@@ -122,7 +122,8 @@ export default function JoinSetup() {
             title: "Welcome!",
             description: `You've joined ${clubName}`,
           });
-          setTimeout(() => navigate('/app'), 1500);
+          // Use full page redirect to refresh session cookies and show new tenant
+          setTimeout(() => window.location.href = '/dashboard', 1500);
         }
       } else {
         throw new Error(data.error || "Failed to join club");
@@ -167,7 +168,8 @@ export default function JoinSetup() {
             title: "Welcome!",
             description: `You've joined ${clubName}`,
           });
-          setTimeout(() => navigate('/app'), 1500);
+          // Use full page redirect to refresh session cookies and show new tenant
+          setTimeout(() => window.location.href = '/dashboard', 1500);
         }
       } else {
         throw new Error(data.error || "Failed to join club");

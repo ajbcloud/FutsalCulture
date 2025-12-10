@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db";
-import { tenants, users, tenantPlanAssignments, subscriptions, auditEvents, inviteCodes } from "../../shared/schema";
-import { eq } from "drizzle-orm";
+import { tenants, users, tenantPlanAssignments, subscriptions, auditEvents, inviteCodes, systemSettings } from "../../shared/schema";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { slugify } from "../../shared/utils";
 import { clerkMiddleware, getAuth } from "@clerk/express";
@@ -346,6 +346,16 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
         throw new Error("INVALID_CODE");
       }
       
+      // Check tenant's auto-approval setting
+      const autoApproveSetting = await tx.query.systemSettings.findFirst({
+        where: (settings, { and, eq }) => and(
+          eq(settings.tenantId, tenant.id),
+          eq(settings.key, 'autoApproveRegistrations')
+        )
+      });
+      // Default to true (auto-approve) if setting doesn't exist
+      const autoApprove = autoApproveSetting?.value !== 'false';
+      
       // Increment invite code usage if found in inviteCodes table
       if (usedInviteCodeId) {
         await tx.update(inviteCodes)
@@ -376,8 +386,9 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
               .set({
                 tenantId: tenant.id,
                 role: validRole,
-                isApproved: false, // Requires admin approval
-                registrationStatus: 'pending',
+                isApproved: autoApprove,
+                registrationStatus: autoApprove ? 'approved' : 'pending',
+                approvedAt: autoApprove ? new Date() : null,
               })
               .where(eq(users.id, existingUser.id))
               .returning();
@@ -392,8 +403,9 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
             .set({
               tenantId: tenant.id,
               role: validRole,
-              isApproved: false, // Requires admin approval
-              registrationStatus: 'pending',
+              isApproved: autoApprove,
+              registrationStatus: autoApprove ? 'approved' : 'pending',
+              approvedAt: autoApprove ? new Date() : null,
             })
             .where(eq(users.id, existingUser.id))
             .returning();
@@ -407,8 +419,9 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
           authProvider: 'clerk',
           tenantId: tenant.id,
           role: validRole,
-          isApproved: false,
-          registrationStatus: 'pending',
+          isApproved: autoApprove,
+          registrationStatus: autoApprove ? 'approved' : 'pending',
+          approvedAt: autoApprove ? new Date() : null,
           firstName: clerkFirstName,
           lastName: clerkLastName,
         }).returning();
