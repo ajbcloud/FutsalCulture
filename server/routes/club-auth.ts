@@ -361,12 +361,29 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
       if (existingUser) {
         // User exists - check if already in a tenant
         if (existingUser.tenantId) {
-          // Allow multi-tenant membership in the future
-          // For now, update their tenant
-          if (existingUser.tenantId !== tenant.id) {
+          // Allow users on platform-staging (unaffiliated) to join a real club
+          const isUnaffiliated = existingUser.tenantId === 'platform-staging';
+          const isSameTenant = existingUser.tenantId === tenant.id;
+          
+          if (isSameTenant) {
+            // Already in this club
+            user = existingUser;
+          } else if (isUnaffiliated) {
+            // User is unaffiliated, allow them to join a real club
+            const [updatedUser] = await tx.update(users)
+              .set({
+                tenantId: tenant.id,
+                role: validRole,
+                isApproved: false, // Requires admin approval
+                registrationStatus: 'pending',
+              })
+              .where(eq(users.id, existingUser.id))
+              .returning();
+            user = updatedUser;
+          } else {
+            // User is in a different real club - not allowed
             throw new Error("ALREADY_IN_CLUB");
           }
-          user = existingUser;
         } else {
           // Update user with tenant
           const [updatedUser] = await tx.update(users)

@@ -16,6 +16,7 @@ export default function JoinSetup() {
   const [role, setRole] = useState<"parent" | "player">("parent");
   const [clubName, setClubName] = useState("");
   const [error, setError] = useState("");
+  const [existingRole, setExistingRole] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { isSignedIn, isLoaded } = useUser();
@@ -42,25 +43,98 @@ export default function JoinSetup() {
       return;
     }
 
-    validateCode();
+    validateCodeAndCheckUser();
   }, [isLoaded, isSignedIn, code]);
 
-  async function validateCode() {
+  async function validateCodeAndCheckUser() {
     try {
-      const response = await fetch(`/api/auth/validate-invite-code?code=${encodeURIComponent(code!)}`);
-      const data = await response.json();
+      // Validate the invite code
+      const codeResponse = await fetch(`/api/auth/validate-invite-code?code=${encodeURIComponent(code!)}`);
+      const codeData = await codeResponse.json();
 
-      if (response.ok && data.valid) {
-        setClubName(data.clubName);
-        setStatus("select_role");
-      } else {
-        setError(data.error || "Invalid invite code");
+      if (!codeResponse.ok || !codeData.valid) {
+        setError(codeData.error || "Invalid invite code");
         setStatus("error");
+        return;
       }
+
+      setClubName(codeData.clubName);
+
+      // Check if user already has a role set
+      try {
+        const token = await getToken();
+        const userResponse = await fetch('/api/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.role && (userData.role === 'parent' || userData.role === 'player')) {
+            // User already has a role, auto-join with that role
+            setExistingRole(userData.role);
+            setRole(userData.role);
+            // Automatically join without showing role selection
+            await handleAutoJoin(userData.role);
+            return;
+          }
+        }
+      } catch (userErr) {
+        console.log("Could not fetch user role, showing selection");
+      }
+
+      // No existing role found, show role selection
+      setStatus("select_role");
     } catch (err) {
       console.error("Error validating code:", err);
       setError("Failed to validate code");
       setStatus("error");
+    }
+  }
+
+  async function handleAutoJoin(userRole: string) {
+    setStatus("joining");
+    
+    try {
+      const token = await getToken();
+      
+      const response = await fetch('/api/auth/join-club', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          code,
+          role: userRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.requiresApproval) {
+          setStatus("pending_approval");
+        } else {
+          setStatus("success");
+          toast({
+            title: "Welcome!",
+            description: `You've joined ${clubName}`,
+          });
+          setTimeout(() => navigate('/app'), 1500);
+        }
+      } else {
+        throw new Error(data.error || "Failed to join club");
+      }
+    } catch (err: any) {
+      console.error("Error joining club:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to join club",
+        variant: "destructive",
+      });
+      setStatus("select_role");
     }
   }
 
