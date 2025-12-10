@@ -417,7 +417,7 @@ export default function Dashboard() {
               </div>
               <p className="text-lg text-muted-foreground max-w-xl">
                 {isUnaffiliated 
-                  ? "Set up your household and add your players. When you're ready, join a club to start booking sessions."
+                  ? "When you're ready, join a club to start booking sessions. Once you join a club, you can set up your household and add your players."
                   : "Ready to book today's training sessions? Let's get your players on the field."}
               </p>
             </div>

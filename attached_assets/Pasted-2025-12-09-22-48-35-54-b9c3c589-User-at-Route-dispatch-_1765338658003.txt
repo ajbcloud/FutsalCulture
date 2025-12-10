@@ -1,0 +1,140 @@
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at Route.dispatch (/home/runner/workspace/node_modules/express/lib/router/route.js:119:3)
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"path": [
+2025-12-09 22:48:35.54
+b9c3c589
+User
+]
+2025-12-09 22:48:35.54
+b9c3c589
+User
+path: [Array],
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"received": "null",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at get error [as error] (file:///home/runner/workspace/node_modules/zod/v3/types.js:39:31)
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at file:///home/runner/workspace/dist/index.js:12223:52
+2025-12-09 22:48:35.54
+b9c3c589
+User
+{
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"received": "null",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5) {
+2025-12-09 22:48:35.54
+b9c3c589
+User
+},
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at requireAdmin (file:///home/runner/workspace/dist/index.js:9972:14)
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"expected": "string",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+},
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"tenantId"
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"path": [
+2025-12-09 22:48:35.54
+b9c3c589
+User
+],
+2025-12-09 22:48:35.54
+b9c3c589
+User
+{
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"path": [
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"code": "invalid_type",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"code": "invalid_type",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"received": "undefined",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+{
+2025-12-09 22:48:35.54
+b9c3c589
+User
+{
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"code": "invalid_type",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"discountValue"
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"code": "invalid_type",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+Error creating invite code: ZodError: [
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"expected": "'percentage' | 'fixed' | 'full'",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"received": "null",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+{
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"message": "Expected number, received null"
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"message": "Expected object, received null"
+2025-12-09 22:48:35.54
+b9c3c589
+User
+"expected": "number",
+2025-12-09 22:48:35.54
+b9c3c589
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)

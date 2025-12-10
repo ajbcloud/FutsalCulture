@@ -2162,6 +2162,8 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
 
 export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
   id: true,
+  tenantId: true, // Added by backend from authenticated user
+  createdBy: true, // Added by backend from authenticated user
   currentUses: true,
   createdAt: true,
   updatedAt: true,
