@@ -16,8 +16,20 @@ import { useBusinessName } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
-import { Mail, Phone, Clock, MapPin, Sparkles, Crown, MessageSquare, History } from "lucide-react";
+import { Mail, Phone, Clock, MapPin, Sparkles, Crown, MessageSquare, History, Building2, HelpCircle } from "lucide-react";
 import { Link } from "wouter";
+
+interface TenantInfo {
+  id: string;
+  name: string;
+  contactName: string;
+  contactEmail: string;
+  location?: {
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+  };
+}
 
 // Base schema for all users
 const baseHelpSchema = z.object({
@@ -87,6 +99,20 @@ export default function Help() {
       return response.json();
     },
   });
+  
+  // Fetch tenant info when user is logged in
+  const { data: tenantInfo } = useQuery<TenantInfo>({
+    queryKey: ["/api/tenant/info"],
+    queryFn: async () => {
+      const response = await fetch("/api/tenant/info");
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: isAuthenticated && !!user?.tenantId,
+  });
+  
+  // Determine if we should show club contact info
+  const hasClubContact = tenantInfo?.contactEmail || tenantInfo?.contactName;
   
   // Generate random math captcha
   const generateCaptcha = () => {
@@ -236,7 +262,10 @@ export default function Help() {
           <div className="text-center flex-1">
             <h1 className="text-4xl font-bold mb-4">Get Help</h1>
             <p className="text-muted-foreground text-lg">
-              Need assistance with PlayHQ or your sports organization management? We're here to help!
+              {hasClubContact 
+                ? `Need assistance with ${tenantInfo?.name || 'your club'} or the PlayHQ platform? We're here to help!`
+                : "Need assistance with PlayHQ or your sports organization management? We're here to help!"
+              }
             </p>
           </div>
           
@@ -256,7 +285,14 @@ export default function Help() {
           {/* Contact Form */}
           <Card className="bg-card border border-border">
             <CardHeader>
-              <CardTitle className="text-foreground text-xl">Send us a message</CardTitle>
+              <CardTitle className="text-foreground text-xl">
+                {hasClubContact ? `Message ${tenantInfo?.name || 'Your Club'}` : 'Send us a message'}
+              </CardTitle>
+              {hasClubContact && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your request will be sent to the club administrators
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               {isSubmitted ? (
@@ -492,16 +528,84 @@ export default function Help() {
 
           {/* Contact Information */}
           <div className="space-y-6">
-            <Card className="bg-card border border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground text-xl">Contact Information</CardTitle>
+            {/* Club Contact - Show when user is logged in under a tenant */}
+            {hasClubContact && (
+              <Card className="bg-card border border-blue-500/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-blue-400" />
+                    <CardTitle className="text-foreground text-xl">Contact {tenantInfo?.name || 'Your Club'}</CardTitle>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    For questions about sessions, schedules, or payments
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {tenantInfo?.contactName && (
+                    <div className="flex items-center space-x-3">
+                      <MessageSquare className="w-5 h-5 text-purple-400" />
+                      <div>
+                        <p className="text-foreground font-medium">Contact Person</p>
+                        <p className="text-muted-foreground">{tenantInfo.contactName}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {tenantInfo?.contactEmail && (
+                    <div className="flex items-center space-x-3">
+                      <Mail className="w-5 h-5 text-blue-400" />
+                      <div>
+                        <p className="text-foreground font-medium">Email</p>
+                        <a 
+                          href={`mailto:${tenantInfo.contactEmail}`}
+                          className="text-blue-400 hover:underline"
+                        >
+                          {tenantInfo.contactEmail}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {tenantInfo?.location?.city && (
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="w-5 h-5 text-red-400" />
+                      <div>
+                        <p className="text-foreground font-medium">Location</p>
+                        <p className="text-muted-foreground">
+                          {[tenantInfo.location.city, tenantInfo.location.state, tenantInfo.location.country]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* PlayHQ Platform Support - Always shown, secondary when club contact exists */}
+            <Card className={`bg-card border ${hasClubContact ? 'border-border' : 'border-blue-500/30'}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-green-400" />
+                  <CardTitle className="text-foreground text-xl">
+                    {hasClubContact ? 'PlayHQ Platform Support' : 'Contact Information'}
+                  </CardTitle>
+                </div>
+                {hasClubContact && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    For account issues, app bugs, or billing questions
+                  </p>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-blue-400" />
                   <div>
                     <p className="text-foreground font-medium">Email</p>
-                    <p className="text-muted-foreground">support@playhq.app</p>
+                    <a href="mailto:support@playhq.app" className="text-blue-400 hover:underline">
+                      support@playhq.app
+                    </a>
                   </div>
                 </div>
                 
