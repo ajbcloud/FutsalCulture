@@ -45,6 +45,7 @@ import billingRouter from './billing-routes';
 import quickbooksRoutes from './routes/quickbooks';
 import { terminologyRouter } from './routes/terminology';
 import unaffiliatedSignupRouter from './routes/unaffiliated-signup';
+import { getStagingTenantId } from './utils/staging-tenant';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -645,6 +646,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = await storage.getUser((req as any).user.id);
         tenantId = user?.tenantId;
       }
+      
+      // Check if user is unaffiliated (on platform-staging or no tenant)
+      const stagingTenantId = getStagingTenantId();
+      const isUnaffiliated = !tenantId || tenantId === stagingTenantId;
+      
+      // For unaffiliated users, return empty filters - they haven't joined a club yet
+      if (isUnaffiliated) {
+        return res.json({
+          ageGroups: [],
+          locations: [],
+          genders: [],
+        });
+      }
 
       // Get all sessions for the tenant (including past) to build comprehensive filter options
       const sessions = await storage.getSessions({ tenantId: tenantId || undefined, includePast: true });
@@ -653,32 +667,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueAgeGroups = Array.from(new Set(sessions.flatMap(session => session.ageGroups || [])));
       const uniqueGenders = Array.from(new Set(sessions.flatMap(session => session.genders || [])));
 
-      // Get configured locations from admin settings
-      let availableLocations = ['Turf City', 'Sports Hub', 'Jurong East']; // Default fallback
+      // Get configured locations from admin settings (empty default)
+      let availableLocations: string[] = [];
 
-      if (tenantId) {
-        try {
-          const settings = await db.select()
-            .from(systemSettings)
-            .where(eq(systemSettings.tenantId, tenantId));
+      try {
+        const settings = await db.select()
+          .from(systemSettings)
+          .where(eq(systemSettings.tenantId, tenantId));
 
-          const locationsSetting = settings.find(s => s.key === 'availableLocations');
-          if (locationsSetting?.value) {
-            try {
-              const parsedLocations = JSON.parse(locationsSetting.value);
-              // Extract just the names from location objects
-              availableLocations = parsedLocations.map((loc: any) => 
-                typeof loc === 'object' ? loc.name : loc
-              ).filter((name: string) => name);
-            } catch (e) {
-              // If parsing fails, treat as comma-separated string
-              availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
-            }
+        const locationsSetting = settings.find(s => s.key === 'availableLocations');
+        if (locationsSetting?.value) {
+          try {
+            const parsedLocations = JSON.parse(locationsSetting.value);
+            // Extract just the names from location objects
+            availableLocations = parsedLocations.map((loc: any) => 
+              typeof loc === 'object' ? loc.name : loc
+            ).filter((name: string) => name);
+          } catch (e) {
+            // If parsing fails, treat as comma-separated string
+            availableLocations = locationsSetting.value.split(',').map(s => s.trim()).filter(s => s);
           }
-        } catch (settingsError) {
-          console.error('Error fetching settings for locations:', settingsError);
-          // Keep default locations on error
         }
+      } catch (settingsError) {
+        console.error('Error fetching settings for locations:', settingsError);
       }
 
       const filters = {
