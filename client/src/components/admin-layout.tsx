@@ -42,7 +42,6 @@ type NavItem = {
   icon: typeof LayoutDashboard;
   exact?: boolean;
   featureKey?: string;
-  isLogout?: boolean;
   isSuperAdminOnly?: boolean;
 };
 
@@ -63,7 +62,6 @@ const adminNavItems: NavItem[] = [
   { href: "/admin/billing", label: "Billing", icon: Sparkles },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/super-admin", label: "Super Admin Portal", icon: Shield, isSuperAdminOnly: true },
-  { href: "#logout", label: "Logout", icon: LogOut, isLogout: true },
 ];
 
 interface AdminLayoutProps {
@@ -154,23 +152,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? location === item.href 
                   : location.startsWith(item.href);
 
-                if ('isLogout' in item && item.isLogout) {
-                  return (
-                    <div
-                      key={item.href}
-                      className="flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                      onClick={async () => {
-                        setSidebarOpen(false);
-                        await logout();
-                        window.location.href = '/';
-                      }}
-                    >
-                      <Icon className="w-5 h-5 mr-3" />
-                      <span className="admin-nav-text theme-nav-text">{item.label}</span>
-                    </div>
-                  );
-                }
-
                 return (
                   <Link key={item.href} href={item.href}>
                     <div 
@@ -245,6 +226,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
           </div>
+          
+          {/* Logout button */}
+          <button
+            onClick={async () => {
+              setSidebarOpen(false);
+              await logout();
+              window.location.href = '/';
+            }}
+            className="w-full mt-3 flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4 mr-3" />
+            <span className="text-sm">Logout</span>
+          </button>
         </div>
       </div>
 
