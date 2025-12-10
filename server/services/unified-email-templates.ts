@@ -439,10 +439,69 @@ Powered by PlayHQ
   }
 
   /**
-   * Generate parent2 template
+   * Generate parent2 template - dedicated template for household invites
    */
   private generateParent2Template(template: UnifiedEmailTemplate): string {
-    return this.generateStandardHTMLTemplate(template, 'Add Second Parent', '👨‍👩‍👧‍👦');
+    const { data } = template;
+    const branding = data.tenantBranding || {};
+    const primaryColor = branding.primaryColor || '#3B82F6';
+    const businessName = branding.businessName || data.tenantName;
+    const inviteUrl = data.inviteUrl || '#';
+
+    // PlayHQ-themed dark design
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join ${businessName} Household</title>
+  <style>
+    body { margin: 0; padding: 20px; background-color: #0f172a; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    .email-container { max-width: 600px; margin: 0 auto; background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; overflow: hidden; border: 1px solid #334155; }
+    .header { background: linear-gradient(135deg, ${primaryColor} 0%, #1d4ed8 100%); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+    .header p { margin: 12px 0 0 0; opacity: 0.9; font-size: 16px; }
+    .content { padding: 40px 30px; color: #e2e8f0; }
+    .content p { margin: 0 0 16px 0; line-height: 1.6; font-size: 16px; }
+    .message-box { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 24px; border-radius: 12px; margin: 24px 0; color: #f1f5f9; }
+    .cta-button { display: inline-block; background: linear-gradient(135deg, ${primaryColor} 0%, #2563eb 100%); color: white !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); }
+    .cta-button:hover { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+    .cta-container { text-align: center; margin: 32px 0; }
+    .footer { background: #0f172a; padding: 30px; text-align: center; color: #64748b; border-top: 1px solid #1e293b; }
+    .footer p { margin: 0; font-size: 14px; }
+    .footer strong { color: #3b82f6; }
+    .signature { color: #94a3b8; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>You're Invited!</h1>
+      <p>${businessName}</p>
+    </div>
+    <div class="content">
+      <p>Hello <strong style="color: #f1f5f9;">${data.recipientName}</strong>,</p>
+      
+      <div class="message-box">
+        <p style="margin: 0;">${data.customMessage || `${data.senderName} has invited you to join their household. As a co-parent, you'll be able to manage players and book sessions together.`}</p>
+      </div>
+
+      <div class="cta-container">
+        <a href="${inviteUrl}" class="cta-button">Join Household</a>
+      </div>
+
+      <p style="font-size: 14px; color: #94a3b8;">Click the button above to accept this invitation and set up your account. You'll get access to manage players and book training sessions.</p>
+
+      <p class="signature">Best regards,<br><strong style="color: #f1f5f9;">The ${businessName} Team</strong></p>
+    </div>
+    <div class="footer">
+      <p>Powered by <strong>PlayHQ</strong></p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
   }
 
   /**
