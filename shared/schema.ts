@@ -2160,6 +2160,10 @@ export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
   lockedToParentId: z.string().optional(),
 });
 
+// Code Types:
+// - invite: Simple code to join a club/organization
+// - access: Code to access specific features or sessions
+// - discount: Code that provides a discount on bookings
 export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
   id: true,
   tenantId: true, // Added by backend from authenticated user
@@ -2172,10 +2176,25 @@ export const insertInviteCodeSchema = createInsertSchema(inviteCodes).omit({
     .min(3, "Code must be at least 3 characters")
     .max(50, "Code must be less than 50 characters"),
   codeType: z.enum(['invite', 'access', 'discount']),
-  discountType: z.enum(['percentage', 'fixed', 'full']).optional(),
-  discountValue: z.number().int().optional(),
-  maxUses: z.number().int().positive().optional(),
-  metadata: z.record(z.any()).optional(),
+  description: z.string().nullable().optional(),
+  isDefault: z.boolean().nullable().optional(),
+  isActive: z.boolean().nullable().optional(),
+  isPlatform: z.boolean().nullable().optional(),
+  // Pre-fill metadata (optional for all code types)
+  ageGroup: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  club: z.string().nullable().optional(),
+  // Discount fields (only required for discount codes, nullable for others)
+  discountType: z.enum(['percentage', 'fixed', 'full']).nullable().optional(),
+  discountValue: z.number().int().nullable().optional(),
+  discountDuration: z.enum(['one_time', 'months_3', 'months_6', 'months_12', 'indefinite']).nullable().optional(),
+  // Usage limits (optional for all code types)
+  maxUses: z.number().int().positive().nullable().optional(),
+  expiresAt: z.string().nullable().optional(), // ISO date string
+  validFrom: z.string().nullable().optional(), // ISO date string
+  // Custom metadata (optional)
+  metadata: z.record(z.any()).nullable().optional(),
 });
 
 export type InviteCodeInsert = z.infer<typeof insertInviteCodeSchema>;
