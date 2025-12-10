@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar, Building2, KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Home, Users, UserPlus, UserMinus, LogOut, DollarSign, Plus, Trash2, User, FileCheck, Edit, Calendar, Building2, KeyRound, ArrowRightLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { HouseholdSelect, HouseholdMemberSelect } from "@shared/schema";
 import ConsentDocumentModal from "@/components/consent/ConsentDocumentModal";
@@ -105,6 +107,10 @@ export default function HouseholdSection() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showJoinClubModal, setShowJoinClubModal] = useState(false);
+  const [confirmDeletePlayer, setConfirmDeletePlayer] = useState<{ playerId: string; playerName: string; memberId: string } | null>(null);
+  const [editingParentMember, setEditingParentMember] = useState<HouseholdMember | null>(null);
+  const [isEditParentDialogOpen, setIsEditParentDialogOpen] = useState(false);
+  const [selectedTransferTargetId, setSelectedTransferTargetId] = useState<string>("");
 
   const isUnaffiliated = user?.isUnaffiliated === true;
 
@@ -243,6 +249,47 @@ export default function HouseholdSection() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to leave household", variant: "destructive" });
+    },
+  });
+
+  const deletePlayerMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const response = await apiRequest("DELETE", `/api/players/${playerId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete player");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      setConfirmDeletePlayer(null);
+      toast({ title: "Success", description: "Player deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete player", variant: "destructive" });
+    },
+  });
+
+  const transferRoleMutation = useMutation({
+    mutationFn: async (targetMemberId: string) => {
+      const response = await apiRequest("PATCH", `/api/households/${userHousehold?.id}/members/${targetMemberId}/role`, { role: 'primary' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to transfer role");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      setIsEditParentDialogOpen(false);
+      setEditingParentMember(null);
+      setSelectedTransferTargetId("");
+      toast({ title: "Success", description: "Primary role transferred successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to transfer role", variant: "destructive" });
     },
   });
 
@@ -473,41 +520,79 @@ export default function HouseholdSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userHousehold.members.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      {member.user 
-                        ? `${member.user.firstName || ''} ${member.user.lastName || ''}`.trim() || 'Unknown'
-                        : member.player 
-                          ? `${member.player.firstName} ${member.player.lastName}`
-                          : 'Unknown'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={member.role === 'primary' ? 'default' : 'secondary'}>
-                        {member.role === 'primary' ? 'Primary' : member.user ? 'Parent' : 'Player'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {member.userId !== user?.id && member.role !== 'primary' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setConfirmRemove({
-                            memberId: member.id,
-                            memberName: member.user 
-                              ? `${member.user.firstName || ''} ${member.user.lastName || ''}`.trim()
-                              : member.player 
-                                ? `${member.player.firstName} ${member.player.lastName}`
-                                : 'this member'
-                          })}
-                          data-testid={`button-remove-member-${member.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {userHousehold.members.map((member) => {
+                  const isPrimaryUser = currentUserMember?.role === 'primary';
+                  const isPlayer = !!member.playerId && !member.userId;
+                  const isParent = !!member.userId;
+                  const isSelf = member.userId === user?.id;
+                  const isPrimaryMember = member.role === 'primary';
+                  
+                  const canEditPlayer = isPlayer;
+                  const canEditParent = isPrimaryUser && isParent;
+                  const canEditSelf = isSelf && isParent;
+                  const canEdit = canEditPlayer || canEditParent || canEditSelf;
+                  const canDelete = isPlayer;
+
+                  const memberName = member.user 
+                    ? `${member.user.firstName || ''} ${member.user.lastName || ''}`.trim() || 'Unknown'
+                    : member.player 
+                      ? `${member.player.firstName} ${member.player.lastName}`
+                      : 'Unknown';
+
+                  return (
+                    <TableRow key={member.id} data-testid={`member-row-${member.id}`}>
+                      <TableCell>
+                        {memberName}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isPrimaryMember ? 'default' : 'secondary'}>
+                          {isPrimaryMember ? 'Primary' : isParent ? 'Parent' : 'Player'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (isPlayer && member.player) {
+                                  const playerData = userPlayers.find(p => p.id === member.playerId);
+                                  if (playerData) {
+                                    setEditingPlayer(playerData);
+                                    setIsEditDialogOpen(true);
+                                  }
+                                } else if (isParent) {
+                                  setEditingParentMember(member);
+                                  setIsEditParentDialogOpen(true);
+                                }
+                              }}
+                              data-testid={`button-edit-member-${member.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setConfirmDeletePlayer({
+                                playerId: member.playerId!,
+                                playerName: member.player 
+                                  ? `${member.player.firstName} ${member.player.lastName}`
+                                  : 'this player',
+                                memberId: member.id
+                              })}
+                              data-testid={`button-delete-player-${member.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -743,6 +828,140 @@ export default function HouseholdSection() {
               data-testid="button-confirm-leave"
             >
               Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!confirmDeletePlayer} onOpenChange={() => setConfirmDeletePlayer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Player</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {confirmDeletePlayer?.playerName}? This will permanently remove the player from the household and delete all their data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-player">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmDeletePlayer && deletePlayerMutation.mutate(confirmDeletePlayer.playerId)}
+              disabled={deletePlayerMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-player"
+            >
+              {deletePlayerMutation.isPending ? "Deleting..." : "Delete Player"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={isEditParentDialogOpen} onOpenChange={(open) => {
+        setIsEditParentDialogOpen(open);
+        if (!open) {
+          setEditingParentMember(null);
+          setSelectedTransferTargetId("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Parent Information</DialogTitle>
+            <DialogDescription>
+              View and manage parent details
+            </DialogDescription>
+          </DialogHeader>
+          {editingParentMember && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Name</Label>
+                <div className="p-3 bg-muted rounded-md text-foreground">
+                  {editingParentMember.user 
+                    ? `${editingParentMember.user.firstName || ''} ${editingParentMember.user.lastName || ''}`.trim() || 'Unknown'
+                    : 'Unknown'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Role</Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <Badge variant={editingParentMember.role === 'primary' ? 'default' : 'secondary'}>
+                    {editingParentMember.role === 'primary' ? 'Primary Parent' : 'Parent'}
+                  </Badge>
+                </div>
+              </div>
+
+              {currentUserMember?.role === 'primary' && editingParentMember.userId === user?.id && (
+                <div className="pt-4 border-t border-border">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Transfer Primary Role</Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Transfer your primary parent role to another parent in the household. You will become a regular parent member.
+                    </p>
+                    {(() => {
+                      const otherParents = userHousehold?.members.filter(
+                        m => m.userId && m.userId !== user?.id
+                      ) || [];
+                      
+                      if (otherParents.length === 0) {
+                        return (
+                          <p className="text-sm text-muted-foreground italic">
+                            No other parents in household to transfer to. Invite another parent first.
+                          </p>
+                        );
+                      }
+                      
+                      return (
+                        <div className="space-y-3">
+                          <Select
+                            value={selectedTransferTargetId}
+                            onValueChange={setSelectedTransferTargetId}
+                          >
+                            <SelectTrigger data-testid="select-transfer-target">
+                              <SelectValue placeholder="Select a parent" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {otherParents.map((parent) => (
+                                <SelectItem key={parent.id} value={parent.id}>
+                                  {parent.user 
+                                    ? `${parent.user.firstName || ''} ${parent.user.lastName || ''}`.trim() || 'Unknown'
+                                    : 'Unknown'}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            disabled={!selectedTransferTargetId || transferRoleMutation.isPending}
+                            onClick={() => {
+                              if (selectedTransferTargetId) {
+                                transferRoleMutation.mutate(selectedTransferTargetId);
+                              }
+                            }}
+                            data-testid="button-transfer-primary-role"
+                          >
+                            {transferRoleMutation.isPending ? "Transferring..." : "Transfer Primary Role"}
+                          </Button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsEditParentDialogOpen(false);
+                setEditingParentMember(null);
+                setSelectedTransferTargetId("");
+              }}
+              data-testid="button-close-edit-parent"
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2161,9 +2161,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/players/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/players/:id', isAuthenticated, async (req: any, res) => {
     try {
-      await storage.deletePlayer(req.params.id);
+      const userId = req.user?.id;
+      const tenantId = req.user?.tenantId;
+      
+      if (!userId || !tenantId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const playerId = req.params.id;
+      
+      // Check that the player belongs to a household the user is in
+      const userHousehold = await storage.getUserHousehold(userId, tenantId);
+      if (!userHousehold) {
+        return res.status(403).json({ message: "You must be in a household to delete players" });
+      }
+
+      // Check if the player is in the same household
+      const playerMember = userHousehold.members?.find((m: any) => m.playerId === playerId);
+      if (!playerMember) {
+        return res.status(403).json({ message: "You can only delete players in your household" });
+      }
+
+      // Remove player from household first
+      if (playerMember.id) {
+        await storage.removeHouseholdMember(playerMember.id, tenantId);
+      }
+
+      // Then delete the player entity
+      await storage.deletePlayer(playerId);
       res.json({ message: "Player deleted successfully" });
     } catch (error) {
       console.error("Error deleting player:", error);
@@ -3589,6 +3616,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing household member:", error);
       res.status(500).json({ message: "Failed to remove household member" });
+    }
+  });
+
+  // PATCH /api/households/:householdId/members/:memberId/role - Transfer primary role
+  app.patch('/api/households/:householdId/members/:memberId/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      const userId = req.user?.id;
+      
+      if (!tenantId || !userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { householdId, memberId } = req.params;
+      const { role } = req.body;
+
+      if (role !== 'primary') {
+        return res.status(400).json({ message: "Only 'primary' role transfer is supported" });
+      }
+
+      // Get the household with members
+      const household = await storage.getHousehold(householdId, tenantId);
+      if (!household) {
+        return res.status(404).json({ message: "Household not found" });
+      }
+
+      // Find the current user's member record
+      const callerMember = household.members?.find((m: any) => m.userId === userId);
+      if (!callerMember) {
+        return res.status(403).json({ message: "You are not a member of this household" });
+      }
+
+      // Only the current primary can transfer the role
+      if (callerMember.role !== 'primary') {
+        return res.status(403).json({ message: "Only the primary parent can transfer this role" });
+      }
+
+      // Find the target member
+      const targetMember = household.members?.find((m: any) => m.id === memberId);
+      if (!targetMember) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+
+      // Target must be a user (parent), not a player
+      if (!targetMember.userId) {
+        return res.status(400).json({ message: "Primary role can only be transferred to a parent" });
+      }
+
+      // Cannot transfer to self
+      if (targetMember.id === callerMember.id) {
+        return res.status(400).json({ message: "Cannot transfer primary role to yourself" });
+      }
+
+      // Update the roles in database
+      await db.update(householdMembers)
+        .set({ role: 'member' })
+        .where(and(
+          eq(householdMembers.id, callerMember.id),
+          eq(householdMembers.tenantId, tenantId)
+        ));
+
+      await db.update(householdMembers)
+        .set({ role: 'primary' })
+        .where(and(
+          eq(householdMembers.id, memberId),
+          eq(householdMembers.tenantId, tenantId)
+        ));
+
+      // Return updated household
+      const updatedHousehold = await storage.getHousehold(householdId, tenantId);
+      res.json(updatedHousehold);
+    } catch (error) {
+      console.error("Error transferring primary role:", error);
+      res.status(500).json({ message: "Failed to transfer primary role" });
     }
   });
 
