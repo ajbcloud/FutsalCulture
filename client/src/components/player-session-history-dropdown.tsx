@@ -65,7 +65,7 @@ export function PlayerSessionHistoryDropdown({
   const { data: systemSettings } = useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/settings');
+      const response = await fetch('/api/tenant/settings');
       if (!response.ok) throw new Error('Failed to fetch settings');
       return response.json();
     },

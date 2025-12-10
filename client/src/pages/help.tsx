@@ -90,11 +90,11 @@ export default function Help() {
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [isParent, setIsParent] = useState(false);
   
-  // Fetch admin settings for contact information
+  // Fetch tenant settings for contact information
   const { data: settings } = useQuery({
-    queryKey: ["/api/admin/settings"],
+    queryKey: ["/api/tenant/settings"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/settings");
+      const response = await fetch("/api/tenant/settings");
       if (!response.ok) throw new Error("Failed to fetch settings");
       return response.json();
     },

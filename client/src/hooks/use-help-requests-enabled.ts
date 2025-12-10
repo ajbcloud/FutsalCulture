@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export function useHelpRequestsEnabled() {
   const { data: settings, isLoading } = useQuery<{ enableHelpRequests?: boolean }>({
-    queryKey: ['/api/admin/settings'],
+    queryKey: ['/api/tenant/settings'],
   });
 
   // While loading, default to true to prevent flickering

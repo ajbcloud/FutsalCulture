@@ -22,7 +22,7 @@ export function TimezoneProvider({ children }: TimezoneProviderProps) {
   useEffect(() => {
     const fetchTimezone = async () => {
       try {
-        const response = await fetch('/api/admin/settings');
+        const response = await fetch('/api/tenant/settings');
         if (response.ok) {
           const settings = await response.json();
           if (settings.timezone) {

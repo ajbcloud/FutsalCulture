@@ -534,6 +534,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant settings - accessible by any authenticated user (read-only version of admin settings)
+  app.get('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      // Get user to find tenant ID
+      const user = await storage.getUser(userId);
+      if (!user || !user.tenantId) {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+
+      const tenantId = user.tenantId;
+      
+      // Get tenant information for default business name and contact email
+      let tenantInfo = null;
+      const [tenant] = await db.select()
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .limit(1);
+      tenantInfo = tenant;
+      
+      // Get system settings from database for this tenant
+      const settings = await db.select()
+        .from(systemSettings)
+        .where(eq(systemSettings.tenantId, tenantId));
+      
+      const settingsMap = settings.reduce((acc, setting) => {
+        let value: any = setting.value;
+        // Parse boolean values
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        // Parse numeric values
+        if (!isNaN(Number(value))) value = Number(value);
+        // Parse JSON arrays (for availableLocations)
+        if (setting.key === 'availableLocations' && typeof value === 'string') {
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            // If parsing fails, treat as string and split by comma
+            value = value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+          }
+        }
+        
+        acc[setting.key] = value;
+        return acc;
+      }, {} as any);
+
+      // Use tenant's displayName (user-facing) preferring over name (internal with suffix)
+      const defaultBusinessName = tenantInfo?.displayName || tenantInfo?.name || "Your Organization";
+      const defaultContactEmail = user?.email || "admin@example.com";
+
+      // Default settings if none exist
+      const defaultSettings = {
+        autoApproveRegistrations: true,
+        businessName: defaultBusinessName,
+        businessLogo: "",
+        contactEmail: defaultContactEmail,
+        supportEmail: defaultContactEmail,
+        supportPhone: "",
+        supportHours: "Monday - Friday",
+        supportLocation: "",
+        timezone: "America/New_York",
+        emailNotifications: true,
+        smsNotifications: false,
+        sessionCapacityWarning: 3,
+        paymentReminderMinutes: 60,
+        paymentSubmissionTimeMinutes: 30,
+        refundCutoffMinutes: 60,
+        weekdayStart: "monday",
+        weekdayEnd: "sunday",
+        fiscalYearType: "calendar",
+        fiscalYearStartMonth: 1,
+        availableLocations: [],
+        enableHelpRequests: true,
+        ...settingsMap
+      };
+      
+      // Convert legacy paymentReminderHours to paymentReminderMinutes if it exists
+      if (settingsMap.paymentReminderHours && !settingsMap.paymentReminderMinutes) {
+        defaultSettings.paymentReminderMinutes = settingsMap.paymentReminderHours * 60;
+        delete defaultSettings.paymentReminderHours;
+      }
+      
+      // Always prefer tenant displayName over stored businessName (which might have suffix)
+      if (tenantInfo?.displayName) {
+        defaultSettings.businessName = tenantInfo.displayName;
+      }
+
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error("Error fetching tenant settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
   // Tenant age policy endpoint - accessible by any authenticated user
   app.get('/api/tenant/age-policy', isAuthenticated, async (req: any, res) => {
     try {

@@ -90,10 +90,10 @@ export default function SessionDetail() {
     },
   });
 
-  // Fetch admin settings to get location address data
+  // Fetch tenant settings to get location address data
   const { data: adminSettings } = useQuery({
-    queryKey: ['/api/admin/settings'],
-    queryFn: () => fetch('/api/admin/settings').then(res => res.json())
+    queryKey: ['/api/tenant/settings'],
+    queryFn: () => fetch('/api/tenant/settings').then(res => res.json())
   });
 
   if (isLoading) {
