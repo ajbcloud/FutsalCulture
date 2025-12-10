@@ -279,7 +279,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userHasCapability(user, capability)
       );
 
-      res.json({ ...user, capabilities });
+      // Compute isUnaffiliated based on actual tenantId (not stale DB flag)
+      // User is unaffiliated if they have no tenant or are on the staging tenant
+      const stagingTenantId = getStagingTenantId();
+      const computedIsUnaffiliated = !user.tenantId || user.tenantId === stagingTenantId;
+
+      res.json({ ...user, capabilities, isUnaffiliated: computedIsUnaffiliated });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
