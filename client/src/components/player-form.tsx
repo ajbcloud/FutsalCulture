@@ -30,7 +30,7 @@ type PlayerForm = z.infer<typeof playerSchema>;
 
 interface PlayerFormProps {
   player?: Player | null;
-  onSuccess?: () => void;
+  onSuccess?: (createdPlayer?: Player) => void;
 }
 
 type AgePolicy = {
@@ -105,14 +105,14 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (createdPlayer: Player) => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
         title: "Success",
         description: "Player added successfully",
       });
       form.reset();
-      onSuccess?.();
+      onSuccess?.(createdPlayer);
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {

@@ -104,6 +104,7 @@ export default function HouseholdSection() {
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [pendingPlayerToAdd, setPendingPlayerToAdd] = useState<Player | null>(null);
   const [isAddPlayerDialogOpen, setIsAddPlayerDialogOpen] = useState(false);
+  const [newlyCreatedPlayer, setNewlyCreatedPlayer] = useState<Player | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showJoinClubModal, setShowJoinClubModal] = useState(false);
@@ -310,7 +311,27 @@ export default function HouseholdSection() {
       addPlayerMutation.mutate(pendingPlayerToAdd.id);
       setPendingPlayerToAdd(null);
     }
+    if (newlyCreatedPlayer) {
+      // Consent completed for newly created player - close the dialog
+      setNewlyCreatedPlayer(null);
+      setIsAddPlayerDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+    }
     setShowConsentModal(false);
+  };
+
+  const handleNewPlayerCreated = (createdPlayer?: Player) => {
+    if (createdPlayer && isConsentRequired && user?.id) {
+      // Player created - now show consent modal
+      setNewlyCreatedPlayer(createdPlayer);
+      setShowConsentModal(true);
+    } else {
+      // No consent required - just close the dialog
+      setIsAddPlayerDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+    }
   };
 
   if (authLoading || householdsLoading || playersLoading) {
@@ -418,11 +439,7 @@ export default function HouseholdSection() {
                   <DialogHeader>
                     <DialogTitle className="text-foreground">Add New Player</DialogTitle>
                   </DialogHeader>
-                  <PlayerForm onSuccess={() => {
-                    setIsAddPlayerDialogOpen(false);
-                    queryClient.invalidateQueries({ queryKey: ["/api/players"] });
-                    queryClient.invalidateQueries({ queryKey: ["/api/households"] });
-                  }} />
+                  <PlayerForm onSuccess={handleNewPlayerCreated} />
                 </DialogContent>
               </Dialog>
             )}
@@ -967,19 +984,20 @@ export default function HouseholdSection() {
         </DialogContent>
       </Dialog>
 
-      {showConsentModal && pendingPlayerToAdd && user?.id && (
+      {showConsentModal && (pendingPlayerToAdd || newlyCreatedPlayer) && user?.id && (
         <ConsentDocumentModal
           isOpen={showConsentModal}
           onClose={() => {
             setShowConsentModal(false);
             setPendingPlayerToAdd(null);
+            setNewlyCreatedPlayer(null);
           }}
           playerData={{
-            id: pendingPlayerToAdd.id,
-            firstName: pendingPlayerToAdd.firstName,
-            lastName: pendingPlayerToAdd.lastName,
-            birthDate: pendingPlayerToAdd.birthYear 
-              ? `${pendingPlayerToAdd.birthYear}-01-01` 
+            id: (pendingPlayerToAdd || newlyCreatedPlayer)!.id,
+            firstName: (pendingPlayerToAdd || newlyCreatedPlayer)!.firstName,
+            lastName: (pendingPlayerToAdd || newlyCreatedPlayer)!.lastName,
+            birthDate: (pendingPlayerToAdd || newlyCreatedPlayer)!.birthYear 
+              ? `${(pendingPlayerToAdd || newlyCreatedPlayer)!.birthYear}-01-01` 
               : new Date().toISOString().split('T')[0],
           }}
           parentData={{
