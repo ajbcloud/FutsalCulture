@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { slugify } from "../../shared/utils";
 import { clerkMiddleware, getAuth } from "@clerk/express";
+import { emailTemplateService } from "../services/unified-email-templates";
 
 export const clubAuthRouter = Router();
 
@@ -456,6 +457,36 @@ clubAuthRouter.post("/join-club", async (req: any, res) => {
     });
     
     console.log(`User ${clerkUserId} joined club "${result.tenant.name}" as ${validRole}`);
+    
+    // Send welcome email if auto-approved (user is immediately a member)
+    if (result.user.isApproved && result.user.email) {
+      try {
+        const recipientName = result.user.firstName 
+          ? `${result.user.firstName}${result.user.lastName ? ' ' + result.user.lastName : ''}`
+          : 'there';
+        
+        await emailTemplateService.sendEmail({
+          to: result.user.email,
+          template: {
+            type: 'welcome',
+            variant: 'html',
+            data: {
+              tenantId: result.tenant.id,
+              tenantName: result.tenant.name,
+              recipientName,
+              recipientEmail: result.user.email,
+              senderName: result.tenant.name,
+              role: result.user.role || 'parent',
+              customMessage: `You've successfully joined ${result.tenant.name}! You can now browse training sessions, register your players, and book sessions.`,
+            },
+          },
+        });
+        console.log(`Welcome email sent to ${result.user.email} for joining ${result.tenant.name}`);
+      } catch (emailError) {
+        // Log but don't fail the join operation if email fails
+        console.error('Failed to send welcome email:', emailError);
+      }
+    }
     
     res.json({
       success: true,
