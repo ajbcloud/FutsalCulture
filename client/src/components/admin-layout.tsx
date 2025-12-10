@@ -73,7 +73,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { data: tenantPlan } = useTenantPlan();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
@@ -161,16 +161,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       className="flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
                       onClick={async () => {
                         setSidebarOpen(false);
-                        try {
-                          await fetch('/api/auth/logout', {
-                            method: 'POST',
-                            credentials: 'include'
-                          });
-                          window.location.href = '/';
-                        } catch (error) {
-                          console.error('Logout error:', error);
-                          window.location.href = '/';
-                        }
+                        await logout();
+                        window.location.href = '/';
                       }}
                     >
                       <Icon className="w-5 h-5 mr-3" />

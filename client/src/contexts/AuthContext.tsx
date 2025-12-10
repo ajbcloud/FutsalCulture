@@ -81,6 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear Express/Passport session
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      // Clear Clerk session
       await signOut();
       setUser(null);
     } catch (error) {
