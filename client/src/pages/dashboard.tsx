@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus, Home, Building2, KeyRound } from "lucide-react";
+import { Edit, Trash2, Plus, Calendar, Users, Clock, ArrowRight, Sparkles, CalendarDays, UserPlus, Home, Building2, KeyRound, CheckCircle2, X } from "lucide-react";
 import { format } from "date-fns";
 import { players, signups, futsalSessions, NotificationPreferences } from "@shared/schema";
 
@@ -60,6 +60,9 @@ export default function Dashboard() {
     birthDate: string;
   } | null>(null);
 
+  // Welcome banner for new household members
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+
   // Sync tab state with URL query params - MUST be with other hooks before any computed values
   const searchString = useSearch();
   const getTabFromUrl = useCallback(() => {
@@ -77,6 +80,17 @@ export default function Dashboard() {
       setActiveTab(newTab);
     }
   }, [searchString, getTabFromUrl, activeTab]);
+
+  // Check for joined=household in URL (welcome banner for new household members)
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    if (params.get('joined') === 'household') {
+      setShowWelcomeBanner(true);
+      // Clear the URL param without triggering a navigation
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchString]);
 
   // Update URL when tab changes
   const handleTabChange = useCallback((newTab: string) => {
@@ -174,8 +188,9 @@ export default function Dashboard() {
   );
 
   // Show consent modal automatically when there are minors with missing consent forms
+  // But wait until welcome banner is dismissed first
   useEffect(() => {
-    if (playersNeedingConsent.length > 0 && !showConsentModal && !consentPlayerData) {
+    if (playersNeedingConsent.length > 0 && !showConsentModal && !consentPlayerData && !showWelcomeBanner) {
       const firstPlayerNeedingConsent = playersNeedingConsent[0];
       setConsentPlayerData({
         id: firstPlayerNeedingConsent.player.id,
@@ -187,7 +202,7 @@ export default function Dashboard() {
       });
       setShowConsentModal(true);
     }
-  }, [playersNeedingConsent, showConsentModal, consentPlayerData]);
+  }, [playersNeedingConsent, showConsentModal, consentPlayerData, showWelcomeBanner]);
 
   const handleConsentComplete = () => {
     setShowConsentModal(false);
@@ -437,6 +452,36 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Navbar />
       
+      {/* Welcome Banner for new household members */}
+      {showWelcomeBanner && (
+        <div className="bg-gradient-to-r from-green-500/10 via-green-500/5 to-green-500/10 border-b border-green-500/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-green-500/20">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-800 dark:text-green-200">Welcome to the household!</h3>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    You've successfully joined. You can now view and manage all players in this household.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWelcomeBanner(false)}
+                className="text-green-700 dark:text-green-300 hover:bg-green-500/10"
+                data-testid="button-dismiss-welcome"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Unaffiliated User Banner - Join a Club CTA */}
       {isUnaffiliated && (
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-b border-primary/20">

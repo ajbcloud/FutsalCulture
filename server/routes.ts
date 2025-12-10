@@ -1048,8 +1048,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: parent1.id,
           firstName: parent1.firstName,
           lastName: parent1.lastName,
-          email: parent1.parent2InviteEmail || parent1.parent2InvitePhone
+          email: parent1.email
         },
+        invitedEmail: parent1.parent2InviteEmail || '',
         tenantId: parent1.tenantId
       });
     } catch (error) {
@@ -1350,6 +1351,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error accepting parent 2 invite:", error);
       res.status(500).json({ message: "Failed to create parent 2 account" });
+    }
+  });
+
+  // Join household as Parent2 after Clerk authentication
+  app.post('/api/parent2-invite/join/:token', isAuthenticated, async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const clerkUserId = req.user.id;
+
+      // Decode token
+      let parent1Id: string;
+      let householdId: string | null = null;
+      try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const parts = decoded.split(':');
+        if (parts[0] !== 'parent2') throw new Error('Invalid token type');
+        parent1Id = parts[1];
+        if (parts.length >= 4) {
+          householdId = parts[2];
+        }
+      } catch {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+
+      const parent1 = await storage.getUser(parent1Id);
+      if (!parent1) {
+        return res.status(404).json({ message: "Parent not found" });
+      }
+
+      const tenantId = parent1.tenantId;
+
+      // Get the current user (parent2) from req.user which was set by Clerk auth
+      const parent2 = await storage.getUser(clerkUserId);
+      if (!parent2) {
+        return res.status(404).json({ message: "Your account was not found" });
+      }
+
+      // Update parent2's tenantId to match parent1
+      if (parent2.tenantId !== tenantId) {
+        await storage.updateUser(parent2.id, { tenantId });
+      }
+
+      // Update all players belonging to parent 1 to include parent 2
+      await storage.updatePlayersParent2(parent1Id, parent2.id);
+
+      // Add parent2 to the household
+      if (householdId && tenantId) {
+        try {
+          await storage.addHouseholdMember(householdId, tenantId, {
+            userId: parent2.id,
+            role: 'secondary',
+          });
+          console.log(`Added parent2 ${parent2.id} to household ${householdId}`);
+        } catch (householdError) {
+          console.error('Error adding parent2 to household:', householdError);
+        }
+      } else if (tenantId) {
+        // Try to find parent1's household
+        try {
+          const parent1Household = await storage.getUserHousehold(parent1Id, tenantId);
+          if (parent1Household) {
+            await storage.addHouseholdMember(parent1Household.id, tenantId, {
+              userId: parent2.id,
+              role: 'secondary',
+            });
+            console.log(`Added parent2 ${parent2.id} to parent1's household ${parent1Household.id}`);
+          }
+        } catch (householdError) {
+          console.error('Error adding parent2 to parent1 household:', householdError);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Successfully joined household",
+        parent1Name: `${parent1.firstName} ${parent1.lastName}`.trim()
+      });
+    } catch (error) {
+      console.error("Error joining household:", error);
+      res.status(500).json({ message: "Failed to join household" });
     }
   });
 
