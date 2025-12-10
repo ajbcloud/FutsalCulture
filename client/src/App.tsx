@@ -33,6 +33,8 @@ import AdminPayment from "@/pages/admin/payment";
 import AdminSessionWaitlist from "@/pages/admin/session-waitlist";
 import AdminCommunications from "@/pages/admin/communications";
 import AdminInvitations from "@/pages/admin/invitations";
+import AdminCoaches from "@/pages/admin/coaches";
+import CoachDashboard from "@/pages/coach-dashboard";
 
 import AdminPlayerDevelopment from "@/pages/admin/player-development";
 import SuperAdmin from "@/pages/super-admin";
@@ -140,6 +142,9 @@ function Router() {
         <Route path="/payments/history" component={PaymentHistory} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/checkout/success" component={CheckoutSuccess} />
+        {user?.isAssistant && (
+          <Route path="/coach/dashboard" component={CoachDashboard} />
+        )}
         {(user?.isAdmin || user?.isAssistant) && (
           <>
             <Route path="/admin" component={AdminDashboard} />
@@ -157,6 +162,7 @@ function Router() {
             </Route>
             <Route path="/admin/players" component={AdminPlayers} />
             <Route path="/admin/parents" component={AdminParents} />
+            <Route path="/admin/coaches" component={AdminCoaches} />
             <Route path="/admin/invitations" component={AdminInvitations} />
             <Route path="/admin/pending-registrations" component={AdminPendingRegistrations} />
             <Route path="/admin/communications" component={AdminCommunications} />

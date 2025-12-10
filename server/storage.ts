@@ -111,6 +111,12 @@ import {
   type InsertWearableData,
   type PlayerMetrics,
   type InsertPlayerMetrics,
+  coachTenantAssignments,
+  coachSessionAssignments,
+  type CoachTenantAssignmentInsert,
+  type CoachTenantAssignmentSelect,
+  type CoachSessionAssignmentInsert,
+  type CoachSessionAssignmentSelect,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, gte, lte, count, sql, or, ilike, inArray } from "drizzle-orm";
@@ -429,6 +435,21 @@ export interface IStorage {
   getLatestPlayerMetrics(tenantId: string, playerId: string): Promise<PlayerMetrics | undefined>;
   upsertPlayerMetrics(metrics: InsertPlayerMetrics): Promise<PlayerMetrics>;
   aggregatePlayerMetrics(tenantId: string, playerId: string, date: Date): Promise<PlayerMetrics>;
+
+  // Coach Tenant Assignment operations
+  getCoachTenantAssignments(tenantId: string): Promise<CoachTenantAssignmentSelect[]>;
+  getCoachTenantAssignment(id: string, tenantId: string): Promise<CoachTenantAssignmentSelect | undefined>;
+  getCoachAssignmentByUserAndTenant(userId: string, tenantId: string): Promise<CoachTenantAssignmentSelect | undefined>;
+  getUserCoachAssignments(userId: string): Promise<(CoachTenantAssignmentSelect & { tenant: { id: string; name: string; displayName: string | null } })[]>;
+  createCoachTenantAssignment(assignment: CoachTenantAssignmentInsert): Promise<CoachTenantAssignmentSelect>;
+  updateCoachTenantAssignment(id: string, tenantId: string, data: Partial<CoachTenantAssignmentInsert>): Promise<CoachTenantAssignmentSelect>;
+  deleteCoachTenantAssignment(id: string, tenantId: string): Promise<void>;
+
+  // Coach Session Assignment operations
+  getCoachSessionAssignments(coachAssignmentId: string): Promise<CoachSessionAssignmentSelect[]>;
+  getSessionCoaches(sessionId: string, tenantId: string): Promise<CoachSessionAssignmentSelect[]>;
+  assignCoachToSession(assignment: CoachSessionAssignmentInsert): Promise<CoachSessionAssignmentSelect>;
+  removeCoachFromSession(id: string, tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5135,6 +5156,124 @@ export class DatabaseStorage implements IStorage {
     };
     
     return await this.upsertPlayerMetrics(metrics);
+  }
+
+  // Coach Tenant Assignment operations
+  async getCoachTenantAssignments(tenantId: string): Promise<CoachTenantAssignmentSelect[]> {
+    return await db
+      .select()
+      .from(coachTenantAssignments)
+      .where(eq(coachTenantAssignments.tenantId, tenantId))
+      .orderBy(desc(coachTenantAssignments.createdAt));
+  }
+
+  async getCoachTenantAssignment(id: string, tenantId: string): Promise<CoachTenantAssignmentSelect | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(coachTenantAssignments)
+      .where(and(
+        eq(coachTenantAssignments.id, id),
+        eq(coachTenantAssignments.tenantId, tenantId)
+      ));
+    return assignment;
+  }
+
+  async getCoachAssignmentByUserAndTenant(userId: string, tenantId: string): Promise<CoachTenantAssignmentSelect | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(coachTenantAssignments)
+      .where(and(
+        eq(coachTenantAssignments.userId, userId),
+        eq(coachTenantAssignments.tenantId, tenantId)
+      ));
+    return assignment;
+  }
+
+  async getUserCoachAssignments(userId: string): Promise<(CoachTenantAssignmentSelect & { tenant: { id: string; name: string; displayName: string | null } })[]> {
+    const assignments = await db
+      .select({
+        assignment: coachTenantAssignments,
+        tenant: {
+          id: tenants.id,
+          name: tenants.name,
+          displayName: tenants.displayName,
+        },
+      })
+      .from(coachTenantAssignments)
+      .innerJoin(tenants, eq(coachTenantAssignments.tenantId, tenants.id))
+      .where(eq(coachTenantAssignments.userId, userId))
+      .orderBy(desc(coachTenantAssignments.createdAt));
+    
+    return assignments.map(({ assignment, tenant }) => ({
+      ...assignment,
+      tenant,
+    }));
+  }
+
+  async createCoachTenantAssignment(assignment: CoachTenantAssignmentInsert): Promise<CoachTenantAssignmentSelect> {
+    const [newAssignment] = await db
+      .insert(coachTenantAssignments)
+      .values(assignment)
+      .returning();
+    return newAssignment;
+  }
+
+  async updateCoachTenantAssignment(id: string, tenantId: string, data: Partial<CoachTenantAssignmentInsert>): Promise<CoachTenantAssignmentSelect> {
+    const [updated] = await db
+      .update(coachTenantAssignments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(
+        eq(coachTenantAssignments.id, id),
+        eq(coachTenantAssignments.tenantId, tenantId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteCoachTenantAssignment(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(coachTenantAssignments)
+      .where(and(
+        eq(coachTenantAssignments.id, id),
+        eq(coachTenantAssignments.tenantId, tenantId)
+      ));
+  }
+
+  // Coach Session Assignment operations
+  async getCoachSessionAssignments(coachAssignmentId: string): Promise<CoachSessionAssignmentSelect[]> {
+    return await db
+      .select()
+      .from(coachSessionAssignments)
+      .where(eq(coachSessionAssignments.coachAssignmentId, coachAssignmentId))
+      .orderBy(desc(coachSessionAssignments.assignedAt));
+  }
+
+  async getSessionCoaches(sessionId: string, tenantId: string): Promise<CoachSessionAssignmentSelect[]> {
+    return await db
+      .select()
+      .from(coachSessionAssignments)
+      .where(and(
+        eq(coachSessionAssignments.sessionId, sessionId),
+        eq(coachSessionAssignments.tenantId, tenantId)
+      ))
+      .orderBy(desc(coachSessionAssignments.assignedAt));
+  }
+
+  async assignCoachToSession(assignment: CoachSessionAssignmentInsert): Promise<CoachSessionAssignmentSelect> {
+    const [newAssignment] = await db
+      .insert(coachSessionAssignments)
+      .values(assignment)
+      .returning();
+    return newAssignment;
+  }
+
+  async removeCoachFromSession(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(coachSessionAssignments)
+      .where(and(
+        eq(coachSessionAssignments.id, id),
+        eq(coachSessionAssignments.tenantId, tenantId)
+      ));
   }
 }
 

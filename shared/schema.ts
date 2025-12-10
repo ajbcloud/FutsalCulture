@@ -535,6 +535,55 @@ export const householdMembers = pgTable("household_members", {
   uniqueIndex("household_members_tenant_player_unique_idx").on(table.tenantId, table.playerId),
 ]);
 
+// Coach Tenant Assignments - allows coaches to be assigned to multiple clubs
+export const coachTenantAssignments = pgTable("coach_tenant_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  
+  // Permission flags - all default to false for safety
+  canViewPii: boolean("can_view_pii").default(false), // View player personal info
+  canManageSessions: boolean("can_manage_sessions").default(false), // Create/edit sessions
+  canViewAnalytics: boolean("can_view_analytics").default(false), // View club analytics
+  canViewAttendance: boolean("can_view_attendance").default(true), // View attendance for assigned sessions
+  canTakeAttendance: boolean("can_take_attendance").default(true), // Mark attendance for assigned sessions
+  canViewFinancials: boolean("can_view_financials").default(false), // View financial data - off by default
+  canIssueRefunds: boolean("can_issue_refunds").default(false), // Issue refunds - off by default
+  canIssueCredits: boolean("can_issue_credits").default(false), // Issue credits - off by default
+  canManageDiscounts: boolean("can_manage_discounts").default(false), // Manage discount codes - off by default
+  canAccessAdminPortal: boolean("can_access_admin_portal").default(false), // Access /admin routes - off by default
+  
+  // Status and metadata
+  status: varchar("status").notNull().default("active"), // active, suspended, removed
+  invitedAt: timestamp("invited_at").defaultNow(),
+  invitedBy: varchar("invited_by").references(() => users.id),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("coach_tenant_assignments_user_id_idx").on(table.userId),
+  index("coach_tenant_assignments_tenant_id_idx").on(table.tenantId),
+  index("coach_tenant_assignments_status_idx").on(table.status),
+  uniqueIndex("coach_tenant_assignments_user_tenant_unique_idx").on(table.userId, table.tenantId),
+]);
+
+// Coach Session Assignments - links coaches to specific sessions they're responsible for
+export const coachSessionAssignments = pgTable("coach_session_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachAssignmentId: varchar("coach_assignment_id").notNull().references(() => coachTenantAssignments.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id").notNull().references(() => futsalSessions.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  isLead: boolean("is_lead").default(false), // Lead coach vs assistant for this session
+  notes: text("notes"), // Coach notes for this session
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: varchar("assigned_by").references(() => users.id),
+}, (table) => [
+  index("coach_session_assignments_coach_idx").on(table.coachAssignmentId),
+  index("coach_session_assignments_session_idx").on(table.sessionId),
+  index("coach_session_assignments_tenant_idx").on(table.tenantId),
+  uniqueIndex("coach_session_unique_idx").on(table.coachAssignmentId, table.sessionId),
+]);
+
 // User Credits table - replaces refund system, supports household-level credits
 export const userCredits = pgTable("user_credits", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2062,6 +2111,26 @@ export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).
 
 export type HouseholdMemberInsert = z.infer<typeof insertHouseholdMemberSchema>;
 export type HouseholdMemberSelect = typeof householdMembers.$inferSelect;
+
+// Coach Tenant Assignment schemas
+export const insertCoachTenantAssignmentSchema = createInsertSchema(coachTenantAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  invitedAt: true,
+});
+
+export type CoachTenantAssignmentInsert = z.infer<typeof insertCoachTenantAssignmentSchema>;
+export type CoachTenantAssignmentSelect = typeof coachTenantAssignments.$inferSelect;
+
+// Coach Session Assignment schemas
+export const insertCoachSessionAssignmentSchema = createInsertSchema(coachSessionAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+
+export type CoachSessionAssignmentInsert = z.infer<typeof insertCoachSessionAssignmentSchema>;
+export type CoachSessionAssignmentSelect = typeof coachSessionAssignments.$inferSelect;
 
 export const insertHelpRequestSchema = createInsertSchema(helpRequests).omit({
   id: true,

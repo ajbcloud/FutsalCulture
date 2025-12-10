@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
@@ -30,11 +31,26 @@ import {
   TrendingUp,
   Mail,
   UserPlus,
-  MessageSquare
+  MessageSquare,
+  GraduationCap
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
 import { useTenantPlan } from "@/hooks/useTenantPlan";
+import { ClubSwitcher } from "@/components/club-switcher";
+
+type CoachPermissions = {
+  canViewPii: boolean;
+  canManageSessions: boolean;
+  canViewAnalytics: boolean;
+  canViewAttendance: boolean;
+  canTakeAttendance: boolean;
+  canViewFinancials: boolean;
+  canIssueRefunds: boolean;
+  canIssueCredits: boolean;
+  canManageDiscounts: boolean;
+  canAccessAdminPortal: boolean;
+};
 
 type NavItem = {
   href: string;
@@ -43,24 +59,27 @@ type NavItem = {
   exact?: boolean;
   featureKey?: string;
   isSuperAdminOnly?: boolean;
+  isAdminOnly?: boolean;
+  coachPermission?: keyof CoachPermissions;
 };
 
 const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/sessions", label: "Sessions", icon: Calendar },
-  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard, coachPermission: 'canViewFinancials' },
   { href: "/admin/players", label: "Players", icon: Shirt },
   { href: "/admin/parents", label: "Parents", icon: Users },
-  { href: "/admin/invitations", label: "Invitations", icon: UserPlus },
-  { href: "/admin/credits", label: "Credits", icon: CreditCard },
+  { href: "/admin/coaches", label: "Coaches", icon: GraduationCap, isAdminOnly: true },
+  { href: "/admin/invitations", label: "Invitations", icon: UserPlus, isAdminOnly: true },
+  { href: "/admin/credits", label: "Credits", icon: CreditCard, coachPermission: 'canIssueCredits' },
   { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
   { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
-  { href: "/admin/sms-credits", label: "SMS Credits", icon: MessageSquare, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/sms-credits", label: "SMS Credits", icon: MessageSquare, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS, isAdminOnly: true },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, coachPermission: 'canViewAnalytics' },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
   { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
-  { href: "/admin/billing", label: "Billing", icon: Sparkles },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/billing", label: "Billing", icon: Sparkles, isAdminOnly: true },
+  { href: "/admin/settings", label: "Settings", icon: Settings, isAdminOnly: true },
   { href: "/super-admin", label: "Super Admin Portal", icon: Shield, isSuperAdminOnly: true },
 ];
 
@@ -76,6 +95,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { data: tenantPlan } = useTenantPlan();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
+
+  // Fetch coach permissions for assistants
+  const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: number; permissions: CoachPermissions }> }>({
+    queryKey: ['/api/coach/my-tenants'],
+    enabled: user?.isAssistant && !user?.isAdmin,
+  });
+
+  // Get current tenant's permissions if user is a coach
+  const coachPermissions = useMemo(() => {
+    if (!user?.isAssistant || user?.isAdmin || !coachData?.tenants) return null;
+    const currentTenant = coachData.tenants.find((t) => t.tenantId === user.tenantId);
+    return currentTenant?.permissions || null;
+  }, [user, coachData]);
   
   const planId = tenantPlan?.planId || 'free';
   const planName = planId.charAt(0).toUpperCase() + planId.slice(1);
@@ -95,15 +127,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Filter navigation items based on feature access and user role
   const visibleNavItems = adminNavItems.filter(item => {
-    if (item.isSuperAdminOnly && !user?.isSuperAdmin) {
-      return false;
+    // Super admin check
+    if (item.isSuperAdminOnly && !user?.isSuperAdmin) return false;
+    
+    // Feature flag checks
+    if (item.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT && !hasPlayerDevelopment) return false;
+    if (item.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS && !hasSmsNotifications) return false;
+    
+    // For coaches (isAssistant but not isAdmin), check permissions
+    if (user?.isAssistant && !user?.isAdmin) {
+      // Block admin-only items
+      if (item.isAdminOnly) return false;
+      
+      // Check coach-specific permissions
+      if (item.coachPermission && coachPermissions) {
+        return coachPermissions[item.coachPermission] === true;
+      }
     }
-    if (item.featureKey && item.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT) {
-      return hasPlayerDevelopment;
-    }
-    if (item.featureKey && item.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS) {
-      return hasSmsNotifications;
-    }
+    
     return true;
   });
 
@@ -181,6 +222,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
+            
+            {/* Club switcher for coaches with multiple club assignments */}
+            <ClubSwitcher />
           </div>
           <Button
             variant="ghost"

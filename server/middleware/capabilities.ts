@@ -39,11 +39,48 @@
 
 import { Request, Response, NextFunction } from 'express';
 
-// Define capability constants
+// Define capability constants - basic capabilities
 export const FINANCIAL_ANALYTICS = 'FINANCIAL_ANALYTICS' as const;
 
+// Coach-specific capability constants
+export const VIEW_PII = 'VIEW_PII' as const;
+export const MANAGE_SESSIONS = 'MANAGE_SESSIONS' as const;
+export const VIEW_ANALYTICS = 'VIEW_ANALYTICS' as const;
+export const VIEW_ATTENDANCE = 'VIEW_ATTENDANCE' as const;
+export const TAKE_ATTENDANCE = 'TAKE_ATTENDANCE' as const;
+export const VIEW_FINANCIALS = 'VIEW_FINANCIALS' as const;
+export const ISSUE_REFUNDS = 'ISSUE_REFUNDS' as const;
+export const ISSUE_CREDITS = 'ISSUE_CREDITS' as const;
+export const MANAGE_DISCOUNTS = 'MANAGE_DISCOUNTS' as const;
+export const ACCESS_ADMIN_PORTAL = 'ACCESS_ADMIN_PORTAL' as const;
+
 // Create a type for all capabilities
-export type Capability = typeof FINANCIAL_ANALYTICS;
+export type Capability = 
+  | typeof FINANCIAL_ANALYTICS
+  | typeof VIEW_PII
+  | typeof MANAGE_SESSIONS
+  | typeof VIEW_ANALYTICS
+  | typeof VIEW_ATTENDANCE
+  | typeof TAKE_ATTENDANCE
+  | typeof VIEW_FINANCIALS
+  | typeof ISSUE_REFUNDS
+  | typeof ISSUE_CREDITS
+  | typeof MANAGE_DISCOUNTS
+  | typeof ACCESS_ADMIN_PORTAL;
+
+// Coach permissions interface (matches coachTenantAssignments table)
+export interface CoachPermissions {
+  canViewPii: boolean;
+  canManageSessions: boolean;
+  canViewAnalytics: boolean;
+  canViewAttendance: boolean;
+  canTakeAttendance: boolean;
+  canViewFinancials: boolean;
+  canIssueRefunds: boolean;
+  canIssueCredits: boolean;
+  canManageDiscounts: boolean;
+  canAccessAdminPortal: boolean;
+}
 
 // User interface based on the schema (minimal fields needed for capability checks)
 interface User {
@@ -52,6 +89,7 @@ interface User {
   isAssistant?: boolean | null;
   isSuperAdmin?: boolean | null;
   role?: string | null;
+  coachPermissions?: CoachPermissions | null; // Added for coach permission checks
 }
 
 // Extend Express Request to include user
@@ -63,16 +101,79 @@ interface RequestWithUser extends Request {
 // Returns true if the user role has the capability
 export const CAPABILITY_MAP: Record<Capability, (user: User) => boolean> = {
   [FINANCIAL_ANALYTICS]: (user: User) => {
-    // Admin: has FINANCIAL_ANALYTICS capability
     if (user.isAdmin) return true;
-    
-    // Assistant: does NOT have FINANCIAL_ANALYTICS capability
-    if (user.isAssistant) return false;
-    
-    // SuperAdmin: has FINANCIAL_ANALYTICS capability
     if (user.isSuperAdmin) return true;
-    
-    // Default: no access
+    if (user.isAssistant && user.coachPermissions?.canViewFinancials) return true;
+    return false;
+  },
+  
+  [VIEW_PII]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canViewPii) return true;
+    return false;
+  },
+  
+  [MANAGE_SESSIONS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canManageSessions) return true;
+    return false;
+  },
+  
+  [VIEW_ANALYTICS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canViewAnalytics) return true;
+    return false;
+  },
+  
+  [VIEW_ATTENDANCE]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canViewAttendance) return true;
+    return false;
+  },
+  
+  [TAKE_ATTENDANCE]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canTakeAttendance) return true;
+    return false;
+  },
+  
+  [VIEW_FINANCIALS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canViewFinancials) return true;
+    return false;
+  },
+  
+  [ISSUE_REFUNDS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canIssueRefunds) return true;
+    return false;
+  },
+  
+  [ISSUE_CREDITS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canIssueCredits) return true;
+    return false;
+  },
+  
+  [MANAGE_DISCOUNTS]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canManageDiscounts) return true;
+    return false;
+  },
+  
+  [ACCESS_ADMIN_PORTAL]: (user: User) => {
+    if (user.isAdmin) return true;
+    if (user.isSuperAdmin) return true;
+    if (user.isAssistant && user.coachPermissions?.canAccessAdminPortal) return true;
     return false;
   },
 };
@@ -120,4 +221,16 @@ export function requireCapability(capability: Capability) {
 }
 
 // Export all capabilities as a constant array for easy reference
-export const ALL_CAPABILITIES: Capability[] = [FINANCIAL_ANALYTICS];
+export const ALL_CAPABILITIES: Capability[] = [
+  FINANCIAL_ANALYTICS,
+  VIEW_PII,
+  MANAGE_SESSIONS,
+  VIEW_ANALYTICS,
+  VIEW_ATTENDANCE,
+  TAKE_ATTENDANCE,
+  VIEW_FINANCIALS,
+  ISSUE_REFUNDS,
+  ISSUE_CREDITS,
+  MANAGE_DISCOUNTS,
+  ACCESS_ADMIN_PORTAL,
+];

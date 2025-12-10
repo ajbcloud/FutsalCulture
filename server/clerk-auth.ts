@@ -2,8 +2,8 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { tenants, subscriptions, tenantPlanAssignments, users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { tenants, subscriptions, tenantPlanAssignments, users, coachTenantAssignments } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 import { slugify, generateTenantCode } from "@shared/utils";
 import { nanoid } from "nanoid";
 import { getOrCreateStagingTenant, getStagingTenantId } from "./utils/staging-tenant";
@@ -375,6 +375,39 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
       
       (req as any).user = user;
       (req as any).userId = user.id;
+      
+      // Load coach permissions if user is an assistant
+      if (user.isAssistant && user.tenantId) {
+        try {
+          const assignment = await db.select().from(coachTenantAssignments)
+            .where(
+              and(
+                eq(coachTenantAssignments.userId, user.id),
+                eq(coachTenantAssignments.tenantId, user.tenantId),
+                eq(coachTenantAssignments.status, 'active')
+              )
+            )
+            .limit(1);
+          
+          if (assignment.length > 0) {
+            (req as any).user.coachPermissions = {
+              canViewPii: assignment[0].canViewPii,
+              canManageSessions: assignment[0].canManageSessions,
+              canViewAnalytics: assignment[0].canViewAnalytics,
+              canViewAttendance: assignment[0].canViewAttendance,
+              canTakeAttendance: assignment[0].canTakeAttendance,
+              canViewFinancials: assignment[0].canViewFinancials,
+              canIssueRefunds: assignment[0].canIssueRefunds,
+              canIssueCredits: assignment[0].canIssueCredits,
+              canManageDiscounts: assignment[0].canManageDiscounts,
+              canAccessAdminPortal: assignment[0].canAccessAdminPortal,
+            };
+          }
+        } catch (err) {
+          console.error('Error loading coach permissions:', err);
+        }
+      }
+      
       return next();
     }
     
@@ -628,6 +661,38 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
     (req as any).user = user;
     (req as any).userId = user?.id;
     
+    // Load coach permissions if user is an assistant
+    if (user?.isAssistant && user?.tenantId) {
+      try {
+        const assignment = await db.select().from(coachTenantAssignments)
+          .where(
+            and(
+              eq(coachTenantAssignments.userId, user.id),
+              eq(coachTenantAssignments.tenantId, user.tenantId),
+              eq(coachTenantAssignments.status, 'active')
+            )
+          )
+          .limit(1);
+        
+        if (assignment.length > 0) {
+          (req as any).user.coachPermissions = {
+            canViewPii: assignment[0].canViewPii,
+            canManageSessions: assignment[0].canManageSessions,
+            canViewAnalytics: assignment[0].canViewAnalytics,
+            canViewAttendance: assignment[0].canViewAttendance,
+            canTakeAttendance: assignment[0].canTakeAttendance,
+            canViewFinancials: assignment[0].canViewFinancials,
+            canIssueRefunds: assignment[0].canIssueRefunds,
+            canIssueCredits: assignment[0].canIssueCredits,
+            canManageDiscounts: assignment[0].canManageDiscounts,
+            canAccessAdminPortal: assignment[0].canAccessAdminPortal,
+          };
+        }
+      } catch (err) {
+        console.error('Error loading coach permissions:', err);
+      }
+    }
+    
     next();
   } catch (error) {
     console.error('Error syncing Clerk user:', error);
@@ -665,6 +730,39 @@ export async function requireClerkAuth(req: Request, res: Response, next: NextFu
       if (user) {
         (req as any).user = user;
         (req as any).userId = user.id;
+        
+        // Load coach permissions if user is an assistant
+        if (user.isAssistant && user.tenantId) {
+          try {
+            const assignment = await db.select().from(coachTenantAssignments)
+              .where(
+                and(
+                  eq(coachTenantAssignments.userId, user.id),
+                  eq(coachTenantAssignments.tenantId, user.tenantId),
+                  eq(coachTenantAssignments.status, 'active')
+                )
+              )
+              .limit(1);
+            
+            if (assignment.length > 0) {
+              (req as any).user.coachPermissions = {
+                canViewPii: assignment[0].canViewPii,
+                canManageSessions: assignment[0].canManageSessions,
+                canViewAnalytics: assignment[0].canViewAnalytics,
+                canViewAttendance: assignment[0].canViewAttendance,
+                canTakeAttendance: assignment[0].canTakeAttendance,
+                canViewFinancials: assignment[0].canViewFinancials,
+                canIssueRefunds: assignment[0].canIssueRefunds,
+                canIssueCredits: assignment[0].canIssueCredits,
+                canManageDiscounts: assignment[0].canManageDiscounts,
+                canAccessAdminPortal: assignment[0].canAccessAdminPortal,
+              };
+            }
+          } catch (err) {
+            console.error('Error loading coach permissions:', err);
+          }
+        }
+        
         return next();
       }
     } catch (error) {
