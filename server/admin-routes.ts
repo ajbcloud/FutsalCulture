@@ -2590,6 +2590,12 @@ export async function setupAdminRoutes(app: any) {
         defaultSettings.paymentReminderMinutes = settingsMap.paymentReminderHours * 60;
         delete defaultSettings.paymentReminderHours;
       }
+      
+      // Always prefer tenant displayName over stored businessName (which might have suffix)
+      // This ensures the clean display name is shown to users
+      if (tenantInfo?.displayName) {
+        defaultSettings.businessName = tenantInfo.displayName;
+      }
 
       res.json(defaultSettings);
     } catch (error) {
