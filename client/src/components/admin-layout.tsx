@@ -121,9 +121,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out sm:translate-x-0 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        {/* Fixed header */}
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-          <div className="flex flex-col items-center space-y-3 flex-1 w-full max-w-full">
+        {/* Fixed header with business branding, admin portal title, and user info */}
+        <div className="p-4 border-b border-border flex-shrink-0">
+          <div className="flex flex-col items-center space-y-3 w-full max-w-full">
             <div className="w-full max-w-full px-2">
               <BusinessBranding 
                 variant="large" 
@@ -132,6 +132,55 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               />
             </div>
             <h1 className="text-xl font-bold theme-nav-title text-center w-full admin-nav-title">Admin Portal</h1>
+            
+            {/* User account info */}
+            <div className="w-full flex items-center justify-between pt-2">
+              <div className="flex items-center space-x-3">
+                <CustomAvatar
+                  src={user?.profileImageUrl || undefined}
+                  alt={user?.firstName || "User"}
+                  fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
+                  backgroundColor={user?.avatarColor || "#10b981"}
+                  textColor={user?.avatarTextColor || undefined}
+                  size="md"
+                />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  {user?.email && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.email}
+                    </p>
+                  )}
+                  {!user?.isSuperAdmin && (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                      data-testid="badge-plan-level"
+                    >
+                      {planName} Plan
+                    </Badge>
+                  )}
+                  {user?.isSuperAdmin && (
+                    <Badge 
+                      variant="outline" 
+                      className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
+                    >
+                      Super Admin
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -172,69 +221,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
         </div>
 
-        {/* Trial Status Indicator - fixed above user profile */}
+        {/* Trial Status Indicator */}
         <div className="px-3 py-2 bg-card flex-shrink-0">
           <TrialStatusIndicator />
         </div>
 
-        {/* Fixed user info at bottom */}
+        {/* Logout button at bottom */}
         <div className="p-4 border-t border-border bg-card flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <CustomAvatar
-                src={user?.profileImageUrl || undefined}
-                alt={user?.firstName || "User"}
-                fallbackText={user?.firstName?.[0]?.toUpperCase() || 'A'}
-                backgroundColor={user?.avatarColor || "#10b981"}
-                textColor={user?.avatarTextColor || undefined}
-                size="md"
-              />
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                {user?.email && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user.email}
-                  </p>
-                )}
-                {!user?.isSuperAdmin && (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
-                    data-testid="badge-plan-level"
-                  >
-                    {planName} Plan
-                  </Badge>
-                )}
-                {user?.isSuperAdmin && (
-                  <Badge 
-                    variant="outline" 
-                    className="text-[10px] px-1.5 py-0 h-4 font-medium bg-red-500/20 text-red-400 border-red-500/30"
-                  >
-                    Super Admin
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={toggleTheme}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent flex items-center justify-center"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          </div>
-          
-          {/* Logout button */}
           <button
             onClick={async () => {
               setSidebarOpen(false);
               await logout();
               window.location.href = '/';
             }}
-            className="w-full mt-3 flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className="w-full flex items-center px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4 mr-3" />
