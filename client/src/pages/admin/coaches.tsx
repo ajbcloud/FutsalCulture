@@ -418,6 +418,7 @@ export default function AdminCoaches() {
               <div className="space-y-2">
                 <PermissionToggle
                   label="View Attendance"
+                  description="See who attended sessions, but cannot mark players present or absent"
                   checked={inviteForm.permissions.canViewAttendance}
                   onChange={(checked) =>
                     setInviteForm({
@@ -429,6 +430,7 @@ export default function AdminCoaches() {
                 />
                 <PermissionToggle
                   label="Take Attendance"
+                  description="Mark players as present or absent during sessions"
                   checked={inviteForm.permissions.canTakeAttendance}
                   onChange={(checked) =>
                     setInviteForm({
@@ -440,6 +442,7 @@ export default function AdminCoaches() {
                 />
                 <PermissionToggle
                   label="View Player Info (PII)"
+                  description="Access player details like phone numbers, emails, and emergency contacts"
                   checked={inviteForm.permissions.canViewPii}
                   onChange={(checked) =>
                     setInviteForm({
@@ -451,6 +454,7 @@ export default function AdminCoaches() {
                 />
                 <PermissionToggle
                   label="Manage Sessions"
+                  description="Create, edit, and cancel training sessions"
                   checked={inviteForm.permissions.canManageSessions}
                   onChange={(checked) =>
                     setInviteForm({
@@ -462,6 +466,7 @@ export default function AdminCoaches() {
                 />
                 <PermissionToggle
                   label="View Analytics"
+                  description="Access reports on attendance trends and session performance"
                   checked={inviteForm.permissions.canViewAnalytics}
                   onChange={(checked) =>
                     setInviteForm({
@@ -527,34 +532,39 @@ export default function AdminCoaches() {
               <Label className="text-sm font-medium">Permissions</Label>
 
               <PermissionToggle
-                label="View Player Info (PII)"
-                checked={editForm.canViewPii}
-                onChange={(checked) => setEditForm({ ...editForm, canViewPii: checked })}
-                testId="switch-edit-view-pii"
-              />
-              <PermissionToggle
-                label="Manage Sessions"
-                checked={editForm.canManageSessions}
-                onChange={(checked) => setEditForm({ ...editForm, canManageSessions: checked })}
-                testId="switch-edit-manage-sessions"
-              />
-              <PermissionToggle
-                label="View Analytics"
-                checked={editForm.canViewAnalytics}
-                onChange={(checked) => setEditForm({ ...editForm, canViewAnalytics: checked })}
-                testId="switch-edit-view-analytics"
-              />
-              <PermissionToggle
                 label="View Attendance"
+                description="See who attended sessions, but cannot mark players present or absent"
                 checked={editForm.canViewAttendance}
                 onChange={(checked) => setEditForm({ ...editForm, canViewAttendance: checked })}
                 testId="switch-edit-view-attendance"
               />
               <PermissionToggle
                 label="Take Attendance"
+                description="Mark players as present or absent during sessions"
                 checked={editForm.canTakeAttendance}
                 onChange={(checked) => setEditForm({ ...editForm, canTakeAttendance: checked })}
                 testId="switch-edit-take-attendance"
+              />
+              <PermissionToggle
+                label="View Player Info (PII)"
+                description="Access player details like phone numbers, emails, and emergency contacts"
+                checked={editForm.canViewPii}
+                onChange={(checked) => setEditForm({ ...editForm, canViewPii: checked })}
+                testId="switch-edit-view-pii"
+              />
+              <PermissionToggle
+                label="Manage Sessions"
+                description="Create, edit, and cancel training sessions"
+                checked={editForm.canManageSessions}
+                onChange={(checked) => setEditForm({ ...editForm, canManageSessions: checked })}
+                testId="switch-edit-manage-sessions"
+              />
+              <PermissionToggle
+                label="View Analytics"
+                description="Access reports on attendance trends and session performance"
+                checked={editForm.canViewAnalytics}
+                onChange={(checked) => setEditForm({ ...editForm, canViewAnalytics: checked })}
+                testId="switch-edit-view-analytics"
               />
 
               <div className="border-t border-border pt-3 mt-3">
@@ -657,6 +667,7 @@ export default function AdminCoaches() {
 
 function PermissionToggle({
   label,
+  description,
   checked,
   onChange,
   disabled = false,
@@ -664,6 +675,7 @@ function PermissionToggle({
   testId,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -676,8 +688,11 @@ function PermissionToggle({
     >
       <div className="flex-1">
         <Label className="text-sm cursor-pointer">{label}</Label>
+        {description && (
+          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        )}
         {warning && disabled && (
-          <p className="text-xs text-yellow-600 flex items-center gap-1">
+          <p className="text-xs text-yellow-600 flex items-center gap-1 mt-0.5">
             <AlertTriangle className="w-3 h-3" />
             {warning}
           </p>
