@@ -180,7 +180,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
       })
       .returning();
 
-    const baseUrl = process.env.REPLIT_APP_URL || process.env.REPLIT_DEV_DOMAIN || 'https://playhq.app';
+    const baseUrl = process.env.APP_URL || 'https://playhq.app';
     const joinUrl = `${baseUrl}/join-as-coach?code=${code}`;
     const tenantName = tenant.displayName || tenant.name;
     const inviterName = inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || 'Admin' : 'Admin';
