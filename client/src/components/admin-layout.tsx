@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { BusinessBranding } from "@/components/business-branding";
@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CustomAvatar } from "@/components/custom-avatar";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -32,7 +37,9 @@ import {
   Mail,
   UserPlus,
   MessageSquare,
-  GraduationCap
+  GraduationCap,
+  Pencil,
+  Loader2
 } from "lucide-react";
 import { useHasFeature } from "@/hooks/use-feature-flags";
 import { FEATURE_KEYS } from "@shared/feature-flags";
@@ -91,11 +98,60 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { data: tenantPlan } = useTenantPlan();
   const { hasFeature: hasPlayerDevelopment } = useHasFeature(FEATURE_KEYS.PLAYER_DEVELOPMENT);
   const { hasFeature: hasSmsNotifications } = useHasFeature(FEATURE_KEYS.NOTIFICATIONS_SMS);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Profile edit state
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+  });
+
+  // Update profile form when user changes
+  useState(() => {
+    setProfileForm({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+    });
+  });
+
+  // Profile update mutation
+  const profileMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string }) => {
+      const response = await apiRequest('PUT', '/api/user/profile', {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: user?.email || '',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update profile');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Profile updated",
+        description: "Your name has been updated successfully.",
+      });
+      setShowProfileDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      refreshUser();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update profile",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch coach permissions for assistants
   const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: string; permissions: CoachPermissions }> }>({
@@ -238,9 +294,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 size="md"
               />
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setProfileForm({
+                        firstName: user?.firstName || '',
+                        lastName: user?.lastName || '',
+                      });
+                      setShowProfileDialog(true);
+                    }}
+                    className="p-1 text-muted-foreground hover:text-foreground rounded"
+                    title="Edit profile"
+                    data-testid="button-edit-profile"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
                 {user?.email && (
                   <p className="text-xs text-muted-foreground truncate">
                     {user.email}
@@ -275,6 +347,53 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </button>
           </div>
         </div>
+
+        {/* Profile Edit Dialog */}
+        <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>
+                Update your name as it appears in the app.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="profile-firstName">First Name</Label>
+                <Input
+                  id="profile-firstName"
+                  value={profileForm.firstName}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="First name"
+                  data-testid="input-profile-firstname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-lastName">Last Name</Label>
+                <Input
+                  id="profile-lastName"
+                  value={profileForm.lastName}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Last name"
+                  data-testid="input-profile-lastname"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowProfileDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => profileMutation.mutate(profileForm)}
+                disabled={profileMutation.isPending}
+                data-testid="button-save-profile"
+              >
+                {profileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Logout button at bottom */}
         <div className="px-4 pb-4 bg-card flex-shrink-0">
