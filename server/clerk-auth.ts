@@ -689,7 +689,7 @@ export async function syncClerkUser(req: Request, res: Response, next: NextFunct
           firstName: firstName || null,
           lastName: lastName || null,
           profileImageUrl: profileImageUrl || null,
-          role: 'parent',
+          role: 'adult', // Coaches are adults, not parents (they don't have players by default)
         }).returning();
         user = (insertResult as any[])[0];
         console.log(`Created coach invite user ${user.id} in staging tenant (will be updated by join endpoint)`);

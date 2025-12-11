@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -13,18 +14,26 @@ import { UserCircle, GraduationCap, ChevronDown } from "lucide-react";
 type ActiveRole = "coach" | "parent";
 
 export function RoleSwitcher() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [activeRole, setActiveRole] = useState<ActiveRole>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("activeRole") as ActiveRole) || "parent";
+      return (localStorage.getItem("activeRole") as ActiveRole) || "coach";
     }
-    return "parent";
+    return "coach";
   });
 
-  // Only show role switcher when user is BOTH a coach (isAssistant) AND a parent
-  // Pure coaches without parent role should not see this dropdown
-  const shouldShowSwitcher = user?.isAssistant && user?.tenantId && user?.role === "parent";
+  // Check if user has any players registered (making them a parent)
+  const { data: playersData } = useQuery<any[]>({
+    queryKey: ['/api/players'],
+    enabled: isAuthenticated && user?.isAssistant === true,
+  });
+
+  const hasPlayers = (playersData?.length || 0) > 0;
+  
+  // Only show role switcher when user is BOTH a coach (isAssistant) AND has players (is a parent)
+  // Pure coaches without players should not see this dropdown
+  const shouldShowSwitcher = user?.isAssistant && user?.tenantId && hasPlayers;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
