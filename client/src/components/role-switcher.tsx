@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -13,11 +12,6 @@ import { UserCircle, GraduationCap, ChevronDown } from "lucide-react";
 
 type ActiveRole = "coach" | "parent";
 
-interface PlayersResponse {
-  players?: Array<{ id: string }>;
-  length?: number;
-}
-
 export function RoleSwitcher() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -28,19 +22,9 @@ export function RoleSwitcher() {
     return "parent";
   });
 
-  const { data: playersData, isError } = useQuery<PlayersResponse>({
-    queryKey: ["/api/players"],
-    enabled: !!user?.isAssistant && !!user?.tenantId,
-    retry: false,
-  });
-
-  // Gracefully handle fetch errors (e.g., user in staging tenant during onboarding)
-  const hasPlayers = !isError && (Array.isArray(playersData) 
-    ? playersData.length > 0 
-    : (playersData?.players?.length ?? 0) > 0);
-
-  // Only show switcher when user is confirmed coach with valid tenant assignment
-  const shouldShowSwitcher = user?.isAssistant && user?.tenantId && (user?.role === "parent" || hasPlayers);
+  // Only show role switcher when user is BOTH a coach (isAssistant) AND a parent
+  // Pure coaches without parent role should not see this dropdown
+  const shouldShowSwitcher = user?.isAssistant && user?.tenantId && user?.role === "parent";
 
   useEffect(() => {
     if (typeof window !== "undefined") {
