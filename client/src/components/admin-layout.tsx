@@ -154,10 +154,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   });
 
   // Fetch coach permissions for assistants
-  const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: string; permissions: CoachPermissions }> }>({
+  const { data: coachData, isLoading: isCoachDataLoading } = useQuery<{ tenants: Array<{ tenantId: string; permissions: CoachPermissions }> }>({
     queryKey: ['/api/coach/my-tenants'],
     enabled: user?.isAssistant && !user?.isAdmin,
   });
+
+  // Track if coach permissions are still loading
+  const isCoachPermissionsLoading = user?.isAssistant && !user?.isAdmin && isCoachDataLoading;
 
   // Get current tenant's permissions if user is a coach
   const coachPermissions = useMemo(() => {
@@ -198,7 +201,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       
       // If item requires a permission, check it
       if (item.coachPermission) {
-        // If permissions haven't loaded yet, hide permission-gated items
+        // If permissions are still loading, hide permission-gated items temporarily
+        if (isCoachPermissionsLoading) return false;
+        // If permissions loaded but null (no record), deny access
         if (!coachPermissions) return false;
         return coachPermissions[item.coachPermission] === true;
       }
@@ -208,7 +213,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   });
 
   // Check if current route is accessible
-  const isRouteAccessible = useMemo(() => {
+  // Returns: 'allowed' | 'denied' | 'loading'
+  const routeAccessState = useMemo((): 'allowed' | 'denied' | 'loading' => {
     // Find the nav item that matches the current location
     const matchedItem = adminNavItems.find(item => {
       if (item.exact) {
@@ -218,31 +224,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     });
     
     // If no nav item matches, allow access (custom pages, etc.)
-    if (!matchedItem) return true;
+    if (!matchedItem) return 'allowed';
     
     // Super admin check
-    if (matchedItem.isSuperAdminOnly && !user?.isSuperAdmin) return false;
+    if (matchedItem.isSuperAdminOnly && !user?.isSuperAdmin) return 'denied';
     
     // Feature flag checks
-    if (matchedItem.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT && !hasPlayerDevelopment) return false;
-    if (matchedItem.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS && !hasSmsNotifications) return false;
+    if (matchedItem.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT && !hasPlayerDevelopment) return 'denied';
+    if (matchedItem.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS && !hasSmsNotifications) return 'denied';
     
     // For coaches (isAssistant but not isAdmin), check permissions
     if (user?.isAssistant && !user?.isAdmin) {
       // Block admin-only items completely for coaches
-      if (matchedItem.isAdminOnly) return false;
+      if (matchedItem.isAdminOnly) return 'denied';
       
       // If item requires a permission, check it
       if (matchedItem.coachPermission) {
-        if (!coachPermissions) return false;
-        return coachPermissions[matchedItem.coachPermission] === true;
+        // If permissions are still loading, show loading state
+        if (isCoachPermissionsLoading) return 'loading';
+        // If permissions loaded but null (no record), deny access
+        if (!coachPermissions) return 'denied';
+        return coachPermissions[matchedItem.coachPermission] === true ? 'allowed' : 'denied';
       }
     }
     
-    return true;
-  }, [location, user, coachPermissions, hasPlayerDevelopment, hasSmsNotifications]);
+    return 'allowed';
+  }, [location, user, coachPermissions, isCoachPermissionsLoading, hasPlayerDevelopment, hasSmsNotifications]);
 
-  if (!isRouteAccessible) {
+  // Show loading spinner while coach permissions are loading
+  if (routeAccessState === 'loading') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (routeAccessState === 'denied') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">

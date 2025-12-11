@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { usePageRefresh } from "@/hooks/use-page-refresh";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import AdminLayout from "@/components/admin-layout";
@@ -88,11 +88,37 @@ interface AdminStats {
   }>;
 }
 
+type CoachPermissions = {
+  canViewPii: boolean;
+  canManageSessions: boolean;
+  canViewAnalytics: boolean;
+  canViewAttendance: boolean;
+  canTakeAttendance: boolean;
+  canViewFinancials: boolean;
+  canIssueRefunds: boolean;
+  canIssueCredits: boolean;
+  canManageDiscounts: boolean;
+  canAccessAdminPortal: boolean;
+};
+
 export default function AdminDashboard() {
   const businessName = useBusinessName();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Fetch coach permissions for assistants
+  const { data: coachData } = useQuery<{ tenants: Array<{ tenantId: string; permissions: CoachPermissions }> }>({
+    queryKey: ['/api/coach/my-tenants'],
+    enabled: user?.isAssistant === true && user?.isAdmin !== true,
+  });
+  
+  // Get current tenant's permissions if user is a coach
+  const coachPermissions = useMemo(() => {
+    if (!user?.isAssistant || user?.isAdmin || !coachData?.tenants) return null;
+    const currentTenant = coachData.tenants.find((t) => t.tenantId === user.tenantId);
+    return currentTenant?.permissions || null;
+  }, [user, coachData]);
   
   // Check feature access
   const hasBasicAnalytics = useHasFeature('analytics_basic');
@@ -556,7 +582,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 quick-actions">
-                  {user?.isAdmin && (
+                  {(user?.isAdmin || coachPermissions?.canManageSessions) && (
                     <button 
                       onClick={() => setLocation("/admin/sessions/new")}
                       className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
@@ -565,7 +591,7 @@ export default function AdminDashboard() {
                       Create Session
                     </button>
                   )}
-                  {user?.isAdmin && (
+                  {(user?.isAdmin || coachPermissions?.canViewFinancials) && (
                     <button 
                       onClick={() => setLocation("/admin/payments")}
                       className="p-3 bg-green-600 hover:bg-green-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
@@ -574,7 +600,7 @@ export default function AdminDashboard() {
                       Review Payments
                     </button>
                   )}
-                  {user?.isAdmin && (
+                  {(user?.isAdmin || coachPermissions?.canViewPii) && (
                     <button 
                       onClick={() => setLocation("/admin/players")}
                       className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
