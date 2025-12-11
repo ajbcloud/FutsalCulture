@@ -79,6 +79,11 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoint for deployment readiness - must be early in middleware chain
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Apply security middleware
 app.use(rateLimitMiddleware);
 app.use(ipRestrictionMiddleware);
@@ -217,40 +222,40 @@ app.use((req, res, next) => {
       log(`serving on http://${host}:${port}`);
     }
     
-    // Start background processors after server is up
+    // Delay background jobs significantly to allow health checks to pass first
+    // Production deployments need the server to respond to health checks before jobs start
+    const backgroundJobDelay = process.env.NODE_ENV === 'production' ? 30000 : 5000;
+    
     setTimeout(() => {
+      console.log('Starting background processors...');
       startWaitlistProcessor();
       initializeBackgroundJobs();
-    }, 1000); // Delay background jobs to ensure server is fully initialized
+      
+      // Start reservation cleanup job only after background jobs are initialized
+      setInterval(async () => {
+        try {
+          const { storage } = await import("./storage");
+          const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+          const expiredSignups = await storage.getPendingPaymentSignups();
+
+          const expiredReservations = expiredSignups.filter(signup => 
+            signup.createdAt && new Date(signup.createdAt) < cutoff
+          );
+
+          for (const signup of expiredReservations) {
+            await storage.deleteSignup(signup.id);
+            log(`Expired reservation cleaned up: ${signup.id} for player ${signup.player.firstName}`);
+          }
+
+          if (expiredReservations.length > 0) {
+            log(`Cleaned up ${expiredReservations.length} expired reservations`);
+          }
+        } catch (error) {
+          console.error("Error cleaning up expired reservations:", error);
+        }
+      }, 15 * 60 * 1000); // Run every 15 minutes
+    }, backgroundJobDelay);
   });
-
-  // Background job to clean up expired reservations - delayed start
-  setTimeout(() => {
-    setInterval(async () => {
-    try {
-      const { storage } = await import("./storage");
-      const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
-      const expiredSignups = await storage.getPendingPaymentSignups();
-
-      const expiredReservations = expiredSignups.filter(signup => 
-        signup.createdAt && new Date(signup.createdAt) < cutoff
-      );
-
-      for (const signup of expiredReservations) {
-        await storage.deleteSignup(signup.id);
-        log(`Expired reservation cleaned up: ${signup.id} for player ${signup.player.firstName}`);
-
-        // TODO: Optional - notify parent of cancellation via SMS/email
-      }
-
-      if (expiredReservations.length > 0) {
-        log(`Cleaned up ${expiredReservations.length} expired reservations`);
-      }
-    } catch (error) {
-      console.error("Error cleaning up expired reservations:", error);
-    }
-    }, 15 * 60 * 1000); // Run every 15 minutes
-  }, 10000); // Start cleanup job after 10 seconds
   } catch (error) {
     console.error('Server startup error:', error);
     process.exit(1);
