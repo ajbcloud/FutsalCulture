@@ -93,9 +93,13 @@ export class EmailTemplateService {
       const textContent = this.generateTemplate({ ...template, variant: 'text' });
       const subject = this.generateSubject(template);
 
+      // Use welcome email for invitation/welcome types, general email for others
+      const isWelcomeType = ['invitation', 'welcome', 'parent2'].includes(template.type);
+      const fromEmail = isWelcomeType ? WELCOME_EMAIL : FROM_EMAIL;
+
       const result = await sendViaProvider({
         to,
-        from: FROM_EMAIL,
+        from: fromEmail,
         subject,
         html: htmlContent,
         text: textContent,

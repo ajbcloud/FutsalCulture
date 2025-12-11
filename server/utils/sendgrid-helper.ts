@@ -111,7 +111,7 @@ export async function sendBatchEmails(messages: Array<{
       // Convert to SendGrid format
       const sgMessages = batch.map(msg => ({
         ...msg,
-        from: msg.from || process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+        from: msg.from || process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app',
         trackingSettings: {
           clickTracking: { enable: true },
           openTracking: { enable: true },
@@ -152,7 +152,7 @@ export async function verifySendGridConfig(): Promise<{
   error?: string;
 }> {
   const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app';
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app';
   
   if (!apiKey) {
     return {

@@ -1150,7 +1150,7 @@ export function setupSuperAdminRoutes(app: Express) {
         email: {
           provider: 'Resend',
           configured: emailConfigured,
-          senderEmail: 'noreply@playhq.app',
+          senderEmail: 'playhq@playhq.app',
           senderName: 'PlayHQ',
           replyTo: 'support@playhq.app',
           templates: {
