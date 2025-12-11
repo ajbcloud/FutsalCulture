@@ -56,6 +56,7 @@ import SetPassword from "@/pages/SetPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import AcceptInvite from "@/pages/accept-invite";
 import JoinAsCoach from "@/pages/join-as-coach";
+import CoachSetup from "@/pages/coach-setup";
 import PlayerInvite from "@/pages/player-invite";
 import PlayerSetup from "@/pages/PlayerSetup";
 import Parent2Invite from "@/pages/parent2-invite";
@@ -118,6 +119,7 @@ function Router() {
         <Route path="/accept-invite" component={AcceptInvite} />
         <Route path="/join-as-coach" component={JoinAsCoach} />
         <Route path="/join-as-coach/:rest*" component={JoinAsCoach} />
+        <Route path="/coach-setup" component={CoachSetup} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
         <Route path="/status" component={Status} />
