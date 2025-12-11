@@ -347,7 +347,7 @@ router.put('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) =
   }
 });
 
-// DELETE /api/admin/coaches/:id - Remove a coach from the tenant
+// DELETE /api/admin/coaches/:id - Remove a coach from the tenant (or cancel pending invite)
 router.delete('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) => {
   try {
     const tenantId = req.user?.tenantId;
@@ -357,17 +357,42 @@ router.delete('/admin/coaches/:id', requireAdmin, async (req: any, res: Response
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
+    // First try to find as a coach assignment
     const existingAssignment = await storage.getCoachTenantAssignment(id, tenantId);
-    if (!existingAssignment) {
-      return res.status(404).json({ message: 'Coach assignment not found' });
+    if (existingAssignment) {
+      await storage.deleteCoachTenantAssignment(id, tenantId);
+      return res.json({
+        success: true,
+        message: 'Coach removed from organization',
+      });
     }
 
-    await storage.deleteCoachTenantAssignment(id, tenantId);
+    // If not found, check if it's a pending invite in invite_codes table
+    const [pendingInvite] = await db
+      .select()
+      .from(inviteCodes)
+      .where(
+        and(
+          eq(inviteCodes.id, id),
+          eq(inviteCodes.tenantId, tenantId),
+          eq(inviteCodes.isActive, true)
+        )
+      );
 
-    res.json({
-      success: true,
-      message: 'Coach removed from organization',
-    });
+    if (pendingInvite) {
+      // Deactivate the invite
+      await db
+        .update(inviteCodes)
+        .set({ isActive: false })
+        .where(eq(inviteCodes.id, id));
+      
+      return res.json({
+        success: true,
+        message: 'Coach invite cancelled',
+      });
+    }
+
+    return res.status(404).json({ message: 'Coach assignment not found' });
   } catch (error) {
     console.error('Error removing coach:', error);
     res.status(500).json({ message: 'Failed to remove coach' });
