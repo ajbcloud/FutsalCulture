@@ -207,6 +207,60 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return true;
   });
 
+  // Check if current route is accessible
+  const isRouteAccessible = useMemo(() => {
+    // Find the nav item that matches the current location
+    const matchedItem = adminNavItems.find(item => {
+      if (item.exact) {
+        return location === item.href;
+      }
+      return location.startsWith(item.href);
+    });
+    
+    // If no nav item matches, allow access (custom pages, etc.)
+    if (!matchedItem) return true;
+    
+    // Super admin check
+    if (matchedItem.isSuperAdminOnly && !user?.isSuperAdmin) return false;
+    
+    // Feature flag checks
+    if (matchedItem.featureKey === FEATURE_KEYS.PLAYER_DEVELOPMENT && !hasPlayerDevelopment) return false;
+    if (matchedItem.featureKey === FEATURE_KEYS.NOTIFICATIONS_SMS && !hasSmsNotifications) return false;
+    
+    // For coaches (isAssistant but not isAdmin), check permissions
+    if (user?.isAssistant && !user?.isAdmin) {
+      // Block admin-only items completely for coaches
+      if (matchedItem.isAdminOnly) return false;
+      
+      // If item requires a permission, check it
+      if (matchedItem.coachPermission) {
+        if (!coachPermissions) return false;
+        return coachPermissions[matchedItem.coachPermission] === true;
+      }
+    }
+    
+    return true;
+  }, [location, user, coachPermissions, hasPlayerDevelopment, hasSmsNotifications]);
+
+  if (!isRouteAccessible) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+            <Shield className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">
+            You don't have permission to access this page. Please contact your administrator if you believe this is an error.
+          </p>
+          <Link href="/admin">
+            <Button>Go to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile sidebar backdrop */}
