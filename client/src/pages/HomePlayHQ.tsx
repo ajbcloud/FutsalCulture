@@ -240,7 +240,7 @@ export default function HomePlayHQ() {
                     How does billing and pricing work?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600 dark:text-gray-300">
-                    Start free with up to 50 players. Upgrade anytime to Core ($99/mo), Growth ($199/mo), or Elite ($399/mo) to unlock more players, advanced features, and priority support. No long-term contracts—cancel anytime.
+                    Start free with up to 10 players. Upgrade anytime to Core ($79/mo), Growth ($149/mo), or Elite ($299/mo) to unlock unlimited players, advanced features, and priority support. No long-term contracts—cancel anytime.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="security" className="border rounded-lg px-4 bg-white dark:bg-gray-800">

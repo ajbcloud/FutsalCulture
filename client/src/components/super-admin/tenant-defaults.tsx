@@ -132,9 +132,10 @@ export function TenantDefaults() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="core">Core Plan - $99/month (150 players)</SelectItem>
-                  <SelectItem value="growth">Growth Plan - $199/month (500 players)</SelectItem>
-                  <SelectItem value="elite">Elite Plan - $499/month (Unlimited players)</SelectItem>
+                  <SelectItem value="free">Free Plan - $0/month (10 players)</SelectItem>
+                  <SelectItem value="core">Core Plan - $79/month (Unlimited players)</SelectItem>
+                  <SelectItem value="growth">Growth Plan - $149/month (Unlimited players)</SelectItem>
+                  <SelectItem value="elite">Elite Plan - $299/month (Unlimited players)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">

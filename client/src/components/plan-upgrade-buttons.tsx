@@ -21,21 +21,21 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Core ($99/mo)
+          Upgrade to Core ($79/mo)
         </Button>
         <Button 
           onClick={handleUpgrade}
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Growth ($199/mo)
+          Upgrade to Growth ($149/mo)
         </Button>
         <Button 
           onClick={handleUpgrade}
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Elite ($399/mo)
+          Upgrade to Elite ($299/mo)
         </Button>
       </div>
     );
@@ -49,14 +49,14 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Growth ($199/mo)
+          Upgrade to Growth ($149/mo)
         </Button>
         <Button 
           onClick={handleUpgrade}
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Elite ($399/mo)
+          Upgrade to Elite ($299/mo)
         </Button>
       </div>
     );
@@ -70,7 +70,7 @@ export function PlanUpgradeButtons({ tenantId = 'unknown', currentPlan = 'free',
           className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           size="sm"
         >
-          Upgrade to Elite ($399/mo)
+          Upgrade to Elite ($299/mo)
         </Button>
       </div>
     );

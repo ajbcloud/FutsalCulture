@@ -473,9 +473,10 @@ export default function SuperAdminTenants() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starter">Starter - $49/month</SelectItem>
-                    <SelectItem value="pro">Pro - $99/month</SelectItem>
-                    <SelectItem value="enterprise">Enterprise - $199/month</SelectItem>
+                    <SelectItem value="free">Free - $0/month</SelectItem>
+                    <SelectItem value="core">Core - $79/month</SelectItem>
+                    <SelectItem value="growth">Growth - $149/month</SelectItem>
+                    <SelectItem value="elite">Elite - $299/month</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
