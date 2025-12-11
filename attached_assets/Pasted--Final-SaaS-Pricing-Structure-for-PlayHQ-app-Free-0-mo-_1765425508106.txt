@@ -1,0 +1,118 @@
+✅ Final SaaS Pricing Structure for PlayHQ.app
+🔓 Free — $0/mo
+
+Perfect for small trainers just getting started.
+
+Up to 10 players
+
+Up to 5 sessions/month
+
+1 location
+
+Manual session creation only
+
+Basic booking for adults/players
+
+No online payments
+
+No waitlists or bulk tools
+
+Email support only
+
+<small>⚠️ Free plan gives you just enough to use PlayHQ but intentionally excludes automation, payments, and scaling tools.</small>
+
+⚙️ Core — $79/mo
+
+For trainers managing more sessions or growing small teams.
+
+Unlimited players
+
+Unlimited sessions
+
+1 location
+
+Recurring sessions
+
+Email notifications
+
+Calendar sync
+
+CSV Export
+
+Discount codes
+
+Manual waitlist tools
+
+Basic analytics
+
+<small>Great for single-site trainers or clubs who want to remove admin clutter.</small>
+
+🚀 Growth — $149/mo
+
+Designed for multi-coach teams or multi-location programs.
+
+Everything in Core, plus:
+
+Up to 3 locations
+
+CSV Import & bulk ops
+
+SMS notifications
+
+Waitlist auto-promotion
+
+Online payments (Braintree)
+
+Advanced analytics
+
+Support via chat + email
+
+Basic integrations (Mailchimp, QuickBooks)
+
+<small>Built for operations that want streamlined scheduling, payments, and reporting.</small>
+
+🏆 Elite — $299/mo
+
+For serious programs running competitive academies or training networks.
+
+Everything in Growth, plus:
+
+Unlimited locations
+
+Multiple payment providers
+
+API access
+
+Advanced player development features
+
+Full integrations (Zapier, Resend, Telnyx, etc.)
+
+Priority support (email, phone)
+
+Feature request queue priority
+
+<small>Great for businesses managing multiple sites, staff, or advanced ops.</small>
+
+🧩 Feature Comparison Summary
+Feature	Free	Core	Growth	Elite
+Player Limit	10	∞	∞	∞
+Sessions per Month	5	∞	∞	∞
+Locations	1	1	3	∞
+Session Management	Manual	Recurring	Recurring + Bulk	Recurring + Bulk
+Waitlist	–	Manual	Auto	Auto
+Email Notifications	–	✅	✅	✅
+SMS Notifications	–	–	✅	✅
+Online Payments	–	–	✅	✅
+Analytics	–	Basic	Advanced	AI‑Driven
+Calendar Integration	–	✅	✅	✅
+Support	Basic Email	Email	Chat + Email	Priority
+API & Integrations	–	–	Basic	Full
+💡 Positioning Summary
+
+Free Plan: Usable, but limited — perfect for testing or low-volume trainers.
+
+Core Plan: Breaks friction for solo operators. Clean, focused.
+
+Growth Plan: Opens up automation, payments, and scaling.
+
+Elite Plan: A full-stack operating system for competitive programs.

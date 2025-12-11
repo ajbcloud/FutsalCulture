@@ -1,0 +1,161 @@
+Plan: Implement Free Plan Tier and Pricing Structure Updates
+
+This plan outlines the steps to introduce a new Free Plan tier with specific limits while keeping a player cap on the free version, and to explore adding a platform transaction fee for payments. The project is a React (TypeScript, Tailwind, Vite) single-page app with an Express backend, and pricing tiers are currently defined statically in code
+GitHub
+. The goal is to make the Free Plan usable but constrained (limited players, sessions per month, locations, and features) so that users are motivated to upgrade.
+
+Step 1: Update Pricing Tier Definitions in Code
+
+Update the static plan definitions to reflect the Free Plan limits and ensure all plans are represented correctly. In the shared config (shared/feature-flags.ts), verify the Free Plan is defined with a player cap of 10 (maxPlayers = 10)
+GitHub
+ and limited locations (maxLocations = 1)
+GitHub
+. Add a new field for session limits on the Free Plan, e.g. maxSessionsPerMonth, since currently maxSessions is null (unlimited)
+GitHub
+. For example, set maxSessionsPerMonth: 5 (or another reasonable number) to limit how many sessions can be created each month on the free tier. Also, if needed, set a maxUsers for free (e.g. 10) only if we want to count non-player users – otherwise we continue counting only players for the cap (the code presently counts players only
+GitHub
+). Ensure the plan name and description for Free Plan reflect these limitations (e.g. “Basic features with player, session, and location limits”). Make corresponding updates in any front-end constants (such as client/src/constants/plans.ts) so the UI reflects the Free Plan’s limits (e.g. display “10 players”, session limits, etc.)
+GitHub
+.
+
+Step 2: Enforce Player Cap in Backend
+
+Implement logic on the backend to enforce the 10-player limit for Free Plan tenants. Whenever a new player registration or addition is attempted (whether via self-signup or admin action), add a check against the tenant’s current player count. The players table can be queried to get the count of players for that tenant (as seen in the plan-features API
+GitHub
+). If the tenant’s plan is 'free' and they already have 10 players, the backend should block the creation of an additional player and return an error message (for example: “You have reached the maximum allowed players for the Free Plan. Please upgrade to add more.”). This check should be added to the relevant route or controller that handles player creation or user invites. By enforcing this server-side, we ensure no bypass of the limit even if a user disables front-end restrictions.
+
+Step 3: Enforce Session Limit for Free Plan
+
+Implement a similar enforcement for the session creation limit per month on the Free Plan. Decide on the allowed number of sessions (e.g. 5 sessions per month for Free). In the backend endpoint that creates new sessions (or when an admin tries to schedule a session), add logic to count how many sessions the tenant has created in the current month. This may involve querying the sessions/events table with a date filter (e.g. count sessions where created_at or session date is in the current month for that tenant). If the count has reached the Free Plan’s maxSessionsPerMonth, block the creation and respond with a message like “Free Plan is limited to X sessions per month. Upgrade your plan to schedule more sessions.”. This ensures Free tenants can only create a small number of sessions, giving them basic utility but pushing active users towards upgrading. Update the PLAN_LIMITS structure with this new limit so it’s easy to retrieve and display in the UI (similar to how maxPlayers and maxLocations are stored)
+GitHub
+. Also consider front-end messaging – if possible, warn or disable the “Add Session” button on the UI once the limit is reached (the front end could fetch the session count as part of plan data, similar to playerCount).
+
+Step 4: Restrict Free Plan Features in the UI
+
+Many advanced features should be disabled or “gated” for Free Plan users, providing just enough functionality to use the app while highlighting what they’re missing. Using the feature flags configuration, the Free Plan already has several features set to false (disabled)
+GitHub
+. Now we must reflect these in the UI/UX:
+
+Session Management: Free Plan allows only manual session creation. Ensure that any UI for advanced session scheduling is gated. For example, hide or disable recurring session scheduling options and CSV bulk import of sessions for free tenants. If those UI elements appear, add a lock icon or tooltip stating “Upgrade required for this feature.”
+
+Waitlist Automation: If waitlist auto-promotion is a feature (disabled for free
+GitHub
+), ensure that in session details the auto-promote toggle or settings are disabled/hidden for Free Plan. If even manual waitlist management is off for free (as indicated by WAITLIST_MANUAL: false for free
+GitHub
+), the waitlist functionality should be entirely unavailable or read-only in the UI.
+
+Communications (Email/SMS): All mass email or SMS notification features are off on Free
+GitHub
+. In the admin portal, if there’s a “Send Email to All” or “Notifications” section, disable those send buttons. Show an upgrade prompt (e.g. “Available on Growth plan”) in a tooltip or modal when they hover or attempt to use it
+GitHub
+. The email/SMS toggle for session reminders should also be locked for free users.
+
+Analytics: The Free Plan has no access to analytics dashboards
+GitHub
+. Keep the Analytics menu item visible but greyed out. If clicked, instead of loading stats, show a modal or message: “Analytics are available on Growth and Elite plans”
+GitHub
+.
+
+Payments: Online payment processing is disabled for Free Plan by default
+GitHub
+. In the session creation UI, the “Accept Payments” or payment gateway toggle should be shown as locked for free users
+GitHub
+. Display an upgrade prompt: e.g. a tooltip or inline message “Upgrade to enable online payments.” If the UI uses the FeatureGuard and UpgradePrompt components (as seen in the code)
+GitHub
+GitHub
+, leverage those for consistency.
+
+Other Integrations & Advanced Features: Features like calendar sync, Mailchimp, QuickBooks, Zapier, API access, SSO, etc., are all off for Free Plan
+GitHub
+GitHub
+. In the UI, these might correspond to settings or integration pages. Ensure that for Free tenants, those pages either show a locked state or a call-to-action to upgrade. For example, an “Integrations” page can list available integrations but each one locked with “Elite plan required” etc., depending on the feature.
+
+For each of the above, use consistent UI elements (disable state, lock icons, and Upgrade modals) to communicate that the feature is available on higher plans. The code already defines human-readable feature names and descriptions
+GitHub
+GitHub
+ which can be used in tooltips or upgrade prompts. By clearly indicating what’s missing, we strike the balance of making the Free Plan useful yet encouraging upgrades.
+
+Step 5: Add Free Plan Indicators and Upgrade CTA
+
+Improve the visibility of the user’s current plan and provide easy upgrading. In the tenant’s admin dashboard header, add a label or badge that says “Free Plan” so it's clear they are on the free tier
+GitHub
+. This could simply be a small badge next to the organization name or in the account info panel. Next, add a persistent “Upgrade Now” button for Free Plan tenants
+GitHub
+. A good place might be the top-right of the nav bar or header, or an always-visible banner. This button should lead the user into the upgrade flow. For example, it might navigate to the Billing/Pricing page (/admin/billing or a dedicated pricing screen) where the plans are outlined and the user can select a plan to upgrade. If using Stripe Payment Links for one-click upgrades, configure the button to open the appropriate link for a paid plan (Core/Growth/Elite) – possibly the next tier up. For instance, if we encourage upgrading to “Core”, use the Stripe checkout link for Core plan (these links are defined in code
+GitHub
+). Ensure that on successful upgrade, the app refreshes the tenant’s plan info (the Stripe webhook will update the plan level in the database; the frontend query /api/tenant/plan-features should then reflect the new plan
+GitHub
+GitHub
+). By having a clear upgrade call-to-action and plan indicator, Free users are continuously reminded of their status and one click away from subscribing to a higher tier.
+
+Step 6: Introduce a Platform Transaction Fee (Optional)
+
+Explore the feasibility of adding a platform fee on transactions (e.g. a percentage of each payment) to generate revenue from Free Plan users who process payments. Legally and technically this is possible by leveraging Stripe’s facilities for application fees. We need to verify Stripe’s terms and our integration approach: using Stripe Connect would allow the platform to take a cut of payments that clubs (tenants) collect from their customers. The plan here is to potentially enable payment processing on Free Plan (so that even free-tier clubs can accept online payments), but in exchange, impose a small transaction fee on each booking/payment.
+
+Tasks to implement if we proceed with this idea:
+
+Research and Setup: Confirm Stripe’s requirements for collecting application fees. This typically involves setting up a Stripe Connect account for the platform and having tenants use Connect (Standard or Express accounts) so that when a payment is made, we can specify an application_fee_amount or percentage that goes to us. Ensure this is compliant with any relevant laws and Stripe policies.
+
+Enable Payments for Free Plan: In the feature flags, flip PAYMENTS_ENABLED to true for the Free plan (or handle it specially) so that Free users can actually initiate payments
+GitHub
+. This is a necessary change if we want them to use payments at all. Update the UI so that the payment toggle is available for Free plan but indicate the fee (e.g. a note like “5% platform fee on transactions applies”).
+
+Implement Fee in Checkout: Update the payment processing logic on the backend. When a Free Plan tenant creates a checkout session or charges a customer, include the platform fee. For Stripe, this means if we create a PaymentIntent or Checkout Session on behalf of the tenant, set the appropriate parameter (for Stripe Connect, transfer_data or application_fee_amount). If the current architecture has tenants integrating their own Stripe API keys or using their own accounts (as suggested by the existence of Braintree/Stripe integration flags), we might instead require Free tenants to use the platform’s payment account. In that case, process their payments through our master Stripe account and later remit their portion. This is complex, so using Connect with managed accounts is preferable.
+
+Adjust for Paid Plans: Decide whether paid plans will have a transaction fee as well. Generally, if a club is paying a subscription (Core/Growth/Elite), we might waive additional platform fees (or set them to 0%) as an incentive. So implement logic: if tenant plan is Free, apply fee; if plan is paid, no platform fee (aside from standard gateway fees that Stripe/Braintree charge directly). This can be coded by checking planLevel before creating the charge.
+
+Testing Fees: Test a full payment flow as a Free plan tenant: a player makes a booking payment, verify that the platform receives the fee portion. Check that Stripe logs or dashboard show the fee being collected. Also test upgrading from Free to a paid plan and ensure that after upgrade, transactions no longer incur the platform fee.
+
+This step is marked optional because it introduces additional complexity and dependencies (Stripe Connect onboarding, compliance considerations). If it proves too complicated or not immediately necessary, we may skip enabling payments on Free entirely (keeping Free plan with payments disabled, as it currently is) and rely on the subscription upgrade model for revenue. But it’s a potential revenue stream to revisit.
+
+Step 7: Testing and QA
+
+Thoroughly test all scenarios to ensure the new Free Plan behavior is solid:
+
+Create a new tenant on the Free Plan. Verify the Free Plan limits are correctly applied: the dashboard should show “Free Plan” and an upgrade button, and the plan features API reflects planLevel: "free" with the correct features and limits
+GitHub
+.
+
+Test player cap: add players up to the limit (10), then attempt to add one more. The system should prevent it – on the UI you might see an error message or the action disabled; on the server, it should return the upgrade-needed message. Confirm that the count 10/10 is displayed in the Super Admin or tenant admin interface (the prompt in the plan was to show something like “8/10 users”
+GitHub
+, so ensure there's a UI element tracking usage).
+
+Test session limit: create sessions on the free tenant. If a monthly limit was set (say 5), create 5 sessions and ensure the 6th attempt is blocked with the appropriate message. Also verify that at the start of a new month, the counter resets (this may require simulating date or having a way to reset in testing).
+
+Test feature gating UI: Go through each restricted feature in the Free tenant’s UI:
+
+Try to schedule a recurring session – it should not allow (the UI should guide the user to upgrade).
+
+Visit the Analytics page – it should not show data but an upgrade prompt.
+
+Attempt to use communication (send email/SMS) – should be blocked with an explanation.
+
+Open a session’s payment setting – it should be locked or have a note that payments are unavailable (or a fee applies if we enabled payments with fee).
+
+If possible, verify that these UI elements disappear or become enabled after upgrading the tenant to a paid plan.
+
+Test upgrade flow: Click the “Upgrade Now” button as a Free user. Ensure it goes to the correct checkout (Stripe payment link for the selected plan) and after completing payment, the system updates the tenant’s plan to Core/Growth/Elite. After upgrade, the previously locked features should now unlock in the UI (e.g. Analytics now accessible, payment toggle available without fee, etc.). Also confirm the upgrade success is handled (the success redirect from Stripe should trigger a UI update, e.g. perhaps via query params as set in the payment link creation
+GitHub
+).
+
+Test platform fee (if implemented): Simulate a player making a payment to a Free Plan tenant. Verify the transaction completes and that the platform fee was indeed taken (check the Stripe dashboard or logs for the fee amount transfer). Then upgrade that tenant to a paid plan and simulate another payment, confirming no platform fee is taken for paid tiers.
+
+Mobile/Responsiveness: Given the app is responsive by design (Tailwind CSS), quickly check that any added banners, modals, or messages (especially upgrade prompts and locked feature tooltips) display correctly on mobile screens. The upgrade CTA should be easily accessible on smaller devices as well
+GitHub
+.
+
+Address any bugs or UX issues discovered during testing. This QA step is crucial since we are introducing new restrictions that affect core user flows (registration, scheduling, etc.), and we want to ensure the experience is smooth and the upgrade messaging is clear.
+
+Step 8: Deployment and Follow-Up
+
+Once testing is successful, prepare to deploy the changes. Update any relevant documentation or Terms of Service if adding a transaction fee (users should be informed of platform fees clearly). Coordinate the release so that marketing or help materials are in place to explain the Free Plan limits and the benefits of upgrading to higher tiers. After deployment, monitor the system closely:
+
+Ensure that new Free Plan sign-ups are not encountering unexpected blockers.
+
+Monitor metrics like how often users hit the player/session limits and whether upgrade conversions increase – this will validate if the “just not enough” approach is working.
+
+If the platform fee was implemented, confirm that revenue tracking from those fees is working and that no compliance issues arise (e.g., all transactions are accounted for properly).
+
+By following these steps, we will have a Free Plan tier that provides basic functionality (limited players, limited sessions, single location, essential features only
+GitHub
+) and a clear path to upgrade for more capabilities, as well as an optional mechanism to monetize free users via transaction fees. This approach should attract users with a free offering while encouraging them to become paying customers as they grow. The breakdown into small, sequential tasks ensures that each aspect – from data model to backend logic to frontend UX – is handled without overwhelming the development agent, allowing for a focused implementation of each feature before moving on to the next.
