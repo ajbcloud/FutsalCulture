@@ -73,15 +73,15 @@ type NavItem = {
 
 const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/sessions", label: "Sessions", icon: Calendar },
+  { href: "/admin/sessions", label: "Sessions", icon: Calendar, coachPermission: 'canManageSessions' },
   { href: "/admin/payments", label: "Payments", icon: CreditCard, coachPermission: 'canViewFinancials' },
-  { href: "/admin/players", label: "Players", icon: Shirt },
-  { href: "/admin/parents", label: "Parents", icon: Users },
+  { href: "/admin/players", label: "Players", icon: Shirt, coachPermission: 'canViewPii' },
+  { href: "/admin/parents", label: "Parents", icon: Users, coachPermission: 'canViewPii' },
   { href: "/admin/coaches", label: "Coaches", icon: GraduationCap, isAdminOnly: true },
   { href: "/admin/invitations", label: "Invitations", icon: UserPlus, isAdminOnly: true },
   { href: "/admin/credits", label: "Credits", icon: CreditCard, coachPermission: 'canIssueCredits' },
-  { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck },
-  { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS },
+  { href: "/admin/pending-registrations", label: "Pending Registrations", icon: UserCheck, isAdminOnly: true },
+  { href: "/admin/communications", label: "Communications", icon: Mail, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS, isAdminOnly: true },
   { href: "/admin/sms-credits", label: "SMS Credits", icon: MessageSquare, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS, isAdminOnly: true },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3, coachPermission: 'canViewAnalytics' },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
@@ -193,11 +193,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     
     // For coaches (isAssistant but not isAdmin), check permissions
     if (user?.isAssistant && !user?.isAdmin) {
-      // Block admin-only items
+      // Block admin-only items completely for coaches
       if (item.isAdminOnly) return false;
       
-      // Check coach-specific permissions
-      if (item.coachPermission && coachPermissions) {
+      // If item requires a permission, check it
+      if (item.coachPermission) {
+        // If permissions haven't loaded yet, hide permission-gated items
+        if (!coachPermissions) return false;
         return coachPermissions[item.coachPermission] === true;
       }
     }
