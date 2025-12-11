@@ -21,11 +21,12 @@ const router = Router();
 // GET /api/admin/coaches - List all coaches for the tenant with their permission settings
 router.get('/admin/coaches', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     if (!tenantId) {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
+    // Get active coach assignments
     const assignments = await db
       .select({
         assignment: coachTenantAssignments,
@@ -48,7 +49,53 @@ router.get('/admin/coaches', requireAdmin, async (req: any, res: Response) => {
       user,
     }));
 
-    res.json({ coaches });
+    // Get pending coach invites from invite_codes table
+    const pendingInvites = await db
+      .select()
+      .from(inviteCodes)
+      .where(
+        and(
+          eq(inviteCodes.tenantId, tenantId),
+          eq(inviteCodes.isActive, true)
+        )
+      )
+      .orderBy(desc(inviteCodes.createdAt));
+
+    // Filter for coach invites and transform to match coach format
+    const pendingCoaches = pendingInvites
+      .filter(invite => {
+        const metadata = invite.metadata as Record<string, any> | null;
+        return metadata?.inviteType === 'coach_invite';
+      })
+      .map(invite => {
+        const metadata = invite.metadata as Record<string, any>;
+        return {
+          id: invite.id,
+          status: 'pending',
+          invitedAt: invite.createdAt,
+          user: {
+            id: null,
+            firstName: metadata?.firstName || '',
+            lastName: metadata?.lastName || '',
+            email: metadata?.recipientEmail || '',
+            phone: null,
+            profileImageUrl: null,
+          },
+          canViewPii: metadata?.permissions?.canViewPii ?? false,
+          canManageSessions: metadata?.permissions?.canManageSessions ?? false,
+          canViewAnalytics: metadata?.permissions?.canViewAnalytics ?? false,
+          canViewAttendance: metadata?.permissions?.canViewAttendance ?? true,
+          canTakeAttendance: metadata?.permissions?.canTakeAttendance ?? true,
+          canViewFinancials: metadata?.permissions?.canViewFinancials ?? false,
+          canIssueRefunds: metadata?.permissions?.canIssueRefunds ?? false,
+          canIssueCredits: metadata?.permissions?.canIssueCredits ?? false,
+          canManageDiscounts: metadata?.permissions?.canManageDiscounts ?? false,
+          canAccessAdminPortal: metadata?.permissions?.canAccessAdminPortal ?? false,
+          inviteCode: invite.code,
+        };
+      });
+
+    res.json({ coaches: [...coaches, ...pendingCoaches] });
   } catch (error) {
     console.error('Error fetching coaches:', error);
     res.status(500).json({ message: 'Failed to fetch coaches' });
@@ -58,7 +105,7 @@ router.get('/admin/coaches', requireAdmin, async (req: any, res: Response) => {
 // GET /api/admin/coaches/:id - Get a specific coach assignment by ID
 router.get('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { id } = req.params;
     
     if (!tenantId) {
@@ -249,7 +296,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
 // PUT /api/admin/coaches/:id - Update a coach's permissions
 router.put('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { id } = req.params;
     
     if (!tenantId) {
@@ -303,7 +350,7 @@ router.put('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) =
 // DELETE /api/admin/coaches/:id - Remove a coach from the tenant
 router.delete('/admin/coaches/:id', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { id } = req.params;
     
     if (!tenantId) {
@@ -330,7 +377,7 @@ router.delete('/admin/coaches/:id', requireAdmin, async (req: any, res: Response
 // GET /api/admin/coaches/:id/sessions - Get sessions assigned to a coach
 router.get('/admin/coaches/:id/sessions', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { id } = req.params;
     
     if (!tenantId) {
@@ -367,8 +414,8 @@ router.get('/admin/coaches/:id/sessions', requireAdmin, async (req: any, res: Re
 // POST /api/admin/coaches/:id/sessions - Assign a coach to a session
 router.post('/admin/coaches/:id/sessions', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
-    const assignedBy = req.currentUser?.id;
+    const tenantId = req.user?.tenantId;
+    const assignedBy = req.user?.id;
     const { id } = req.params;
     const { sessionId, isLead, notes } = req.body;
     
@@ -416,7 +463,7 @@ router.post('/admin/coaches/:id/sessions', requireAdmin, async (req: any, res: R
 // DELETE /api/admin/coaches/:coachId/sessions/:sessionId - Remove coach from a session
 router.delete('/admin/coaches/:coachId/sessions/:sessionId', requireAdmin, async (req: any, res: Response) => {
   try {
-    const tenantId = req.currentUser?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { coachId, sessionId } = req.params;
     
     if (!tenantId) {
@@ -452,7 +499,7 @@ router.delete('/admin/coaches/:coachId/sessions/:sessionId', requireAdmin, async
 // This endpoint is for coaches to see which clubs they're assigned to
 router.get('/coach/my-tenants', async (req: any, res: Response) => {
   try {
-    const userId = req.currentUser?.id;
+    const userId = req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -497,7 +544,7 @@ router.get('/coach/my-tenants', async (req: any, res: Response) => {
 // POST /api/coach/switch-tenant - Switch the coach's active tenant
 router.post('/coach/switch-tenant', async (req: any, res: Response) => {
   try {
-    const userId = req.currentUser?.id;
+    const userId = req.user?.id;
     const { tenantId } = req.body;
     
     if (!userId) {
@@ -531,8 +578,8 @@ router.post('/coach/switch-tenant', async (req: any, res: Response) => {
 // GET /api/coach/my-sessions - Get current coach's assigned sessions for their current tenant
 router.get('/coach/my-sessions', async (req: any, res: Response) => {
   try {
-    const userId = req.currentUser?.id;
-    const tenantId = req.currentUser?.tenantId;
+    const userId = req.user?.id;
+    const tenantId = req.user?.tenantId;
     
     if (!userId) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -599,8 +646,8 @@ router.get('/coach/my-sessions', async (req: any, res: Response) => {
 // GET /api/coach/calendar/ics - Export coach's sessions as ICS calendar file
 router.get('/coach/calendar/ics', async (req: any, res: Response) => {
   try {
-    const userId = req.currentUser?.id;
-    const tenantId = req.currentUser?.tenantId;
+    const userId = req.user?.id;
+    const tenantId = req.user?.tenantId;
     
     if (!userId) {
       return res.status(401).json({ message: 'Not authenticated' });
