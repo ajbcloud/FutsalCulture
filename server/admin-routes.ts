@@ -1082,6 +1082,54 @@ export async function setupAdminRoutes(app: any) {
       // Add tenant ID from authenticated user
       requestData.tenantId = user.tenantId;
       
+      // Check session limit for Free plan tenants
+      const [tenant] = await db.select({ planLevel: tenants.planLevel })
+        .from(tenants)
+        .where(eq(tenants.id, user.tenantId))
+        .limit(1);
+      
+      if (tenant?.planLevel === 'free') {
+        // Get count of sessions created this month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        const [sessionCount] = await db.select({ count: sql<number>`count(*)::int` })
+          .from(futsalSessions)
+          .where(and(
+            eq(futsalSessions.tenantId, user.tenantId),
+            gte(futsalSessions.createdAt, startOfMonth)
+          ));
+        
+        const currentCount = sessionCount?.count || 0;
+        const limit = 5; // Free plan limit
+        const remaining = Math.max(0, limit - currentCount);
+        
+        // Calculate how many sessions will be created
+        let sessionsToCreate = 1;
+        if (requestData.isRecurring && requestData.recurringCount) {
+          sessionsToCreate = requestData.recurringCount;
+        }
+        
+        if (sessionsToCreate > remaining) {
+          return res.status(403).json({ 
+            message: remaining === 0 
+              ? `You've reached your monthly session limit (${limit}). Upgrade to Core for unlimited sessions.`
+              : `This would exceed your monthly session limit. You can create ${remaining} more session${remaining === 1 ? '' : 's'} this month. Upgrade to Core for unlimited sessions.`,
+            code: 'SESSION_LIMIT_REACHED',
+            currentCount,
+            limit,
+            remaining,
+            sessionsToCreate,
+            upgrade: true
+          });
+        }
+        
+        // Clamp recurringCount to remaining allowance to enforce the limit
+        if (requestData.isRecurring && requestData.recurringCount > remaining) {
+          requestData.recurringCount = remaining;
+        }
+      }
+      
       // Convert date strings to Date objects
       if (requestData.startTime) {
         requestData.startTime = new Date(requestData.startTime);

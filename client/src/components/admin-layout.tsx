@@ -321,13 +321,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </p>
                 )}
                 {!user?.isSuperAdmin && (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
-                    data-testid="badge-plan-level"
-                  >
-                    {planName} Plan
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                      data-testid="badge-plan-level"
+                    >
+                      {planName} Plan
+                    </Badge>
+                    {planId === 'free' && user?.isAdmin && (
+                      <Link href="/admin/billing">
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] px-1.5 py-0 h-4 font-medium bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer"
+                          data-testid="button-upgrade-cta"
+                        >
+                          Upgrade
+                        </Badge>
+                      </Link>
+                    )}
+                  </div>
                 )}
                 {user?.isSuperAdmin && (
                   <Badge 
@@ -430,6 +443,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex items-center space-x-2">
               {/* Remove extra admin text since logo/business name is now in sidebar */}
             </div>
+            
+            {/* Upgrade CTA for Free plan admins only (not assistants/coaches) */}
+            {planId === 'free' && !user?.isSuperAdmin && user?.isAdmin && (
+              <Link href="/admin/billing">
+                <Button 
+                  size="sm" 
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-medium"
+                  data-testid="button-upgrade-header"
+                >
+                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  Upgrade Now
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 

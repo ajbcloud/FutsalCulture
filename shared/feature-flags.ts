@@ -69,7 +69,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.ANALYTICS_BASIC]: true,
     [FEATURE_KEYS.ANALYTICS_ADVANCED]: false,
     [FEATURE_KEYS.PAYMENTS_ENABLED]: false,
-    [FEATURE_KEYS.INTEGRATIONS_CALENDAR]: false,
+    [FEATURE_KEYS.INTEGRATIONS_CALENDAR]: true,  // Calendar sync included in Core
     [FEATURE_KEYS.INTEGRATIONS_MAILCHIMP]: false,
     [FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS]: false,
     [FEATURE_KEYS.INTEGRATIONS_BRAINTREE]: false,
@@ -80,7 +80,7 @@ export const PLAN_FEATURES: Record<PlanLevel, Record<FeatureKey, boolean>> = {
     [FEATURE_KEYS.SSO]: false,
     [FEATURE_KEYS.SUPPORT_STANDARD]: true,
     [FEATURE_KEYS.SUPPORT_PRIORITY]: false,
-    [FEATURE_KEYS.BULK_OPERATIONS]: true,
+    [FEATURE_KEYS.BULK_OPERATIONS]: false,  // CSV export only, not bulk import
     [FEATURE_KEYS.PLAYER_DEVELOPMENT]: false,  // Elite-only feature
     [FEATURE_KEYS.FEATURE_REQUESTS]: true,  // Available with low priority
   },
@@ -143,42 +143,46 @@ export const PLAN_LIMITS = {
   free: {
     maxPlayers: 10, // Limited to 10 players
     maxUsers: null, // No separate user limit
-    maxSessions: null, // No session limit, but manual creation only
+    maxSessions: null, // No total session limit
+    maxSessionsPerMonth: 5, // Limited to 5 sessions per month
     maxLocations: 1,
     price: 0,
     billingPeriod: 'monthly' as const,
     name: 'Free Plan',
-    description: 'Basic features with player and functionality restrictions',
+    description: 'Perfect for small trainers just getting started',
   },
   core: {
-    maxPlayers: 50, // Up to 50 players
+    maxPlayers: null, // Unlimited players
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
-    maxLocations: 3,
-    price: 99,
+    maxSessionsPerMonth: null, // Unlimited sessions per month
+    maxLocations: 1,
+    price: 79,
     billingPeriod: 'monthly' as const,
     name: 'Core',
-    description: 'Perfect for small clubs getting started with digital management',
+    description: 'For trainers managing more sessions or growing small teams',
   },
   growth: {
-    maxPlayers: 250, // Up to 250 players
+    maxPlayers: null, // Unlimited players
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
-    maxLocations: 10,
-    price: 199,
+    maxSessionsPerMonth: null, // Unlimited sessions per month
+    maxLocations: 3,
+    price: 149,
     billingPeriod: 'monthly' as const,
     name: 'Growth',
-    description: 'Ideal for established clubs looking to automate and grow',
+    description: 'Designed for multi-coach teams or multi-location programs',
   },
   elite: {
-    maxPlayers: null, // unlimited
+    maxPlayers: null, // Unlimited
     maxUsers: null, // No user limit for paid plans
     maxSessions: null,
-    maxLocations: null, // unlimited
-    price: 399,
+    maxSessionsPerMonth: null, // Unlimited sessions per month
+    maxLocations: null, // Unlimited
+    price: 299,
     billingPeriod: 'monthly' as const,
     name: 'Elite',
-    description: 'Enterprise-grade features for multi-location organizations',
+    description: 'For serious programs running competitive academies or training networks',
   },
 };
 
@@ -257,6 +261,27 @@ export function checkPlanLimits(planLevel: PlanLevel, playerCount: number): {
     withinLimit: playerCount <= limit,
     limit,
     percentage: (playerCount / limit) * 100,
+  };
+}
+
+// Check if user has reached monthly session limits
+export function checkSessionLimits(planLevel: PlanLevel, sessionCountThisMonth: number): {
+  withinLimit: boolean;
+  limit: number | null;
+  remaining: number | null;
+  percentage: number;
+} {
+  const limit = PLAN_LIMITS[planLevel].maxSessionsPerMonth;
+  
+  if (limit === null) {
+    return { withinLimit: true, limit: null, remaining: null, percentage: 0 };
+  }
+  
+  return {
+    withinLimit: sessionCountThisMonth < limit,
+    limit,
+    remaining: Math.max(0, limit - sessionCountThisMonth),
+    percentage: (sessionCountThisMonth / limit) * 100,
   };
 }
 
