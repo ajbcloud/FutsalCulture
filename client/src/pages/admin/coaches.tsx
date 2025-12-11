@@ -476,6 +476,76 @@ export default function AdminCoaches() {
                   }
                   testId="switch-invite-view-analytics"
                 />
+                
+                <div className="border-t border-border pt-3 mt-3">
+                  <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-500">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs font-medium">Financial Permissions (Sensitive)</span>
+                  </div>
+                  <PermissionToggle
+                    label="View Financials"
+                    description="View payment history, revenue reports, and financial data"
+                    checked={inviteForm.permissions.canViewFinancials}
+                    onChange={(checked) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        permissions: { ...inviteForm.permissions, canViewFinancials: checked },
+                      })
+                    }
+                    testId="switch-invite-view-financials"
+                  />
+                  <PermissionToggle
+                    label="Issue Refunds"
+                    description="Process refunds for cancelled bookings or payments"
+                    checked={inviteForm.permissions.canIssueRefunds}
+                    onChange={(checked) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        permissions: { ...inviteForm.permissions, canIssueRefunds: checked },
+                      })
+                    }
+                    testId="switch-invite-issue-refunds"
+                  />
+                  <PermissionToggle
+                    label="Issue Credits"
+                    description="Add account credits to parents or players"
+                    checked={inviteForm.permissions.canIssueCredits}
+                    onChange={(checked) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        permissions: { ...inviteForm.permissions, canIssueCredits: checked },
+                      })
+                    }
+                    testId="switch-invite-issue-credits"
+                  />
+                  <PermissionToggle
+                    label="Manage Discounts"
+                    description="Create and edit discount codes for sessions"
+                    checked={inviteForm.permissions.canManageDiscounts}
+                    onChange={(checked) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        permissions: { ...inviteForm.permissions, canManageDiscounts: checked },
+                      })
+                    }
+                    testId="switch-invite-manage-discounts"
+                  />
+                </div>
+
+                <div className="border-t border-border pt-3 mt-3">
+                  <PermissionToggle
+                    label="Access Admin Portal"
+                    description="Allow this coach to access the admin portal"
+                    checked={inviteForm.permissions.canAccessAdminPortal}
+                    onChange={(checked) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        permissions: { ...inviteForm.permissions, canAccessAdminPortal: checked },
+                      })
+                    }
+                    testId="switch-invite-access-admin"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -568,40 +638,36 @@ export default function AdminCoaches() {
               />
 
               <div className="border-t border-border pt-3 mt-3">
-                <div className="flex items-center gap-2 mb-2 text-yellow-600">
+                <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-500">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="text-xs font-medium">Financial Permissions (Restricted)</span>
+                  <span className="text-xs font-medium">Financial Permissions (Sensitive)</span>
                 </div>
                 <PermissionToggle
                   label="View Financials"
+                  description="View payment history, revenue reports, and financial data"
                   checked={editForm.canViewFinancials}
                   onChange={(checked) => setEditForm({ ...editForm, canViewFinancials: checked })}
-                  disabled
-                  warning="Financial access is restricted"
                   testId="switch-edit-view-financials"
                 />
                 <PermissionToggle
                   label="Issue Refunds"
+                  description="Process refunds for cancelled bookings or payments"
                   checked={editForm.canIssueRefunds}
                   onChange={(checked) => setEditForm({ ...editForm, canIssueRefunds: checked })}
-                  disabled
-                  warning="Financial access is restricted"
                   testId="switch-edit-issue-refunds"
                 />
                 <PermissionToggle
                   label="Issue Credits"
+                  description="Add account credits to parents or players"
                   checked={editForm.canIssueCredits}
                   onChange={(checked) => setEditForm({ ...editForm, canIssueCredits: checked })}
-                  disabled
-                  warning="Financial access is restricted"
                   testId="switch-edit-issue-credits"
                 />
                 <PermissionToggle
                   label="Manage Discounts"
+                  description="Create and edit discount codes for sessions"
                   checked={editForm.canManageDiscounts}
                   onChange={(checked) => setEditForm({ ...editForm, canManageDiscounts: checked })}
-                  disabled
-                  warning="Financial access is restricted"
                   testId="switch-edit-manage-discounts"
                 />
               </div>
