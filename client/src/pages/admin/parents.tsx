@@ -852,30 +852,6 @@ export default function AdminParents() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Permissions</Label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2 text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isAdmin}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, isAdmin: e.target.checked }))}
-                    className="rounded border-border"
-                  />
-                  <span>Admin Access</span>
-                </label>
-                <label className="flex items-center space-x-2 text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isAssistant}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, isAssistant: e.target.checked }))}
-                    className="rounded border-border"
-                  />
-                  <span>Assistant Access</span>
-                </label>
-              </div>
-            </div>
-
             <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={() => setShowEditModal(false)}>
                 Cancel

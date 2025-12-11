@@ -819,6 +819,7 @@ router.get('/coach/validate-invite', async (req: any, res: Response) => {
 router.post('/coach/join', async (req: any, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userEmail = req.user?.email?.toLowerCase();
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -856,6 +857,17 @@ router.post('/coach/join', async (req: any, res: Response) => {
       return res.status(400).json({ success: false, message: 'Invalid invite code type' });
     }
 
+    // SECURITY: Validate that the logged-in user's email matches the invite recipient
+    const inviteEmail = metadata.recipientEmail?.toLowerCase();
+    if (inviteEmail && userEmail && inviteEmail !== userEmail) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'This invite was sent to a different email address. Please sign out and sign in with the correct account, or use an incognito/private browser window.',
+        emailMismatch: true,
+        expectedEmail: inviteEmail
+      });
+    }
+
     const existingAssignment = await storage.getCoachAssignmentByUserAndTenant(userId, inviteCode.tenantId);
     if (existingAssignment) {
       return res.status(400).json({ success: false, message: 'You are already a coach for this organization' });
@@ -863,14 +875,18 @@ router.post('/coach/join', async (req: any, res: Response) => {
 
     const permissions = metadata.permissions || {};
 
-    // Update user with explicit fields only (type-safe update)
+    // Get the current user to check if they already have name set
+    const currentUser = await storage.getUser(userId);
+    const shouldUpdateName = !currentUser?.firstName && !currentUser?.lastName;
+
+    // Update user - only update name fields if user doesn't have them set already
     await db.update(users)
       .set({
         tenantId: inviteCode.tenantId,
         isAssistant: true,
         isUnaffiliated: false,
-        ...(metadata.firstName ? { firstName: metadata.firstName } : {}),
-        ...(metadata.lastName ? { lastName: metadata.lastName } : {}),
+        ...(shouldUpdateName && metadata.firstName ? { firstName: metadata.firstName } : {}),
+        ...(shouldUpdateName && metadata.lastName ? { lastName: metadata.lastName } : {}),
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));

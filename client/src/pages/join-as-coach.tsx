@@ -1,21 +1,22 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignUp, useUser, useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { SignUp, useUser, useAuth as useClerkAuth, useClerk } from "@clerk/clerk-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle2, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Users, CheckCircle2, Loader2, AlertCircle, ArrowLeft, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 
-type Step = "validating" | "welcome" | "signup" | "joining" | "success" | "error";
+type Step = "validating" | "welcome" | "signup" | "joining" | "success" | "error" | "email_mismatch";
 
 interface ValidateResponse {
   valid: boolean;
   tenantName?: string;
   tenantId?: string;
+  recipientEmail?: string;
   error?: string;
 }
 
@@ -28,6 +29,7 @@ export default function JoinAsCoach() {
   const isDarkMode = theme === 'dark';
   const { isSignedIn } = useUser();
   const { getToken } = useClerkAuth();
+  const { signOut } = useClerk();
   const { user, isAuthenticated } = useAuth();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -119,9 +121,18 @@ export default function JoinAsCoach() {
     }
 
     if (validateData?.valid) {
-      if (isAuthenticated && isSignedIn) {
-        setStep("joining");
-        joinMutation.mutate();
+      if (isAuthenticated && isSignedIn && user?.email) {
+        // Check if logged-in email matches invite email
+        const inviteEmail = validateData.recipientEmail?.toLowerCase();
+        const currentEmail = user.email?.toLowerCase();
+        
+        if (inviteEmail && currentEmail && inviteEmail !== currentEmail) {
+          setErrorMessage(`This invite was sent to ${validateData.recipientEmail}. You are currently signed in as ${user.email}.`);
+          setStep("email_mismatch");
+        } else {
+          setStep("joining");
+          joinMutation.mutate();
+        }
       } else {
         setStep("welcome");
       }
@@ -129,7 +140,7 @@ export default function JoinAsCoach() {
       setErrorMessage(validateData.error || "Invalid or expired invite code.");
       setStep("error");
     }
-  }, [code, isValidating, validateError, validateData, isAuthenticated, isSignedIn]);
+  }, [code, isValidating, validateError, validateData, isAuthenticated, isSignedIn, user?.email]);
 
   if (step === "validating") {
     return (
@@ -167,6 +178,49 @@ export default function JoinAsCoach() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Home
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === "email_mismatch") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
+        <Card className="w-full max-w-md" data-testid="card-email-mismatch">
+          <CardContent className="p-8">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-4" data-testid="icon-email-mismatch" />
+              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100" data-testid="text-mismatch-title">
+                Wrong Account
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-6" data-testid="text-mismatch-message">
+                {errorMessage}
+              </p>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-700 dark:text-blue-200">
+                  Please sign out and either create a new account with the invited email address, or open this link in a private/incognito browser window.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Button
+                  onClick={() => signOut(() => window.location.reload())}
+                  className="w-full"
+                  data-testid="button-signout-mismatch"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out & Try Again
+                </Button>
+                <Button
+                  onClick={() => navigate("/")}
+                  variant="outline"
+                  className="w-full"
+                  data-testid="button-cancel-mismatch"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
