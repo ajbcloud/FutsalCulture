@@ -114,6 +114,13 @@ export default function JoinAsCoach() {
     },
   });
 
+  // Track if we've started the signup flow to prevent resetting to welcome
+  const [hasStartedSignup, setHasStartedSignup] = useState(() => {
+    // Check if we're on a Clerk sub-route (like /verify-email-address)
+    return window.location.pathname.includes('/join-as-coach/');
+  });
+
+  // Handle initial validation and first-time setup
   useEffect(() => {
     if (!code) {
       setErrorMessage("No invite code provided. Please use the link from your invitation email.");
@@ -132,27 +139,45 @@ export default function JoinAsCoach() {
       return;
     }
 
-    if (validateData?.valid) {
-      if (isAuthenticated && isSignedIn && user?.email) {
-        // Check if logged-in email matches invite email
-        const inviteEmail = validateData.recipientEmail?.toLowerCase();
-        const currentEmail = user.email?.toLowerCase();
-        
-        if (inviteEmail && currentEmail && inviteEmail !== currentEmail) {
-          setErrorMessage(`This invite was sent to ${validateData.recipientEmail}. You are currently signed in as ${user.email}.`);
-          setStep("email_mismatch");
-        } else {
-          setStep("joining");
-          joinMutation.mutate();
-        }
-      } else {
-        setStep("welcome");
-      }
-    } else if (validateData && !validateData.valid) {
+    if (validateData && !validateData.valid) {
       setErrorMessage(validateData.error || "Invalid or expired invite code.");
       setStep("error");
+      return;
     }
-  }, [code, isValidating, validateError, validateData, isAuthenticated, isSignedIn, user?.email]);
+
+    // Only set welcome if we haven't started signup yet
+    if (validateData?.valid && !hasStartedSignup && step === "validating") {
+      setStep("welcome");
+    }
+  }, [code, isValidating, validateError, validateData, hasStartedSignup]);
+
+  // Handle post-authentication joining - separate effect to avoid loops
+  useEffect(() => {
+    // Only proceed if we have valid data and user is signed in
+    if (!validateData?.valid || !isSignedIn) return;
+    
+    // Don't re-run if we're already joining, succeeded, or errored
+    if (step === "joining" || step === "success" || step === "error" || step === "email_mismatch") return;
+    
+    // User just completed Clerk signup/signin
+    if (isAuthenticated && user?.email) {
+      const inviteEmail = validateData.recipientEmail?.toLowerCase();
+      const currentEmail = user.email?.toLowerCase();
+      
+      if (inviteEmail && currentEmail && inviteEmail !== currentEmail) {
+        setErrorMessage(`This invite was sent to ${validateData.recipientEmail}. You are currently signed in as ${user.email}.`);
+        setStep("email_mismatch");
+      } else {
+        console.log('[Coach Join] User authenticated, proceeding to join...');
+        setStep("joining");
+        joinMutation.mutate();
+      }
+    } else if (isSignedIn && !isAuthenticated) {
+      // Clerk signed in but app auth not synced yet - show loading
+      console.log('[Coach Join] Waiting for app auth sync...');
+      setStep("joining");
+    }
+  }, [validateData?.valid, isSignedIn, isAuthenticated, user?.email, step]);
 
   if (step === "validating") {
     return (
@@ -301,6 +326,10 @@ export default function JoinAsCoach() {
             path="/join-as-coach"
             signInUrl="/login"
             forceRedirectUrl={`/join-as-coach?code=${encodeURIComponent(code)}`}
+            unsafeMetadata={{
+              signupType: 'coach_invite',
+              inviteCode: code,
+            }}
             appearance={{
               variables: {
                 colorPrimary: "#3b82f6",
@@ -378,7 +407,10 @@ export default function JoinAsCoach() {
           </div>
           
           <Button 
-            onClick={() => setStep("signup")}
+            onClick={() => {
+              setHasStartedSignup(true);
+              setStep("signup");
+            }}
             className="w-full"
             size="lg"
             data-testid="button-signup-continue"

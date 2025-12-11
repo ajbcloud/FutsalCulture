@@ -2236,30 +2236,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const playerId = req.params.id;
       
-      // First get the user's household (just the ID)
-      const userHouseholdBasic = await storage.getUserHousehold(userId, tenantId);
-      if (!userHouseholdBasic) {
-        return res.status(403).json({ message: "You must be in a household to delete players" });
+      // Get the player to verify ownership
+      const player = await storage.getPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
       }
 
-      // Get the full household with members
-      const userHousehold = await storage.getHousehold(userHouseholdBasic.id, tenantId);
-      if (!userHousehold) {
-        return res.status(403).json({ message: "You must be in a household to delete players" });
+      // Check if the user is the parent or parent2 of this player
+      const isParent = player.parentId === userId || player.parent2Id === userId;
+      if (!isParent) {
+        return res.status(403).json({ message: "You can only delete your own players" });
       }
 
-      // Check if the player is in the same household
-      const playerMember = userHousehold.members?.find((m: any) => m.playerId === playerId);
-      if (!playerMember) {
-        return res.status(403).json({ message: "You can only delete players in your household" });
+      // Also try to remove from household if they're linked
+      try {
+        const userHousehold = await storage.getUserHousehold(userId, tenantId);
+        if (userHousehold) {
+          const fullHousehold = await storage.getHousehold(userHousehold.id, tenantId);
+          const playerMember = fullHousehold?.members?.find((m: any) => m.playerId === playerId);
+          if (playerMember?.id) {
+            await storage.removeHouseholdMember(playerMember.id, tenantId);
+          }
+        }
+      } catch (householdError) {
+        console.log("Note: Could not remove player from household:", householdError);
       }
 
-      // Remove player from household first
-      if (playerMember.id) {
-        await storage.removeHouseholdMember(playerMember.id, tenantId);
-      }
-
-      // Then delete the player entity
+      // Delete the player entity
       await storage.deletePlayer(playerId);
       res.json({ message: "Player deleted successfully" });
     } catch (error) {
