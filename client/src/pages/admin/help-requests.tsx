@@ -14,7 +14,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle, Reply, ExternalLink, HelpCircle, Sparkles, Crown, Mail, Phone, Clock, MapPin, Calendar } from 'lucide-react';
+import { MessageSquare, CheckCircle, Reply, ExternalLink, HelpCircle, Sparkles, Crown, Mail, Phone, Clock, MapPin, Calendar, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
@@ -113,6 +113,7 @@ export default function AdminHelpRequests() {
   const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
   const [paginatedRequests, setPaginatedRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [resolvingRequest, setResolvingRequest] = useState<any>(null);
@@ -276,6 +277,9 @@ export default function AdminHelpRequests() {
       setLoading(false);
     }).catch(err => {
       console.error('Error fetching help requests:', err);
+      if (err.message?.includes('403') || err.message?.includes('Forbidden')) {
+        setAccessDenied(true);
+      }
       setLoading(false);
     });
   }, []);
@@ -448,6 +452,27 @@ export default function AdminHelpRequests() {
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-full">
+            <Shield className="h-12 w-12 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Access Denied</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              You don't have permission to view help requests. This feature is only available to administrators.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setLocation('/admin')} data-testid="button-back-to-dashboard">
+            Back to Dashboard
+          </Button>
         </div>
       </AdminLayout>
     );

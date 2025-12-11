@@ -85,7 +85,7 @@ const adminNavItems: NavItem[] = [
   { href: "/admin/sms-credits", label: "SMS Credits", icon: MessageSquare, featureKey: FEATURE_KEYS.NOTIFICATIONS_SMS, isAdminOnly: true },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3, coachPermission: 'canViewAnalytics' },
   { href: "/admin/player-development", label: "Player Development", icon: TrendingUp, featureKey: FEATURE_KEYS.PLAYER_DEVELOPMENT },
-  { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle },
+  { href: "/admin/help-requests", label: "Help Requests", icon: HelpCircle, isAdminOnly: true },
   { href: "/admin/billing", label: "Billing", icon: Sparkles, isAdminOnly: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, isAdminOnly: true },
   { href: "/super-admin", label: "Super Admin Portal", icon: Shield, isSuperAdminOnly: true },
