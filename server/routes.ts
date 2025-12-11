@@ -51,7 +51,7 @@ import { terminologyRouter } from './routes/terminology';
 import unaffiliatedSignupRouter from './routes/unaffiliated-signup';
 import { getStagingTenantId } from './utils/staging-tenant';
 import { emailTemplateService } from './services/unified-email-templates';
-import adminCoachesRouter from './routes/admin-coaches-routes';
+import adminCoachesRouter, { publicCoachRouter } from './routes/admin-coaches-routes';
 
 const isAuthenticated = requireClerkAuth;
 
@@ -3450,7 +3450,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup admin routes
   await setupAdminRoutes(app);
   
-  // Setup admin coach management routes
+  // Setup public coach routes (no auth required for validate-invite)
+  app.use('/api', publicCoachRouter);
+  
+  // Setup admin coach management routes (requires auth)
   app.use('/api', isAuthenticated, adminCoachesRouter);
   
   // Setup unified invitation system routes (new system)

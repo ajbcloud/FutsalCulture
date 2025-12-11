@@ -18,6 +18,70 @@ function generateCoachInviteCode(): string {
 
 const router = Router();
 
+// PUBLIC router for routes that don't require authentication
+export const publicCoachRouter = Router();
+
+// GET /api/coach/validate-invite - Validate a coach invite code (PUBLIC - no auth required)
+publicCoachRouter.get('/coach/validate-invite', async (req: any, res: Response) => {
+  try {
+    const { code } = req.query;
+
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ valid: false, error: 'Invite code is required' });
+    }
+
+    console.log('[Coach Validate] Validating invite code:', code);
+
+    const [inviteCode] = await db
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.code, code));
+
+    if (!inviteCode) {
+      console.log('[Coach Validate] Code not found:', code);
+      return res.status(404).json({ valid: false, error: 'Invalid invite code' });
+    }
+
+    if (!inviteCode.isActive) {
+      return res.status(400).json({ valid: false, error: 'This invite code is no longer active' });
+    }
+
+    if (inviteCode.validUntil && new Date(inviteCode.validUntil) < new Date()) {
+      return res.status(400).json({ valid: false, error: 'This invite code has expired' });
+    }
+
+    if (inviteCode.maxUses !== null && (inviteCode.currentUses || 0) >= inviteCode.maxUses) {
+      return res.status(400).json({ valid: false, error: 'This invite code has already been used' });
+    }
+
+    const metadata = inviteCode.metadata as Record<string, any> | null;
+    if (!metadata || metadata.inviteType !== 'coach_invite') {
+      console.log('[Coach Validate] Invalid metadata for code:', code, metadata);
+      return res.status(400).json({ valid: false, error: 'Invalid invite code type' });
+    }
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, inviteCode.tenantId));
+    if (!tenant) {
+      return res.status(400).json({ valid: false, error: 'Organization not found' });
+    }
+
+    console.log('[Coach Validate] Code valid for tenant:', tenant.name);
+
+    res.json({
+      valid: true,
+      tenantId: inviteCode.tenantId,
+      tenantName: tenant.displayName || tenant.name,
+      inviterName: metadata.inviterName || 'Admin',
+      recipientEmail: metadata.recipientEmail || '',
+      firstName: metadata.firstName || '',
+      lastName: metadata.lastName || '',
+    });
+  } catch (error) {
+    console.error('Error validating coach invite:', error);
+    res.status(500).json({ valid: false, error: 'Failed to validate invite code' });
+  }
+});
+
 // GET /api/admin/coaches - List all coaches for the tenant with their permission settings
 router.get('/admin/coaches', requireAdmin, async (req: any, res: Response) => {
   try {
@@ -757,61 +821,6 @@ router.get('/coach/calendar/ics', async (req: any, res: Response) => {
   } catch (error) {
     console.error('Error generating ICS calendar:', error);
     res.status(500).json({ message: 'Failed to generate calendar file' });
-  }
-});
-
-// GET /api/coach/validate-invite - Validate a coach invite code (PUBLIC - no auth required)
-router.get('/coach/validate-invite', async (req: any, res: Response) => {
-  try {
-    const { code } = req.query;
-
-    if (!code || typeof code !== 'string') {
-      return res.status(400).json({ valid: false, message: 'Invite code is required' });
-    }
-
-    const [inviteCode] = await db
-      .select()
-      .from(inviteCodes)
-      .where(eq(inviteCodes.code, code));
-
-    if (!inviteCode) {
-      return res.status(404).json({ valid: false, message: 'Invalid invite code' });
-    }
-
-    if (!inviteCode.isActive) {
-      return res.status(400).json({ valid: false, message: 'This invite code is no longer active' });
-    }
-
-    if (inviteCode.validUntil && new Date(inviteCode.validUntil) < new Date()) {
-      return res.status(400).json({ valid: false, message: 'This invite code has expired' });
-    }
-
-    if (inviteCode.maxUses !== null && (inviteCode.currentUses || 0) >= inviteCode.maxUses) {
-      return res.status(400).json({ valid: false, message: 'This invite code has already been used' });
-    }
-
-    const metadata = inviteCode.metadata as Record<string, any> | null;
-    if (!metadata || metadata.inviteType !== 'coach_invite') {
-      return res.status(400).json({ valid: false, message: 'Invalid invite code type' });
-    }
-
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, inviteCode.tenantId));
-    if (!tenant) {
-      return res.status(400).json({ valid: false, message: 'Organization not found' });
-    }
-
-    res.json({
-      valid: true,
-      tenantId: inviteCode.tenantId,
-      tenantName: tenant.displayName || tenant.name,
-      inviterName: metadata.inviterName || 'Admin',
-      recipientEmail: metadata.recipientEmail || '',
-      firstName: metadata.firstName || '',
-      lastName: metadata.lastName || '',
-    });
-  } catch (error) {
-    console.error('Error validating coach invite:', error);
-    res.status(500).json({ valid: false, message: 'Failed to validate invite code' });
   }
 });
 

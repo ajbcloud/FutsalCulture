@@ -1,0 +1,145 @@
+2025-12-10 21:06:48.27
+538c31f3
+User
+position: '135',
+2025-12-10 21:06:48.27
+538c31f3
+User
+}
+2025-12-10 21:06:48.27
+538c31f3
+User
+table: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+schema: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+severity: 'ERROR',
+
+2025-12-10 21:06:48.27
+538c31f3
+User
+internalPosition: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+at async DatabaseStorage.getCredits (file:///home/runner/workspace/dist/index.js:4257:38)
+2025-12-10 21:06:48.27
+538c31f3
+User
+hint: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+Error fetching credits: error: relation "tenant_credits" does not exist
+2025-12-10 21:06:48.27
+538c31f3
+User
+code: '42P01',
+2025-12-10 21:06:48.27
+538c31f3
+User
+routine: 'parserOpenTable'
+2025-12-10 21:06:48.27
+538c31f3
+User
+file: 'parse_relation.c',
+2025-12-10 21:06:48.27
+538c31f3
+User
+dataType: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+column: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+line: '1449',
+2025-12-10 21:06:48.27
+538c31f3
+User
+length: 114,
+2025-12-10 21:06:48.27
+538c31f3
+User
+at async file:///home/runner/workspace/dist/index.js:12560:24 {
+2025-12-10 21:06:48.27
+538c31f3
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-12-10 21:06:48.27
+538c31f3
+User
+internalQuery: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+where: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-10 21:06:48.27
+538c31f3
+User
+detail: undefined,
+2025-12-10 21:06:48.27
+538c31f3
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-12-10 21:06:48.27
+538c31f3
+User
+constraint: undefined,
+2025-12-10 21:09:55.82
+538c31f3
+User
+at fn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at v.reportStreamError (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1201:46)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at WebSocket.emit (node:events:524:28)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at v.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at An._connectionCallback (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1384:72)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at WebSocket.onError (/home/runner/workspace/node_modules/ws/lib/event-target.js:230:9)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at An._handleErrorEvent (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1291:33)
+2025-12-10 21:09:55.82
+538c31f3
+User
+TypeError: Cannot set property message of # which has only a getter
+2025-12-10 21:09:55.82
+538c31f3
+User
+at WebSocket. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:986:42)
+2025-12-10 21:09:55.82
+538c31f3
+User
+at An._handleErrorWhileConnecting (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1290:38)
+2025-12-10 21:09:56.22
+538c31f3
+User
+at WebSocket.emit (node:events:524:28)
