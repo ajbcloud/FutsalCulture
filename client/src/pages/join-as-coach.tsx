@@ -32,8 +32,18 @@ export default function JoinAsCoach() {
   const { signOut } = useClerk();
   const { user, isAuthenticated } = useAuth();
 
+  // Get code from URL or sessionStorage (Clerk navigation loses URL params during signup flow)
   const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code') || "";
+  const urlCode = urlParams.get('code');
+  
+  // Store code in sessionStorage if we have it in URL, retrieve from storage if not
+  const [code] = useState(() => {
+    if (urlCode) {
+      sessionStorage.setItem('coach_invite_code', urlCode);
+      return urlCode;
+    }
+    return sessionStorage.getItem('coach_invite_code') || "";
+  });
 
   const { data: validateData, isLoading: isValidating, error: validateError } = useQuery<ValidateResponse>({
     queryKey: ['/api/coach/validate-invite', code],
@@ -83,6 +93,8 @@ export default function JoinAsCoach() {
     },
     onSuccess: () => {
       setStep("success");
+      // Clear the stored invite code on success
+      sessionStorage.removeItem('coach_invite_code');
       toast({
         title: "Welcome!",
         description: `You've successfully joined ${validateData?.tenantName} as a coach.`,
@@ -171,7 +183,10 @@ export default function JoinAsCoach() {
                 {errorMessage}
               </p>
               <Button
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  sessionStorage.removeItem('coach_invite_code');
+                  navigate("/");
+                }}
                 variant="outline"
                 data-testid="button-back-home"
               >
