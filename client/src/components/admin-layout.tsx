@@ -321,19 +321,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </p>
                 )}
                 {!user?.isSuperAdmin && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <Badge 
                       variant="outline" 
-                      className={`text-[10px] px-1.5 py-0 h-4 font-medium ${getPlanBadgeStyles(planId)}`}
+                      className={`text-[10px] px-1.5 py-0 h-4 font-medium leading-none ${getPlanBadgeStyles(planId)}`}
                       data-testid="badge-plan-level"
                     >
                       {planName} Plan
                     </Badge>
                     {planId === 'free' && user?.isAdmin && (
-                      <Link href="/admin/billing">
+                      <Link href="/admin/billing" className="flex items-center">
                         <Badge 
                           variant="outline" 
-                          className="text-[10px] px-1.5 py-0 h-4 font-medium bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer"
+                          className="text-[10px] px-1.5 py-0 h-4 font-medium leading-none bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer"
                           data-testid="button-upgrade-cta"
                         >
                           Upgrade
