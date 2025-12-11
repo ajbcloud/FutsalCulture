@@ -10,6 +10,13 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type Step = "validating" | "welcome" | "signup" | "error" | "email_mismatch";
 
+// Check if we're on a Clerk sub-route (verification, continue, etc.)
+function isClerkSubRoute(): boolean {
+  const path = window.location.pathname;
+  return path.includes('/join-as-coach/') && 
+         (path.includes('verify') || path.includes('continue') || path.includes('sso'));
+}
+
 interface ValidateResponse {
   valid: boolean;
   tenantName?: string;
@@ -77,6 +84,18 @@ export default function JoinAsCoach() {
 
   // Validate invite code on mount
   useEffect(() => {
+    // If we're on a Clerk sub-route (verification), stay in signup mode and don't interfere
+    if (isClerkSubRoute()) {
+      console.log('[Coach Invite] On Clerk sub-route, staying in signup mode');
+      // Try to load cached data for display purposes
+      const cached = code ? getCachedInviteData(code) : null;
+      if (cached) {
+        setInviteData(cached);
+      }
+      setStep("signup");
+      return;
+    }
+
     if (!code) {
       setErrorMessage("No invite code provided. Please use the link from your invitation email.");
       setStep("error");
@@ -119,6 +138,12 @@ export default function JoinAsCoach() {
   // If user is already signed in, check email match then redirect to coach-setup
   useEffect(() => {
     if (!isLoaded) return;
+    
+    // Don't redirect during Clerk's verification flow - let Clerk handle it
+    if (isClerkSubRoute()) {
+      console.log('[Coach Invite] On Clerk sub-route, skipping redirect check');
+      return;
+    }
     
     if (isSignedIn && inviteData?.valid && code) {
       // Check email match first
