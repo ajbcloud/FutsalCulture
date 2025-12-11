@@ -40,6 +40,7 @@ export default function CoachSetup() {
   const [tenantName, setTenantName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user: clerkUser, isSignedIn, isLoaded } = useUser();
@@ -51,8 +52,34 @@ export default function CoachSetup() {
   // Fall back to sessionStorage if not in URL (in case of redirect)
   const code = urlCode || sessionStorage.getItem('coach_invite_code');
 
+  // Give Clerk time to establish session after email verification redirect
+  // This prevents redirect loop when isLoaded=true but isSignedIn briefly=false
   useEffect(() => {
     if (!isLoaded) return;
+    
+    // If already signed in, proceed immediately
+    if (isSignedIn) {
+      setAuthCheckComplete(true);
+      return;
+    }
+    
+    // Not signed in yet - wait up to 2 seconds for Clerk session to establish
+    // This handles the brief moment after email verification when isLoaded=true but isSignedIn=false
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) {
+        setAuthCheckComplete(true);
+      }
+    }, 2000);
+    
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (!authCheckComplete) return;
 
     if (!isSignedIn) {
       navigate(`/join-as-coach${code ? `?code=${code}` : ''}`);
@@ -70,7 +97,7 @@ export default function CoachSetup() {
     }
 
     validateAndJoin();
-  }, [isLoaded, isSignedIn, code]);
+  }, [authCheckComplete, isSignedIn, code]);
 
   async function validateAndJoin() {
     setStatus("validating");
