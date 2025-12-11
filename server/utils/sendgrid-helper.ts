@@ -39,7 +39,7 @@ export async function sendEmailViaSendGrid(options: {
   try {
     const msg: any = {
       to: options.to,
-      from: options.from || process.env.SENDGRID_FROM_EMAIL || 'noreply@playhq.app',
+      from: options.from || process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app',
       subject: options.subject,
     };
     

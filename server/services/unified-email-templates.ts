@@ -16,7 +16,8 @@ import { tenants, invitationAnalytics } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendEmail as sendViaProvider, isEmailConfigured } from '../utils/email-provider';
 
-const FROM_EMAIL = 'noreply@playhq.app';
+const WELCOME_EMAIL = 'welcome@playhq.app';
+const FROM_EMAIL = 'playhq@playhq.app';
 
 export interface UnifiedEmailTemplate {
   type: 'invitation' | 'welcome' | 'reminder' | 'parent2' | 'announcement' | 'maintenance';

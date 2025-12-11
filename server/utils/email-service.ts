@@ -52,7 +52,8 @@ The PlayHQ Team
   `.trim();
 }
 
-const FROM_EMAIL = 'noreply@playhq.app';
+const WELCOME_EMAIL = 'welcome@playhq.app';
+const FROM_EMAIL = 'playhq@playhq.app';
 
 export interface SendInvitationEmailOptions {
   to: string;
@@ -79,7 +80,7 @@ export async function sendInvitationEmail(options: SendInvitationEmailOptions): 
 
   const result = await sendEmail({
     to: options.to,
-    from: FROM_EMAIL,
+    from: WELCOME_EMAIL,
     fromName: 'PlayHQ Team',
     subject: `🎯 You're invited to join ${options.tenantName} on PlayHQ`,
     text: getInvitationEmailText(emailData),
@@ -180,7 +181,7 @@ The PlayHQ Team
 
   const result = await sendEmail({
     to: options.to,
-    from: FROM_EMAIL,
+    from: WELCOME_EMAIL,
     fromName: 'PlayHQ Team',
     subject: `🎉 Welcome to ${options.tenantName} on PlayHQ!`,
     text,

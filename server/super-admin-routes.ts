@@ -11,8 +11,9 @@ import * as communicationsController from './controllers/superAdmin/communicatio
 // Super admin email for authentication
 const SUPER_ADMIN_EMAIL = "admin@playhq.app";
 
-// Email from address (used across all email sending)
-const FROM_EMAIL = 'noreply@playhq.app';
+// Email from addresses
+const WELCOME_EMAIL = 'welcome@playhq.app';
+const FROM_EMAIL = 'playhq@playhq.app';
 
 // Store active impersonation sessions in memory (in production, use Redis or DB)
 const impersonationSessions = new Map<string, {

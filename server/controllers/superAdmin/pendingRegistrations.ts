@@ -5,7 +5,8 @@ import { eq, and, or, desc, asc, sql, ilike, gte, lte, inArray } from 'drizzle-o
 import { pageParams, wrapRows } from '../../lib/pagination';
 import { sendEmail } from '../../utils/email-provider';
 
-const FROM_EMAIL = 'noreply@playhq.app';
+const WELCOME_EMAIL = 'welcome@playhq.app';
+const FROM_EMAIL = 'playhq@playhq.app';
 
 // Get all pending registrations across tenants
 export async function list(req: Request, res: Response) {

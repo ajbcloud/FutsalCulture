@@ -6,7 +6,8 @@ import { tenants, users, emailVerificationTokens } from "@shared/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { sendEmail, initEmail } from "../emailService";
 
-const FROM_EMAIL = 'noreply@playhq.app';
+const WELCOME_EMAIL = 'welcome@playhq.app';
+const FROM_EMAIL = 'playhq@playhq.app';
 
 export const authVerificationRouter = Router();
 

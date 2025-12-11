@@ -94,7 +94,7 @@ router.post("/send-email", async (req: any, res) => {
       const emailData = { ...data, customMessage };
       const result = await sendEmail({
         to: email,
-        from: 'noreply@playhq.app',
+        from: 'playhq@playhq.app',
         subject: subject,
         html: emailTemplate.getHtml(emailData),
         text: emailTemplate.getText(emailData)
@@ -159,7 +159,7 @@ router.post("/send-tenant-email", async (req: any, res) => {
         
         const result = await sendEmail({
           to: user.email,
-          from: 'noreply@playhq.app',
+          from: 'playhq@playhq.app',
           subject: subject,
           html: emailTemplate.getHtml(emailData),
           text: emailTemplate.getText(emailData)
@@ -222,7 +222,7 @@ router.post("/send-platform-email", async (req: any, res) => {
         
         const result = await sendEmail({
           to: user.email,
-          from: 'noreply@playhq.app',
+          from: 'playhq@playhq.app',
           subject: subject,
           html: emailTemplate.getHtml(emailData),
           text: emailTemplate.getText(emailData)
