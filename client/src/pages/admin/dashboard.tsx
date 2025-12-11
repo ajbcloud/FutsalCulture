@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBusinessName } from "@/contexts/BusinessContext";
 import { useHasFeature } from "@/hooks/use-feature-flags";
-import { useHasCapability } from '@/contexts/AuthContext';
+import { useAuth, useHasCapability } from '@/contexts/AuthContext';
 import { FINANCIAL_ANALYTICS } from '@/lib/capabilities';
 import { 
   DollarSign, 
@@ -92,6 +92,7 @@ export default function AdminDashboard() {
   const businessName = useBusinessName();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Check feature access
   const hasBasicAnalytics = useHasFeature('analytics_basic');
@@ -555,27 +556,33 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 quick-actions">
-                  <button 
-                    onClick={() => setLocation("/admin/sessions/new")}
-                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
-                    data-testid="button-create-session"
-                  >
-                    Create Session
-                  </button>
-                  <button 
-                    onClick={() => setLocation("/admin/payments")}
-                    className="p-3 bg-green-600 hover:bg-green-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
-                    data-testid="button-review-payments"
-                  >
-                    Review Payments
-                  </button>
-                  <button 
-                    onClick={() => setLocation("/admin/players")}
-                    className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
-                    data-testid="button-import-players"
-                  >
-                    Import Players
-                  </button>
+                  {user?.isAdmin && (
+                    <button 
+                      onClick={() => setLocation("/admin/sessions/new")}
+                      className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                      data-testid="button-create-session"
+                    >
+                      Create Session
+                    </button>
+                  )}
+                  {user?.isAdmin && (
+                    <button 
+                      onClick={() => setLocation("/admin/payments")}
+                      className="p-3 bg-green-600 hover:bg-green-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                      data-testid="button-review-payments"
+                    >
+                      Review Payments
+                    </button>
+                  )}
+                  {user?.isAdmin && (
+                    <button 
+                      onClick={() => setLocation("/admin/players")}
+                      className="p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
+                      data-testid="button-import-players"
+                    >
+                      Import Players
+                    </button>
+                  )}
                   <button 
                     onClick={() => setLocation("/admin/help-requests")}
                     className="p-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-center text-white text-sm font-medium transition-colors cursor-pointer"
