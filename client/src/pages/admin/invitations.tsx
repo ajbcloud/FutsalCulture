@@ -642,9 +642,16 @@ export default function Invitations() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <Badge variant={code.isActive ? "default" : "secondary"} className={code.isActive ? "bg-green-500" : "bg-gray-500"} data-testid={`badge-active-${code.id}`}>
-                          {code.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                        {/* Show "Completed" when usage is full, otherwise Active/Inactive */}
+                        {code.maxUses !== null && (code.currentUses || 0) >= code.maxUses ? (
+                          <Badge variant="default" className="bg-blue-500" data-testid={`badge-completed-${code.id}`}>
+                            Completed
+                          </Badge>
+                        ) : (
+                          <Badge variant={code.isActive ? "default" : "secondary"} className={code.isActive ? "bg-green-500" : "bg-gray-500"} data-testid={`badge-active-${code.id}`}>
+                            {code.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        )}
                         {code.isDefault && (
                           <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300" data-testid={`badge-default-${code.id}`}>
                             DEFAULT

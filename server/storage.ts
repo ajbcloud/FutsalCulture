@@ -1784,6 +1784,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async incrementInviteCodeUsage(id: string): Promise<void> {
+    // First increment the usage count
     await db
       .update(inviteCodes)
       .set({
@@ -1791,6 +1792,24 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(inviteCodes.id, id));
+    
+    // Then check if usage is now full and auto-complete the code
+    const [code] = await db
+      .select({ currentUses: inviteCodes.currentUses, maxUses: inviteCodes.maxUses })
+      .from(inviteCodes)
+      .where(eq(inviteCodes.id, id))
+      .limit(1);
+    
+    // If maxUses is set and currentUses has reached or exceeded it, mark as inactive (completed)
+    if (code && code.maxUses !== null && code.currentUses !== null && code.currentUses >= code.maxUses) {
+      await db
+        .update(inviteCodes)
+        .set({
+          isActive: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(inviteCodes.id, id));
+    }
   }
 
   async getInviteCodeUsageCount(id: string): Promise<number> {
