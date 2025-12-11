@@ -33,7 +33,9 @@ import {
   Clock,
   CreditCard,
   Mail,
-  Calendar
+  Calendar,
+  Percent,
+  Loader2
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -111,6 +113,7 @@ export default function SuperAdminTenants() {
   const [profileDrawerTenant, setProfileDrawerTenant] = useState<{ id: string; name: string } | null>(null);
   const [impersonationDialog, setImpersonationDialog] = useState<{ tenant: Tenant | null; open: boolean }>({ tenant: null, open: false });
   const [impersonationReason, setImpersonationReason] = useState('');
+  const [discountDialog, setDiscountDialog] = useState<{ tenant: Tenant | null; open: boolean }>({ tenant: null, open: false });
   const [newTenant, setNewTenant] = useState({
     name: '',
     subdomain: '',
@@ -221,6 +224,48 @@ export default function SuperAdminTenants() {
     },
     onError: (error: any) => {
       toast({ title: 'Failed to update tenant status', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  // Fetch discount status for the selected tenant in discount dialog
+  const { data: discountStatus, isLoading: discountLoading, refetch: refetchDiscount } = useQuery<{
+    hasActiveDiscount: boolean;
+    discountType?: string;
+    discountValue?: number;
+    discountDuration?: string;
+    appliedAt?: string;
+    expiresAt?: string;
+    appliedBy?: string;
+    cyclesRemaining?: number;
+  }>({
+    queryKey: ['/api/super-admin/tenants', discountDialog.tenant?.id, 'discount-status'],
+    queryFn: async () => {
+      const response = await fetch(`/api/super-admin/tenants/${discountDialog.tenant?.id}/discount-status`);
+      if (!response.ok) throw new Error('Failed to fetch discount status');
+      return response.json();
+    },
+    enabled: !!discountDialog.tenant?.id && discountDialog.open
+  });
+
+  // Remove discount mutation
+  const removeDiscountMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const response = await fetch(`/api/super-admin/tenants/${tenantId}/discount`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove discount');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/tenants', discountDialog.tenant?.id, 'discount-status'] });
+      toast({ title: 'Discount removed successfully' });
+      setDiscountDialog({ tenant: null, open: false });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to remove discount', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -745,6 +790,13 @@ export default function SuperAdminTenants() {
                         <Mail className="w-4 h-4 mr-2" />
                         Resend Welcome Email
                       </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setDiscountDialog({ tenant, open: true })}
+                        data-testid={`menu-manage-discount-${tenant.id}`}
+                      >
+                        <Percent className="w-4 h-4 mr-2" />
+                        Manage Discount
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={() => handleToggleStatus(tenant.id, tenant.status)}
@@ -1056,6 +1108,115 @@ export default function SuperAdminTenants() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Discount Management Dialog */}
+      <Dialog open={discountDialog.open} onOpenChange={(open) => {
+        if (!open) setDiscountDialog({ tenant: null, open: false });
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Percent className="h-5 w-5" />
+              Manage Discount
+            </DialogTitle>
+            <DialogDescription>
+              View and manage discount for <strong>{discountDialog.tenant?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {discountLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : discountStatus?.hasActiveDiscount ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-800 dark:text-green-200">Active Discount</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="ml-2 font-medium">
+                        {discountStatus.discountType === 'percentage' 
+                          ? `${discountStatus.discountValue}% off` 
+                          : discountStatus.discountType === 'full'
+                            ? '100% off (Free)'
+                            : `$${discountStatus.discountValue} off`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="ml-2 font-medium">
+                        {discountStatus.discountDuration === 'indefinite' 
+                          ? 'Forever' 
+                          : discountStatus.discountDuration === 'one_time'
+                            ? 'One-time'
+                            : discountStatus.discountDuration?.replace('months_', '') + ' months'}
+                      </span>
+                    </div>
+                    {discountStatus.appliedAt && (
+                      <div>
+                        <span className="text-muted-foreground">Applied:</span>
+                        <span className="ml-2 font-medium">
+                          {new Date(discountStatus.appliedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    {discountStatus.cyclesRemaining !== undefined && discountStatus.cyclesRemaining > 0 && (
+                      <div>
+                        <span className="text-muted-foreground">Cycles Left:</span>
+                        <span className="ml-2 font-medium">{discountStatus.cyclesRemaining}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-orange-800 dark:text-orange-200 mb-1">Remove Discount</p>
+                      <p className="text-orange-700 dark:text-orange-300">
+                        This will immediately end the discount. The tenant will be charged full price on their next billing cycle.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={() => discountDialog.tenant && removeDiscountMutation.mutate(discountDialog.tenant.id)}
+                  disabled={removeDiscountMutation.isPending}
+                  data-testid="button-remove-discount"
+                >
+                  {removeDiscountMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Remove Discount
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground mb-4">
+                  <Percent className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                  <p>No active discount</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This tenant is paying full price. To apply a discount, create a platform discount code in the Invitations section and have the tenant use it during checkout.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setDiscountDialog({ tenant: null, open: false })}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Tenant Profile Drawer */}
       <TenantProfileDrawer
