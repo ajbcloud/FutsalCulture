@@ -917,10 +917,14 @@ router.post('/coach/join', async (req: any, res: Response) => {
       status: 'active',
     });
 
+    const newUsageCount = (inviteCode.currentUses || 0) + 1;
+    const isNowFullyUsed = inviteCode.maxUses !== null && newUsageCount >= inviteCode.maxUses;
+    
     await db
       .update(inviteCodes)
       .set({
-        currentUses: (inviteCode.currentUses || 0) + 1,
+        currentUses: newUsageCount,
+        isActive: isNowFullyUsed ? false : inviteCode.isActive,
         updatedAt: new Date(),
       })
       .where(eq(inviteCodes.id, inviteCode.id));
