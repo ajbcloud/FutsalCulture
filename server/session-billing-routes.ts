@@ -352,7 +352,7 @@ router.post('/session-billing/session-checkout', async (req: any, res) => {
 
     const sessionData = session[0];
     const playerData = player[0];
-    const amount = 2500; // Default $25.00 in cents - sessions don't have price field yet
+    const amount = sessionData.priceCents ?? 2500; // Use session price or fallback to $25
 
     // Braintree-only checkout - generate client token
     try {
