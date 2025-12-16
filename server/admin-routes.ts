@@ -13,6 +13,7 @@ import { setObjectAclPolicy } from './objectAcl';
 import { SimplePDFGeneratorService } from './services/simplePdfGenerator';
 import { format } from 'date-fns';
 import { userHasCapability, FINANCIAL_ANALYTICS } from './middleware/capabilities';
+import braintree from 'braintree';
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -184,8 +185,30 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
         // Test QuickBooks connection - placeholder for now
         return { success: true };
       case 'braintree':
-        // Test Braintree connection - placeholder for now
-        return { success: true };
+        // Test Braintree connection by generating a client token
+        try {
+          const credentials = typeof integration.credentials === 'string' 
+            ? JSON.parse(integration.credentials) 
+            : integration.credentials;
+          
+          const gateway = new braintree.BraintreeGateway({
+            environment: credentials.environment?.toLowerCase() === 'production' 
+              ? braintree.Environment.Production 
+              : braintree.Environment.Sandbox,
+            merchantId: credentials.merchantId,
+            publicKey: credentials.publicKey,
+            privateKey: credentials.privateKey,
+          });
+
+          // Test by generating a client token
+          const result = await gateway.clientToken.generate({});
+          if (result.clientToken) {
+            return { success: true };
+          }
+          return { success: false, error: 'Failed to generate client token' };
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Failed to connect to Braintree' };
+        }
       default:
         return { success: false, error: 'Unsupported provider' };
     }

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List, Mail } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List, Mail, DollarSign } from 'lucide-react';
 import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
@@ -64,6 +64,7 @@ export default function AdminSessionDetail() {
     ageGroups: [] as string[],
     genders: [] as string[],
     capacity: 12,
+    priceCents: 1000, // Default $10.00
     bookingOpenHour: 8,
     bookingOpenMinute: 0,
     noTimeConstraints: false,
@@ -97,6 +98,7 @@ export default function AdminSessionDetail() {
           ageGroups: data.ageGroups || [],
           genders: data.genders || [],
           capacity: data.capacity || 12,
+          priceCents: data.priceCents ?? 1000,
           bookingOpenHour: data.bookingOpenHour ?? 8,
           bookingOpenMinute: data.bookingOpenMinute ?? 0,
           noTimeConstraints: data.noTimeConstraints ?? false,
@@ -160,6 +162,7 @@ export default function AdminSessionDetail() {
         ageGroups: formData.ageGroups,
         genders: formData.genders,
         capacity: formData.capacity,
+        priceCents: formData.priceCents,
         bookingOpenHour: formData.bookingOpenHour,
         bookingOpenMinute: formData.bookingOpenMinute,
         // New booking constraint fields
@@ -472,6 +475,24 @@ export default function AdminSessionDetail() {
               max="20"
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="price" className="text-muted-foreground">Session Price ($)</Label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="10.00"
+                value={(formData.priceCents / 100).toFixed(2)}
+                onChange={(e) => setFormData({...formData, priceCents: Math.round(parseFloat(e.target.value || '0') * 100)})}
+                className="bg-input border-border text-foreground pl-9"
+                data-testid="input-session-price"
+              />
+            </div>
           </div>
         </div>
 

@@ -139,6 +139,7 @@ export default function AdminIntegrations() {
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
+  const [testingDialog, setTestingDialog] = useState(false);
   const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [testingCheckout, setTestingCheckout] = useState(false);
   const { toast } = useToast();
@@ -288,12 +289,12 @@ export default function AdminIntegrations() {
       if (result.success) {
         toast({
           title: "Test Successful",
-          description: "Integration is working correctly",
+          description: result.message || "Integration is working correctly",
         });
       } else {
         toast({
           title: "Test Failed",
-          description: result.error || "Integration test failed",
+          description: result.error || result.message || "Integration test failed",
           variant: "destructive",
         });
       }
@@ -308,6 +309,53 @@ export default function AdminIntegrations() {
       });
     } finally {
       setTesting(null);
+    }
+  };
+
+  const handleTestFromDialog = async () => {
+    if (!configureDialog) return;
+    
+    const integration = integrations.find(i => i.provider === configureDialog);
+    if (!integration) {
+      toast({
+        title: "Cannot Test",
+        description: "Please save the integration first before testing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setTestingDialog(true);
+    try {
+      const response = await fetch(`/api/admin/integrations/${integration.id}/test`, {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Connection Successful",
+          description: result.message || "Braintree connection successful!",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: result.error || result.message || "Connection test failed",
+          variant: "destructive",
+        });
+      }
+      
+      fetchIntegrations();
+    } catch (error) {
+      console.error('Error testing integration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to test connection",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingDialog(false);
     }
   };
 
@@ -622,10 +670,27 @@ export default function AdminIntegrations() {
                   >
                     Cancel
                   </Button>
+                  {integrations.find(i => i.provider === configureDialog) && (
+                    <Button
+                      variant="outline"
+                      onClick={handleTestFromDialog}
+                      disabled={testingDialog || saving}
+                      className="text-white border-zinc-600 hover:bg-zinc-800"
+                      data-testid="button-test-connection"
+                    >
+                      {testingDialog ? (
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                      ) : (
+                        <TestTube className="w-4 h-4 mr-2" />
+                      )}
+                      {testingDialog ? 'Testing...' : 'Test Connection'}
+                    </Button>
+                  )}
                   <Button
                     onClick={handleSave}
-                    disabled={saving}
+                    disabled={saving || testingDialog}
                     className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="button-save-integration"
                   >
                     {saving ? 'Saving...' : 'Save Integration'}
                   </Button>
