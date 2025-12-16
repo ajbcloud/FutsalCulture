@@ -201,13 +201,22 @@ async function testIntegration(integration: any): Promise<{ success: boolean; er
           });
 
           // Test by generating a client token
-          const result = await gateway.clientToken.generate({});
-          if (result.clientToken) {
-            return { success: true };
+          try {
+            const result = await gateway.clientToken.generate({});
+            if (result.clientToken) {
+              return { success: true };
+            }
+            return { success: false, error: 'Failed to generate client token' };
+          } catch (error: any) {
+            console.error('Braintree test failed:', error);
+            return { 
+              success: false, 
+              error: error.message || error.type || 'Invalid Braintree credentials' 
+            };
           }
-          return { success: false, error: 'Failed to generate client token' };
-        } catch (error) {
-          return { success: false, error: error instanceof Error ? error.message : 'Failed to connect to Braintree' };
+        } catch (error: any) {
+          console.error('Braintree gateway initialization failed:', error);
+          return { success: false, error: error.message || error.type || 'Failed to connect to Braintree' };
         }
       default:
         return { success: false, error: 'Unsupported provider' };

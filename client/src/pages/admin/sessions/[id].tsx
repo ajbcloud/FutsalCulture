@@ -488,7 +488,11 @@ export default function AdminSessionDetail() {
                 min="0"
                 placeholder="10.00"
                 value={(formData.priceCents / 100).toFixed(2)}
-                onChange={(e) => setFormData({...formData, priceCents: Math.round(parseFloat(e.target.value || '0') * 100)})}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value || '0');
+                  const cents = Math.max(0, Math.round(value * 100));
+                  setFormData(prev => ({ ...prev, priceCents: cents }));
+                }}
                 className="bg-input border-border text-foreground pl-9"
                 data-testid="input-session-price"
               />
