@@ -9,7 +9,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, isSameDay, startOfMonth, endOfMonth, isFuture, isPast } from "date-fns";
-import { Calendar as CalendarIcon, List, MapPin, Clock, Users, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, List, MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, ClipboardList, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
 import { CalendarExportButton } from "@/components/calendar-export-button";
 
@@ -38,11 +40,51 @@ interface CoachSessionsResponse {
   coachAssignmentId: string;
 }
 
+interface RosterPlayer {
+  playerName: string;
+  ageGroup: string | null;
+  paymentStatus: 'paid' | 'pending';
+  parentName: string;
+  parentEmail: string;
+}
+
+interface SessionRoster {
+  sessionId: string;
+  sessionTitle: string;
+  sessionDate: string;
+  sessionTime: string;
+  location: string;
+  ageGroups: string[];
+  players: RosterPlayer[];
+}
+
 export default function CoachDashboard() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<string>("upcoming");
+  const [rosterModalOpen, setRosterModalOpen] = useState(false);
+  const [selectedSessionForRoster, setSelectedSessionForRoster] = useState<string | null>(null);
+
+  const { data: rosterData, isLoading: rosterLoading } = useQuery<SessionRoster>({
+    queryKey: ['/api/coach/sessions', selectedSessionForRoster, 'roster'],
+    queryFn: async () => {
+      const res = await fetch(`/api/coach/sessions/${selectedSessionForRoster}/roster`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch roster');
+      return res.json();
+    },
+    enabled: !!selectedSessionForRoster && rosterModalOpen,
+  });
+
+  const openRosterModal = (sessionId: string) => {
+    setSelectedSessionForRoster(sessionId);
+    setRosterModalOpen(true);
+  };
+
+  const closeRosterModal = () => {
+    setRosterModalOpen(false);
+    setSelectedSessionForRoster(null);
+  };
 
   const { data, isLoading, error } = useQuery<CoachSessionsResponse>({
     queryKey: ["/api/coach/my-sessions"],
@@ -175,6 +217,15 @@ export default function CoachDashboard() {
                 View Details
               </Button>
             </Link>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={() => openRosterModal(session.id)}
+              data-testid={`view-roster-${session.id}`}
+            >
+              <ClipboardList className="w-4 h-4 mr-1" />
+              Roster
+            </Button>
             {user?.isAdmin && (
               <Link href={`/admin/sessions/${session.id}`}>
                 <Button variant="ghost" size="sm">
@@ -362,6 +413,91 @@ export default function CoachDashboard() {
           )}
         </div>
       </div>
+
+      <Dialog open={rosterModalOpen} onOpenChange={setRosterModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              Session Roster
+            </DialogTitle>
+          </DialogHeader>
+          
+          {rosterLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : rosterData ? (
+            <div className="space-y-6">
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold text-lg mb-2">{rosterData.sessionTitle}</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                  <div><strong>Date:</strong> {rosterData.sessionDate}</div>
+                  <div><strong>Time:</strong> {rosterData.sessionTime}</div>
+                  <div><strong>Location:</strong> {rosterData.location}</div>
+                  <div><strong>Age Groups:</strong> {rosterData.ageGroups.join(', ') || 'All ages'}</div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 text-center">
+                <div className="flex-1 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{rosterData.players.length}</div>
+                  <div className="text-sm text-green-700 dark:text-green-400">Total Players</div>
+                </div>
+                <div className="flex-1 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {rosterData.players.filter(p => p.paymentStatus === 'paid').length}
+                  </div>
+                  <div className="text-sm text-green-700 dark:text-green-400">Paid</div>
+                </div>
+                <div className="flex-1 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
+                  <div className="text-2xl font-bold text-amber-600">
+                    {rosterData.players.filter(p => p.paymentStatus === 'pending').length}
+                  </div>
+                  <div className="text-sm text-amber-700 dark:text-amber-400">Pending</div>
+                </div>
+              </div>
+
+              {rosterData.players.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player Name</TableHead>
+                      <TableHead>Age Group</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Parent/Guardian</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rosterData.players.map((player, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{player.playerName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{player.ageGroup || 'N/A'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={player.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                            {player.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{player.parentName}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No players registered for this session yet.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Unable to load roster data.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

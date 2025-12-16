@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List } from 'lucide-react';
+import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List, Mail } from 'lucide-react';
 import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
 import { AGE_GROUPS } from '@shared/constants';
@@ -28,6 +28,7 @@ export default function AdminSessionDetail() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingRoster, setSendingRoster] = useState(false);
   const isNew = params?.id === 'new';
   
   // Feature flags for premium features
@@ -202,6 +203,34 @@ export default function AdminSessionDetail() {
       toast({ title: "Error saving session", variant: "destructive" });
     }
     setSaving(false);
+  };
+
+  const handleSendRosterEmail = async () => {
+    if (!params?.id || isNew) return;
+    setSendingRoster(true);
+    try {
+      const response = await fetch(`/api/admin/sessions/${params.id}/send-roster-email`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ 
+          title: "Roster email sent", 
+          description: data.message 
+        });
+      } else {
+        toast({ 
+          title: "Failed to send roster email", 
+          description: data.error || 'An error occurred',
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error('Error sending roster email:', error);
+      toast({ title: "Error sending roster email", variant: "destructive" });
+    }
+    setSendingRoster(false);
   };
 
   if (loading) {
@@ -845,6 +874,17 @@ export default function AdminSessionDetail() {
           <Link href="/admin/sessions">
             <Button variant="outline">Cancel</Button>
           </Link>
+          {!isNew && (
+            <Button 
+              onClick={handleSendRosterEmail} 
+              disabled={sendingRoster}
+              variant="secondary"
+              data-testid="button-send-roster-email"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {sendingRoster ? 'Sending...' : 'Send Roster Email'}
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90">
             {saving ? 'Saving...' : (isNew ? 'Create Session' : 'Update Session')}
           </Button>

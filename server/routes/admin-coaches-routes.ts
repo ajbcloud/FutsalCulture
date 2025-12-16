@@ -946,4 +946,57 @@ router.post('/coach/join', async (req: any, res: Response) => {
   }
 });
 
+// GET /api/coach/sessions/:sessionId/roster - Get roster for a session the coach is assigned to
+router.get('/coach/sessions/:sessionId/roster', async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const tenantId = req.user?.tenantId;
+    const { sessionId } = req.params;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({ message: 'Tenant ID required' });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user?.isAssistant) {
+      return res.status(403).json({ message: 'Not authorized - not a coach' });
+    }
+
+    const assignment = await storage.getCoachAssignmentByUserAndTenant(userId, tenantId);
+    if (!assignment || assignment.status !== 'active') {
+      return res.status(403).json({ message: 'Not an active coach for this organization' });
+    }
+
+    const [sessionAssignment] = await db
+      .select()
+      .from(coachSessionAssignments)
+      .where(
+        and(
+          eq(coachSessionAssignments.sessionId, sessionId),
+          eq(coachSessionAssignments.coachAssignmentId, assignment.id)
+        )
+      );
+
+    if (!sessionAssignment) {
+      return res.status(403).json({ message: 'You are not assigned to this session' });
+    }
+
+    const { getSessionRoster } = await import('../utils/roster-email');
+    const roster = await getSessionRoster(sessionId);
+    
+    if (!roster) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    res.json(roster);
+  } catch (error) {
+    console.error('Error fetching coach session roster:', error);
+    res.status(500).json({ message: 'Failed to fetch session roster' });
+  }
+});
+
 export default router;

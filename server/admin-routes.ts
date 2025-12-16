@@ -6239,4 +6239,55 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
   // Import and use SMS credits routes
   const { default: smsCreditsRoutes } = await import('./routes/sms-credits.js');
   app.use('/api/admin', smsCreditsRoutes);
+
+  // Send roster email for a session
+  app.post('/api/admin/sessions/:sessionId/send-roster-email', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const tenantId = (req as any).user?.tenantId || (req as any).currentUser?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const { sendRosterEmail } = await import('./utils/roster-email');
+      const result = await sendRosterEmail({ sessionId, tenantId });
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: `Roster email sent to ${result.sentTo.length} recipient(s)`,
+          sentTo: result.sentTo
+        });
+      } else {
+        res.status(207).json({
+          success: false,
+          message: 'Some emails failed to send',
+          sentTo: result.sentTo,
+          errors: result.errors
+        });
+      }
+    } catch (error) {
+      console.error('Error sending roster email:', error);
+      res.status(500).json({ error: 'Failed to send roster email' });
+    }
+  });
+
+  // Get session roster (players list with payment status)
+  app.get('/api/admin/sessions/:sessionId/roster', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const { getSessionRoster } = await import('./utils/roster-email');
+      const roster = await getSessionRoster(sessionId);
+      
+      if (!roster) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+      
+      res.json(roster);
+    } catch (error) {
+      console.error('Error fetching session roster:', error);
+      res.status(500).json({ error: 'Failed to fetch session roster' });
+    }
+  });
 }

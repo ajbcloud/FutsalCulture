@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { rollupUsageForDay } from './usageRollup';
 import './webhookStatsRollup';
+import './roster-email-job';
 import { processPendingDowngrades, isBraintreeEnabled } from '../services/braintreeService';
 
 // Nightly usage rollup at 03:12 UTC
