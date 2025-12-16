@@ -211,6 +211,47 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
   }
 });
 
+// Validate discount code endpoint
+router.post('/session-billing/validate-discount-code', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ valid: false, message: 'Discount code is required' });
+    }
+
+    const { storage } = await import('./storage');
+    const currentUser = await storage.getUser(userId);
+    
+    if (!currentUser?.tenantId) {
+      return res.status(400).json({ valid: false, message: 'Tenant ID required' });
+    }
+
+    const result = await storage.validateDiscountCode(code, currentUser.tenantId);
+
+    if (result.valid && result.discountCode) {
+      return res.json({
+        valid: true,
+        discountType: result.discountCode.discountType,
+        discountValue: result.discountCode.discountValue ?? 0,
+        discountCodeId: result.discountCode.id
+      });
+    } else {
+      return res.json({
+        valid: false,
+        message: result.error || 'Invalid discount code'
+      });
+    }
+  } catch (error) {
+    console.error('Error validating discount code:', error);
+    res.status(500).json({ valid: false, message: 'Failed to validate discount code' });
+  }
+});
+
 // Helper function to get active payment processor (Braintree only)
 async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider: 'braintree' | null, credentials: any }> {
   try {
