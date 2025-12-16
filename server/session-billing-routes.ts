@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from './db';
-import { futsalSessions, signups, players, tenants, integrations, systemSettings } from '../shared/schema';
+import { futsalSessions, signups, players, tenants, integrations, systemSettings, discountCodes } from '../shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import braintree from 'braintree';
 import { format } from 'date-fns';
@@ -517,7 +517,7 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
 // Process payment endpoint (Braintree only)
 router.post('/session-billing/process-payment', async (req: any, res) => {
   try {
-    const { signupId, sessionId, playerId, amount, paymentMethodId, provider, useCredits } = req.body;
+    const { signupId, sessionId, playerId, amount, paymentMethodId, provider, useCredits, discountCodeId, discountAmountCents } = req.body;
     const userId = req.user?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -624,6 +624,29 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
     }
 
     if (paymentResult && paymentResult.success) {
+      // Increment discount code usage if a discount was applied
+      if (discountCodeId) {
+        try {
+          // Verify discount code exists and belongs to tenant before incrementing
+          const [discountCode] = await db
+            .select()
+            .from(discountCodes)
+            .where(and(
+              eq(discountCodes.id, discountCodeId),
+              eq(discountCodes.tenantId, currentUser.tenantId)
+            ))
+            .limit(1);
+          
+          if (discountCode) {
+            await storage.incrementDiscountCodeUsage(discountCodeId);
+          } else {
+            console.warn('Discount code not found or does not belong to tenant:', discountCodeId);
+          }
+        } catch (discountError) {
+          console.error('Error processing discount code:', discountError);
+        }
+      }
+
       // Apply credits if used
       if (creditsToUse > 0) {
         const availableCredits = await storage.getAvailableCredits(userId, currentUser.tenantId);
@@ -644,7 +667,9 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
           paid: true, 
           paymentId: paymentResult.paymentId,
           paymentProvider: paymentResult.provider,
-          reservationExpiresAt: null // Clear reservation since payment is complete
+          reservationExpiresAt: null, // Clear reservation since payment is complete
+          discountCodeId: discountCodeId || null,
+          discountAmountCents: discountAmountCents || null
         })
         .where(eq(signups.id, signupId));
 

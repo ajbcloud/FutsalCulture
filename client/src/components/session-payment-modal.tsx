@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet, Tag, ChevronDown, ChevronUp, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTerminology } from "@/hooks/use-user-terminology";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,12 +42,14 @@ interface SessionPaymentModalProps {
 }
 
 // Braintree Form Component
-function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount, onSuccess, onError }: {
+function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount, discountCodeId, discountAmountCents, onSuccess, onError }: {
   session: any;
   player: any;
   signup: any;
   useCredits: boolean;
   finalAmount: number;
+  discountCodeId?: string | null;
+  discountAmountCents?: number;
   onSuccess: () => void;
   onError: (error: string) => void;
 }) {
@@ -383,7 +385,9 @@ function BraintreePaymentForm({ session, player, signup, useCredits, finalAmount
         amount: finalAmount,
         provider: 'braintree',
         paymentMethodNonce: nonce,
-        useCredits
+        useCredits,
+        discountCodeId,
+        discountAmountCents: discountAmountCents || 0
       });
 
       if (response.ok) {
@@ -484,6 +488,13 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
   // State for useCredits toggle - default to true if credits are available
   const [useCredits, setUseCredits] = useState(totalAvailableCreditsCents > 0);
 
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountApplied, setDiscountApplied] = useState<{ discountType: string; discountValue: number; discountCodeId: string } | null>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [isDiscountExpanded, setIsDiscountExpanded] = useState(false);
+
   // Update useCredits when credits data changes
   useEffect(() => {
     if (totalAvailableCreditsCents > 0) {
@@ -491,11 +502,70 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
     }
   }, [totalAvailableCreditsCents]);
 
+  // Calculate discount amount based on discount type
+  const calculateDiscountAmount = (): number => {
+    if (!discountApplied) return 0;
+    const originalPrice = session.priceCents;
+    
+    if (discountApplied.discountType === 'full') {
+      return originalPrice;
+    } else if (discountApplied.discountType === 'percentage') {
+      return Math.floor(originalPrice * discountApplied.discountValue / 100);
+    } else if (discountApplied.discountType === 'fixed') {
+      return Math.min(discountApplied.discountValue, originalPrice);
+    }
+    return 0;
+  };
+
   // Calculate payment amounts
   const originalPrice = session.priceCents;
-  const creditsApplied = useCredits ? Math.min(totalAvailableCreditsCents, originalPrice) : 0;
-  const finalAmount = originalPrice - creditsApplied;
-  const isFullyCoveredByCredits = useCredits && creditsApplied >= originalPrice;
+  const discountAmount = calculateDiscountAmount();
+  const creditsApplied = useCredits ? Math.min(totalAvailableCreditsCents, originalPrice - discountAmount) : 0;
+  const finalAmount = Math.max(0, originalPrice - creditsApplied - discountAmount);
+  const isFullyCoveredByCredits = useCredits && finalAmount <= 0;
+
+  // Handle applying discount code
+  const handleApplyDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setDiscountError("Please enter a discount code");
+      return;
+    }
+
+    setIsValidatingDiscount(true);
+    setDiscountError(null);
+
+    try {
+      const response = await apiRequest('POST', '/api/session-billing/validate-discount-code', {
+        code: discountCode.trim()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDiscountApplied({
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          discountCodeId: data.discountCodeId
+        });
+        setDiscountError(null);
+      } else {
+        const errorData = await response.json();
+        setDiscountError(errorData.message || "Invalid discount code");
+        setDiscountApplied(null);
+      }
+    } catch (err: any) {
+      setDiscountError(err.message || "Failed to validate discount code");
+      setDiscountApplied(null);
+    } finally {
+      setIsValidatingDiscount(false);
+    }
+  };
+
+  // Handle removing applied discount
+  const handleRemoveDiscount = () => {
+    setDiscountApplied(null);
+    setDiscountCode("");
+    setDiscountError(null);
+  };
 
   const handlePaymentSuccess = () => {
     toast({
@@ -584,6 +654,84 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
             </div>
           )}
 
+          {/* Discount Code Section */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsDiscountExpanded(!isDiscountExpanded)}
+              className="w-full flex items-center justify-between p-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              data-testid="button-toggle-discount"
+            >
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                <span>Have a discount code?</span>
+              </div>
+              {isDiscountExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+            
+            {isDiscountExpanded && (
+              <div className="p-3 pt-0 space-y-3">
+                {discountApplied ? (
+                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                      <Check className="h-4 w-4" />
+                      <span className="text-sm font-medium" data-testid="text-discount-applied">
+                        Discount applied: {discountApplied.discountType === 'full' ? '100%' : 
+                          discountApplied.discountType === 'percentage' ? `${discountApplied.discountValue}%` : 
+                          `$${(discountApplied.discountValue / 100).toFixed(2)}`} off
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleRemoveDiscount}
+                      className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                      data-testid="button-remove-discount"
+                      aria-label="Remove discount"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter code"
+                        value={discountCode}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value);
+                          if (discountError) setDiscountError(null);
+                        }}
+                        className="flex-1"
+                        data-testid="input-discount-code"
+                        disabled={isValidatingDiscount}
+                      />
+                      <Button
+                        onClick={handleApplyDiscountCode}
+                        disabled={isValidatingDiscount || !discountCode.trim()}
+                        size="sm"
+                        data-testid="button-apply-discount"
+                      >
+                        {isValidatingDiscount ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Apply"
+                        )}
+                      </Button>
+                    </div>
+                    {discountError && (
+                      <p className="text-sm text-red-500 dark:text-red-400" data-testid="text-discount-error">
+                        {discountError}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Payment Breakdown */}
           <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
             <h3 className="font-medium text-sm text-gray-600 dark:text-gray-400">Payment Summary</h3>
@@ -592,6 +740,12 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                 <span>Original Price:</span>
                 <span data-testid="text-original-price">${(originalPrice / 100).toFixed(2)}</span>
               </div>
+              {discountApplied && discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                  <span>Discount Code Applied:</span>
+                  <span data-testid="text-discount-amount">-${(discountAmount / 100).toFixed(2)}</span>
+                </div>
+              )}
               {useCredits && creditsApplied > 0 && (
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>Credits Applied:</span>
@@ -600,7 +754,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
               )}
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span>Final Amount to Pay:</span>
-                <span data-testid="text-final-amount">${(finalAmount / 100).toFixed(2)}</span>
+                <span data-testid="text-final-amount">${(Math.max(0, finalAmount) / 100).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -649,9 +803,11 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                         signupId: signup.id,
                         sessionId: session.id,
                         playerId: player.id,
-                        amount: finalAmount,
+                        amount: Math.max(0, finalAmount),
                         provider: null,
-                        useCredits: true
+                        useCredits: true,
+                        discountCodeId: discountApplied?.discountCodeId,
+                        discountAmountCents: discountAmount || 0
                       });
                       
                       if (response.ok) {
@@ -667,7 +823,7 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                   className="w-full"
                   data-testid="button-complete-with-credits"
                 >
-                  Complete Enrollment with Credits
+                  Complete Enrollment{discountApplied ? " with Discount" : " with Credits"}
                 </Button>
               </div>
             ) : configLoading ? (
@@ -687,7 +843,9 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                 player={player}
                 signup={signup}
                 useCredits={useCredits}
-                finalAmount={finalAmount}
+                finalAmount={Math.max(0, finalAmount)}
+                discountCodeId={discountApplied?.discountCodeId}
+                discountAmountCents={discountAmount}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
               />
