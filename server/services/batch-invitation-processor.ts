@@ -184,7 +184,7 @@ export class BatchInvitationProcessor {
                 recipientEmail: invitation.recipientEmail,
                 senderName: '', // Would fetch from creator
                 role: invitation.role,
-                inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : process.env.REPLIT_APP_URL}/accept-invite?token=${invitation.token}`,
+                inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://skorehq.app' : process.env.REPLIT_APP_URL}/accept-invite?token=${invitation.token}`,
                 expiresAt: invitation.expiresAt,
                 customMessage: invitation.customMessage || undefined,
               },
@@ -377,7 +377,7 @@ class BatchJob {
     // Send email if type is email
     if (this.request.type === 'email') {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://playhq.app' 
+        ? 'https://skorehq.app' 
         : (process.env.REPLIT_APP_URL || 'https://localhost:5000');
 
       await emailTemplateService.sendEmail({

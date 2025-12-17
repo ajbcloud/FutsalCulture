@@ -6,8 +6,8 @@ import { tenants, users, emailVerificationTokens } from "@shared/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { sendEmail, initEmail } from "../emailService";
 
-const WELCOME_EMAIL = 'welcome@playhq.app';
-const FROM_EMAIL = 'playhq@playhq.app';
+const WELCOME_EMAIL = 'welcome@skorehq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 export const authVerificationRouter = Router();
 
@@ -96,17 +96,17 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
     });
 
     // Send verification email  
-    // For production, use playhq.app. For development, use replit dev URL
+    // For production, use skorehq.app. For development, use replit dev URL
     const app_url = process.env.NODE_ENV === 'production' 
-      ? 'https://playhq.app' 
+      ? 'https://skorehq.app' 
       : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+        <h1 style="color: #2563eb;">Welcome to SkoreHQ!</h1>
         <p>Hi ${contact_name},</p>
-        <p>Thank you for creating your organization on PlayHQ. Please click the link below to verify your email and set your password:</p>
+        <p>Thank you for creating your organization on SkoreHQ. Please click the link below to verify your email and set your password:</p>
         <p style="margin: 30px 0;">
           <a href="${link}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Verify Email & Set Password
@@ -116,13 +116,13 @@ authVerificationRouter.post("/signup_client", async (req, res) => {
         <p style="background: #f3f4f6; padding: 10px; word-break: break-all;">${link}</p>
         <p>This link will expire in 48 hours.</p>
         <p>If you did not request this, please ignore this email.</p>
-        <p>Best regards,<br>The PlayHQ Team</p>
+        <p>Best regards,<br>The SkoreHQ Team</p>
       </div>
     `;
     
     const text = `Hi ${contact_name},
 
-Thank you for creating your organization on PlayHQ. Please click the link below to verify your email and set your password:
+Thank you for creating your organization on SkoreHQ. Please click the link below to verify your email and set your password:
 
 ${link}
 
@@ -131,12 +131,12 @@ This link will expire in 48 hours.
 If you did not request this, please ignore this email.
 
 Best regards,
-The PlayHQ Team`;
+The SkoreHQ Team`;
 
     await sendEmail({
       to: user.email!,
       from: FROM_EMAIL,
-      subject: "Verify your PlayHQ account",
+      subject: "Verify your SkoreHQ account",
       html,
       text,
     });
@@ -276,17 +276,17 @@ authVerificationRouter.post("/signup", async (req, res) => {
     });
 
     // Send verification email  
-    // For production, use playhq.app. For development, use replit dev URL
+    // For production, use skorehq.app. For development, use replit dev URL
     const app_url = process.env.NODE_ENV === 'production' 
-      ? 'https://playhq.app' 
+      ? 'https://skorehq.app' 
       : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
     const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+        <h1 style="color: #2563eb;">Welcome to SkoreHQ!</h1>
         <p>Hi ${contact_name},</p>
-        <p>Thank you for creating your organization on PlayHQ. Please click the link below to verify your email and set your password:</p>
+        <p>Thank you for creating your organization on SkoreHQ. Please click the link below to verify your email and set your password:</p>
         <p style="margin: 30px 0;">
           <a href="${link}" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Verify Email & Set Password
@@ -296,13 +296,13 @@ authVerificationRouter.post("/signup", async (req, res) => {
         <p style="background: #f3f4f6; padding: 10px; word-break: break-all;">${link}</p>
         <p>This link will expire in 48 hours.</p>
         <p>If you did not request this, please ignore this email.</p>
-        <p>Best regards,<br>The PlayHQ Team</p>
+        <p>Best regards,<br>The SkoreHQ Team</p>
       </div>
     `;
     
     const text = `Hi ${contact_name},
 
-Thank you for creating your organization on PlayHQ. Please click the link below to verify your email and set your password:
+Thank you for creating your organization on SkoreHQ. Please click the link below to verify your email and set your password:
 
 ${link}
 
@@ -311,12 +311,12 @@ This link will expire in 48 hours.
 If you did not request this, please ignore this email.
 
 Best regards,
-The PlayHQ Team`;
+The SkoreHQ Team`;
 
     await sendEmail({
       to: user.email!,
       from: FROM_EMAIL,
-      subject: "Verify your PlayHQ account",
+      subject: "Verify your SkoreHQ account",
       html,
       text,
     });
@@ -505,7 +505,7 @@ authVerificationRouter.post("/resend_verification", async (req, res) => {
   });
 
   const app_url = process.env.NODE_ENV === 'production' 
-    ? 'https://playhq.app' 
+    ? 'https://skorehq.app' 
     : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
   const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
 
@@ -522,14 +522,14 @@ authVerificationRouter.post("/resend_verification", async (req, res) => {
       <p>Or copy and paste this link into your browser:</p>
       <p style="background: #f3f4f6; padding: 10px; word-break: break-all;">${link}</p>
       <p>This link will expire in 48 hours.</p>
-      <p>Best regards,<br>The PlayHQ Team</p>
+      <p>Best regards,<br>The SkoreHQ Team</p>
     </div>
   `;
 
   await sendEmail({
     to: user.email!,
     from: FROM_EMAIL,
-    subject: "Verify your PlayHQ account",
+    subject: "Verify your SkoreHQ account",
     html,
     text: `Continue your setup: ${link}`,
   });
@@ -567,7 +567,7 @@ authVerificationRouter.post("/forgot-password", async (req, res) => {
     });
 
     const app_url = process.env.NODE_ENV === 'production' 
-      ? 'https://playhq.app' 
+      ? 'https://skorehq.app' 
       : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
     const link = `${app_url}/reset-password?token=${encodeURIComponent(raw)}`;
 
@@ -585,14 +585,14 @@ authVerificationRouter.post("/forgot-password", async (req, res) => {
         <p style="background: #f3f4f6; padding: 10px; word-break: break-all;">${link}</p>
         <p>This link will expire in 24 hours.</p>
         <p>If you didn't request this password reset, you can safely ignore this email.</p>
-        <p>Best regards,<br>The PlayHQ Team</p>
+        <p>Best regards,<br>The SkoreHQ Team</p>
       </div>
     `;
 
     await sendEmail({
       to: user.email!,
       from: FROM_EMAIL,
-      subject: "Reset your PlayHQ password",
+      subject: "Reset your SkoreHQ password",
       html,
       text: `Reset your password: ${link}`,
     });

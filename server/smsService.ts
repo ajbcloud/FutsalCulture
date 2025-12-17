@@ -181,19 +181,19 @@ export async function sendBulkSMS(recipients: Array<{ phone: string; body: strin
 
 export const SMS_TEMPLATES = {
   invitation: {
-    parent: "Hi {{name}}! {{senderName}} invited you to join {{tenantName}} on PlayHQ. Book training sessions & manage payments easily. Accept: {{inviteUrl}} Expires: {{expiresAt}}",
-    player: "Hey {{name}}! You're invited to join {{tenantName}} on PlayHQ by {{senderName}}. Book sessions & track progress! Join: {{inviteUrl}} Expires: {{expiresAt}}",
-    admin: "Hi {{name}}, {{senderName}} invited you as admin for {{tenantName}} on PlayHQ. Manage your organization: {{inviteUrl}} Expires: {{expiresAt}}",
-    assistant: "Hi {{name}}, you're invited to assist {{tenantName}} on PlayHQ by {{senderName}}. Help manage operations: {{inviteUrl}} Expires: {{expiresAt}}"
+    parent: "Hi {{name}}! {{senderName}} invited you to join {{tenantName}} on SkoreHQ. Book training sessions & manage payments easily. Accept: {{inviteUrl}} Expires: {{expiresAt}}",
+    player: "Hey {{name}}! You're invited to join {{tenantName}} on SkoreHQ by {{senderName}}. Book sessions & track progress! Join: {{inviteUrl}} Expires: {{expiresAt}}",
+    admin: "Hi {{name}}, {{senderName}} invited you as admin for {{tenantName}} on SkoreHQ. Manage your organization: {{inviteUrl}} Expires: {{expiresAt}}",
+    assistant: "Hi {{name}}, you're invited to assist {{tenantName}} on SkoreHQ by {{senderName}}. Help manage operations: {{inviteUrl}} Expires: {{expiresAt}}"
   },
   reminder: {
-    sessionReminder: "🏃 Reminder: Your session at {{location}} starts in {{timeUntil}}. Need to cancel? Visit PlayHQ or call {{contactNumber}}",
+    sessionReminder: "🏃 Reminder: Your session at {{location}} starts in {{timeUntil}}. Need to cancel? Visit SkoreHQ or call {{contactNumber}}",
     paymentDue: "💳 Payment reminder: Your {{amount}} payment for {{sessionDate}} is due. Pay now: {{paymentUrl}} Questions? Reply HELP",
     waitlistPromotion: "🎉 Great news! A spot opened in {{sessionDate}} at {{location}}. Claim it within 2 hours: {{claimUrl}}"
   },
   confirmation: {
     bookingConfirmed: "✅ Booking confirmed! {{playerName}} is registered for {{sessionDate}} at {{location}}. Total: {{amount}}. See you there!",
-    paymentReceived: "💰 Payment received! {{amount}} for {{sessionDate}}. Receipt: {{receiptUrl}} Thank you for choosing PlayHQ!",
+    paymentReceived: "💰 Payment received! {{amount}} for {{sessionDate}}. Receipt: {{receiptUrl}} Thank you for choosing SkoreHQ!",
     cancellation: "❌ Booking cancelled: {{sessionDate}} at {{location}}. {{refundInfo}} Questions? Contact {{supportContact}}"
   }
 };

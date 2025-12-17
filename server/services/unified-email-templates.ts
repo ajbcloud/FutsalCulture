@@ -16,8 +16,8 @@ import { tenants, invitationAnalytics } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendEmail as sendViaProvider, isEmailConfigured } from '../utils/email-provider';
 
-const WELCOME_EMAIL = 'welcome@playhq.app';
-const FROM_EMAIL = 'playhq@playhq.app';
+const WELCOME_EMAIL = 'welcome@skorehq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 export interface UnifiedEmailTemplate {
   type: 'invitation' | 'welcome' | 'reminder' | 'parent2' | 'announcement' | 'maintenance';
@@ -181,7 +181,7 @@ export class EmailTemplateService {
       const defaultBranding = {
         primaryColor: '#3B82F6',
         secondaryColor: '#1E40AF',
-        businessName: tenant[0]?.name || 'PlayHQ',
+        businessName: tenant[0]?.name || 'SkoreHQ',
       };
 
       return defaultBranding;
@@ -190,7 +190,7 @@ export class EmailTemplateService {
       return {
         primaryColor: '#3B82F6',
         secondaryColor: '#1E40AF',
-        businessName: 'PlayHQ',
+        businessName: 'SkoreHQ',
       };
     }
   }
@@ -204,7 +204,7 @@ export class EmailTemplateService {
 
     switch (type) {
       case 'invitation':
-        return `Join ${brandName} on PlayHQ - You're Invited!`;
+        return `Join ${brandName} on SkoreHQ - You're Invited!`;
       case 'welcome':
         return `Welcome to ${brandName}!`;
       case 'reminder':
@@ -216,7 +216,7 @@ export class EmailTemplateService {
       case 'maintenance':
         return `${brandName}: Scheduled Maintenance Notice`;
       default:
-        return `${brandName} - PlayHQ Notification`;
+        return `${brandName} - SkoreHQ Notification`;
     }
   }
 
@@ -233,7 +233,7 @@ export class EmailTemplateService {
       return `
 Hello ${data.recipientName}!
 
-You've been invited to join ${businessName} on PlayHQ as a ${data.role}.
+You've been invited to join ${businessName} on SkoreHQ as a ${data.role}.
 
 ${data.customMessage ? `Personal message from ${data.senderName}:\n"${data.customMessage}"\n\n` : ''}
 
@@ -248,7 +248,7 @@ Best regards,
 The ${businessName} Team
 
 ---
-Powered by PlayHQ - Sports Club Management Made Simple
+Powered by SkoreHQ - Sports Club Management Made Simple
       `.trim();
     }
 
@@ -259,7 +259,7 @@ Powered by PlayHQ - Sports Club Management Made Simple
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Join ${businessName} on PlayHQ</title>
+  <title>Join ${businessName} on SkoreHQ</title>
   <style>
     body {
       margin: 0;
@@ -349,7 +349,7 @@ Powered by PlayHQ - Sports Club Management Made Simple
   <div class="email-container">
     <div class="header">
       <h1>🏆 You're Invited!</h1>
-      <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Join ${businessName} on PlayHQ</p>
+      <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Join ${businessName} on SkoreHQ</p>
     </div>
     
     <div class="content">
@@ -393,7 +393,7 @@ Powered by PlayHQ - Sports Club Management Made Simple
     </div>
     
     <div class="branding">
-      Powered by <strong>PlayHQ</strong> - Sports Club Management Made Simple
+      Powered by <strong>SkoreHQ</strong> - Sports Club Management Made Simple
     </div>
   </div>
 </body>
@@ -428,7 +428,7 @@ Best regards,
 The ${data.tenantName} Team
 
 ---
-Powered by PlayHQ
+Powered by SkoreHQ
       `.trim();
     }
 
@@ -453,7 +453,7 @@ Powered by PlayHQ
     const businessName = branding.businessName || data.tenantName;
     const inviteUrl = data.inviteUrl || '#';
 
-    // PlayHQ-themed dark design
+    // SkoreHQ-themed dark design
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -501,7 +501,7 @@ Powered by PlayHQ
       <p class="signature">Best regards,<br><strong style="color: #f1f5f9;">The ${businessName} Team</strong></p>
     </div>
     <div class="footer">
-      <p>Powered by <strong>PlayHQ</strong></p>
+      <p>Powered by <strong>SkoreHQ</strong></p>
     </div>
   </div>
 </body>
@@ -560,7 +560,7 @@ Powered by PlayHQ
       <p>Best regards,<br>The ${businessName} Team</p>
     </div>
     <div class="footer">
-      <p>Powered by <strong>PlayHQ</strong></p>
+      <p>Powered by <strong>SkoreHQ</strong></p>
     </div>
   </div>
 </body>

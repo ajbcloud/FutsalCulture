@@ -15,12 +15,12 @@ function getInvitationEmailTemplate(data: InvitationEmailData): string {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px;">
       <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
         <h1 style="margin: 0; font-size: 24px;">🎯 You're Invited!</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px;">Join ${data.tenantName} on PlayHQ</p>
+        <p style="margin: 10px 0 0 0; font-size: 16px;">Join ${data.tenantName} on SkoreHQ</p>
       </div>
       <div style="padding: 30px;">
         <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Hi ${data.recipientName},</p>
         <p style="font-size: 16px; color: #333; line-height: 1.5; margin-bottom: 20px;">
-          You've been invited to join <strong>${data.tenantName}</strong> as a <strong>${data.role}</strong> on PlayHQ!
+          You've been invited to join <strong>${data.tenantName}</strong> as a <strong>${data.role}</strong> on SkoreHQ!
         </p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${data.inviteUrl}" style="background-color: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Accept Invitation</a>
@@ -35,11 +35,11 @@ function getInvitationEmailTemplate(data: InvitationEmailData): string {
 
 function getInvitationEmailText(data: InvitationEmailData): string {
   return `
-You're invited to join ${data.tenantName} on PlayHQ!
+You're invited to join ${data.tenantName} on SkoreHQ!
 
 Hi ${data.recipientName},
 
-You've been invited to join ${data.tenantName} as a ${data.role} on PlayHQ.
+You've been invited to join ${data.tenantName} as a ${data.role} on SkoreHQ.
 
 To accept your invitation, please visit: ${data.inviteUrl}
 
@@ -48,12 +48,12 @@ This invitation expires on ${data.expiresAt}.
 If you have any questions, please contact your administrator.
 
 Best regards,
-The PlayHQ Team
+The SkoreHQ Team
   `.trim();
 }
 
-const WELCOME_EMAIL = 'welcome@playhq.app';
-const FROM_EMAIL = 'playhq@playhq.app';
+const WELCOME_EMAIL = 'welcome@skorehq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 export interface SendInvitationEmailOptions {
   to: string;
@@ -81,8 +81,8 @@ export async function sendInvitationEmail(options: SendInvitationEmailOptions): 
   const result = await sendEmail({
     to: options.to,
     from: WELCOME_EMAIL,
-    fromName: 'PlayHQ Team',
-    subject: `🎯 You're invited to join ${options.tenantName} on PlayHQ`,
+    fromName: 'SkoreHQ Team',
+    subject: `🎯 You're invited to join ${options.tenantName} on SkoreHQ`,
     text: getInvitationEmailText(emailData),
     html: getInvitationEmailTemplate(emailData),
     categories: ['invitation', options.role, 'tenant-invite'],
@@ -102,12 +102,12 @@ export async function sendWelcomeEmail(options: {
   tenantName: string;
   role: 'parent' | 'player' | 'admin' | 'assistant';
 }): Promise<void> {
-  const appUrl = process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'https://playhq.app');
+  const appUrl = process.env.NODE_ENV === 'production' ? 'https://skorehq.app' : (process.env.REPLIT_APP_URL || 'https://skorehq.app');
   
   const text = `
 Hi ${options.firstName},
 
-Welcome to ${options.tenantName} on PlayHQ! Your account has been successfully created.
+Welcome to ${options.tenantName} on SkoreHQ! Your account has been successfully created.
 
 ${options.role === 'parent' ? 
   'You can now book training sessions for your players, manage payments, and stay connected with your sports community.' :
@@ -123,7 +123,7 @@ Get started by logging into your account at: ${appUrl}
 If you have any questions, our support team is here to help.
 
 Welcome to the futsal family!
-The PlayHQ Team
+The SkoreHQ Team
 `;
 
   const html = `
@@ -145,13 +145,13 @@ The PlayHQ Team
   <div class="container">
     <div class="header">
       <h1>🎉 Welcome to ${options.tenantName}!</h1>
-      <p>Your PlayHQ account is ready to go</p>
+      <p>Your SkoreHQ account is ready to go</p>
     </div>
     
     <div class="content">
       <p>Hi ${options.firstName},</p>
       
-      <p>Welcome to <strong>${options.tenantName}</strong> on PlayHQ! Your account has been successfully created and you're now part of our futsal community.</p>
+      <p>Welcome to <strong>${options.tenantName}</strong> on SkoreHQ! Your account has been successfully created and you're now part of our futsal community.</p>
       
       <p>${options.role === 'parent' ? 
         'As a parent, you can now book training sessions for your players, manage payments, and stay connected with your sports community.' :
@@ -163,17 +163,17 @@ The PlayHQ Team
       }</p>
       
       <div style="text-align: center;">
-        <a href="${appUrl}" class="button">Go to PlayHQ</a>
+        <a href="${appUrl}" class="button">Go to SkoreHQ</a>
       </div>
       
       <p>If you have any questions, our support team is here to help.</p>
       
       <p>Welcome to the futsal family!</p>
-      <p>The PlayHQ Team</p>
+      <p>The SkoreHQ Team</p>
     </div>
     
     <div class="footer">
-      <p>© 2025 PlayHQ. All rights reserved.</p>
+      <p>© 2025 SkoreHQ. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -182,8 +182,8 @@ The PlayHQ Team
   const result = await sendEmail({
     to: options.to,
     from: WELCOME_EMAIL,
-    fromName: 'PlayHQ Team',
-    subject: `🎉 Welcome to ${options.tenantName} on PlayHQ!`,
+    fromName: 'SkoreHQ Team',
+    subject: `🎉 Welcome to ${options.tenantName} on SkoreHQ!`,
     text,
     html,
     categories: ['welcome', options.role, 'onboarding'],

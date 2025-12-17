@@ -1346,7 +1346,7 @@ export async function setupAdminRoutes(app: any) {
                     '{{sessionLocation}}': session.location || '',
                     '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
                     '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
-                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
+                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'SkoreHQ',
                     '{{organizationPhone}}': tenantData.phone || ''
                   };
 
@@ -1394,7 +1394,7 @@ export async function setupAdminRoutes(app: any) {
                     '{{sessionLocation}}': session.location || '',
                     '{{sessionAgeGroup}}': session.ageGroups?.join(', ') || '',
                     '{{creditAmount}}': '$' + (signup.actualAmountCents / 100).toFixed(2),
-                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'PlayHQ',
+                    '{{organizationName}}': tenantData.displayName || tenantData.name || 'SkoreHQ',
                     '{{organizationPhone}}': tenantData.phone || ''
                   };
 
@@ -4293,7 +4293,7 @@ Isabella,Williams,2015,girls,mike.williams@email.com,555-567-8901,,false,false`;
             soccerClub: rowData.soccerClub || null,
             canAccessPortal: canAccessPortal,
             canBookAndPay: rowData.canBookAndPay?.toLowerCase() === 'true',
-            email: canAccessPortal ? `${rowData.firstName.toLowerCase()}.${rowData.lastName.toLowerCase()}@player.playhq.com` : null,
+            email: canAccessPortal ? `${rowData.firstName.toLowerCase()}.${rowData.lastName.toLowerCase()}@player.skorehq.com` : null,
             phoneNumber: null,
             createdAt: new Date()
           });
@@ -4698,7 +4698,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           },
           customer: {
             id: tenantData.stripeCustomerId || 'cus_database_active',
-            email: currentUser?.email || "admin@playhq.app"
+            email: currentUser?.email || "admin@skorehq.app"
           }
         };
 
@@ -4746,7 +4746,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
         if (!customerId) {
           // Create a new customer in Stripe
           const customer = await stripe.customers.create({
-            email: currentUser?.email || "admin@playhq.app",
+            email: currentUser?.email || "admin@skorehq.app",
             name: `${currentUser?.firstName || "Admin"} ${currentUser?.lastName || "User"}`,
             metadata: {
               user_id: currentUser?.id || "unknown",
@@ -4805,7 +4805,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
             plan: null,
             customer: {
               id: customerId,
-              email: currentUser?.email || "admin@playhq.app"
+              email: currentUser?.email || "admin@skorehq.app"
             }
           };
         }
@@ -4832,7 +4832,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           } : null,
           customer: {
             id: customerId,
-            email: currentUser?.email || "admin@playhq.app"
+            email: currentUser?.email || "admin@skorehq.app"
           }
         } : {
           id: "no_subscription",
@@ -4846,7 +4846,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
           plan: null,
           customer: {
             id: customerId,
-            email: currentUser?.email || "admin@playhq.app"
+            email: currentUser?.email || "admin@skorehq.app"
           }
         };
 
@@ -4885,7 +4885,7 @@ Maria,Rodriguez,maria.rodriguez@email.com,555-567-8901`;
       try {
         // Create a customer for portal session
         const customer = await stripe.customers.create({
-          email: currentUser?.email || "admin@playhq.app",
+          email: currentUser?.email || "admin@skorehq.app",
           name: "Platform Administrator",
           metadata: {
             user_id: currentUser?.id || "unknown",

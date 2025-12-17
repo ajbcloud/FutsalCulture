@@ -5,7 +5,7 @@ import { BusinessProvider } from "@/contexts/BusinessContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
-export default function HomePlayHQ() {
+export default function HomeSkoreHQ() {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -13,13 +13,13 @@ export default function HomePlayHQ() {
       {/* Navbar */}
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
         <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
-          {/* In production, show business name/logo. In dev, show PlayHQ */}
+          {/* In production, show business name/logo. In dev, show SkoreHQ */}
           {import.meta.env.PROD ? (
             <BusinessProvider>
               <BusinessBranding inline variant="default" />
             </BusinessProvider>
           ) : (
-            'PlayHQ'
+            'SkoreHQ'
           )}
         </a>
         <nav className="flex items-center gap-6 text-sm">
@@ -53,7 +53,7 @@ export default function HomePlayHQ() {
                 >
                   Get started free
                 </a>
-                <a href="mailto:sales@playhq.app" className="underline text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white py-4 text-lg">
+                <a href="mailto:sales@skorehq.app" className="underline text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white py-4 text-lg">
                   Talk to sales
                 </a>
               </div>
@@ -66,7 +66,7 @@ export default function HomePlayHQ() {
                 <div className="relative bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
                   <img 
                     src={adminDashboardImg} 
-                    alt="PlayHQ Admin Dashboard - Complete sports club management interface showing analytics, player management, and session scheduling"
+                    alt="SkoreHQ Admin Dashboard - Complete sports club management interface showing analytics, player management, and session scheduling"
                     className="w-full h-auto object-contain"
                     loading="eager"
                   />
@@ -149,7 +149,7 @@ export default function HomePlayHQ() {
           <div className="mx-auto max-w-4xl px-6 text-center">
             <h2 className="text-3xl font-bold mb-6">Enterprise-grade security, built in</h2>
             <p className="text-lg text-gray-200 mb-8 max-w-2xl mx-auto">
-              Your players' data deserves the best protection. PlayHQ is built with security at its core—not as an afterthought.
+              Your players' data deserves the best protection. SkoreHQ is built with security at its core—not as an afterthought.
             </p>
             <div className="grid md:grid-cols-3 gap-6 mt-8">
               <div className="p-4">
@@ -195,10 +195,10 @@ export default function HomePlayHQ() {
                 </AccordionItem>
                 <AccordionItem value="pci" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
                   <AccordionTrigger className="text-left font-semibold">
-                    Is PlayHQ PCI compliant?
+                    Is SkoreHQ PCI compliant?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600 dark:text-gray-300">
-                    Yes! PlayHQ is fully PCI DSS compliant. We never store credit card numbers on our servers. All payment data is processed securely through Braintree's PCI Level 1 certified infrastructure, the highest level of payment security available.
+                    Yes! SkoreHQ is fully PCI DSS compliant. We never store credit card numbers on our servers. All payment data is processed securely through Braintree's PCI Level 1 certified infrastructure, the highest level of payment security available.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="parents" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
@@ -221,10 +221,10 @@ export default function HomePlayHQ() {
               <Accordion type="single" collapsible className="space-y-2">
                 <AccordionItem value="ages" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
                   <AccordionTrigger className="text-left font-semibold">
-                    Does PlayHQ support all ages?
+                    Does SkoreHQ support all ages?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600 dark:text-gray-300">
-                    Absolutely! PlayHQ supports youth programs, adult leagues, and mixed-age clubs. Configure age groups, set age-appropriate permissions, and manage players from tots to seniors—all from one platform.
+                    Absolutely! SkoreHQ supports youth programs, adult leagues, and mixed-age clubs. Configure age groups, set age-appropriate permissions, and manage players from tots to seniors—all from one platform.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="processors" className="border rounded-lg px-4 bg-white dark:bg-gray-800">
@@ -256,7 +256,7 @@ export default function HomePlayHQ() {
                     Do you support multiple sports?
                   </AccordionTrigger>
                   <AccordionContent className="text-gray-600 dark:text-gray-300">
-                    Yes! PlayHQ works for soccer, futsal, basketball, volleyball, tennis, swimming, and many other sports. Configure team sizes, session types, seasons, and age groups for your specific sport's needs.
+                    Yes! SkoreHQ works for soccer, futsal, basketball, volleyball, tennis, swimming, and many other sports. Configure team sizes, session types, seasons, and age groups for your specific sport's needs.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -269,7 +269,7 @@ export default function HomePlayHQ() {
       <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-6">
-            <div>© {currentYear} PlayHQ</div>
+            <div>© {currentYear} SkoreHQ</div>
             <div className="flex gap-6">
               <a href="/terms" className="hover:text-gray-900 dark:hover:text-white">Terms</a>
               <a href="/privacy" className="hover:text-gray-900 dark:hover:text-white">Privacy</a>
@@ -277,7 +277,7 @@ export default function HomePlayHQ() {
           </div>
           <div className="flex gap-6">
             <a href="/status" className="hover:text-gray-900 dark:hover:text-white">Status</a>
-            <a href="mailto:support@playhq.app" className="hover:text-gray-900 dark:hover:text-white">Support</a>
+            <a href="mailto:support@skorehq.app" className="hover:text-gray-900 dark:hover:text-white">Support</a>
           </div>
         </div>
       </footer>

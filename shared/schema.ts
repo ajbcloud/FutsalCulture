@@ -1514,7 +1514,7 @@ export const platformSettings = pgTable("platform_settings", {
     },
     "subdomains": {
       "enabled": false,
-      "baseDomain": "tenants.playhq.app",
+      "baseDomain": "tenants.skorehq.app",
       "dnsOk": false,
       "sslOk": false
     },
@@ -3553,12 +3553,12 @@ export const quickbooksConnections = pgTable("quickbooks_connections", {
   index("quickbooks_connections_realm_idx").on(table.realmId),
 ]);
 
-// QuickBooks account mappings - maps PlayHQ transaction types to QB accounts
+// QuickBooks account mappings - maps SkoreHQ transaction types to QB accounts
 export const quickbooksAccountMappings = pgTable("quickbooks_account_mappings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
   
-  // PlayHQ side
+  // SkoreHQ side
   transactionType: quickbooksTransactionTypeEnum("transaction_type").notNull(),
   
   // QuickBooks side

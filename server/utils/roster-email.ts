@@ -25,7 +25,7 @@ function calculateAgeGroup(birthYear: number): string {
   return 'Adult';
 }
 
-const FROM_EMAIL = 'playhq@playhq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 interface RosterPlayer {
   playerName: string;
@@ -196,7 +196,7 @@ function generateRosterEmailHtml(roster: SessionRoster, tenantName: string): str
     </div>
     
     <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
-      <p>This is an automated roster email from PlayHQ</p>
+      <p>This is an automated roster email from SkoreHQ</p>
     </div>
   </div>
 </body>
@@ -234,7 +234,7 @@ PLAYER LIST
 ${roster.players.length > 0 ? playerList : 'No players registered for this session yet.'}
 
 ---
-This is an automated roster email from PlayHQ
+This is an automated roster email from SkoreHQ
   `.trim();
 }
 
@@ -262,7 +262,7 @@ export async function sendRosterEmail(options: SendRosterEmailOptions): Promise<
     .from(tenants)
     .where(eq(tenants.id, tenantId));
 
-  const tenantName = tenant?.name || 'PlayHQ';
+  const tenantName = tenant?.name || 'SkoreHQ';
 
   const emailHtml = generateRosterEmailHtml(roster, tenantName);
   const emailText = generateRosterEmailText(roster, tenantName);

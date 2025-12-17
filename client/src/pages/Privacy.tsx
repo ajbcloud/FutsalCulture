@@ -3,7 +3,7 @@ export default function Privacy() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between border-b border-border">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">PlayHQ</a>
+        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">SkoreHQ</a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="/" className="hover:opacity-80 text-muted-foreground hover:text-foreground">Home</a>
           <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent text-foreground">Log in</a>
@@ -21,7 +21,7 @@ export default function Privacy() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">1. Introduction</h2>
             <p className="text-muted-foreground mb-4">
-              Welcome to PlayHQ ("we," "our," or "us"). We are committed to protecting your privacy and handling your personal information responsibly. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our sports club management platform and related services.
+              Welcome to SkoreHQ ("we," "our," or "us"). We are committed to protecting your privacy and handling your personal information responsibly. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our sports club management platform and related services.
             </p>
           </section>
 
@@ -113,7 +113,7 @@ export default function Privacy() {
               <li>Withdrawal of consent where processing is based on consent</li>
             </ul>
             <p className="text-muted-foreground mb-4">
-              To exercise these rights, please contact us at privacy@playhq.app.
+              To exercise these rights, please contact us at privacy@skorehq.app.
             </p>
           </section>
 
@@ -165,8 +165,8 @@ export default function Privacy() {
             </p>
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-muted-foreground">
-                <strong>Email:</strong> privacy@playhq.app<br />
-                <strong>Support:</strong> support@playhq.app<br />
+                <strong>Email:</strong> privacy@skorehq.app<br />
+                <strong>Support:</strong> support@skorehq.app<br />
                 <strong>Address:</strong> [Your Business Address]
               </p>
             </div>
@@ -175,7 +175,7 @@ export default function Privacy() {
       </main>
 
       <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-muted-foreground flex items-center justify-between border-t border-border">
-        <div>© {new Date().getFullYear()} PlayHQ</div>
+        <div>© {new Date().getFullYear()} SkoreHQ</div>
         <div className="flex gap-6">
           <a href="/terms" className="hover:text-foreground">Terms</a>
           <a href="/privacy" className="hover:text-foreground">Privacy</a>

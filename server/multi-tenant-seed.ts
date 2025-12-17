@@ -39,8 +39,8 @@ function randomInt(min: number, max: number): number {
 // Data arrays
 const tenantDataArray: TenantInsert[] = [
   {
-    name: "PlayHQ",
-    subdomain: "playhq",
+    name: "SkoreHQ",
+    subdomain: "skorehq",
   },
   {
     name: "Elite Footwork Academy", 
@@ -412,8 +412,8 @@ async function seedSystemSettings() {
   
   const settings = [
     { key: "autoApproveRegistrations", value: "true" },
-    { key: "businessName", value: "PlayHQ" },
-    { key: "supportEmail", value: "support@playhq.app" },
+    { key: "businessName", value: "SkoreHQ" },
+    { key: "supportEmail", value: "support@skorehq.app" },
     { key: "supportPhone", value: "+1 (555) 123-4567" },
     { key: "supportHours", value: "Mon-Fri 9AM-6PM EST" },
     { key: "businessLocation", value: "123 Sports Center Dr, Athletic City, AC 12345" },

@@ -38,7 +38,7 @@ router.post("/get-started", async (req, res) => {
   const token = randomToken(48); const expires = new Date(Date.now()+1000*60*60*24);
   await db.insert(email_verifications).values({ user_id: userId, email: contact_email, token, expires_at: expires });
   const link = `${process.env.APP_URL || ""}/verify?token=${token}`;
-  await resend.emails.send({ from: process.env.EMAIL_FROM!, to: contact_email, subject: "Verify your email • PlayHQ", html: `<p>Welcome to PlayHQ.</p><p><a href="${link}">Verify your email</a></p>` });
+  await resend.emails.send({ from: process.env.EMAIL_FROM!, to: contact_email, subject: "Verify your email • SkoreHQ", html: `<p>Welcome to SkoreHQ.</p><p><a href="${link}">Verify your email</a></p>` });
 
   res.json({ ok: true });
 });

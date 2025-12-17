@@ -111,7 +111,7 @@ const defaultPolicies: Policies = {
   },
   subdomains: {
     enabled: false,
-    baseDomain: 'tenants.playhq.app',
+    baseDomain: 'tenants.skorehq.app',
     dnsOk: false,
     sslOk: false,
   },

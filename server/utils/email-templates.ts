@@ -122,13 +122,13 @@ export function getInvitationEmailTemplate(data: InvitationEmailData): string {
   <div class="container">
     <div class="header">
       <h1>🎯 You're Invited!</h1>
-      <p>Join ${data.tenantName} on PlayHQ</p>
+      <p>Join ${data.tenantName} on SkoreHQ</p>
     </div>
     
     <div class="content">
       <div class="greeting">Hi ${data.recipientName}!</div>
       
-      <p><strong>${data.senderName}</strong> has invited you to join <strong>${data.tenantName}</strong> on PlayHQ.</p>
+      <p><strong>${data.senderName}</strong> has invited you to join <strong>${data.tenantName}</strong> on SkoreHQ.</p>
       
       <div class="invitation-details">
         <div class="role-badge">${data.role}</div>
@@ -155,8 +155,8 @@ export function getInvitationEmailTemplate(data: InvitationEmailData): string {
     </div>
     
     <div class="footer">
-      <p><strong>PlayHQ</strong> - Streamlining Sports Management</p>
-      <p>© 2025 PlayHQ. All rights reserved.</p>
+      <p><strong>SkoreHQ</strong> - Streamlining Sports Management</p>
+      <p>© 2025 SkoreHQ. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -168,11 +168,11 @@ export function getInvitationEmailTemplate(data: InvitationEmailData): string {
  */
 export function getInvitationEmailText(data: InvitationEmailData): string {
   return `
-🎯 You're invited to join ${data.tenantName} on PlayHQ!
+🎯 You're invited to join ${data.tenantName} on SkoreHQ!
 
 Hi ${data.recipientName}!
 
-${data.senderName} has invited you to join ${data.tenantName} on PlayHQ as a ${data.role}.
+${data.senderName} has invited you to join ${data.tenantName} on SkoreHQ as a ${data.role}.
 
 ${getRoleWelcomeMessage(data.role, data.tenantName)}
 
@@ -182,11 +182,11 @@ Accept your invitation by clicking here: ${data.inviteUrl}
 
 If you have any questions, feel free to reach out to your team administrator or our support team.
 
-Welcome to PlayHQ!
-The PlayHQ Team
+Welcome to SkoreHQ!
+The SkoreHQ Team
 
 ---
-© 2025 PlayHQ. All rights reserved.
+© 2025 SkoreHQ. All rights reserved.
 `;
 }
 

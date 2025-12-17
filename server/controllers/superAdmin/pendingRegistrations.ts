@@ -5,8 +5,8 @@ import { eq, and, or, desc, asc, sql, ilike, gte, lte, inArray } from 'drizzle-o
 import { pageParams, wrapRows } from '../../lib/pagination';
 import { sendEmail } from '../../utils/email-provider';
 
-const WELCOME_EMAIL = 'welcome@playhq.app';
-const FROM_EMAIL = 'playhq@playhq.app';
+const WELCOME_EMAIL = 'welcome@skorehq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 // Get all pending registrations across tenants
 export async function list(req: Request, res: Response) {
@@ -357,8 +357,8 @@ export async function approve(req: Request, res: Response) {
             to: updatedUser.email,
             from: FROM_EMAIL,
             subject: 'Registration Approved',
-            text: `Hi ${updatedUser.firstName},\n\nYour registration has been approved. You can now log in to your account.\n\nBest regards,\nPlayHQ Team`,
-            html: `<p>Hi ${updatedUser.firstName},</p><p>Your registration has been approved. You can now log in to your account.</p><p>Best regards,<br>PlayHQ Team</p>`
+            text: `Hi ${updatedUser.firstName},\n\nYour registration has been approved. You can now log in to your account.\n\nBest regards,\nSkoreHQ Team`,
+            html: `<p>Hi ${updatedUser.firstName},</p><p>Your registration has been approved. You can now log in to your account.</p><p>Best regards,<br>SkoreHQ Team</p>`
           });
         } catch (emailError) {
           console.error('Failed to send approval email:', emailError);
@@ -397,8 +397,8 @@ export async function approve(req: Request, res: Response) {
               to: parent.email,
               from: FROM_EMAIL,
               subject: 'Player Registration Approved',
-              text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.\n\nBest regards,\nPlayHQ Team`,
-              html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.</p><p>Best regards,<br>PlayHQ Team</p>`
+              text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.\n\nBest regards,\nSkoreHQ Team`,
+              html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} has been approved.</p><p>Best regards,<br>SkoreHQ Team</p>`
             });
           } catch (emailError) {
             console.error('Failed to send approval email:', emailError);
@@ -451,8 +451,8 @@ export async function reject(req: Request, res: Response) {
             to: updatedUser.email,
             from: FROM_EMAIL,
             subject: 'Registration Status Update',
-            text: `Hi ${updatedUser.firstName},\n\nWe regret to inform you that your registration could not be approved at this time.\n\nReason: ${reason}\n\nIf you have questions, please contact support.\n\nBest regards,\nPlayHQ Team`,
-            html: `<p>Hi ${updatedUser.firstName},</p><p>We regret to inform you that your registration could not be approved at this time.</p><p><strong>Reason:</strong> ${reason}</p><p>If you have questions, please contact support.</p><p>Best regards,<br>PlayHQ Team</p>`
+            text: `Hi ${updatedUser.firstName},\n\nWe regret to inform you that your registration could not be approved at this time.\n\nReason: ${reason}\n\nIf you have questions, please contact support.\n\nBest regards,\nSkoreHQ Team`,
+            html: `<p>Hi ${updatedUser.firstName},</p><p>We regret to inform you that your registration could not be approved at this time.</p><p><strong>Reason:</strong> ${reason}</p><p>If you have questions, please contact support.</p><p>Best regards,<br>SkoreHQ Team</p>`
           });
         } catch (emailError) {
           console.error('Failed to send rejection email:', emailError);
@@ -489,8 +489,8 @@ export async function reject(req: Request, res: Response) {
               to: parent.email,
               from: FROM_EMAIL,
               subject: 'Player Registration Status Update',
-              text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.\n\nReason: ${reason}\n\nPlease contact support if you have questions.\n\nBest regards,\nPlayHQ Team`,
-              html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.</p><p><strong>Reason:</strong> ${reason}</p><p>Please contact support if you have questions.</p><p>Best regards,<br>PlayHQ Team</p>`
+              text: `Hi ${parent.firstName},\n\nThe registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.\n\nReason: ${reason}\n\nPlease contact support if you have questions.\n\nBest regards,\nSkoreHQ Team`,
+              html: `<p>Hi ${parent.firstName},</p><p>The registration for ${updatedPlayer.firstName} ${updatedPlayer.lastName} could not be approved.</p><p><strong>Reason:</strong> ${reason}</p><p>Please contact support if you have questions.</p><p>Best regards,<br>SkoreHQ Team</p>`
             });
           } catch (emailError) {
             console.error('Failed to send rejection email:', emailError);

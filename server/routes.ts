@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const host = req.get('host') || '';
         const subdomain = host.split('.')[0];
         
-        if (subdomain && !['www', 'localhost', 'playhq', 'app'].includes(subdomain)) {
+        if (subdomain && !['www', 'localhost', 'skorehq', 'app'].includes(subdomain)) {
           const tenant = await db.query.tenants.findFirst({
             where: eq(tenants.subdomain, subdomain),
             columns: { id: true }
@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If no tenant, return platform defaults
       if (!tenantId) {
         return res.json({
-          businessName: 'PlayHQ',
+          businessName: 'SkoreHQ',
           businessLogo: undefined
         });
       }
@@ -140,14 +140,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settingsMap = new Map(settings.map(s => [s.key, s.value]));
       
       res.json({
-        businessName: settingsMap.get('businessName') || 'PlayHQ',
+        businessName: settingsMap.get('businessName') || 'SkoreHQ',
         businessLogo: settingsMap.get('businessLogo') || undefined
       });
     } catch (error) {
       // Log the error for monitoring but return defaults to keep UI functional
       console.error('❌ Branding endpoint error:', error);
       res.status(500).json({
-        businessName: 'PlayHQ',
+        businessName: 'SkoreHQ',
         businessLogo: undefined,
         error: 'Failed to load branding'
       });
@@ -980,7 +980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send email notification to support team
       try {
         const { sendHelpRequestNotification } = await import('./emailService');
-        const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@playhq.app';
+        const supportEmail = await storage.getSystemSetting('supportEmail') || 'support@skorehq.app';
         await sendHelpRequestNotification(supportEmail, {
           name: `${helpRequest.firstName} ${helpRequest.lastName}`,
           email: helpRequest.email,
@@ -1067,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get tenant info for branding
       const tenant = tenantId ? await storage.getTenant(tenantId) : null;
-      const tenantName = tenant?.displayName || tenant?.name || 'PlayHQ';
+      const tenantName = tenant?.displayName || tenant?.name || 'SkoreHQ';
 
       // Send invite email if method is email and player has email
       if (method === 'email' && player.email) {
@@ -3860,13 +3860,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             variant: 'html',
             data: {
               tenantId,
-              tenantName: tenant?.name || 'PlayHQ',
+              tenantName: tenant?.name || 'SkoreHQ',
               recipientName: email.split('@')[0], // Use email prefix as placeholder name
               recipientEmail: email,
               senderName,
               role: 'parent',
               inviteUrl,
-              customMessage: `${senderName} has invited you to join their household on ${tenant?.name || 'PlayHQ'}. As a co-parent, you'll be able to manage players and book sessions together.`,
+              customMessage: `${senderName} has invited you to join their household on ${tenant?.name || 'SkoreHQ'}. As a co-parent, you'll be able to manage players and book sessions together.`,
               tenantBranding: {
                 businessName: tenant?.businessName || tenant?.name,
                 primaryColor: tenant?.primaryColor || undefined,

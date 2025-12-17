@@ -53,7 +53,7 @@ router.get('/tenant/:tenantId/invite-codes', isAuthenticated, async (req, res) =
           recipientName: (req.query.test_email as string).split('@')[0],
           role: req.query.test_role as string,
           invitedBy: 'Admin',
-          tenantName: 'PlayHQ Demo',
+          tenantName: 'SkoreHQ Demo',
           inviteLink: `https://your-domain.com/accept-invite?token=demo-token`,
           expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         });
@@ -310,7 +310,7 @@ router.post('/admin/send-invitation', isAuthenticated, async (req, res) => {
       recipientName: email.split('@')[0], // Use email prefix as name
       role: role,
       invitedBy: 'Admin',
-      tenantName: 'PlayHQ Demo',
+      tenantName: 'SkoreHQ Demo',
       inviteLink: `https://your-domain.com/accept-invite?token=demo-token`,
       expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });

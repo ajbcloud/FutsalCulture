@@ -5,7 +5,7 @@ export default function Landing(){
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-gray-900">PlayHQ</a>
+        <a href="/" className="text-xl font-extrabold tracking-tight text-gray-900">SkoreHQ</a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#features" className="hover:opacity-80 text-gray-700">Features</a>
           <a href="#pricing" className="hover:opacity-80 text-gray-700">Pricing</a>
@@ -28,7 +28,7 @@ export default function Landing(){
           <div className="rounded-2xl shadow-lg p-6 bg-white border border-gray-200">
             <div className="aspect-video w-full bg-gray-100 rounded-xl grid place-items-center text-gray-500">
               <div className="text-center">
-                <div className="text-2xl font-semibold mb-2">PlayHQ Dashboard</div>
+                <div className="text-2xl font-semibold mb-2">SkoreHQ Dashboard</div>
                 <div className="text-sm">Manage your entire club in one place</div>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function Landing(){
       </main>
 
       <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-gray-600 flex items-center justify-between border-t border-gray-200">
-        <div>© {new Date().getFullYear()} PlayHQ</div>
+        <div>© {new Date().getFullYear()} SkoreHQ</div>
         <div className="flex gap-6">
           <a href="/terms" className="hover:text-gray-900">Terms</a>
           <a href="/privacy" className="hover:text-gray-900">Privacy</a>

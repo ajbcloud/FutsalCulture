@@ -10,65 +10,65 @@ const router = Router();
 // Email templates for different scenarios
 const emailTemplates = {
   welcome: {
-    subject: "Welcome to PlayHQ",
+    subject: "Welcome to SkoreHQ",
     getHtml: (data: any) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+        <h1 style="color: #2563eb;">Welcome to SkoreHQ!</h1>
         <p>Hi ${data.name},</p>
-        <p>Welcome to PlayHQ, the comprehensive sports club management platform.</p>
+        <p>Welcome to SkoreHQ, the comprehensive sports club management platform.</p>
         <p>We're excited to have you on board!</p>
-        <p>Best regards,<br>The PlayHQ Team</p>
+        <p>Best regards,<br>The SkoreHQ Team</p>
       </div>
     `,
-    getText: (data: any) => `Welcome to PlayHQ!\n\nHi ${data.name},\n\nWelcome to PlayHQ, the comprehensive sports club management platform.\n\nWe're excited to have you on board!\n\nBest regards,\nThe PlayHQ Team`
+    getText: (data: any) => `Welcome to SkoreHQ!\n\nHi ${data.name},\n\nWelcome to SkoreHQ, the comprehensive sports club management platform.\n\nWe're excited to have you on board!\n\nBest regards,\nThe SkoreHQ Team`
   },
   announcement: {
-    subject: "Important Update from PlayHQ",
+    subject: "Important Update from SkoreHQ",
     getHtml: (data: any) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">PlayHQ Announcement</h1>
+        <h1 style="color: #2563eb;">SkoreHQ Announcement</h1>
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           ${data.message}
         </div>
-        <p>Thank you for using PlayHQ!</p>
-        <p>The PlayHQ Team</p>
+        <p>Thank you for using SkoreHQ!</p>
+        <p>The SkoreHQ Team</p>
       </div>
     `,
-    getText: (data: any) => `PlayHQ Announcement\n\n${data.message}\n\nThank you for using PlayHQ!\nThe PlayHQ Team`
+    getText: (data: any) => `SkoreHQ Announcement\n\n${data.message}\n\nThank you for using SkoreHQ!\nThe SkoreHQ Team`
   },
   maintenance: {
-    subject: "Scheduled Maintenance - PlayHQ",
+    subject: "Scheduled Maintenance - SkoreHQ",
     getHtml: (data: any) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #f59e0b;">Scheduled Maintenance Notice</h1>
-        <p>Dear PlayHQ Users,</p>
+        <p>Dear SkoreHQ Users,</p>
         <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
           <p><strong>Maintenance Window:</strong> ${data.maintenanceWindow}</p>
           <p><strong>Expected Duration:</strong> ${data.duration}</p>
           <p><strong>Services Affected:</strong> ${data.servicesAffected}</p>
         </div>
         <p>During this time, you may experience brief interruptions in service. We apologize for any inconvenience and appreciate your patience.</p>
-        <p>For updates, visit our status page: <a href="https://playhq.app/status">https://playhq.app/status</a></p>
-        <p>Thank you,<br>The PlayHQ Team</p>
+        <p>For updates, visit our status page: <a href="https://skorehq.app/status">https://skorehq.app/status</a></p>
+        <p>Thank you,<br>The SkoreHQ Team</p>
       </div>
     `,
-    getText: (data: any) => `Scheduled Maintenance Notice\n\nDear PlayHQ Users,\n\nMaintenance Window: ${data.maintenanceWindow}\nExpected Duration: ${data.duration}\nServices Affected: ${data.servicesAffected}\n\nDuring this time, you may experience brief interruptions in service. We apologize for any inconvenience and appreciate your patience.\n\nFor updates, visit: https://playhq.app/status\n\nThank you,\nThe PlayHQ Team`
+    getText: (data: any) => `Scheduled Maintenance Notice\n\nDear SkoreHQ Users,\n\nMaintenance Window: ${data.maintenanceWindow}\nExpected Duration: ${data.duration}\nServices Affected: ${data.servicesAffected}\n\nDuring this time, you may experience brief interruptions in service. We apologize for any inconvenience and appreciate your patience.\n\nFor updates, visit: https://skorehq.app/status\n\nThank you,\nThe SkoreHQ Team`
   },
   security: {
-    subject: "Important Security Update - PlayHQ",
+    subject: "Important Security Update - SkoreHQ",
     getHtml: (data: any) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #dc2626;">Security Update Required</h1>
-        <p>Dear PlayHQ User,</p>
+        <p>Dear SkoreHQ User,</p>
         <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
           ${data.message}
         </div>
         <p>Please take action as soon as possible to ensure your account remains secure.</p>
-        <p>If you have any questions, contact our support team immediately at <a href="mailto:support@playhq.app">support@playhq.app</a></p>
-        <p>Best regards,<br>The PlayHQ Security Team</p>
+        <p>If you have any questions, contact our support team immediately at <a href="mailto:support@skorehq.app">support@skorehq.app</a></p>
+        <p>Best regards,<br>The SkoreHQ Security Team</p>
       </div>
     `,
-    getText: (data: any) => `Security Update Required\n\nDear PlayHQ User,\n\n${data.message}\n\nPlease take action as soon as possible to ensure your account remains secure.\n\nIf you have any questions, contact our support team immediately at support@playhq.app\n\nBest regards,\nThe PlayHQ Security Team`
+    getText: (data: any) => `Security Update Required\n\nDear SkoreHQ User,\n\n${data.message}\n\nPlease take action as soon as possible to ensure your account remains secure.\n\nIf you have any questions, contact our support team immediately at support@skorehq.app\n\nBest regards,\nThe SkoreHQ Security Team`
   }
 };
 
@@ -94,7 +94,7 @@ router.post("/send-email", async (req: any, res) => {
       const emailData = { ...data, customMessage };
       const result = await sendEmail({
         to: email,
-        from: 'playhq@playhq.app',
+        from: 'skorehq@skorehq.app',
         subject: subject,
         html: emailTemplate.getHtml(emailData),
         text: emailTemplate.getText(emailData)
@@ -159,7 +159,7 @@ router.post("/send-tenant-email", async (req: any, res) => {
         
         const result = await sendEmail({
           to: user.email,
-          from: 'playhq@playhq.app',
+          from: 'skorehq@skorehq.app',
           subject: subject,
           html: emailTemplate.getHtml(emailData),
           text: emailTemplate.getText(emailData)
@@ -222,7 +222,7 @@ router.post("/send-platform-email", async (req: any, res) => {
         
         const result = await sendEmail({
           to: user.email,
-          from: 'playhq@playhq.app',
+          from: 'skorehq@skorehq.app',
           subject: subject,
           html: emailTemplate.getHtml(emailData),
           text: emailTemplate.getText(emailData)

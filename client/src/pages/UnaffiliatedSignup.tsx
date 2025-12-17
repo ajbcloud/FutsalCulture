@@ -161,7 +161,7 @@ export default function UnaffiliatedSignup() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0f1629] p-4">
       <div className="w-full max-w-lg space-y-4">
         <div className="text-center space-y-2 mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Join PlayHQ</h1>
+          <h1 className="text-3xl font-bold text-foreground">Join SkoreHQ</h1>
           <p className="text-muted-foreground">
             Create your account to manage players and join clubs
           </p>
@@ -330,7 +330,7 @@ export function UnaffiliatedSignupComplete() {
           
           toast({
             title: "Account created!",
-            description: "Welcome to PlayHQ. You can now manage your household and join clubs.",
+            description: "Welcome to SkoreHQ. You can now manage your household and join clubs.",
           });
           
           navigate("/dashboard");
@@ -512,7 +512,7 @@ export function UnaffiliatedSignupComplete() {
           <div className="flex justify-center mb-4">
             <CheckCircle2 className="h-12 w-12 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Welcome to PlayHQ!</CardTitle>
+          <CardTitle className="text-2xl">Welcome to SkoreHQ!</CardTitle>
           <CardDescription>
             Your account is ready. Redirecting to your dashboard...
           </CardDescription>

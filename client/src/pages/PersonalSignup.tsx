@@ -133,7 +133,7 @@ export default function PersonalSignup() {
           <div className="flex justify-center mb-4">
             <User className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Create your PlayHQ account</CardTitle>
+          <CardTitle className="text-2xl">Create your SkoreHQ account</CardTitle>
           <CardDescription>
             Set up a personal account that you can use to join clubs later
           </CardDescription>

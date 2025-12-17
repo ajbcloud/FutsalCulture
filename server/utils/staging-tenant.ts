@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 const STAGING_TENANT_ID = 'platform-staging';
-const STAGING_TENANT_NAME = 'PlayHQ Platform';
+const STAGING_TENANT_NAME = 'SkoreHQ Platform';
 const STAGING_TENANT_SUBDOMAIN = 'platform-staging';
 
 export async function getOrCreateStagingTenant() {

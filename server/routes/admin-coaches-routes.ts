@@ -291,7 +291,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
       })
       .returning();
 
-    const baseUrl = process.env.APP_URL || 'https://playhq.app';
+    const baseUrl = process.env.APP_URL || 'https://skorehq.app';
     const joinUrl = `${baseUrl}/join-as-coach?code=${code}`;
     const tenantName = tenant.displayName || tenant.name;
     const inviterName = inviter ? `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || 'Admin' : 'Admin';
@@ -307,7 +307,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
           <h1 style="color: #1a1a1a; font-size: 24px; margin: 0 0 20px 0;">You're Invited to Join as a Coach!</h1>
           <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            ${inviterName} has invited you to join <strong>${tenantName}</strong> as a coach on PlayHQ.
+            ${inviterName} has invited you to join <strong>${tenantName}</strong> as a coach on SkoreHQ.
           </p>
           <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
             Click the button below to accept your invitation and set up your account.
@@ -322,7 +322,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
           </p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            This invitation was sent via PlayHQ. Your invite code is: <strong>${code}</strong>
+            This invitation was sent via SkoreHQ. Your invite code is: <strong>${code}</strong>
           </p>
         </div>
       </body>
@@ -334,7 +334,7 @@ router.post('/admin/coaches/invite', requireAdmin, async (req: any, res: Respons
       to: email,
       subject: `You're invited to join ${tenantName} as a coach`,
       html: emailHtml,
-      text: `${inviterName} has invited you to join ${tenantName} as a coach on PlayHQ. Visit ${joinUrl} to accept your invitation.`,
+      text: `${inviterName} has invited you to join ${tenantName} as a coach on SkoreHQ. Visit ${joinUrl} to accept your invitation.`,
     });
     console.log('[Coach Invite] Email result:', emailResult);
 
@@ -778,7 +778,7 @@ router.get('/coach/calendar/ics', async (req: any, res: Response) => {
         .replace(/\n/g, '\\n');
     };
 
-    let icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//PlayHQ//Coach Sessions//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n`;
+    let icsContent = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//SkoreHQ//Coach Sessions//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n`;
 
     for (const { session } of sessionAssignments) {
       const startDate = new Date(session.startTime);
@@ -800,7 +800,7 @@ router.get('/coach/calendar/ics', async (req: any, res: Response) => {
       const description = escapeICSText(descriptionParts.join('\\n'));
 
       icsContent += `BEGIN:VEVENT\r\n`;
-      icsContent += `UID:${session.id}@playhq.com\r\n`;
+      icsContent += `UID:${session.id}@skorehq.com\r\n`;
       icsContent += `DTSTART:${formatDateToICS(startDate)}\r\n`;
       icsContent += `DTEND:${formatDateToICS(endDate)}\r\n`;
       icsContent += `SUMMARY:${escapeICSText(session.title)}\r\n`;

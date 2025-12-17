@@ -83,10 +83,10 @@ export class SimplePDFGeneratorService {
 
     // Default settings with fallbacks
     return {
-      businessName: settingsMap.businessName || "PlayHQ",
+      businessName: settingsMap.businessName || "SkoreHQ",
       businessLogo: settingsMap.businessLogo || "",
-      contactEmail: settingsMap.contactEmail || "admin@playhq.app",
-      supportEmail: settingsMap.supportEmail || "support@playhq.app",
+      contactEmail: settingsMap.contactEmail || "admin@skorehq.app",
+      supportEmail: settingsMap.supportEmail || "support@skorehq.app",
       supportPhone: settingsMap.supportPhone || "(555) 123-GOAL",
       supportHours: settingsMap.supportHours || "Monday - Friday",
       supportLocation: settingsMap.supportLocation || "South Florida",

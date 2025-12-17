@@ -11,7 +11,7 @@ export default function GetStarted() {
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center space-y-2 mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-            Welcome to PlayHQ
+            Welcome to SkoreHQ
           </h1>
           <p className="text-muted-foreground text-lg">
             How would you like to get started?

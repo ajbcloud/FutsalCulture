@@ -28,9 +28,9 @@ router.post('/test/email', async (req, res) => {
         to,
         tenantName: 'Test Organization',
         recipientName: 'Test User',
-        senderName: 'PlayHQ Team',
+        senderName: 'SkoreHQ Team',
         role: 'parent',
-        inviteUrl: 'https://playhq.app/test-invite',
+        inviteUrl: 'https://skorehq.app/test-invite',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
     }
@@ -69,9 +69,9 @@ router.post('/test/sms', async (req, res) => {
         to,
         tenantName: 'Test Organization',
         recipientName: 'Test User',
-        senderName: 'PlayHQ Team',
+        senderName: 'SkoreHQ Team',
         role: 'parent',
-        inviteUrl: 'https://playhq.app/test-invite',
+        inviteUrl: 'https://skorehq.app/test-invite',
         expiresAt: 'December 31, 2024 at 11:59 PM'
       });
 

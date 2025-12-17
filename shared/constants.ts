@@ -1,4 +1,4 @@
-// Shared constants for the PlayHQ application
+// Shared constants for the SkoreHQ application
 
 export const AGE_GROUPS = ['U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U18'] as const;
 

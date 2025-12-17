@@ -37,7 +37,7 @@ export async function getResendClient() {
   const { apiKey, fromEmail } = await getCredentials();
   return {
     client: new Resend(apiKey),
-    fromEmail: fromEmail || 'playhq@playhq.app'
+    fromEmail: fromEmail || 'skorehq@skorehq.app'
   };
 }
 
@@ -51,5 +51,5 @@ export async function isResendConfigured(): Promise<boolean> {
 }
 
 export function getResendFromEmail(): string {
-  return connectionSettings?.settings?.from_email || 'playhq@playhq.app';
+  return connectionSettings?.settings?.from_email || 'skorehq@skorehq.app';
 }

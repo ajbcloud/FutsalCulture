@@ -39,7 +39,7 @@ export async function sendEmailViaSendGrid(options: {
   try {
     const msg: any = {
       to: options.to,
-      from: options.from || process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app',
+      from: options.from || process.env.SENDGRID_FROM_EMAIL || 'skorehq@skorehq.app',
       subject: options.subject,
     };
     
@@ -111,7 +111,7 @@ export async function sendBatchEmails(messages: Array<{
       // Convert to SendGrid format
       const sgMessages = batch.map(msg => ({
         ...msg,
-        from: msg.from || process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app',
+        from: msg.from || process.env.SENDGRID_FROM_EMAIL || 'skorehq@skorehq.app',
         trackingSettings: {
           clickTracking: { enable: true },
           openTracking: { enable: true },
@@ -152,7 +152,7 @@ export async function verifySendGridConfig(): Promise<{
   error?: string;
 }> {
   const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'playhq@playhq.app';
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'skorehq@skorehq.app';
   
   if (!apiKey) {
     return {

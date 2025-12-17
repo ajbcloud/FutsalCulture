@@ -9,11 +9,11 @@ import { trialManager } from './trial-management';
 import * as communicationsController from './controllers/superAdmin/communications';
 
 // Super admin email for authentication
-const SUPER_ADMIN_EMAIL = "admin@playhq.app";
+const SUPER_ADMIN_EMAIL = "admin@skorehq.app";
 
 // Email from addresses
-const WELCOME_EMAIL = 'welcome@playhq.app';
-const FROM_EMAIL = 'playhq@playhq.app';
+const WELCOME_EMAIL = 'welcome@skorehq.app';
+const FROM_EMAIL = 'skorehq@skorehq.app';
 
 // Store active impersonation sessions in memory (in production, use Redis or DB)
 const impersonationSessions = new Map<string, {
@@ -135,23 +135,23 @@ export function setupSuperAdminRoutes(app: Express) {
       // Send welcome email if requested
       if (sendWelcomeEmail) {
         const app_url = process.env.NODE_ENV === 'production' 
-          ? 'https://playhq.app' 
+          ? 'https://skorehq.app' 
           : (process.env.REPLIT_APP_URL || 'http://localhost:3000');
         const link = `${app_url}/set-password?token=${encodeURIComponent(raw)}`;
         
         await sendEmail({
           to: adminEmail,
           from: FROM_EMAIL,
-          subject: "Welcome to PlayHQ - Your Organization is Ready",
+          subject: "Welcome to SkoreHQ - Your Organization is Ready",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h1 style="color: #2563eb;">Welcome to PlayHQ!</h1>
+              <h1 style="color: #2563eb;">Welcome to SkoreHQ!</h1>
               <p>Hi ${firstName},</p>
-              <p>Your organization <strong>${name}</strong> has been created on PlayHQ by a Super Admin.</p>
+              <p>Your organization <strong>${name}</strong> has been created on SkoreHQ by a Super Admin.</p>
               <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3>Your Organization Details:</h3>
                 <p><strong>Organization Name:</strong> ${name}</p>
-                <p><strong>URL:</strong> https://${subdomain}.playhq.app</p>
+                <p><strong>URL:</strong> https://${subdomain}.skorehq.app</p>
                 <p><strong>Plan:</strong> ${plan === 'free' ? 'Free' : plan === 'core' ? 'Core (14-day Trial)' : plan}</p>
                 ${autoApprove ? '<p><strong>Status:</strong> Active</p>' : '<p><strong>Status:</strong> Pending Approval</p>'}
               </div>
@@ -162,10 +162,10 @@ export function setupSuperAdminRoutes(app: Express) {
                 </a>
               </p>
               <p>This link will expire in 48 hours.</p>
-              <p>Best regards,<br>The PlayHQ Team</p>
+              <p>Best regards,<br>The SkoreHQ Team</p>
             </div>
           `,
-          text: `Welcome to PlayHQ! Your organization ${name} has been created. Set your password: ${link}`,
+          text: `Welcome to SkoreHQ! Your organization ${name} has been created. Set your password: ${link}`,
         }).catch(err => console.error('Failed to send welcome email:', err));
       }
       
@@ -270,20 +270,20 @@ export function setupSuperAdminRoutes(app: Express) {
         await sendEmail({
           to: adminUser.email,
           from: FROM_EMAIL,
-          subject: "Your PlayHQ Organization Has Been Approved!",
+          subject: "Your SkoreHQ Organization Has Been Approved!",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h1 style="color: #2563eb;">Great News - You're Approved!</h1>
               <p>Hi ${adminUser.firstName || 'there'},</p>
-              <p>Your organization <strong>${tenant.name}</strong> has been approved and is now active on PlayHQ!</p>
+              <p>Your organization <strong>${tenant.name}</strong> has been approved and is now active on SkoreHQ!</p>
               <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0;">
                 <h3 style="color: #22c55e; margin-top: 0;">✓ Application Approved</h3>
-                <p>Your 14-day trial has started. You now have full access to all PlayHQ features.</p>
+                <p>Your 14-day trial has started. You now have full access to all SkoreHQ features.</p>
               </div>
               <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3>Your Organization Details:</h3>
                 <p><strong>Organization:</strong> ${tenant.name}</p>
-                <p><strong>URL:</strong> https://${tenant.subdomain}.playhq.app</p>
+                <p><strong>URL:</strong> https://${tenant.subdomain}.skorehq.app</p>
                 <p><strong>Trial Ends:</strong> ${new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
               </div>
               <h3>Get Started:</h3>
@@ -294,16 +294,16 @@ export function setupSuperAdminRoutes(app: Express) {
                 <li>Customize your organization settings</li>
               </ol>
               <p style="margin-top: 30px;">
-                <a href="https://playhq.app/login" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                <a href="https://skorehq.app/login" style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
                   Go to Dashboard →
                 </a>
               </p>
-              <p>If you have any questions, we're here to help at <a href="mailto:support@playhq.app">support@playhq.app</a></p>
+              <p>If you have any questions, we're here to help at <a href="mailto:support@skorehq.app">support@skorehq.app</a></p>
               <p>Welcome aboard!</p>
-              <p>The PlayHQ Team</p>
+              <p>The SkoreHQ Team</p>
             </div>
           `,
-          text: `Your organization ${tenant.name} has been approved! Your 14-day trial has started. Login at https://playhq.app to get started.`,
+          text: `Your organization ${tenant.name} has been approved! Your 14-day trial has started. Login at https://skorehq.app to get started.`,
         }).catch(err => console.error('Failed to send approval email:', err));
       }
       
@@ -356,22 +356,22 @@ export function setupSuperAdminRoutes(app: Express) {
         await sendEmail({
           to: adminUser.email,
           from: FROM_EMAIL,
-          subject: "Update on Your PlayHQ Application",
+          subject: "Update on Your SkoreHQ Application",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h1 style="color: #2563eb;">Application Update</h1>
               <p>Hi ${adminUser.firstName || 'there'},</p>
-              <p>Thank you for your interest in PlayHQ.</p>
+              <p>Thank you for your interest in SkoreHQ.</p>
               <p>After reviewing your application for <strong>${tenant.name}</strong>, we regret to inform you that we're unable to approve it at this time.</p>
               <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0;">
                 <p style="margin: 0;"><strong>Reason:</strong> ${reason}</p>
               </div>
-              <p>If you believe this decision was made in error or if you'd like to discuss your application, please don't hesitate to contact us at <a href="mailto:support@playhq.app">support@playhq.app</a>.</p>
+              <p>If you believe this decision was made in error or if you'd like to discuss your application, please don't hesitate to contact us at <a href="mailto:support@skorehq.app">support@skorehq.app</a>.</p>
               <p>We appreciate your understanding and wish you the best in finding a solution that meets your needs.</p>
-              <p>Best regards,<br>The PlayHQ Team</p>
+              <p>Best regards,<br>The SkoreHQ Team</p>
             </div>
           `,
-          text: `Your PlayHQ application for ${tenant.name} was not approved. Reason: ${reason}. Contact support@playhq.app if you have questions.`,
+          text: `Your SkoreHQ application for ${tenant.name} was not approved. Reason: ${reason}. Contact support@skorehq.app if you have questions.`,
         }).catch(err => console.error('Failed to send rejection email:', err));
       }
       
@@ -697,7 +697,7 @@ export function setupSuperAdminRoutes(app: Express) {
         'CA': [
           {
             tenantId: '1',
-            tenantName: 'PlayHQ',
+            tenantName: 'SkoreHQ',
             planLevel: 'elite',
             state: 'CA',
             createdAt: '2024-01-15T00:00:00Z',
@@ -1150,9 +1150,9 @@ export function setupSuperAdminRoutes(app: Express) {
         email: {
           provider: 'Resend',
           configured: emailConfigured,
-          senderEmail: 'playhq@playhq.app',
-          senderName: 'PlayHQ',
-          replyTo: 'support@playhq.app',
+          senderEmail: 'skorehq@skorehq.app',
+          senderName: 'SkoreHQ',
+          replyTo: 'support@skorehq.app',
           templates: {
             welcome: true,
             booking: true,

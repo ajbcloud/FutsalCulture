@@ -21,7 +21,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     refetchOnWindowFocus: false,
   });
 
-  const businessName = branding?.businessName || 'PlayHQ';
+  const businessName = branding?.businessName || 'SkoreHQ';
   const businessLogo = branding?.businessLogo;
 
   return (

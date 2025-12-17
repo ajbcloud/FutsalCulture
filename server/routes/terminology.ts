@@ -9,7 +9,7 @@ import { getTerminologyLabels } from "../../shared/utils/terminology";
 export const terminologyRouter = Router();
 
 // Platform-controlled domains for tenant resolution
-const PLATFORM_DOMAINS = ['playhq.com', 'localhost', 'replit.dev', 'replit.app'];
+const PLATFORM_DOMAINS = ['skorehq.com', 'localhost', 'replit.dev', 'replit.app'];
 
 // Helper function to extract subdomain from hostname
 function extractSubdomain(hostname: string): string | null {
@@ -57,8 +57,8 @@ terminologyRouter.get("/terminology/user-term", async (req: any, res) => {
       
       // Check if this is a platform domain (require segment boundaries)
       const isPlatformDomain = PLATFORM_DOMAINS.some(domain => 
-        hostname === domain ||                    // Exact match: "playhq.com"
-        hostname.endsWith(`.${domain}`)          // Subdomain match: "tenant.playhq.com"
+        hostname === domain ||                    // Exact match: "skorehq.com"
+        hostname.endsWith(`.${domain}`)          // Subdomain match: "tenant.skorehq.com"
       );
       
       let tenant;

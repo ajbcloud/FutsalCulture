@@ -1,6 +1,6 @@
 import { sendEmail as sendEmailViaProvider, sendBulkEmail as sendBulkViaProvider, isEmailConfigured, EmailMessage } from './utils/email-provider';
 
-const DEFAULT_FROM_EMAIL = 'playhq@playhq.app';
+const DEFAULT_FROM_EMAIL = 'skorehq@skorehq.app';
 
 export async function initEmail() {
   const configured = await isEmailConfigured();

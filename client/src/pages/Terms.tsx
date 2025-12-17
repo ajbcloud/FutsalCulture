@@ -3,7 +3,7 @@ export default function Terms() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between border-b border-border">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">PlayHQ</a>
+        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">SkoreHQ</a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="/" className="hover:opacity-80 text-muted-foreground hover:text-foreground">Home</a>
           <a href="/login" className="rounded-xl px-4 py-2 border border-border hover:bg-accent text-foreground">Log in</a>
@@ -21,14 +21,14 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">1. Agreement to Terms</h2>
             <p className="text-muted-foreground mb-4">
-              By accessing and using PlayHQ ("Service," "Platform," "we," "us," or "our"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using SkoreHQ ("Service," "Platform," "we," "us," or "our"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">2. Description of Service</h2>
             <p className="text-muted-foreground mb-4">
-              PlayHQ is a comprehensive sports club management platform that provides:
+              SkoreHQ is a comprehensive sports club management platform that provides:
             </p>
             <ul className="list-disc list-inside text-muted-foreground mb-4 space-y-1">
               <li>Session scheduling and booking management</li>
@@ -87,7 +87,7 @@ export default function Terms() {
             
             <h3 className="text-xl font-medium mb-3 text-foreground">5.1 Permitted Uses</h3>
             <p className="text-muted-foreground mb-4">
-              You may use PlayHQ only for lawful purposes and in accordance with these Terms. The Service is intended for sports club management and related activities.
+              You may use SkoreHQ only for lawful purposes and in accordance with these Terms. The Service is intended for sports club management and related activities.
             </p>
 
             <h3 className="text-xl font-medium mb-3 text-foreground">5.2 Prohibited Activities</h3>
@@ -108,12 +108,12 @@ export default function Terms() {
             
             <h3 className="text-xl font-medium mb-3 text-foreground">6.1 Your Content</h3>
             <p className="text-muted-foreground mb-4">
-              You retain ownership of any content you submit to PlayHQ. By submitting content, you grant us a license to use, store, and display such content as necessary to provide the Service.
+              You retain ownership of any content you submit to SkoreHQ. By submitting content, you grant us a license to use, store, and display such content as necessary to provide the Service.
             </p>
 
             <h3 className="text-xl font-medium mb-3 text-foreground">6.2 Our Intellectual Property</h3>
             <p className="text-muted-foreground mb-4">
-              The PlayHQ platform, including its design, features, and underlying technology, is protected by intellectual property laws. You may not copy, modify, or create derivative works without permission.
+              The SkoreHQ platform, including its design, features, and underlying technology, is protected by intellectual property laws. You may not copy, modify, or create derivative works without permission.
             </p>
           </section>
 
@@ -129,7 +129,7 @@ export default function Terms() {
             
             <h3 className="text-xl font-medium mb-3 text-foreground">8.1 Sports Participation Risks</h3>
             <p className="text-muted-foreground mb-4">
-              Sports activities involve inherent risks. PlayHQ is a management platform only and does not assume responsibility for injuries or incidents during sports activities. Participants and parents acknowledge these risks.
+              Sports activities involve inherent risks. SkoreHQ is a management platform only and does not assume responsibility for injuries or incidents during sports activities. Participants and parents acknowledge these risks.
             </p>
 
             <h3 className="text-xl font-medium mb-3 text-foreground">8.2 Medical Information</h3>
@@ -148,7 +148,7 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">10. Indemnification</h2>
             <p className="text-muted-foreground mb-4">
-              You agree to defend, indemnify, and hold harmless PlayHQ from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use of the Service or violation of these Terms.
+              You agree to defend, indemnify, and hold harmless SkoreHQ from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use of the Service or violation of these Terms.
             </p>
           </section>
 
@@ -176,7 +176,7 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">13. Dispute Resolution</h2>
             <p className="text-muted-foreground mb-4">
-              Any disputes arising from these Terms or your use of PlayHQ shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.
+              Any disputes arising from these Terms or your use of SkoreHQ shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.
             </p>
           </section>
 
@@ -208,8 +208,8 @@ export default function Terms() {
             </p>
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-muted-foreground">
-                <strong>Email:</strong> legal@playhq.app<br />
-                <strong>Support:</strong> support@playhq.app<br />
+                <strong>Email:</strong> legal@skorehq.app<br />
+                <strong>Support:</strong> support@skorehq.app<br />
                 <strong>Address:</strong> [Your Business Address]
               </p>
             </div>
@@ -218,14 +218,14 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-foreground">18. Entire Agreement</h2>
             <p className="text-muted-foreground mb-4">
-              These Terms, together with our Privacy Policy, constitute the entire agreement between you and PlayHQ regarding the use of the Service.
+              These Terms, together with our Privacy Policy, constitute the entire agreement between you and SkoreHQ regarding the use of the Service.
             </p>
           </section>
         </div>
       </main>
 
       <footer className="mx-auto w-full max-w-6xl px-6 py-10 text-sm text-muted-foreground flex items-center justify-between border-t border-border">
-        <div>© {new Date().getFullYear()} PlayHQ</div>
+        <div>© {new Date().getFullYear()} SkoreHQ</div>
         <div className="flex gap-6">
           <a href="/terms" className="hover:text-foreground">Terms</a>
           <a href="/privacy" className="hover:text-foreground">Privacy</a>

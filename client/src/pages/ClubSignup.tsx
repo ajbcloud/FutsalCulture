@@ -27,7 +27,7 @@ export default function ClubSignup() {
             Create Your Club
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Sign up to get started with PlayHQ
+            Sign up to get started with SkoreHQ
           </p>
         </div>
         

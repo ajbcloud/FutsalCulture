@@ -174,7 +174,7 @@ export default function AdminHelpRequests() {
     enabled: !!user,
   });
 
-  // Personal request to PlayHQ mutation
+  // Personal request to SkoreHQ mutation
   const personalRequestMutation = useMutation({
     mutationFn: async (data: PersonalRequest) => {
       // Set priority based on user's subscription level
@@ -189,7 +189,7 @@ export default function AdminHelpRequests() {
       personalRequestForm.reset();
       toast({
         title: "Message sent successfully!",
-        description: "Your request has been submitted to PlayHQ support.",
+        description: "Your request has been submitted to SkoreHQ support.",
       });
     },
     onError: () => {
@@ -486,7 +486,7 @@ export default function AdminHelpRequests() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
-              Manage parent/player requests, communicate with PlayHQ, and track feature requests
+              Manage parent/player requests, communicate with SkoreHQ, and track feature requests
             </p>
           </div>
         </div>
@@ -500,8 +500,8 @@ export default function AdminHelpRequests() {
             </TabsTrigger>
             <TabsTrigger value="personal-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">PlayHQ</span>
-              <span className="sm:hidden">PlayHQ</span>
+              <span className="hidden sm:inline">SkoreHQ</span>
+              <span className="sm:hidden">SkoreHQ</span>
             </TabsTrigger>
             <TabsTrigger value="feature-requests" className="flex items-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1037,7 +1037,7 @@ export default function AdminHelpRequests() {
       </Dialog>
           </TabsContent>
 
-          {/* Tab 2: PlayHQ - Personal Requests & View Past Requests */}
+          {/* Tab 2: SkoreHQ - Personal Requests & View Past Requests */}
           <TabsContent value="personal-requests" className="space-y-6">
             
             {/* Section 1: View Past Requests */}
@@ -1045,10 +1045,10 @@ export default function AdminHelpRequests() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  My PlayHQ Requests
+                  My SkoreHQ Requests
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  View and track your submitted requests to PlayHQ support.
+                  View and track your submitted requests to SkoreHQ support.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1059,9 +1059,9 @@ export default function AdminHelpRequests() {
                 ) : !myHelpRequests || myHelpRequests.length === 0 ? (
                   <div className="text-center py-8">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">No PlayHQ requests found</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-2">No SkoreHQ requests found</h3>
                     <p className="text-sm text-muted-foreground">
-                      You haven't submitted any requests to PlayHQ yet. Use the form below to submit a new request.
+                      You haven't submitted any requests to SkoreHQ yet. Use the form below to submit a new request.
                     </p>
                   </div>
                 ) : (
@@ -1153,10 +1153,10 @@ export default function AdminHelpRequests() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="h-5 w-5" />
-                  Submit New Request to PlayHQ
+                  Submit New Request to SkoreHQ
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Send a direct message to PlayHQ support for personal assistance with your account or business needs.
+                  Send a direct message to SkoreHQ support for personal assistance with your account or business needs.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1315,7 +1315,7 @@ export default function AdminHelpRequests() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Phone className="h-4 w-4" />
-                            <span>Direct phone line: 1-800-PLAYHQ-1</span>
+                            <span>Direct phone line: 1-800-SKOREHQ</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4" />

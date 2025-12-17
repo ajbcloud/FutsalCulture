@@ -16,7 +16,7 @@ export default function Status() {
   // Mock data - in a real app, you'd fetch this from an API
   const services: ServiceStatus[] = [
     {
-      name: "PlayHQ Platform",
+      name: "SkoreHQ Platform",
       status: "operational",
       description: "All systems operational",
       lastChecked: new Date().toISOString()
@@ -78,9 +78,9 @@ export default function Status() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-text mb-4">PlayHQ Status</h1>
+          <h1 className="text-4xl font-bold text-text mb-4">SkoreHQ Status</h1>
           <p className="text-xl text-text-muted">
-            Current status and uptime for all PlayHQ services
+            Current status and uptime for all SkoreHQ services
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export default function Status() {
           </CardHeader>
           <CardContent>
             <p className="text-text-muted">
-              All PlayHQ services are running smoothly. No incidents reported.
+              All SkoreHQ services are running smoothly. No incidents reported.
             </p>
             <p className="text-sm text-text-subtle mt-2">
               Last updated: {new Date().toLocaleString()}
@@ -135,8 +135,8 @@ export default function Status() {
         <div className="mt-12 text-center">
           <p className="text-text-muted">
             Having issues? Contact our support team at{" "}
-            <a href="mailto:support@playhq.app" className="text-link hover:text-link-hover">
-              support@playhq.app
+            <a href="mailto:support@skorehq.app" className="text-link hover:text-link-hover">
+              support@skorehq.app
             </a>
           </p>
         </div>

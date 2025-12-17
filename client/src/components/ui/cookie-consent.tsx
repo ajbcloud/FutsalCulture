@@ -21,7 +21,7 @@ interface CookieConsent {
   timestamp: number;
 }
 
-const STORAGE_KEY = "playhq-cookie-consent";
+const STORAGE_KEY = "skorehq-cookie-consent";
 
 export default function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);

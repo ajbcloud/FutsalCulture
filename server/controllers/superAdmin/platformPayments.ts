@@ -29,7 +29,7 @@ export async function list(req: Request, res: Response) {
     },
     { 
       id: 'qit_pay_002', 
-      tenant: 'PlayHQ', 
+      tenant: 'SkoreHQ', 
       adminName: 'Atticus Brind',
       planLevel: 'Core Plan',
       gateway: 'braintree', 

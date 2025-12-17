@@ -497,7 +497,7 @@ export default function SuperAdminTenants() {
                   data-testid="input-tenant-subdomain"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Will be accessible at: {newTenant.subdomain || 'subdomain'}.playhq.app
+                  Will be accessible at: {newTenant.subdomain || 'subdomain'}.skorehq.app
                 </p>
               </div>
               <div>
@@ -669,7 +669,7 @@ export default function SuperAdminTenants() {
               <div key={tenant.id} className="grid grid-cols-13 gap-4 p-4 border-b last:border-b-0 hover:bg-muted/25">
                 <div className="col-span-3">
                   <div className="font-medium">{tenant.name}</div>
-                  <div className="text-sm text-muted-foreground">{tenant.subdomain}.playhq.app</div>
+                  <div className="text-sm text-muted-foreground">{tenant.subdomain}.skorehq.app</div>
                 </div>
                 <div className="col-span-2">
                   <div className="font-mono text-sm text-muted-foreground">{tenant.id}</div>

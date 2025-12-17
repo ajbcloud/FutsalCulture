@@ -12,7 +12,7 @@ import { BusinessProvider } from "@/contexts/BusinessContext";
 import ErrorBoundary from "@/components/error-boundary";
 import CookieConsentBanner from "@/components/ui/cookie-consent";
 import { TrialStatusIndicator } from "@/components/trial-status-indicator";
-import HomePlayHQ from "@/pages/HomePlayHQ";
+import HomeSkoreHQ from "@/pages/HomeSkoreHQ";
 import FutsalLanding from "@/pages/FutsalLanding";
 import Sessions from "@/pages/sessions";
 import SessionDetail from "@/pages/session-detail";
@@ -94,7 +94,7 @@ function Router() {
   return (
     <div className="bg-background text-foreground min-h-screen">
       <Switch>
-        <Route path="/" component={HomePlayHQ} />
+        <Route path="/" component={HomeSkoreHQ} />
         <Route path="/landing" component={FutsalLanding} />
         <Route path="/app" component={Dashboard} />
         <Route path="/get-started" component={GetStarted} />

@@ -263,8 +263,8 @@ export default function Help() {
             <h1 className="text-4xl font-bold mb-4">Get Help</h1>
             <p className="text-muted-foreground text-lg">
               {hasClubContact 
-                ? `Need assistance with ${tenantInfo?.name || 'your club'} or the PlayHQ platform? We're here to help!`
-                : "Need assistance with PlayHQ or your sports organization management? We're here to help!"
+                ? `Need assistance with ${tenantInfo?.name || 'your club'} or the SkoreHQ platform? We're here to help!`
+                : "Need assistance with SkoreHQ or your sports organization management? We're here to help!"
               }
             </p>
           </div>
@@ -583,13 +583,13 @@ export default function Help() {
               </Card>
             )}
             
-            {/* PlayHQ Platform Support - Always shown, secondary when club contact exists */}
+            {/* SkoreHQ Platform Support - Always shown, secondary when club contact exists */}
             <Card className={`bg-card border ${hasClubContact ? 'border-border' : 'border-blue-500/30'}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-green-400" />
                   <CardTitle className="text-foreground text-xl">
-                    {hasClubContact ? 'PlayHQ Platform Support' : 'Contact Information'}
+                    {hasClubContact ? 'SkoreHQ Platform Support' : 'Contact Information'}
                   </CardTitle>
                 </div>
                 {hasClubContact && (
@@ -603,8 +603,8 @@ export default function Help() {
                   <Mail className="w-5 h-5 text-blue-400" />
                   <div>
                     <p className="text-foreground font-medium">Email</p>
-                    <a href="mailto:support@playhq.app" className="text-blue-400 hover:underline">
-                      support@playhq.app
+                    <a href="mailto:support@skorehq.app" className="text-blue-400 hover:underline">
+                      support@skorehq.app
                     </a>
                   </div>
                 </div>
@@ -641,28 +641,28 @@ export default function Help() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="text-foreground font-medium mb-2">What is PlayHQ?</h4>
-                  <p className="text-muted-foreground text-sm">PlayHQ is a comprehensive sports management platform that helps organizations manage sessions, players, payments, and communications all in one place.</p>
+                  <h4 className="text-foreground font-medium mb-2">What is SkoreHQ?</h4>
+                  <p className="text-muted-foreground text-sm">SkoreHQ is a comprehensive sports management platform that helps organizations manage sessions, players, payments, and communications all in one place.</p>
                 </div>
                 
                 <div>
                   <h4 className="text-foreground font-medium mb-2">How do I access my organization's portal?</h4>
-                  <p className="text-muted-foreground text-sm">Each organization on PlayHQ has its own custom portal. Your organization admin will provide you with the specific access link.</p>
+                  <p className="text-muted-foreground text-sm">Each organization on SkoreHQ has its own custom portal. Your organization admin will provide you with the specific access link.</p>
                 </div>
                 
                 <div>
                   <h4 className="text-foreground font-medium mb-2">Can I manage multiple organizations?</h4>
-                  <p className="text-muted-foreground text-sm">Yes! PlayHQ supports multi-tenant management, allowing you to oversee multiple sports organizations from a single platform.</p>
+                  <p className="text-muted-foreground text-sm">Yes! SkoreHQ supports multi-tenant management, allowing you to oversee multiple sports organizations from a single platform.</p>
                 </div>
                 
                 <div>
                   <h4 className="text-foreground font-medium mb-2">What payment methods are supported?</h4>
-                  <p className="text-muted-foreground text-sm">PlayHQ integrates with Braintree to support all major credit cards, digital wallets, and secure payment processing.</p>
+                  <p className="text-muted-foreground text-sm">SkoreHQ integrates with Braintree to support all major credit cards, digital wallets, and secure payment processing.</p>
                 </div>
                 
                 <div>
                   <h4 className="text-foreground font-medium mb-2">Is my data secure?</h4>
-                  <p className="text-muted-foreground text-sm">Absolutely. PlayHQ uses enterprise-grade security with SSL encryption, secure authentication, and regular security audits to protect your data.</p>
+                  <p className="text-muted-foreground text-sm">Absolutely. SkoreHQ uses enterprise-grade security with SSL encryption, secure authentication, and regular security audits to protect your data.</p>
                 </div>
               </CardContent>
             </Card>

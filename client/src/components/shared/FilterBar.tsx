@@ -75,7 +75,7 @@ export default function FilterBar({
                 <SelectContent>
                   <SelectItem value="all">All Tenants</SelectItem>
                   <SelectItem value="elite-footwork">Elite Footwork Academy</SelectItem>
-                  <SelectItem value="playhq">PlayHQ</SelectItem>
+                  <SelectItem value="skorehq">SkoreHQ</SelectItem>
                   <SelectItem value="metro-futsal">Metro Futsal</SelectItem>
                 </SelectContent>
               </Select>

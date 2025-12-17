@@ -117,11 +117,11 @@ router.post('/', requireAdmin, async (req: any, res) => {
           if (validatedData.type === 'email') {
             await sendInvitationEmail({
               to: invitation.recipientEmail,
-              tenantName: 'PlayHQ',
+              tenantName: 'SkoreHQ',
               recipientName: invitation.recipientName || 'User',
               senderName: 'Admin',
               role: invitation.role as any,
-              inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
+              inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://skorehq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
               expiresAt: new Date(invitation.expiresAt)
             });
             
@@ -197,11 +197,11 @@ router.post('/', requireAdmin, async (req: any, res) => {
       if (validatedData.type === 'email') {
         await sendInvitationEmail({
           to: invitation.recipientEmail,
-          tenantName: 'PlayHQ',
+          tenantName: 'SkoreHQ',
           recipientName: invitation.recipientName || 'User',
           senderName: 'Admin',
           role: invitation.role as any,
-          inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://playhq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
+          inviteUrl: `${process.env.NODE_ENV === 'production' ? 'https://skorehq.app' : (process.env.REPLIT_APP_URL || 'http://localhost:5000')}/accept-invite?token=${invitation.token}`,
           expiresAt: new Date(invitation.expiresAt)
         });
         
@@ -221,7 +221,7 @@ router.post('/', requireAdmin, async (req: any, res) => {
         });
 
       const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://playhq.app' 
+      ? 'https://skorehq.app' 
       : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
       
       res.status(201).json({
@@ -377,7 +377,7 @@ router.get('/:id', requireAdmin, async (req: any, res) => {
       .orderBy(desc(invitationAnalytics.createdAt));
 
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://playhq.app' 
+      ? 'https://skorehq.app' 
       : (process.env.REPLIT_APP_URL || 'https://8726fb33-956e-4063-81a8-0b67be518e51-00-1v16mgios7gh8.riker.replit.dev');
 
     res.json({

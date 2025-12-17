@@ -607,7 +607,7 @@ export default function SuperAdminSettings() {
                           subdomains: { ...localPolicies.subdomains, baseDomain: e.target.value }
                         });
                       }}
-                      placeholder="tenants.playhq.app"
+                      placeholder="tenants.skorehq.app"
                       disabled={!localPolicies.subdomains.enabled}
                     />
                     <div className="flex gap-2">

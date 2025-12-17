@@ -200,14 +200,14 @@ export async function verifyEmailConfig(): Promise<{
     return {
       configured: false,
       provider: 'none',
-      fromEmail: 'playhq@playhq.app',
+      fromEmail: 'skorehq@skorehq.app',
       error: 'No email provider configured'
     };
   } catch (error: any) {
     return {
       configured: false,
       provider: 'none',
-      fromEmail: 'playhq@playhq.app',
+      fromEmail: 'skorehq@skorehq.app',
       error: error.message || 'Failed to verify email configuration'
     };
   }

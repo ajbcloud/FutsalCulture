@@ -53,8 +53,8 @@ const app = express();
 // CORS configuration for production domain
 app.use((req, res, next) => {
   const allowedOrigins = [
-    'https://playhq.app',
-    'https://www.playhq.app',
+    'https://skorehq.app',
+    'https://www.skorehq.app',
     'http://localhost:5000',
     'http://localhost:5173'
   ];
@@ -217,7 +217,7 @@ app.use((req, res, next) => {
   
   server.listen(port, host, () => {
     if (process.env.NODE_ENV === 'production') {
-      console.log(`PlayHQ server running on http://${host}:${port}`);
+      console.log(`SkoreHQ server running on http://${host}:${port}`);
     } else {
       log(`serving on http://${host}:${port}`);
     }

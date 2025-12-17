@@ -79,7 +79,7 @@ export async function buildNotificationVariables(
  *     playerName: 'Jane Doe',
  *     sessionDate: '2025-10-15',
  *     sessionTime: '3:00 PM',
- *     organizationName: 'PlayHQ Academy'
+ *     organizationName: 'SkoreHQ Academy'
  *   },
  *   storage,
  *   tenantId,

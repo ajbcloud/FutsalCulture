@@ -3072,8 +3072,8 @@ export class DatabaseStorage implements IStorage {
   async getSuperAdminSettings(): Promise<any> {
     return {
       general: {
-        platformName: 'PlayHQ',
-        supportEmail: 'support@playhq.app',
+        platformName: 'SkoreHQ',
+        supportEmail: 'support@skorehq.app',
         termsOfService: 'Terms of service content...',
         privacyPolicy: 'Privacy policy content...',
         maintenanceMode: false,
