@@ -53,6 +53,7 @@ interface SystemSettings {
   paymentReminderMinutes: number;
   paymentSubmissionTimeMinutes: number;
   refundCutoffMinutes: number;
+  requireOnlinePayment: boolean;
   weekdayStart: string;
   weekdayEnd: string;
   fiscalYearType: string;
@@ -509,6 +510,7 @@ export default function AdminSettings() {
     paymentReminderMinutes: 60,
     paymentSubmissionTimeMinutes: 30,
     refundCutoffMinutes: 60,
+    requireOnlinePayment: true,
     weekdayStart: 'monday',
     weekdayEnd: 'sunday',
     fiscalYearType: 'calendar',
@@ -1505,6 +1507,22 @@ export default function AdminSettings() {
                     data-testid="input-refund-cutoff"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Minutes before session start when refunds are no longer allowed</p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-foreground">Require Online Payment</Label>
+                    <p className="text-sm text-muted-foreground">
+                      When enabled, parents must pay online when booking sessions. When disabled, payment can be collected on-site or outside the application.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.requireOnlinePayment}
+                    onCheckedChange={(checked) => 
+                      setSettings(prev => ({ ...prev, requireOnlinePayment: checked }))
+                    }
+                    data-testid="switch-require-online-payment"
+                  />
                 </div>
               </div>
 

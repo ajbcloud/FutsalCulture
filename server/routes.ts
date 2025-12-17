@@ -710,6 +710,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultSettings.businessName = tenantInfo.displayName;
       }
 
+      // Include requireOnlinePayment from tenant table (defaults to true if not set)
+      (defaultSettings as any).requireOnlinePayment = tenantInfo?.requireOnlinePayment !== false;
+
       res.json(defaultSettings);
     } catch (error) {
       console.error("Error fetching tenant settings:", error);

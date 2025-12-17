@@ -11,12 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Player, FutsalSession } from "@shared/schema";
 import { calculateAgeGroup } from "@shared/utils";
 import { SessionPaymentModal } from "@/components/session-payment-modal";
-import { CreditCard, DollarSign } from "lucide-react";
+import { CreditCard, DollarSign, CheckCircle, MapPin } from "lucide-react";
 
 interface ReservationFormProps {
   sessionId: string;
-  session: FutsalSession;
+  session: FutsalSession & { requirePayment?: boolean | null };
   preSelectedPlayerId?: string;
+}
+
+interface TenantSettings {
+  requireOnlinePayment?: boolean;
 }
 
 export default function ReservationForm({ sessionId, session, preSelectedPlayerId }: ReservationFormProps) {
@@ -31,7 +35,18 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
     queryKey: ["/api/players"],
   });
 
-  // Set pre-selected player if provided via URL
+  const { data: tenantSettings } = useQuery<TenantSettings>({
+    queryKey: ["/api/tenant/settings"],
+  });
+
+  const isPaymentRequired = (): boolean => {
+    if (session.requirePayment === true) return true;
+    if (session.requirePayment === false) return false;
+    return tenantSettings?.requireOnlinePayment !== false;
+  };
+
+  const paymentRequired = isPaymentRequired();
+
   useEffect(() => {
     if (preSelectedPlayerId && players.length > 0) {
       const player = players.find(p => p.id === preSelectedPlayerId);
@@ -58,14 +73,20 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       
-      // Store signup data and show payment modal
-      const selectedPlayer = players.find(p => p.id === selectedPlayerId);
-      setPendingSignup({
-        ...signupData,
-        player: selectedPlayer,
-        session: session
-      });
-      setShowPaymentModal(true);
+      if (paymentRequired) {
+        const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+        setPendingSignup({
+          ...signupData,
+          player: selectedPlayer,
+          session: session
+        });
+        setShowPaymentModal(true);
+      } else {
+        toast({
+          title: "Spot Reserved!",
+          description: "Your spot has been successfully booked. Payment can be completed on-site.",
+        });
+      }
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -99,7 +120,6 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
-    // Verify player eligibility
     const selectedPlayer = players.find(p => p.id === selectedPlayerId);
     if (!selectedPlayer) {
       toast({
@@ -122,7 +142,6 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
-    // Check access code if required
     if (session.hasAccessCode && !accessCode.trim()) {
       toast({
         title: "Error",
@@ -132,11 +151,10 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
-    // Create signup with reserveOnly flag to mark as pending payment
     createSignupMutation.mutate({
       playerId: selectedPlayerId,
       sessionId,
-      reserveOnly: true,
+      reserveOnly: paymentRequired,
       ...(session.hasAccessCode && { accessCode: accessCode.trim().toUpperCase() })
     });
   };
@@ -144,7 +162,6 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   const handlePaymentClose = () => {
     setShowPaymentModal(false);
     setPendingSignup(null);
-    // Refresh data after payment modal closes
     queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
     queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
   };
@@ -202,7 +219,6 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           </Select>
         </div>
 
-        {/* Access Code Input - only show if session requires it */}
         {session.hasAccessCode && (
           <div className="space-y-2">
             <Label htmlFor="accessCode">Access Code</Label>
@@ -222,22 +238,41 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           </div>
         )}
 
-        {/* Payment Information */}
-        <div className="bg-card border border-border p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            <h4 className="font-medium text-foreground">Payment Required</h4>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Complete your payment immediately to secure your booking. You can pay with credit card, PayPal, or Venmo.
-          </p>
-          <div className="flex items-center gap-2 mt-3">
-            <DollarSign className="h-5 w-5 text-green-500" />
-            <p className="text-lg font-semibold text-foreground">
-              ${(session.priceCents / 100).toFixed(2)}
+        {paymentRequired ? (
+          <div className="bg-card border border-border p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              <h4 className="font-medium text-foreground">Payment Required</h4>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Complete your payment immediately to secure your booking. You can pay with credit card, PayPal, or Venmo.
             </p>
+            <div className="flex items-center gap-2 mt-3">
+              <DollarSign className="h-5 w-5 text-green-500" />
+              <p className="text-lg font-semibold text-foreground">
+                ${(session.priceCents / 100).toFixed(2)}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <h4 className="font-medium text-green-800 dark:text-green-200">Pay On-Site</h4>
+            </div>
+            <p className="text-sm text-green-700 dark:text-green-300">
+              No online payment required. Payment can be collected on-site or outside the application.
+            </p>
+            {session.priceCents > 0 && (
+              <div className="flex items-center gap-2 mt-3">
+                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <p className="text-lg font-semibold text-green-800 dark:text-green-200">
+                  ${(session.priceCents / 100).toFixed(2)} (due on-site)
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <Button 
           type="submit" 
@@ -247,11 +282,10 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
           disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId) || (session.hasAccessCode === true && !accessCode.trim())}
           data-testid="button-reserve-and-pay"
         >
-          {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
+          {createSignupMutation.isPending ? "Reserving..." : (paymentRequired ? "Reserve Spot & Pay" : "Reserve Spot")}
         </Button>
       </form>
 
-      {/* Payment Modal */}
       {pendingSignup && selectedPlayer && (
         <SessionPaymentModal
           isOpen={showPaymentModal}

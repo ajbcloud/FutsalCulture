@@ -226,6 +226,9 @@ export const tenants = pgTable("tenants", {
 
   // Staging tenant flag - marks this as the platform staging tenant for unaffiliated users
   isStaging: boolean("is_staging").default(false),
+  
+  // Payment requirement settings - controls whether online payment is required for session booking
+  requireOnlinePayment: boolean("require_online_payment").default(true),
 });
 
 // Tenant Subscription Events - Audit history for all subscription changes
@@ -427,6 +430,8 @@ export const futsalSessions = pgTable("futsal_sessions", {
   waitlistLimit: integer("waitlist_limit"), // NULL = no limit
   paymentWindowMinutes: integer("payment_window_minutes").default(60),
   autoPromote: boolean("auto_promote").default(true),
+  // Payment requirement override - null inherits from tenant setting, true/false overrides
+  requirePayment: boolean("require_payment"), // null = use tenant default, true = require, false = no payment needed
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("futsal_sessions_tenant_id_idx").on(table.tenantId),

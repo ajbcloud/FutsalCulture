@@ -79,6 +79,7 @@ export default function AdminSessionDetail() {
     recurringType: 'weekly' as 'weekly' | 'biweekly' | 'monthly',
     recurringEndDate: '',
     recurringCount: 8,
+    requirePayment: null as boolean | null,
   });
 
   useEffect(() => {
@@ -113,6 +114,7 @@ export default function AdminSessionDetail() {
           recurringType: 'weekly',
           recurringEndDate: '',
           recurringCount: 8,
+          requirePayment: data.requirePayment ?? null,
         });
         setLoading(false);
       }).catch(err => {
@@ -175,6 +177,7 @@ export default function AdminSessionDetail() {
         waitlistLimit: formData.waitlistLimit && formData.waitlistLimit.trim() ? parseInt(formData.waitlistLimit) : null,
         paymentWindowMinutes: formData.paymentWindowMinutes || 60,
         autoPromote: Boolean(formData.autoPromote),
+        requirePayment: formData.requirePayment,
         // Include recurring data for new sessions
         ...(isNew && {
           isRecurring: formData.isRecurring,
@@ -497,6 +500,31 @@ export default function AdminSessionDetail() {
                 data-testid="input-session-price"
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="requirePayment" className="text-muted-foreground">Payment Requirement</Label>
+            <Select 
+              value={formData.requirePayment === null ? 'inherit' : formData.requirePayment ? 'true' : 'false'} 
+              onValueChange={(value) => {
+                let paymentValue: boolean | null = null;
+                if (value === 'true') paymentValue = true;
+                else if (value === 'false') paymentValue = false;
+                setFormData({...formData, requirePayment: paymentValue});
+              }}
+            >
+              <SelectTrigger className="bg-input border-border text-foreground" data-testid="select-require-payment">
+                <SelectValue placeholder="Select payment requirement" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="inherit" className="text-foreground hover:bg-muted">Use default</SelectItem>
+                <SelectItem value="true" className="text-foreground hover:bg-muted">Require payment</SelectItem>
+                <SelectItem value="false" className="text-foreground hover:bg-muted">No payment required</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Override the organization's default payment requirement for this session
+            </p>
           </div>
         </div>
 

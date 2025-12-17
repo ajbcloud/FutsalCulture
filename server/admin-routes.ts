@@ -2677,6 +2677,9 @@ export async function setupAdminRoutes(app: any) {
         defaultSettings.businessName = tenantInfo.displayName;
       }
 
+      // Include requireOnlinePayment from tenant table (defaults to true if not set)
+      (defaultSettings as any).requireOnlinePayment = tenantInfo?.requireOnlinePayment !== false;
+
       res.json(defaultSettings);
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -2709,6 +2712,20 @@ export async function setupAdminRoutes(app: any) {
         } catch (tenantError: any) {
           console.error('Error updating tenant displayName:', tenantError);
           // Continue with other settings updates even if tenant update fails
+        }
+      }
+
+      // If requireOnlinePayment is being updated, save it directly to the tenant table
+      if (typeof updates.requireOnlinePayment === 'boolean' && tenantId) {
+        try {
+          await db.update(tenants)
+            .set({ requireOnlinePayment: updates.requireOnlinePayment })
+            .where(eq(tenants.id, tenantId));
+          console.log(`Updated tenant requireOnlinePayment to: ${updates.requireOnlinePayment}`);
+          // Remove from updates so it's not saved to systemSettings
+          delete updates.requireOnlinePayment;
+        } catch (tenantError: any) {
+          console.error('Error updating tenant requireOnlinePayment:', tenantError);
         }
       }
 
