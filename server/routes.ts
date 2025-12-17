@@ -42,6 +42,7 @@ import { sendgridWebhookRouter } from './routes/sendgrid-webhooks';
 import { resendWebhookRouter } from './routes/resend-webhooks';
 import { telnyxWebhookRouter } from './routes/telnyx-webhooks';
 import { braintreeWebhookRouter } from './routes/braintree-webhooks';
+import { braintreeTenantWebhookRouter } from './routes/braintreeWebhookRoutes';
 import { communicationTestRouter } from './routes/communication-test';
 import tenantRouter from './tenant-routes';
 import { ALL_CAPABILITIES, userHasCapability } from './middleware/capabilities';
@@ -64,6 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/webhooks/telnyx', telnyxWebhookRouter);
 
   // Braintree webhook routes (must be BEFORE auth middleware since webhooks use their own verification)
+  // Per-tenant webhook routes at /api/webhooks/braintree/sandbox/:webhookKey and /api/webhooks/braintree/production/:webhookKey
+  app.use('/api/webhooks/braintree', braintreeTenantWebhookRouter);
+  // Platform-level webhook route at /api/webhooks/braintree/
   app.use('/api/webhooks/braintree', braintreeWebhookRouter);
 
   // Session middleware (still needed for legacy features and fallback)
@@ -3479,6 +3483,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session billing routes for payment processing
   const sessionBillingRoutes = await import('./session-billing-routes');
   app.use('/api', isAuthenticated, sessionBillingRoutes.default);
+
+  // Setup tenant billing routes for payment gateway management
+  // adminBillingRouter has its own requireAdmin middleware for /gateway/* routes
+  const { adminBillingRouter, checkoutRouter } = await import('./routes/tenantBillingRoutes');
+  app.use('/api/tenant/billing', isAuthenticated, adminBillingRouter);
+  // checkoutRouter only requires authenticated user (no admin), handles /client-token and /submit
+  app.use('/api/checkout', isAuthenticated, checkoutRouter);
 
   // Setup player development routes (Elite feature)
   const playerDevRoutes = await import('./player-development-routes');

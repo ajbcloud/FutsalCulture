@@ -4,6 +4,12 @@ import { futsalSessions, signups, players, tenants, integrations, systemSettings
 import { eq, and, sql } from 'drizzle-orm';
 import braintree from 'braintree';
 import { format } from 'date-fns';
+import { 
+  getGatewayStatus, 
+  generateClientToken as generateTenantClientToken, 
+  createTransaction as createTenantTransaction,
+  getTenantGateway
+} from './services/tenantBraintreeService';
 
 const router = Router();
 
@@ -169,19 +175,30 @@ router.get('/session-billing/payment-config', async (req: any, res) => {
       return res.status(400).json({ message: 'Tenant ID required' });
     }
 
-    const { provider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
+    const { provider, credentials, useTenantGateway, tenantId: gatewayTenantId } = await getActivePaymentProcessor(currentUser.tenantId);
     
-    console.log('Payment processor config:', { provider, hasCredentials: !!credentials });
+    console.log('Payment processor config:', { provider, hasCredentials: !!credentials, useTenantGateway });
     
     if (!provider) {
       return res.status(400).json({ message: 'No payment processor configured' });
     }
 
     // Return only the necessary client-side configuration (Braintree only)
-    let config: any = { provider };
+    let config: any = { provider, useTenantGateway };
     
     try {
-      const clientToken = await generateBraintreeClientToken(credentials, userId);
+      let clientToken: string;
+      
+      if (useTenantGateway && gatewayTenantId) {
+        // Use tenant's own Braintree gateway
+        console.log('Generating client token using tenant gateway');
+        clientToken = await generateTenantClientToken(gatewayTenantId);
+      } else {
+        // Use platform's Braintree gateway
+        console.log('Generating client token using platform gateway');
+        clientToken = await generateBraintreeClientToken(credentials, userId);
+      }
+      
       console.log('Braintree client token generated successfully, length:', clientToken?.length);
       config.clientToken = clientToken;
       console.log('Config after setting client token:', { 
@@ -252,10 +269,54 @@ router.post('/session-billing/validate-discount-code', async (req: any, res) => 
   }
 });
 
+// Helper function to check if tenant has their own connected Braintree gateway
+async function hasTenantConnectedGateway(tenantId: string): Promise<{ connected: boolean; environment?: 'sandbox' | 'production' }> {
+  try {
+    const tenantStatus = await getGatewayStatus(tenantId);
+    const activeEnv = tenantStatus.activeEnvironment;
+    
+    // Check if the active environment has a connected gateway
+    const activeGateway = tenantStatus[activeEnv];
+    if (activeGateway?.status === 'connected') {
+      console.log(`Tenant ${tenantId} has connected gateway in ${activeEnv} environment`);
+      return { connected: true, environment: activeEnv };
+    }
+    
+    console.log(`Tenant ${tenantId} does not have a connected gateway`);
+    return { connected: false };
+  } catch (error) {
+    console.log(`Error checking tenant gateway status for ${tenantId}:`, error);
+    return { connected: false };
+  }
+}
+
 // Helper function to get active payment processor (Braintree only)
-async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider: 'braintree' | null, credentials: any }> {
+// Now checks for tenant's own gateway first, then falls back to platform gateway
+async function getActivePaymentProcessor(tenantId?: string): Promise<{ 
+  provider: 'braintree' | null; 
+  credentials: any;
+  useTenantGateway: boolean;
+  tenantId?: string;
+}> {
   try {
     console.log('Checking for active Braintree payment processor...');
+    
+    // First, check if tenant has their own connected gateway
+    if (tenantId) {
+      const tenantGateway = await hasTenantConnectedGateway(tenantId);
+      if (tenantGateway.connected) {
+        console.log(`Using tenant's own Braintree gateway (${tenantGateway.environment})`);
+        return {
+          provider: 'braintree',
+          credentials: null, // Credentials handled by tenantBraintreeService
+          useTenantGateway: true,
+          tenantId: tenantId
+        };
+      }
+    }
+    
+    // Fall back to platform gateway
+    console.log('Tenant does not have connected gateway, falling back to platform gateway');
     
     // Check for enabled Braintree payment processor
     // Look for tenant-specific integrations first, then global ones
@@ -312,7 +373,8 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
       
       return {
         provider: 'braintree',
-        credentials: parsedCredentials
+        credentials: parsedCredentials,
+        useTenantGateway: false
       };
     }
 
@@ -333,15 +395,16 @@ async function getActivePaymentProcessor(tenantId?: string): Promise<{ provider:
       });
       return {
         provider: 'braintree',
-        credentials: envCredentials
+        credentials: envCredentials,
+        useTenantGateway: false
       };
     }
 
     console.log('No Braintree payment processor found');
-    return { provider: null, credentials: null };
+    return { provider: null, credentials: null, useTenantGateway: false };
   } catch (error) {
     console.error('Error getting active payment processor:', error);
-    return { provider: null, credentials: null };
+    return { provider: null, credentials: null, useTenantGateway: false };
   }
 }
 
@@ -384,8 +447,8 @@ router.post('/session-billing/session-checkout', async (req: any, res) => {
       return res.status(404).json({ message: 'Player not found' });
     }
 
-    // Get active payment processor
-    const { provider, credentials } = await getActivePaymentProcessor();
+    // Get active payment processor (now checks for tenant gateway first)
+    const { provider, credentials, useTenantGateway, tenantId: gatewayTenantId } = await getActivePaymentProcessor(currentUser.tenantId);
     
     if (!provider) {
       return res.status(400).json({ message: 'No payment processor configured' });
@@ -397,11 +460,22 @@ router.post('/session-billing/session-checkout', async (req: any, res) => {
 
     // Braintree-only checkout - generate client token
     try {
-      const clientToken = await generateBraintreeClientToken(credentials);
+      let clientToken: string;
+      
+      if (useTenantGateway && gatewayTenantId) {
+        // Use tenant's own Braintree gateway
+        console.log('Generating checkout client token using tenant gateway');
+        clientToken = await generateTenantClientToken(gatewayTenantId);
+      } else {
+        // Use platform's Braintree gateway
+        console.log('Generating checkout client token using platform gateway');
+        clientToken = await generateBraintreeClientToken(credentials);
+      }
       
       res.json({
         provider: 'braintree',
         clientToken: clientToken,
+        useTenantGateway: useTenantGateway,
         amount: amount / 100, // Convert cents to dollars for Braintree
         sessionDetails: {
           id: sessionData.id,
@@ -442,8 +516,17 @@ router.post('/session-billing/confirm-session-payment', async (req: any, res) =>
     if (provider === 'braintree' && paymentId) {
       // Verify Braintree transaction
       try {
-        const { credentials: braintreeCredentials } = await getActivePaymentProcessor();
-        const gateway = createBraintreeGateway(braintreeCredentials);
+        const { credentials: braintreeCredentials, useTenantGateway, tenantId: gatewayTenantId } = await getActivePaymentProcessor(currentUser.tenantId);
+        
+        let gateway;
+        if (useTenantGateway && gatewayTenantId) {
+          gateway = await getTenantGateway(gatewayTenantId);
+          console.log('Verifying transaction using tenant gateway');
+        } else {
+          gateway = createBraintreeGateway(braintreeCredentials);
+          console.log('Verifying transaction using platform gateway');
+        }
+        
         const transaction = await gateway.transaction.find(paymentId);
         
         // Check if transaction is successful and settled
@@ -548,7 +631,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
     let paymentResult = null;
     
     if (remainingAmount > 0) {
-      const { provider: activeProvider, credentials } = await getActivePaymentProcessor(currentUser.tenantId);
+      const { provider: activeProvider, credentials, useTenantGateway, tenantId: gatewayTenantId } = await getActivePaymentProcessor(currentUser.tenantId);
       
       if (!activeProvider) {
         return res.status(400).json({ message: 'No payment processor configured' });
@@ -559,7 +642,7 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
         return res.status(400).json({ message: 'Use Braintree for checkout. See /api/billing/braintree/ endpoints.' });
       }
     
-      // Process Braintree payment only
+      // Process Braintree payment
       try {
         const { paymentMethodNonce } = req.body;
         if (!paymentMethodNonce) {
@@ -579,36 +662,66 @@ router.post('/session-billing/process-payment', async (req: any, res) => {
         const playerInfo = player[0];
         const customerName = `${playerInfo.firstName} ${playerInfo.lastName}`.trim();
 
-        const gateway = createBraintreeGateway(credentials);
-        const result = await gateway.transaction.sale({
-          amount: (remainingAmount / 100).toString(), // Convert remaining amount to dollars
-          paymentMethodNonce: paymentMethodNonce,
-          customer: {
-            firstName: playerInfo.firstName,
-            lastName: playerInfo.lastName,
-            email: playerInfo.email || undefined, // Only include if email exists
-          },
-          options: {
-            submitForSettlement: true
-          }
-        });
+        if (useTenantGateway && gatewayTenantId) {
+          // Use tenant's own Braintree gateway via tenantBraintreeService
+          console.log('Processing payment using tenant gateway');
+          const tenantResult = await createTenantTransaction(gatewayTenantId, {
+            amountCents: remainingAmount,
+            paymentMethodNonce: paymentMethodNonce,
+            bookingId: signupId,
+            customerDetails: {
+              firstName: playerInfo.firstName,
+              lastName: playerInfo.lastName,
+              email: playerInfo.email || undefined,
+            },
+          });
 
-        if (result.success && result.transaction) {
-          console.log('Braintree payment successful:', {
-            transactionId: result.transaction.id,
-            amount: result.transaction.amount,
-            status: result.transaction.status,
+          console.log('Braintree payment successful (tenant gateway):', {
+            transactionId: tenantResult.id,
+            amountCents: tenantResult.amountCents,
+            status: tenantResult.status,
             customer: customerName
           });
 
           paymentResult = {
             success: true,
-            paymentId: result.transaction.id,
+            paymentId: tenantResult.id,
             provider: 'braintree'
           };
         } else {
-          console.error('Braintree payment error:', result.message);
-          return res.status(400).json({ message: result.message || 'Payment failed' });
+          // Use platform's Braintree gateway
+          console.log('Processing payment using platform gateway');
+          const gateway = createBraintreeGateway(credentials);
+          const result = await gateway.transaction.sale({
+            amount: (remainingAmount / 100).toString(), // Convert remaining amount to dollars
+            paymentMethodNonce: paymentMethodNonce,
+            customer: {
+              firstName: playerInfo.firstName,
+              lastName: playerInfo.lastName,
+              email: playerInfo.email || undefined, // Only include if email exists
+            },
+            options: {
+              submitForSettlement: true
+            }
+          });
+
+          if (result.success && result.transaction) {
+            console.log('Braintree payment successful (platform gateway):', {
+              transactionId: result.transaction.id,
+              amount: result.transaction.amount,
+              status: result.transaction.status,
+              customer: customerName
+            });
+
+            paymentResult = {
+              success: true,
+              paymentId: result.transaction.id,
+              provider: 'braintree'
+            };
+          } else {
+            console.error('Braintree payment error:', result.message);
+            return res.status(400).json({ message: result.message || 'Payment failed' });
+          }
         }
       } catch (braintreeError: any) {
         console.error('Braintree payment error:', braintreeError);

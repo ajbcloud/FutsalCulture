@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import AdminLayout from '@/components/admin-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePlanFeatures, useHasFeature } from '@/hooks/use-feature-flags';
 import { FEATURE_KEYS } from '@shared/feature-flags';
+import { BraintreeWizard, GatewayStatus } from '@/components/braintree-wizard';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Settings2, 
   Mail, 
@@ -23,7 +26,9 @@ import {
   TestTube,
   CreditCard,
   DollarSign,
-  Lock
+  Lock,
+  ExternalLink,
+  Unplug
 } from 'lucide-react';
 
 interface Integration {
@@ -142,12 +147,50 @@ export default function AdminIntegrations() {
   const [testingDialog, setTestingDialog] = useState(false);
   const [activeProcessor, setActiveProcessor] = useState<any>(null);
   const [testingCheckout, setTestingCheckout] = useState(false);
+  const [braintreeWizardOpen, setBraintreeWizardOpen] = useState(false);
   const { toast } = useToast();
   
   // Feature flags
   const { data: planData } = usePlanFeatures();
   const { hasFeature: hasQuickBooks } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS);
   const { hasFeature: hasBraintree } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_BRAINTREE);
+
+  // Fetch Braintree gateway status
+  const { data: gatewayStatus, refetch: refetchGatewayStatus } = useQuery<GatewayStatus>({
+    queryKey: ['/api/tenant/billing/gateway'],
+    enabled: hasBraintree,
+  });
+
+  // Test Braintree connection mutation
+  const testBraintreeConnection = useMutation({
+    mutationFn: async () => {
+      const env = (gatewayStatus as any)?.activeEnvironment || 'sandbox';
+      return apiRequest('POST', `/api/tenant/billing/gateway/${env}/test`);
+    },
+    onSuccess: () => {
+      toast({ title: 'Connection successful!' });
+      refetchGatewayStatus();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Connection failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Disconnect Braintree mutation
+  const disconnectBraintree = useMutation({
+    mutationFn: async (env: 'sandbox' | 'production') => {
+      return apiRequest('DELETE', `/api/tenant/billing/gateway/${env}`);
+    },
+    onSuccess: () => {
+      toast({ title: 'Disconnected successfully' });
+      refetchGatewayStatus();
+      fetchIntegrations();
+      fetchActiveProcessor();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to disconnect', description: error.message, variant: 'destructive' });
+    },
+  });
 
   useEffect(() => {
     fetchIntegrations();
@@ -510,6 +553,129 @@ export default function AdminIntegrations() {
                 }).map(([provider, config]) => {
                   const integration = integrations.find(i => i.provider === provider);
                   
+                  // Special handling for Braintree with enhanced UI
+                  if (provider === 'braintree') {
+                    const sandboxConfigured = gatewayStatus?.sandbox?.configured;
+                    const productionConfigured = gatewayStatus?.production?.configured;
+                    const isConnected = sandboxConfigured || productionConfigured;
+                    const activeEnv = (gatewayStatus as any)?.activeEnvironment as 'sandbox' | 'production' | undefined;
+                    const lastTested = activeEnv === 'production' 
+                      ? gatewayStatus?.production?.lastTestedAt 
+                      : gatewayStatus?.sandbox?.lastTestedAt;
+                    const testStatus = activeEnv === 'production'
+                      ? gatewayStatus?.production?.testStatus
+                      : gatewayStatus?.sandbox?.testStatus;
+                    
+                    // Determine connection status badge
+                    const getConnectionBadge = () => {
+                      if (testStatus === 'failure') {
+                        return <Badge variant="destructive" className="bg-red-600">Error</Badge>;
+                      }
+                      if (productionConfigured && activeEnv === 'production') {
+                        return <Badge className="bg-green-600">Production Connected</Badge>;
+                      }
+                      if (sandboxConfigured) {
+                        return <Badge className="bg-yellow-600">Sandbox Connected</Badge>;
+                      }
+                      return <Badge variant="secondary">Not Connected</Badge>;
+                    };
+                    
+                    return (
+                      <TableRow key={provider} className="border-zinc-700">
+                        <TableCell className="text-white">
+                          <div className="flex items-center space-x-3">
+                            {config.icon}
+                            <div>
+                              <div className="font-medium">{config.name}</div>
+                              <div className="text-sm text-zinc-400">{config.description}</div>
+                              {isConnected && activeEnv && (
+                                <div className="text-xs text-zinc-500 mt-1">
+                                  Active: {activeEnv === 'production' ? 'Production' : 'Sandbox'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            {testStatus === 'success' ? (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            ) : testStatus === 'failure' ? (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            ) : isConnected ? (
+                              <AlertCircle className="w-4 h-4 text-yellow-500" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-gray-400" />
+                            )}
+                            {getConnectionBadge()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-zinc-400">
+                          {lastTested 
+                            ? new Date(lastTested).toLocaleDateString()
+                            : 'Never'
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setBraintreeWizardOpen(true)}
+                              className="text-white border-zinc-600 hover:bg-zinc-800"
+                              data-testid="button-configure-braintree"
+                            >
+                              {isConnected ? 'Manage' : 'Configure'}
+                            </Button>
+                            {isConnected && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => testBraintreeConnection.mutate()}
+                                  disabled={testBraintreeConnection.isPending}
+                                  className="text-white border-zinc-600 hover:bg-zinc-800"
+                                  data-testid="button-test-braintree"
+                                >
+                                  {testBraintreeConnection.isPending ? (
+                                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                                  ) : (
+                                    <TestTube className="w-4 h-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => disconnectBraintree.mutate(activeEnv || 'sandbox')}
+                                  disabled={disconnectBraintree.isPending}
+                                  className="text-red-400 border-red-600 hover:bg-red-900/20"
+                                  data-testid="button-disconnect-braintree"
+                                >
+                                  {disconnectBraintree.isPending ? (
+                                    <div className="animate-spin w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full" />
+                                  ) : (
+                                    <Unplug className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
+                            <a
+                              href="https://developer.paypal.com/braintree/articles/get-started/overview"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-xs text-blue-400 hover:underline"
+                              data-testid="link-braintree-docs"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Docs
+                            </a>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  
+                  // Default rendering for other integrations
                   return (
                     <TableRow key={provider} className="border-zinc-700">
                       <TableCell className="text-white">
@@ -699,6 +865,19 @@ export default function AdminIntegrations() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Braintree Wizard */}
+        <BraintreeWizard
+          isOpen={braintreeWizardOpen}
+          onClose={() => setBraintreeWizardOpen(false)}
+          onComplete={() => {
+            setBraintreeWizardOpen(false);
+            refetchGatewayStatus();
+            fetchIntegrations();
+            fetchActiveProcessor();
+          }}
+          existingStatus={gatewayStatus}
+        />
       </div>
     </AdminLayout>
   );

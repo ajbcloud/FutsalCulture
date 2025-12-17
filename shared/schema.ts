@@ -3695,3 +3695,189 @@ export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
 export type InsertQuickbooksSyncLog = z.infer<typeof insertQuickbooksSyncLogSchema>;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
 export type InsertFinancialTransaction = z.infer<typeof insertFinancialTransactionSchema>;
+
+// =============================================
+// Multi-Tenant Braintree Payment Gateway Tables
+// =============================================
+
+// Gateway environment enum
+export const gatewayEnvironmentEnum = pgEnum("gateway_environment", ["sandbox", "production"]);
+
+// Gateway status enum
+export const gatewayStatusEnum = pgEnum("gateway_status", ["disconnected", "connected", "error"]);
+
+// Billing audit action enum
+export const billingAuditActionEnum = pgEnum("billing_audit_action", [
+  "gateway.connect",
+  "gateway.update", 
+  "gateway.disconnect",
+  "gateway.test",
+  "gateway.toggleEnvironment",
+  "webhook.secret.rotate"
+]);
+
+// Webhook processing status enum
+export const webhookProcessingStatusEnum = pgEnum("webhook_processing_status", ["received", "processed", "failed"]);
+
+// Tenant transaction status enum
+export const tenantTransactionStatusEnum = pgEnum("tenant_transaction_status", [
+  "authorized",
+  "submitted_for_settlement",
+  "settled",
+  "voided",
+  "refunded",
+  "failed",
+  "disputed"
+]);
+
+// TenantPaymentGateway - stores Braintree credentials per tenant/environment
+export const tenantPaymentGateways = pgTable("tenant_payment_gateways", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  provider: varchar("provider").default("braintree"),
+  environment: gatewayEnvironmentEnum("environment").notNull(),
+  merchantId: varchar("merchant_id"),
+  publicKey: varchar("public_key"),
+  privateKeyEncrypted: text("private_key_encrypted"), // Encrypted private key
+  privateKeyLast4: varchar("private_key_last4", { length: 4 }),
+  status: gatewayStatusEnum("status").default("disconnected"),
+  lastTestAt: timestamp("last_test_at"),
+  lastSuccessAt: timestamp("last_success_at"),
+  lastErrorCode: varchar("last_error_code"),
+  lastErrorMessageSafe: text("last_error_message_safe"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete
+}, (table) => [
+  index("tenant_payment_gateways_tenant_idx").on(table.tenantId),
+  index("tenant_payment_gateways_environment_idx").on(table.environment),
+  uniqueIndex("tenant_payment_gateways_unique_idx").on(table.tenantId, table.provider, table.environment),
+]);
+
+// TenantBillingSettings - tenant-level billing configuration
+export const tenantBillingSettings = pgTable("tenant_billing_settings", {
+  tenantId: varchar("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }),
+  provider: varchar("provider").default("braintree"),
+  activeEnvironment: gatewayEnvironmentEnum("active_environment").default("sandbox"),
+  isPaymentsEnabled: boolean("is_payments_enabled").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// BillingAuditLog - audit trail for billing actions
+export const billingAuditLogs = pgTable("billing_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  actorUserId: varchar("actor_user_id").notNull(), // Clerk user ID
+  action: billingAuditActionEnum("action").notNull(),
+  environment: varchar("environment"),
+  metadataJsonSafe: jsonb("metadata_json_safe").default(sql`'{}'::jsonb`),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("billing_audit_logs_tenant_idx").on(table.tenantId),
+  index("billing_audit_logs_actor_idx").on(table.actorUserId),
+  index("billing_audit_logs_created_idx").on(table.createdAt),
+]);
+
+// WebhookEndpointConfig - webhook endpoint configuration per tenant/environment
+export const webhookEndpointConfigs = pgTable("webhook_endpoint_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  provider: varchar("provider").default("braintree"),
+  environment: gatewayEnvironmentEnum("environment").notNull(),
+  webhookKey: varchar("webhook_key").unique().notNull(), // Random unguessable key for URL
+  webhookSecretEncrypted: text("webhook_secret_encrypted"),
+  secretLast4: varchar("secret_last4", { length: 4 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  rotatedAt: timestamp("rotated_at"),
+}, (table) => [
+  index("webhook_endpoint_configs_tenant_idx").on(table.tenantId),
+  uniqueIndex("webhook_endpoint_configs_unique_idx").on(table.tenantId, table.provider, table.environment),
+]);
+
+// WebhookEventReceipt - tracks received webhook events
+export const webhookEventReceipts = pgTable("webhook_event_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  provider: varchar("provider").default("braintree"),
+  environment: varchar("environment").notNull(),
+  eventId: varchar("event_id").notNull(),
+  eventType: varchar("event_type").notNull(),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+  processingStatus: webhookProcessingStatusEnum("processing_status").default("received"),
+  lastProcessingErrorSafe: text("last_processing_error_safe"),
+}, (table) => [
+  index("webhook_event_receipts_tenant_idx").on(table.tenantId),
+  index("webhook_event_receipts_event_id_idx").on(table.eventId),
+  uniqueIndex("webhook_event_receipts_unique_idx").on(table.tenantId, table.provider, table.environment, table.eventId),
+]);
+
+// TenantTransaction - records tenant payment transactions
+export const tenantTransactions = pgTable("tenant_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  externalTransactionId: varchar("external_transaction_id").notNull(),
+  bookingId: varchar("booking_id"), // Reference to session signups or bookings
+  amountCents: integer("amount_cents").notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  status: tenantTransactionStatusEnum("status").notNull(),
+  paymentMethodTypeSafe: varchar("payment_method_type_safe"), // e.g., 'card', 'paypal'
+  paymentMethodLast4Safe: varchar("payment_method_last4_safe", { length: 4 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("tenant_transactions_tenant_idx").on(table.tenantId),
+  index("tenant_transactions_external_id_idx").on(table.externalTransactionId),
+]);
+
+// Insert schemas for Braintree payment gateway tables
+export const insertTenantPaymentGatewaySchema = createInsertSchema(tenantPaymentGateways).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantBillingSettingsSchema = createInsertSchema(tenantBillingSettings).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillingAuditLogSchema = createInsertSchema(billingAuditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWebhookEndpointConfigSchema = createInsertSchema(webhookEndpointConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWebhookEventReceiptSchema = createInsertSchema(webhookEventReceipts).omit({
+  id: true,
+  receivedAt: true,
+});
+
+export const insertTenantTransactionSchema = createInsertSchema(tenantTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for Braintree payment gateway tables
+export type TenantPaymentGateway = typeof tenantPaymentGateways.$inferSelect;
+export type InsertTenantPaymentGateway = z.infer<typeof insertTenantPaymentGatewaySchema>;
+export type TenantBillingSettings = typeof tenantBillingSettings.$inferSelect;
+export type InsertTenantBillingSettings = z.infer<typeof insertTenantBillingSettingsSchema>;
+export type BillingAuditLog = typeof billingAuditLogs.$inferSelect;
+export type InsertBillingAuditLog = z.infer<typeof insertBillingAuditLogSchema>;
+export type WebhookEndpointConfig = typeof webhookEndpointConfigs.$inferSelect;
+export type InsertWebhookEndpointConfig = z.infer<typeof insertWebhookEndpointConfigSchema>;
+export type WebhookEventReceipt = typeof webhookEventReceipts.$inferSelect;
+export type InsertWebhookEventReceipt = z.infer<typeof insertWebhookEventReceiptSchema>;
+export type TenantTransaction = typeof tenantTransactions.$inferSelect;
+export type InsertTenantTransaction = z.infer<typeof insertTenantTransactionSchema>;
