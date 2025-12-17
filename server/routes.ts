@@ -375,6 +375,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get consent templates for authenticated users (parents signing for players)
+  app.get('/api/consent/templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      
+      if (!tenantId) {
+        return res.status(400).json({ error: 'Tenant ID required' });
+      }
+
+      const templates = await storage.getConsentTemplates(tenantId);
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching consent templates:', error);
+      res.status(500).json({ error: 'Failed to fetch consent templates' });
+    }
+  });
+
   app.put('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

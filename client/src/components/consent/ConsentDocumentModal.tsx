@@ -111,7 +111,8 @@ export default function ConsentDocumentModal({
       setError(null);
       
       // Use custom endpoint if provided (for unauthenticated flows like parent2 invite)
-      const endpoint = templateEndpoint || '/api/admin/consent-templates';
+      // Default to the public endpoint for authenticated users, not the admin endpoint
+      const endpoint = templateEndpoint || '/api/consent/templates';
       const response = await apiRequest('GET', endpoint);
       if (!response.ok) {
         throw new Error('Failed to fetch consent templates');
