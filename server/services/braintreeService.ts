@@ -23,7 +23,9 @@ const braintreeEnabled = !!(
 );
 
 if (braintreeEnabled) {
-  const environment = process.env.NODE_ENV === 'production' 
+  // Use BRAINTREE_ENVIRONMENT secret if set, otherwise fall back to NODE_ENV
+  const envSetting = process.env.BRAINTREE_ENVIRONMENT?.toLowerCase();
+  const environment = envSetting === 'production' 
     ? Environment.Production 
     : Environment.Sandbox;
   
@@ -33,7 +35,7 @@ if (braintreeEnabled) {
     publicKey: process.env.BRAINTREE_PUBLIC_KEY!,
     privateKey: process.env.BRAINTREE_PRIVATE_KEY!,
   });
-  console.log('✅ Braintree gateway initialized');
+  console.log(`✅ Braintree gateway initialized (${envSetting || 'sandbox'} environment)`);
 } else {
   console.warn('⚠️ Braintree not configured - missing credentials');
 }
