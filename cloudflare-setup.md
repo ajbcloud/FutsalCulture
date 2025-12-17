@@ -1,4 +1,4 @@
-# Cloudflare Configuration for PlayHQ.app
+# Cloudflare Configuration for SkoreHQ.com
 
 ## DNS Records Setup
 
@@ -29,7 +29,7 @@ TTL: Auto
 
 ### SSL/TLS Certificates
 - Cloudflare Universal SSL will automatically provision certificates
-- Edge certificates will cover both `playhq.app` and `www.playhq.app`
+- Edge certificates will cover both `skorehq.com` and `www.skorehq.com`
 - Certificate authority: Let's Encrypt or Google Trust Services
 
 ## Security Settings
@@ -75,18 +75,18 @@ Create these page rules for optimal performance:
 
 ```
 Rule 1: API Routes (No Cache)
-URL: playhq.app/api/*
+URL: skorehq.com/api/*
 Settings: Cache Level = Bypass
 
 Rule 2: Static Assets (Long Cache)
-URL: playhq.app/assets/*
+URL: skorehq.com/assets/*
 Settings: 
 - Cache Level = Cache Everything
 - Browser Cache TTL = 1 month
 - Edge Cache TTL = 1 month
 
 Rule 3: Admin Areas (Security Headers)
-URL: playhq.app/admin*
+URL: skorehq.com/admin*
 Settings:
 - Security Level = High
 - Cache Level = Bypass
@@ -148,9 +148,9 @@ If using custom email addresses:
 1. Go to Email → Email Routing
 2. Configure catch-all forwarding
 3. Set up custom email addresses:
-   - `admin@playhq.app`
-   - `support@playhq.app`
-   - `noreply@playhq.app`
+   - `admin@skorehq.com`
+   - `support@skorehq.com`
+   - `noreply@skorehq.com`
 
 ## Troubleshooting
 
@@ -179,8 +179,8 @@ If using custom email addresses:
 ## Post-Setup Verification
 
 ### Test Checklist
-- [ ] `https://playhq.app` loads correctly
-- [ ] `https://www.playhq.app` redirects properly
+- [ ] `https://skorehq.com` loads correctly
+- [ ] `https://www.skorehq.com` redirects properly
 - [ ] SSL certificate shows as valid
 - [ ] Admin portal accessible at `/admin`
 - [ ] Super admin portal accessible at `/super-admin`

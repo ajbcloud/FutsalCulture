@@ -1,7 +1,7 @@
-# PlayHQ.app Production Configuration
+# SkoreHQ.com Production Configuration
 
 ## Application Overview
-- **Domain**: playhq.app
+- **Domain**: skorehq.com
 - **Platform**: Multi-tenant futsal training management
 - **Architecture**: Full-stack React + Express + PostgreSQL
 - **Authentication**: Replit OpenID Connect
@@ -29,7 +29,7 @@ SENDGRID_API_KEY=SG.your_sendgrid_api_key
 
 # Application
 NODE_ENV=production
-VITE_APP_URL=https://playhq.app
+VITE_APP_URL=https://skorehq.com
 ```
 
 ## Database Schema Migration
@@ -85,8 +85,8 @@ UPDATE users SET "isSuperAdmin" = true WHERE email = 'your-admin@email.com';
 
 ### CORS Configuration
 The application is configured for these domains:
-- `https://playhq.app`
-- `https://www.playhq.app`
+- `https://skorehq.com`
+- `https://www.skorehq.com`
 
 ### Session Security
 - Secure session cookies
@@ -159,7 +159,7 @@ The application is configured for these domains:
 6. Test all functionality
 
 ### Post-Deployment Verification
-- [ ] Application loads at playhq.app
+- [ ] Application loads at skorehq.com
 - [ ] Authentication flow works
 - [ ] Database connections stable
 - [ ] Payment processing functional

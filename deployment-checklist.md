@@ -1,4 +1,4 @@
-# PlayHQ.app Deployment Checklist
+# SkoreHQ.com Deployment Checklist
 
 ## Pre-Deployment Setup ✅
 
@@ -29,7 +29,7 @@
 - [ ] Note the default `.replit.app` URL
 
 ### 2. Custom Domain Configuration
-- [ ] In Replit deployment settings, add `playhq.app` as custom domain
+- [ ] In Replit deployment settings, add `skorehq.com` as custom domain
 - [ ] Copy the DNS records provided by Replit
 
 ### 3. Cloudflare DNS Setup
@@ -40,7 +40,7 @@
 - [ ] Set minimum TLS version to 1.2
 
 ### 4. Post-Deployment Verification
-- [ ] Test `https://playhq.app` loads correctly
+- [ ] Test `https://skorehq.com` loads correctly
 - [ ] Test user authentication flow
 - [ ] Test admin portal access
 - [ ] Test super admin portal access
@@ -91,7 +91,7 @@
 
 ## DNS Records for Cloudflare
 
-Add these records in your Cloudflare DNS settings for `playhq.app`:
+Add these records in your Cloudflare DNS settings for `skorehq.com`:
 
 ```
 Type: CNAME
