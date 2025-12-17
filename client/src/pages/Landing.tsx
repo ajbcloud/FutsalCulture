@@ -269,7 +269,7 @@ function FeatureCard({
   description,
 }: {
   number: string;
-  icon: React.ReactNode;
+  icon: JSX.Element;
   title: string;
   description: string;
 }) {
