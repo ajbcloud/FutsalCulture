@@ -55,7 +55,7 @@ import {
 import playHQLogo from "@assets/PlayHQ_1753846544553.png";
 
 export default function SuperAdminPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -303,11 +303,15 @@ export default function SuperAdminPage() {
                   </DropdownMenuItem>
                   
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </a>
+                  <DropdownMenuItem 
+                    className="cursor-pointer"
+                    onClick={async () => {
+                      await logout();
+                    }}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
