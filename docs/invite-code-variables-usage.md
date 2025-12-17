@@ -46,7 +46,7 @@ async function sendBookingConfirmation(
       sessionDate: bookingData.sessionDate,
       sessionTime: bookingData.sessionTime,
       sessionLocation: bookingData.sessionLocation,
-      organizationName: 'PlayHQ Academy'
+      organizationName: 'SkoreHQ Academy'
     },
     storage,
     tenantId,
@@ -63,7 +63,7 @@ async function sendBookingConfirmation(
   // Send email
   await sendEmail({
     to: bookingData.parentEmail,
-    from: 'noreply@playhq.app',
+    from: 'noreply@skorehq.com',
     subject,
     html: content
   });
@@ -103,7 +103,7 @@ async function sendCampaignWithInviteCodes(
     {
       ...tenantInviteVars,
       // Additional custom variables
-      organizationName: 'PlayHQ Academy'
+      organizationName: 'SkoreHQ Academy'
     }
   );
 }
@@ -146,7 +146,7 @@ const variables = await buildNotificationVariables(
     parentName: 'John Doe',
     playerName: 'Jane Doe',
     sessionDate: '2025-10-15',
-    organizationName: 'PlayHQ'
+    organizationName: 'SkoreHQ'
   },
   storage,
   tenantId,

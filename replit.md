@@ -1,7 +1,7 @@
-# PlayHQ Booking App
+# SkoreHQ Booking App
 
 ## Overview
-PlayHQ is a full-stack web application for booking futsal training spots, evolving into a multi-tenant Super-Admin platform. It supports day-of booking, payment integration, and real-time capacity monitoring. The business vision is to provide a scalable SaaS solution for sports academies, streamlining booking for parents and offering robust administrative tools for organizations.
+SkoreHQ is a full-stack web application for booking futsal training spots, evolving into a multi-tenant Super-Admin platform. It supports day-of booking, payment integration, and real-time capacity monitoring. The business vision is to provide a scalable SaaS solution for sports academies, streamlining booking for parents and offering robust administrative tools for organizations.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
