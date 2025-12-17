@@ -394,6 +394,19 @@ export const players = pgTable("players", {
 // Sessions table
 export const sessionsEnum = pgEnum("session_status", ["upcoming", "open", "full", "closed", "cancelled"]);
 
+// Venue type enum for session location classification
+export const venueTypeEnum = pgEnum("venue_type", [
+  "grass_field",
+  "turf_field",
+  "court",
+  "pitch",
+  "indoor_facility",
+  "outdoor_facility",
+  "sports_complex",
+  "training_facility",
+  "other"
+]);
+
 export const futsalSessions = pgTable("futsal_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
@@ -432,6 +445,9 @@ export const futsalSessions = pgTable("futsal_sessions", {
   autoPromote: boolean("auto_promote").default(true),
   // Payment requirement override - null inherits from tenant setting, true/false overrides
   requirePayment: boolean("require_payment"), // null = use tenant default, true = require, false = no payment needed
+  // Venue classification
+  venueType: venueTypeEnum("venue_type"), // Type of venue (grass_field, turf_field, court, etc.)
+  venueDetail: text("venue_detail"), // Specific venue info (e.g., "Field A", "Court 3")
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("futsal_sessions_tenant_id_idx").on(table.tenantId),

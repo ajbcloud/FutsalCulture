@@ -4,6 +4,35 @@ export const AGE_GROUPS = ['U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15',
 
 export const GENDERS = ['boys', 'girls'] as const;
 
+// Venue types for session location classification
+export const VENUE_TYPES = [
+  { value: 'grass_field', label: 'Grass Field' },
+  { value: 'turf_field', label: 'Turf Field' },
+  { value: 'court', label: 'Court' },
+  { value: 'pitch', label: 'Pitch' },
+  { value: 'indoor_facility', label: 'Indoor Facility' },
+  { value: 'outdoor_facility', label: 'Outdoor Facility' },
+  { value: 'sports_complex', label: 'Sports Complex' },
+  { value: 'training_facility', label: 'Training Facility' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type VenueType = typeof VENUE_TYPES[number]['value'];
+
+export function getVenueTypeLabel(value: string | null | undefined): string {
+  if (!value) return '';
+  const venue = VENUE_TYPES.find(v => v.value === value);
+  return venue?.label || value;
+}
+
+export function formatVenueDisplay(venueType: string | null | undefined, venueDetail: string | null | undefined): string {
+  const typeLabel = getVenueTypeLabel(venueType);
+  if (typeLabel && venueDetail) {
+    return `${typeLabel} - ${venueDetail}`;
+  }
+  return typeLabel || venueDetail || '';
+}
+
 // Business rules
 export const MINIMUM_PORTAL_AGE = 13; // Players must be 13+ for portal access
 
