@@ -1,0 +1,117 @@
+2025-12-17 00:01:37.61
+d1505a46
+User
+Payment config request received
+2025-12-17 00:01:37.61
+d1505a46
+User
+userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+2025-12-17 00:01:37.61
+d1505a46
+User
+userSub: undefined
+2025-12-17 00:01:37.88
+d1505a46
+User
+position: '68',
+2025-12-17 00:01:37.88
+d1505a46
+User
+schema: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+table: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+column: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+internalPosition: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+at async file:///home/runner/workspace/dist/index.js:31934:33 {
+2025-12-17 00:01:37.88
+d1505a46
+User
+constraint: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+dataType: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+detail: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+at async Promise.all (index 0)
+2025-12-17 00:01:37.88
+d1505a46
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-17 00:01:37.88
+d1505a46
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-12-17 00:01:37.88
+d1505a46
+User
+at async DatabaseStorage.getConsentDocumentsByPlayer (file:///home/runner/workspace/dist/index.js:6634:16)
+2025-12-17 00:01:37.88
+d1505a46
+User
+severity: 'ERROR',
+2025-12-17 00:01:37.88
+d1505a46
+User
+where: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+code: '42703',
+2025-12-17 00:01:37.88
+d1505a46
+User
+Error fetching household consent documents: error: column "template_type" does not exist
+2025-12-17 00:01:37.88
+d1505a46
+User
+file: 'parse_relation.c',
+2025-12-17 00:01:37.88
+d1505a46
+User
+length: 113,
+2025-12-17 00:01:37.88
+d1505a46
+User
+at async file:///home/runner/workspace/dist/index.js:31936:29
+2025-12-17 00:01:37.88
+d1505a46
+User
+}
+2025-12-17 00:01:37.88
+d1505a46
+User
+line: '3722',
+2025-12-17 00:01:37.88
+d1505a46
+User
+internalQuery: undefined,
+2025-12-17 00:01:37.88
+d1505a46
+User
+routine: 'errorMissingColumn'
+2025-12-17 00:01:37.88
+d1505a46
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+
+2025-12-17 00:01:37.88
+d1505a46
+User
+hint: undefined,
