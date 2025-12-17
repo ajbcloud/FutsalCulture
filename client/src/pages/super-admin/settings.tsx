@@ -1228,18 +1228,32 @@ export default function SuperAdminSettings() {
 
         <TabsContent value="integrations" className="space-y-4 mt-6">
           {/* Email Service Integration */}
-          <Card>
+          <Card className="border-l-4 border-l-emerald-500">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>Email Service (Resend)</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${emailConfig?.apiKey ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-muted'}`}>
+                    <Mail className={`h-5 w-5 ${emailConfig?.apiKey ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      Email Service (Resend)
+                      <ExternalLink className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => window.open('https://resend.com/docs', '_blank')} />
+                    </CardTitle>
+                    <CardDescription className="mt-1">Configure email delivery service for notifications and communications</CardDescription>
+                  </div>
                 </div>
-                <Badge variant={emailConfig?.apiKey ? "default" : "secondary"}>
-                  {emailConfig?.apiKey ? "Configured" : "Not Configured"}
+                <Badge 
+                  variant={emailConfig?.apiKey ? "default" : "secondary"}
+                  className={emailConfig?.apiKey ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+                >
+                  {emailConfig?.apiKey ? (
+                    <><Check className="h-3 w-3 mr-1" />Connected</>
+                  ) : (
+                    "Not Configured"
+                  )}
                 </Badge>
               </div>
-              <CardDescription>Configure email delivery service for notifications and communications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
@@ -1385,18 +1399,32 @@ export default function SuperAdminSettings() {
           </Card>
 
           {/* SMS Service Integration */}
-          <Card>
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle>SMS Service (Twilio)</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${smsConfig?.accountSid ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-muted'}`}>
+                    <MessageSquare className={`h-5 w-5 ${smsConfig?.accountSid ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      SMS Service (Twilio)
+                      <ExternalLink className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => window.open('https://www.twilio.com/docs', '_blank')} />
+                    </CardTitle>
+                    <CardDescription className="mt-1">Configure SMS delivery for instant notifications and alerts</CardDescription>
+                  </div>
                 </div>
-                <Badge variant={smsConfig?.accountSid ? "default" : "secondary"}>
-                  {smsConfig?.accountSid ? "Configured" : "Not Configured"}
+                <Badge 
+                  variant={smsConfig?.accountSid ? "default" : "secondary"}
+                  className={smsConfig?.accountSid ? "bg-blue-600 hover:bg-blue-700" : ""}
+                >
+                  {smsConfig?.accountSid ? (
+                    <><Check className="h-3 w-3 mr-1" />Connected</>
+                  ) : (
+                    "Not Configured"
+                  )}
                 </Badge>
               </div>
-              <CardDescription>Configure SMS delivery for instant notifications and alerts</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
