@@ -3,6 +3,7 @@ import { FeatureGrid } from "@/components/billing/FeatureGrid";
 import { BusinessBranding } from "@/components/business-branding";
 import { BusinessProvider } from "@/contexts/BusinessContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { SkoreHQLogo } from "@/components/shared/SkoreHQLogo";
 import adminDashboardImg from "@assets/chrome_Xe6PgsfHlu_1756180663671.png";
 
 export default function HomeSkoreHQ() {
@@ -12,14 +13,13 @@ export default function HomeSkoreHQ() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Navbar */}
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-foreground">
-          {/* In production, show business name/logo. In dev, show SkoreHQ */}
+        <a href="/" className="hover:opacity-90 transition-opacity">
           {import.meta.env.PROD ? (
             <BusinessProvider>
               <BusinessBranding inline variant="default" />
             </BusinessProvider>
           ) : (
-            'SkoreHQ'
+            <SkoreHQLogo size="lg" variant="light" />
           )}
         </a>
         <nav className="flex items-center gap-6 text-sm">

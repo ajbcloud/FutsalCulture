@@ -1,11 +1,14 @@
 
 import { Link } from "wouter";
+import { SkoreHQLogo } from "@/components/shared/SkoreHQLogo";
 
 export default function Landing(){
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <header className="mx-auto w-full max-w-6xl px-6 py-6 flex items-center justify-between">
-        <a href="/" className="text-xl font-extrabold tracking-tight text-gray-900">SkoreHQ</a>
+        <a href="/" className="hover:opacity-90 transition-opacity">
+          <SkoreHQLogo size="lg" variant="dark" />
+        </a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#features" className="hover:opacity-80 text-gray-700">Features</a>
           <a href="#pricing" className="hover:opacity-80 text-gray-700">Pricing</a>
