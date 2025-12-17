@@ -1,119 +1,128 @@
-# SMS Credits Management UI - Design Guidelines
+# SkoreHQ Sports Theme - Design Guidelines
 
-## Design Approach
+## Design Philosophy
 
-**System**: Material Design + Modern SaaS Dashboard Patterns (inspired by Linear, Vercel, Stripe admin interfaces)
+**System**: Bold, modern sports aesthetic inspired by premium athletic brands and sports media
+**Theme**: Dark mode primary with high-contrast neon accents for energy and impact
 
-**Rationale**: Utility-focused admin component requiring clarity, efficiency, and professional polish. Dark mode support necessitates strong contrast hierarchy and structured information architecture.
+## Color Palette
+
+### Primary Colors
+- **Background Dark**: `#1a1a1a` - Main page background
+- **Background Elevated**: `#242424` - Cards, elevated surfaces
+- **Background Surface**: `#2a2a2a` - Interactive surfaces, inputs
+
+### Accent Colors
+- **Neon Green**: `#BFFF00` - Primary accent, CTAs, highlights
+- **Neon Green Hover**: `#d4ff33` - Hover states
+- **Neon Green Muted**: `rgba(191, 255, 0, 0.1)` - Subtle backgrounds
+
+### Text Colors
+- **Primary Text**: `#ffffff` - Headlines, important text
+- **Secondary Text**: `#a1a1a1` - Body text, descriptions
+- **Muted Text**: `#6b6b6b` - Captions, metadata
+
+### Utility Colors
+- **Border**: `#333333` - Subtle borders
+- **Border Accent**: `#BFFF00` - Highlighted borders
 
 ## Typography
 
-**Font Family**: Inter (Google Fonts)
-- Headings: 600-700 weight
-- Body: 400-500 weight
-- Metrics/Numbers: 700 weight, tabular-nums
+**Font Family**: Inter (Google Fonts) - Clean, modern sans-serif
 
-**Hierarchy**:
-- Page title: text-2xl font-semibold
-- Section headers: text-lg font-semibold
-- Card titles: text-base font-medium
-- Body text: text-sm
-- Captions/metadata: text-xs
+### Hierarchy
+- **Hero Headlines**: `text-6xl` to `text-8xl`, `font-black`, uppercase optional
+- **Section Headlines**: `text-4xl` to `text-5xl`, `font-bold`
+- **Card Titles**: `text-xl` to `text-2xl`, `font-semibold`
+- **Body Text**: `text-base` to `text-lg`, `font-normal`
+- **Captions**: `text-sm`, `font-medium`
 
-## Layout System
+### Feature Numbers
+- **Large Display Numbers**: `text-7xl` to `text-9xl`, `font-black`
+- **Format**: Zero-padded (01, 02, 03)
+- **Color**: Neon green or white with green accent
 
-**Spacing Primitives**: Tailwind units of 2, 4, 6, 8, 12, 16, 24
-- Component padding: p-6 to p-8
-- Section gaps: gap-6 to gap-8
-- Card spacing: space-y-4
-- Container max-width: max-w-7xl
+## Layout Principles
 
-**Grid Structure**: 
-- Main layout: 2-column on lg+ (credits overview + purchase cards)
-- Transaction history: Full-width below
-- Mobile: Stack to single column
+### Asymmetric Grid
+- Break traditional centered layouts
+- Overlap elements intentionally
+- Use negative space dramatically
+- Mix full-width and constrained sections
 
-## Component Architecture
+### Geometric Elements
+- Sharp rectangular accent boxes
+- Angled or offset elements
+- Overlapping cards and images
+- Neon green highlight bars
 
-### 1. Credits Overview Card (Top-left)
-- Large numerical display (text-4xl, font-bold, tabular-nums)
-- Label "Available Credits" (text-sm, opacity-60)
-- Secondary info: Last purchase date, expiration warning if applicable
-- Visual: Subtle border, elevated with slight shadow in dark mode
+### Spacing
+- Generous whitespace between sections: `py-20` to `py-32`
+- Tight internal spacing for grouped content
+- Asymmetric padding for visual interest
 
-### 2. Purchase Options Grid (Top-right)
-- 3 tier cards in horizontal layout (grid-cols-1 md:grid-cols-3)
-- Each card includes:
-  * Credit amount (text-2xl, font-bold)
-  * Price per credit (text-xs, opacity-60)
-  * Total price (text-lg, font-semibold)
-  * "Most Popular" badge on middle tier
-  * Action button (full-width, primary variant)
-- Highlight middle tier with border accent
+## Component Styles
 
-### 3. Quick Stats Bar (Below overview)
-- 4-metric grid (grid-cols-2 lg:grid-cols-4, gap-4)
-- Each stat shows:
-  * Icon (from Heroicons)
-  * Metric value (text-xl, font-bold, tabular-nums)
-  * Label (text-xs, opacity-60)
-- Metrics: Credits used this month, Total spent, Average per session, Success rate
+### Navigation
+- Minimal, clean design
+- Dark background with white text
+- Neon green active states
+- Simple hover underlines or highlights
 
-### 4. Transaction History Table (Full-width bottom)
-- Table structure with columns:
-  * Date/Time (sortable)
-  * Transaction Type (badge: Purchase/Usage/Refund)
-  * Amount (+/- credits with visual indicator)
-  * Cost (for purchases)
-  * Status (badge with icon)
-  * Session/Reference (if usage)
-- Row hover states with subtle background change
-- Pagination controls at bottom (10 per page default)
-- Empty state with illustration and "No transactions yet" message
+### Buttons
+- **Primary**: Neon green background, dark text, bold font
+- **Secondary**: Transparent with neon green border
+- **With Arrow**: Include `→` arrow for "See more" actions
+- **Shape**: Slightly rounded (`rounded-lg`) or sharp corners
+
+### Cards
+- Dark background (`#242424`)
+- Subtle border (`#333333`)
+- Neon green accents for highlights
+- Large number overlays as design elements
+
+### Feature Sections
+- Large display numbers (01, 02, 03) as visual anchors
+- Neon green accent boxes or bars
+- Black & white imagery style
+- Bold headlines with concise descriptions
+
+### Pricing Cards
+- Dark card backgrounds
+- Neon green for "popular" highlights
+- Clear price hierarchy
+- Green checkmarks for features
+
+## Image Treatment
+
+### Style
+- Black & white / grayscale for sports imagery
+- High contrast
+- Action shots preferred
+- May include subtle neon green overlay accents
+
+### Placeholders
+- Dark gray backgrounds
+- Geometric shapes
+- Icon representations
+
+## Animations (Minimal)
+
+- Subtle hover transitions on buttons
+- Smooth color transitions
+- No excessive motion
+- Keep interactions fast and responsive
 
 ## Accessibility
 
-- All interactive elements min 44px touch targets
-- Focus rings visible on all controls (ring-2 ring-offset-2)
-- Form inputs with proper labels and error states
-- Screen reader announcements for balance updates
-- Keyboard navigation throughout table (arrow keys)
-
-## Animations
-
-**Strategic Use Only**:
-- Number counter animation when balance updates (1s duration)
-- Skeleton loading for transaction table
-- Smooth badge appearance on hover
-- No page transitions or scroll effects
+- Maintain WCAG contrast ratios with neon green on dark
+- Clear focus indicators
+- Touch targets minimum 44px
+- Screen reader friendly structure
 
 ## Icons
 
-**Library**: Heroicons (via CDN)
-- Credits: CurrencyDollarIcon
-- Purchases: ShoppingCartIcon
-- Usage: PaperAirplaneIcon
-- Success: CheckCircleIcon
-- Warning: ExclamationTriangleIcon
-- Sort indicators: ChevronUpDownIcon
-
-## Component Details
-
-**Cards**: Rounded corners (rounded-lg), consistent padding (p-6), subtle borders
-
-**Buttons**: 
-- Primary: Full corners (rounded-md), medium size (px-4 py-2)
-- Secondary: Ghost variant for table actions
-- Disabled states clearly indicated (opacity-50, cursor-not-allowed)
-
-**Badges**: Small (px-2 py-1), rounded (rounded-full), uppercase (uppercase text-xs), medium font weight
-
-**Tables**: 
-- Header row with bottom border
-- Alternating row backgrounds for better scanning
-- Right-aligned numbers (tabular-nums)
-- Compact spacing (py-3 px-4)
-
-## Images
-
-**Not Required**: This is a data-focused admin component; no hero or decorative images needed. Focus on data visualization clarity.
+**Library**: Lucide React
+- Use outlined style
+- Match text color or neon green for emphasis
+- Keep sizing consistent with text

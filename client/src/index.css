@@ -129,6 +129,11 @@
   --border-hover: hsl(214, 32%, 85%);  /* Hover borders */
   --input: hsl(214, 32%, 96%);         /* Input backgrounds */
   
+  /* Neon Green Accent - Sports Theme */
+  --accent-green: #BFFF00;             /* Primary neon green accent */
+  --accent-green-hover: #d4ff33;       /* Neon green hover state */
+  --accent-green-muted: rgba(191, 255, 0, 0.1); /* Subtle neon green bg */
+  
   /* Brand colors */
   --brand: hsl(217, 91%, 60%);         /* Primary brand color */
   --brand-contrast: hsl(0, 0%, 100%);  /* Text on brand backgrounds */
