@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { AGE_GROUPS } from '@shared/constants';
+import { AGE_GROUPS, formatVenueDisplay } from '@shared/constants';
 import { Pagination } from '@/components/pagination';
 import LocationLink from '@/components/LocationLink';
 import { useQuery } from '@tanstack/react-query';
@@ -538,6 +538,7 @@ export default function AdminSessions() {
               <TableHead className="text-muted-foreground">Age Group</TableHead>
               <TableHead className="text-muted-foreground">Gender</TableHead>
               <TableHead className="text-muted-foreground">Location</TableHead>
+              <TableHead className="text-muted-foreground">Venue</TableHead>
               <TableHead className="text-muted-foreground">Capacity</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground">Actions</TableHead>
@@ -572,6 +573,9 @@ export default function AdminSessions() {
                     address={getLocationData(session.locationName || session.location).address}
                     className="text-muted-foreground hover:text-foreground"
                   />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatVenueDisplay(session.venueType, session.venueDetail) || '—'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <div className="flex items-center space-x-2">
@@ -621,7 +625,7 @@ export default function AdminSessions() {
               {/* Accordion Content */}
               {expandedSession === session.id && (
                 <TableRow className="border-border">
-                  <TableCell colSpan={8} className="p-0">
+                  <TableCell colSpan={9} className="p-0">
                     <div className="bg-muted p-6 rounded-lg mx-4 my-2">
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-foreground mb-2">

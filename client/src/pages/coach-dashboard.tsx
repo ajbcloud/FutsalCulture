@@ -9,7 +9,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, isSameDay, startOfMonth, endOfMonth, isFuture, isPast } from "date-fns";
-import { Calendar as CalendarIcon, List, MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, ClipboardList, X } from "lucide-react";
+import { Calendar as CalendarIcon, List, MapPin, Clock, Users, Star, ChevronLeft, ChevronRight, ClipboardList, X, Building2 } from "lucide-react";
+import { formatVenueDisplay } from "@shared/constants";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
@@ -27,6 +28,8 @@ interface CoachSession {
     startTime: string;
     endTime: string;
     location: string;
+    venueType?: string | null;
+    venueDetail?: string | null;
     capacity: number;
     currentSignups: number;
     ageGroups: string[];
@@ -194,6 +197,12 @@ export default function CoachDashboard() {
               <MapPin className="w-4 h-4" />
               <span>{session.location}</span>
             </div>
+            {(session.venueType || session.venueDetail) && (
+              <div className="flex items-center gap-2" data-testid={`session-venue-${session.id}`}>
+                <Building2 className="w-4 h-4" />
+                <span>{formatVenueDisplay(session.venueType, session.venueDetail)}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2" data-testid={`session-players-${session.id}`}>
               <Users className="w-4 h-4" />
               <span>

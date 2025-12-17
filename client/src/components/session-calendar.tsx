@@ -10,6 +10,7 @@ import { FutsalSession, Player } from "@shared/schema";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateAgeGroup, isSessionEligibleForPlayer } from "@shared/utils";
 import { format12Hour } from "@shared/booking-config";
+import { formatVenueDisplay } from "@shared/constants";
 import LocationLink from "@/components/LocationLink";
 
 interface SessionCalendarProps {
@@ -455,6 +456,12 @@ export default function SessionCalendar({
                           />
                         </div>
                       </div>
+                      
+                      {(session.venueType || session.venueDetail) && (
+                        <div className="text-sm text-muted-foreground">
+                          Venue: {formatVenueDisplay(session.venueType, session.venueDetail)}
+                        </div>
+                      )}
                       
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2">

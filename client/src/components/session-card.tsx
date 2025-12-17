@@ -4,11 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, DollarSign, ShoppingCart, Users, UserPlus, UserMinus } from "lucide-react";
+import { Clock, MapPin, DollarSign, ShoppingCart, Users, UserPlus, UserMinus, Building2 } from "lucide-react";
 import { FutsalSession } from "@shared/schema";
 import LocationLink from "@/components/LocationLink";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatVenueDisplay } from "@shared/constants";
 
 interface SessionCardProps {
   session: FutsalSession;
@@ -228,6 +229,12 @@ export default function SessionCard({ session, onAddToCart, showAddToCart = fals
             <DollarSign className="w-4 h-4 mr-2" />
             <span>${(session.priceCents / 100).toFixed(2)}</span>
           </div>
+          {(session.venueType || session.venueDetail) && (
+            <div className="flex items-center text-muted-foreground">
+              <Building2 className="w-4 h-4 mr-2" />
+              <span>{formatVenueDisplay(session.venueType, session.venueDetail)}</span>
+            </div>
+          )}
         </div>
 
         <div className="mb-4">

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet, Tag, ChevronDown, ChevronUp, Check, X } from "lucide-react";
+import { CreditCard, DollarSign, Calendar, MapPin, Clock, Loader2, Wallet, Tag, ChevronDown, ChevronUp, Check, X, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTerminology } from "@/hooks/use-user-terminology";
+import { formatVenueDisplay } from "@shared/constants";
 import { apiRequest } from "@/lib/queryClient";
 
 type CreditBalanceResponse = {
@@ -29,6 +30,8 @@ interface SessionPaymentModalProps {
     ageGroup: string;
     priceCents: number;
     title: string;
+    venueType?: string | null;
+    venueDetail?: string | null;
   };
   player: {
     id: string;
@@ -775,6 +778,12 @@ export function SessionPaymentModal({ isOpen, onClose, session, player, signup }
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <span>{session.location}</span>
               </div>
+              {(session.venueType || session.venueDetail) && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-gray-500" />
+                  <span>{formatVenueDisplay(session.venueType, session.venueDetail)}</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
               <span className="text-sm font-medium">Player: {player.firstName} {player.lastName}</span>
