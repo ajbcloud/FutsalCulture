@@ -93,8 +93,8 @@ async function upgradeTenantPlan(identifier: string, newPlan: 'free' | 'core' | 
   }
 }
 
-// Usage: upgrade PlayHQ to Elite plan
-upgradeTenantPlan('playhq', 'elite')
+// Usage: upgrade SkoreHQ to Elite plan
+upgradeTenantPlan('skorehq', 'elite')
   .then(() => console.log('Upgrade complete'))
   .catch(console.error)
   .finally(() => process.exit(0));
