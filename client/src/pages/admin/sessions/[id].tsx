@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Key, Lock, Unlock, Repeat, Calendar, Users, List, Mail, DollarSign } from 'lucide-react';
 import { Link } from 'wouter';
 import { Switch } from '@/components/ui/switch';
-import { AGE_GROUPS } from '@shared/constants';
+import { AGE_GROUPS, VENUE_TYPES } from '@shared/constants';
 import { format12Hour, convert12To24Hour, isValidBookingTime } from '@shared/booking-config';
 import { useQuery } from '@tanstack/react-query';
 import { useHasFeature } from '@/hooks/use-feature-flags';
@@ -80,6 +80,8 @@ export default function AdminSessionDetail() {
     recurringEndDate: '',
     recurringCount: 8,
     requirePayment: null as boolean | null,
+    venueType: '',
+    venueDetail: '',
   });
 
   useEffect(() => {
@@ -115,6 +117,8 @@ export default function AdminSessionDetail() {
           recurringEndDate: '',
           recurringCount: 8,
           requirePayment: data.requirePayment ?? null,
+          venueType: data.venueType || '',
+          venueDetail: data.venueDetail || '',
         });
         setLoading(false);
       }).catch(err => {
@@ -178,6 +182,8 @@ export default function AdminSessionDetail() {
         paymentWindowMinutes: formData.paymentWindowMinutes || 60,
         autoPromote: Boolean(formData.autoPromote),
         requirePayment: formData.requirePayment,
+        venueType: formData.venueType || null,
+        venueDetail: formData.venueDetail?.trim() || null,
         // Include recurring data for new sessions
         ...(isNew && {
           isRecurring: formData.isRecurring,
@@ -322,7 +328,39 @@ export default function AdminSessionDetail() {
           </div>
         </div>
 
+        {/* Venue Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-foreground mb-4">Venue</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="venueType" className="text-muted-foreground">Venue Type</Label>
+              <Select value={formData.venueType} onValueChange={(value) => setFormData({...formData, venueType: value})}>
+                <SelectTrigger className="bg-input border-border text-foreground" data-testid="select-venue-type">
+                  <SelectValue placeholder="Select venue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {VENUE_TYPES.map((venue) => (
+                    <SelectItem key={venue.value} value={venue.value}>
+                      {venue.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
+            <div>
+              <Label htmlFor="venueDetail" className="text-muted-foreground">Venue Name/Number</Label>
+              <Input
+                id="venueDetail"
+                value={formData.venueDetail}
+                onChange={(e) => setFormData({...formData, venueDetail: e.target.value})}
+                className="bg-input border-border text-foreground"
+                placeholder="e.g., Field A, Court 3"
+                data-testid="input-venue-detail"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Additional Session Configuration */}
         <div className="mt-6">
