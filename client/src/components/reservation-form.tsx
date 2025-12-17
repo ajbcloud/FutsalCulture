@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Player, FutsalSession } from "@shared/schema";
 import { calculateAgeGroup } from "@shared/utils";
-import VenmoPrompt from "@/components/venmo-prompt";
+import { SessionPaymentModal } from "@/components/session-payment-modal";
+import { CreditCard, DollarSign } from "lucide-react";
 
 interface ReservationFormProps {
   sessionId: string;
@@ -23,8 +24,8 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   const { user } = useAuth();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [accessCode, setAccessCode] = useState<string>("");
-  const [venmoData, setVenmoData] = useState<any>(null);
-  const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<any>(null);
 
   const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
@@ -45,19 +46,28 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   }, [preSelectedPlayerId, players, session]);
 
   const createSignupMutation = useMutation({
-    mutationFn: async (data: { playerId: string; sessionId: string; accessCode?: string }) => {
+    mutationFn: async (data: { playerId: string; sessionId: string; accessCode?: string; reserveOnly?: boolean }) => {
       const response = await apiRequest("POST", "/api/signups", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to reserve spot");
+      }
       return response.json();
     },
     onSuccess: (signupData) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
       
-      // Show Venmo prompt with reservation details
-      setVenmoData(signupData);
-      setShowVenmoPrompt(true);
+      // Store signup data and show payment modal
+      const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+      setPendingSignup({
+        ...signupData,
+        player: selectedPlayer,
+        session: session
+      });
+      setShowPaymentModal(true);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -122,11 +132,21 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
       return;
     }
 
+    // Create signup with reserveOnly flag to mark as pending payment
     createSignupMutation.mutate({
       playerId: selectedPlayerId,
       sessionId,
+      reserveOnly: true,
       ...(session.hasAccessCode && { accessCode: accessCode.trim().toUpperCase() })
     });
+  };
+
+  const handlePaymentClose = () => {
+    setShowPaymentModal(false);
+    setPendingSignup(null);
+    // Refresh data after payment modal closes
+    queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/signups"] });
   };
 
   const isPlayerEligible = (playerId: string) => {
@@ -139,7 +159,7 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
   if (players.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">You need to add a player first.</p>
+        <p className="text-muted-foreground mb-4">You need to add a player first.</p>
         <Button asChild>
           <a href="/dashboard">Go to Dashboard</a>
         </Button>
@@ -147,13 +167,15 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
     );
   }
 
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="player">Select Player</Label>
           <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-            <SelectTrigger>
+            <SelectTrigger data-testid="select-player-trigger">
               <SelectValue placeholder="Choose a player" />
             </SelectTrigger>
             <SelectContent>
@@ -167,8 +189,9 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
                     key={player.id} 
                     value={player.id}
                     disabled={!isEligible}
-                    className={!isEligible ? "text-zinc-600 cursor-not-allowed" : ""}
+                    className={!isEligible ? "text-muted-foreground cursor-not-allowed" : ""}
                     title={!isEligible ? `Not eligible: requires ${session.genders?.join(', ') || 'Any Gender'} ${session.ageGroups?.join(', ') || 'Any Age'}` : ""}
+                    data-testid={`select-player-${player.id}`}
                   >
                     {player.firstName} {player.lastName} ({playerAgeGroup}) 
                     {!isEligible && " - Not Eligible"}
@@ -189,39 +212,69 @@ export default function ReservationForm({ sessionId, session, preSelectedPlayerI
               placeholder="Enter access code"
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
-              className="bg-zinc-800 border-zinc-600 text-white placeholder-zinc-400"
+              className="bg-input border-border text-foreground placeholder:text-muted-foreground"
               maxLength={20}
+              data-testid="input-access-code"
             />
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               This session requires an access code to book
             </p>
           </div>
         )}
 
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Reserve & Pay via Venmo</h4>
-          <p className="text-sm text-gray-600">
-            Your spot will be reserved immediately. Complete payment via Venmo within 1 hour to secure your booking.
+        {/* Payment Information */}
+        <div className="bg-card border border-border p-4 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <h4 className="font-medium text-foreground">Payment Required</h4>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Complete your payment immediately to secure your booking. You can pay with credit card, PayPal, or Venmo.
           </p>
-          <p className="text-lg font-semibold text-futsal-600 mt-2">$10.00</p>
+          <div className="flex items-center gap-2 mt-3">
+            <DollarSign className="h-5 w-5 text-green-500" />
+            <p className="text-lg font-semibold text-foreground">
+              ${(session.priceCents / 100).toFixed(2)}
+            </p>
+          </div>
         </div>
 
         <Button 
           type="submit" 
           className={`w-full ${!selectedPlayerId || !isPlayerEligible(selectedPlayerId) ? 
-            'bg-zinc-700 text-zinc-400 cursor-not-allowed' : 
-            'bg-green-600 hover:bg-green-700'}`}
+            'bg-muted text-muted-foreground cursor-not-allowed' : 
+            'bg-green-600 hover:bg-green-700 text-white'}`}
           disabled={createSignupMutation.isPending || !selectedPlayerId || !isPlayerEligible(selectedPlayerId) || (session.hasAccessCode === true && !accessCode.trim())}
+          data-testid="button-reserve-and-pay"
         >
           {createSignupMutation.isPending ? "Reserving..." : "Reserve Spot & Pay"}
         </Button>
       </form>
 
-      <VenmoPrompt
-        isOpen={showVenmoPrompt}
-        onClose={() => setShowVenmoPrompt(false)}
-        signupData={venmoData}
-      />
+      {/* Payment Modal */}
+      {pendingSignup && selectedPlayer && (
+        <SessionPaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentClose}
+          session={{
+            id: session.id,
+            location: session.location || '',
+            startTime: session.startTime instanceof Date ? session.startTime.toISOString() : String(session.startTime),
+            ageGroup: session.ageGroups?.join(', ') || '',
+            priceCents: session.priceCents,
+            title: session.title || 'Session'
+          }}
+          player={{
+            id: selectedPlayer.id,
+            firstName: selectedPlayer.firstName,
+            lastName: selectedPlayer.lastName
+          }}
+          signup={{
+            id: pendingSignup.id,
+            reservationExpiresAt: pendingSignup.reservationExpiresAt || new Date(Date.now() + 60 * 60 * 1000).toISOString()
+          }}
+        />
+      )}
     </>
   );
 }
