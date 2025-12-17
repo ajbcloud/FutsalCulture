@@ -2169,7 +2169,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Mailchimp</h4>
                             <p className="text-sm text-muted-foreground">Email marketing platform</p>
-                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Growth, Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'mailchimp')?.enabled && (
@@ -2225,7 +2225,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Google Workspace</h4>
                             <p className="text-sm text-muted-foreground">Gmail, Calendar, and Drive</p>
-                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'google')?.enabled && (
@@ -2272,7 +2272,7 @@ export default function AdminSettings() {
                           <div>
                             <h4 className="font-medium text-foreground">Microsoft 365</h4>
                             <p className="text-sm text-muted-foreground">Outlook, Teams, SharePoint</p>
-                            <p className="text-xs text-muted-foreground mt-1">Available on: Elite</p>
+                            <p className="text-xs text-muted-foreground mt-1">Available on: Core, Growth, Elite</p>
                           </div>
                         </div>
                         {integrations.find(i => i.provider === 'microsoft')?.enabled && (

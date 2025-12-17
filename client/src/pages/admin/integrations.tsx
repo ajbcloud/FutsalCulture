@@ -154,6 +154,8 @@ export default function AdminIntegrations() {
   const { data: planData } = usePlanFeatures();
   const { hasFeature: hasQuickBooks } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_QUICKBOOKS);
   const { hasFeature: hasBraintree } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_BRAINTREE);
+  const { hasFeature: hasMailchimp } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_MAILCHIMP);
+  const { hasFeature: hasCalendar } = useHasFeature(FEATURE_KEYS.INTEGRATIONS_CALENDAR);
 
   // Fetch Braintree gateway status
   const { data: gatewayStatus, refetch: refetchGatewayStatus } = useQuery<GatewayStatus>({
@@ -549,6 +551,8 @@ export default function AdminIntegrations() {
                   // Filter integrations based on plan features
                   if (provider === 'quickbooks' && !hasQuickBooks) return false;
                   if (provider === 'braintree' && !hasBraintree) return false;
+                  if (provider === 'mailchimp' && !hasMailchimp) return false;
+                  if ((provider === 'google' || provider === 'microsoft') && !hasCalendar) return false;
                   return true;
                 }).map(([provider, config]) => {
                   const integration = integrations.find(i => i.provider === provider);
@@ -746,7 +750,7 @@ export default function AdminIntegrations() {
         </Card>
 
         {/* Locked Integrations (for upgrade prompts) */}
-        {(!hasQuickBooks || !hasBraintree) && (
+        {(!hasQuickBooks || !hasBraintree || !hasMailchimp || !hasCalendar) && (
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
               <CardTitle className="text-white flex items-center">
@@ -782,6 +786,51 @@ export default function AdminIntegrations() {
                         <div className="font-medium text-white">{providerConfigs.braintree.name}</div>
                         <div className="text-sm text-zinc-400">{providerConfigs.braintree.description}</div>
                         <Badge variant="secondary" className="mt-1">Growth Plan Required</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+                {!hasMailchimp && providerConfigs.mailchimp && (
+                  <div className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center space-x-3">
+                      {providerConfigs.mailchimp.icon}
+                      <div>
+                        <div className="font-medium text-white">{providerConfigs.mailchimp.name}</div>
+                        <div className="text-sm text-zinc-400">{providerConfigs.mailchimp.description}</div>
+                        <Badge variant="secondary" className="mt-1">Growth Plan Required</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+                {!hasCalendar && providerConfigs.google && (
+                  <div className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center space-x-3">
+                      {providerConfigs.google.icon}
+                      <div>
+                        <div className="font-medium text-white">{providerConfigs.google.name}</div>
+                        <div className="text-sm text-zinc-400">{providerConfigs.google.description}</div>
+                        <Badge variant="secondary" className="mt-1">Core Plan Required</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
+                      Upgrade Plan
+                    </Button>
+                  </div>
+                )}
+                {!hasCalendar && providerConfigs.microsoft && (
+                  <div className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                    <div className="flex items-center space-x-3">
+                      {providerConfigs.microsoft.icon}
+                      <div>
+                        <div className="font-medium text-white">{providerConfigs.microsoft.name}</div>
+                        <div className="text-sm text-zinc-400">{providerConfigs.microsoft.description}</div>
+                        <Badge variant="secondary" className="mt-1">Core Plan Required</Badge>
                       </div>
                     </div>
                     <Button variant="outline" className="text-white border-zinc-600 hover:bg-zinc-800">
