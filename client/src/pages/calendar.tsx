@@ -5,6 +5,8 @@ import Navbar from "@/components/navbar";
 import MultiSelectFilter from "@/components/multi-select-filter";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function Calendar() {
   const [location] = useLocation();
@@ -13,6 +15,7 @@ export default function Calendar() {
   const [selectedAges, setSelectedAges] = useState<string[]>([]);
   const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showHistorical, setShowHistorical] = useState(false);
   
   // Applied filters (used for filtering)
   const [appliedAges, setAppliedAges] = useState<string[]>([]);
@@ -130,8 +133,8 @@ export default function Calendar() {
           <div className="mb-8">
             {/* Title Section */}
             <div className="text-center sm:text-left mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Future Sessions Calendar</h1>
-              <p className="text-muted-foreground text-lg">View and book upcoming training sessions</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Sessions Calendar</h1>
+              <p className="text-muted-foreground text-lg">View and book training sessions</p>
             </div>
             
             {/* Filter Controls - Desktop: inline, Mobile: below title */}
@@ -166,6 +169,18 @@ export default function Calendar() {
               >
                 Apply Filters
               </Button>
+              
+              <div className="flex items-center gap-2 ml-4">
+                <Switch
+                  id="show-historical"
+                  checked={showHistorical}
+                  onCheckedChange={setShowHistorical}
+                  data-testid="switch-show-historical"
+                />
+                <Label htmlFor="show-historical" className="text-sm whitespace-nowrap">
+                  Show past sessions
+                </Label>
+              </div>
             </div>
             
             {/* Mobile Filter Controls - Below title */}
@@ -204,6 +219,18 @@ export default function Calendar() {
                   Apply Filters
                 </Button>
               </div>
+              
+              <div className="flex items-center gap-2 mt-3">
+                <Switch
+                  id="show-historical-mobile"
+                  checked={showHistorical}
+                  onCheckedChange={setShowHistorical}
+                  data-testid="switch-show-historical-mobile"
+                />
+                <Label htmlFor="show-historical-mobile" className="text-sm">
+                  Show past sessions
+                </Label>
+              </div>
             </div>
           </div>
 
@@ -212,6 +239,7 @@ export default function Calendar() {
             multiPlayerGenders={appliedGenders}
             locationFilter={appliedLocations.length === 1 ? appliedLocations[0] : undefined}
             showBookingButtons={true}
+            showHistorical={showHistorical}
             onSessionClick={handleSessionClick}
           />
         </div>

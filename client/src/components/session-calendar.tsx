@@ -20,6 +20,7 @@ interface SessionCalendarProps {
   multiPlayerAges?: string[];
   multiPlayerGenders?: string[];
   showBookingButtons?: boolean;
+  showHistorical?: boolean;
   onSessionClick?: (session: FutsalSession) => void;
 }
 
@@ -29,7 +30,8 @@ export default function SessionCalendar({
   locationFilter,
   multiPlayerAges = [],
   multiPlayerGenders = [],
-  showBookingButtons = false, 
+  showBookingButtons = false,
+  showHistorical = false,
   onSessionClick 
 }: SessionCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -58,14 +60,13 @@ export default function SessionCalendar({
   const sessions = allSessions.filter(session => {
     const now = new Date();
     const sessionDate = new Date(session.startTime);
-    const today = new Date();
     
-    // Only show future sessions (not past ones)
-    if (sessionDate < now) {
+    // Only show future sessions unless showHistorical is enabled
+    if (!showHistorical && sessionDate < now) {
       return false;
     }
     
-    // For calendar view, show all future sessions regardless of booking status
+    // For calendar view, show sessions based on showHistorical setting
     // The booking availability will be handled in the rendering logic
     
     // Check multi-player filters first (if coming from dashboard with multiple players)
