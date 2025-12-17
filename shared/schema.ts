@@ -2094,10 +2094,16 @@ export const insertPlayerSchema = createInsertSchema(players).omit({
   createdAt: true,
 });
 
+export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
+export type Player = typeof players.$inferSelect;
+
 export const insertSessionSchema = createInsertSchema(futsalSessions).omit({
   id: true,
   createdAt: true,
 });
+
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type FutsalSession = typeof futsalSessions.$inferSelect;
 
 export const insertSignupSchema = createInsertSchema(signups).omit({
   id: true,
